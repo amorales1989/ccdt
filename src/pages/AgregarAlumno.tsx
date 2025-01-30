@@ -2,26 +2,48 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { createStudent } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 const AgregarAlumno = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    nombre: "",
-    edad: "",
-    telefono: "",
-    direccion: "",
+    name: "",
+    age: "",
+    phone: "",
+    address: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Datos del alumno:", formData);
-    toast({
-      title: "Alumno agregado",
-      description: "El alumno ha sido agregado exitosamente",
-    });
-    setFormData({ nombre: "", edad: "", telefono: "", direccion: "" });
+    setIsLoading(true);
+    try {
+      await createStudent({
+        name: formData.name,
+        age: formData.age ? parseInt(formData.age) : null,
+        phone: formData.phone || null,
+        address: formData.address || null,
+      });
+      
+      toast({
+        title: "Alumno agregado",
+        description: "El alumno ha sido agregado exitosamente",
+      });
+      navigate("/");
+    } catch (error) {
+      console.error("Error al crear alumno:", error);
+      toast({
+        title: "Error",
+        description: "Hubo un error al agregar el alumno",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -33,50 +55,47 @@ const AgregarAlumno = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre completo</Label>
+              <Label htmlFor="name">Nombre completo</Label>
               <Input
-                id="nombre"
-                value={formData.nombre}
+                id="name"
+                value={formData.name}
                 onChange={(e) =>
-                  setFormData({ ...formData, nombre: e.target.value })
+                  setFormData({ ...formData, name: e.target.value })
                 }
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edad">Edad</Label>
+              <Label htmlFor="age">Edad</Label>
               <Input
-                id="edad"
+                id="age"
                 type="number"
-                value={formData.edad}
-                onChange={(e) => setFormData({ ...formData, edad: e.target.value })}
-                required
+                value={formData.age}
+                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="telefono">Teléfono</Label>
+              <Label htmlFor="phone">Teléfono</Label>
               <Input
-                id="telefono"
-                value={formData.telefono}
+                id="phone"
+                value={formData.phone}
                 onChange={(e) =>
-                  setFormData({ ...formData, telefono: e.target.value })
+                  setFormData({ ...formData, phone: e.target.value })
                 }
-                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="direccion">Dirección</Label>
+              <Label htmlFor="address">Dirección</Label>
               <Input
-                id="direccion"
-                value={formData.direccion}
+                id="address"
+                value={formData.address}
                 onChange={(e) =>
-                  setFormData({ ...formData, direccion: e.target.value })
+                  setFormData({ ...formData, address: e.target.value })
                 }
-                required
               />
             </div>
-            <Button type="submit" className="w-full">
-              Agregar Alumno
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Agregando..." : "Agregar Alumno"}
             </Button>
           </form>
         </CardContent>

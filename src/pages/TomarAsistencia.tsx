@@ -3,34 +3,76 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-
-const estudiantes = [
-  { id: 1, nombre: "Juan Pérez" },
-  { id: 2, nombre: "María García" },
-];
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getStudents, markAttendance, createEvent } from "@/lib/api";
+import { format } from "date-fns";
 
 const TomarAsistencia = () => {
   const { toast } = useToast();
-  const [asistencias, setAsistencias] = useState<Record<number, boolean>>({});
+  const queryClient = useQueryClient();
+  const [asistencias, setAsistencias] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
-  const marcarAsistencia = (id: number, presente: boolean) => {
+  const { data: students, isLoading: isLoadingStudents } = useQuery({
+    queryKey: ["students"],
+    queryFn: getStudents,
+  });
+
+  const handleSaveAttendance = async () => {
+    setIsLoading(true);
+    try {
+      // Primero creamos el evento para hoy
+      const event = await createEvent({
+        title: `Asistencia ${format(new Date(), "dd/MM/yyyy")}`,
+        date: format(new Date(), "yyyy-MM-dd"),
+        description: "Registro de asistencia",
+      });
+
+      // Luego guardamos la asistencia de cada alumno
+      await Promise.all(
+        Object.entries(asistencias).map(([studentId, status]) =>
+          markAttendance({
+            student_id: studentId,
+            event_id: event.id,
+            status,
+          })
+        )
+      );
+
+      toast({
+        title: "Asistencia guardada",
+        description: "La asistencia ha sido registrada exitosamente",
+      });
+
+      // Limpiar el estado
+      setAsistencias({});
+      
+    } catch (error) {
+      console.error("Error al guardar asistencia:", error);
+      toast({
+        title: "Error",
+        description: "Hubo un error al guardar la asistencia",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const marcarAsistencia = (id: string, presente: boolean) => {
     setAsistencias((prev) => ({ ...prev, [id]: presente }));
   };
 
-  const guardarAsistencia = () => {
-    console.log("Asistencias guardadas:", asistencias);
-    toast({
-      title: "Asistencia guardada",
-      description: "La asistencia ha sido registrada exitosamente",
-    });
-  };
+  if (isLoadingStudents) {
+    return <div className="p-6">Cargando alumnos...</div>;
+  }
 
   return (
     <div className="p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Tomar Asistencia</CardTitle>
+          <CardTitle>Tomar Asistencia - {format(new Date(), "dd/MM/yyyy")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -41,26 +83,26 @@ const TomarAsistencia = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {estudiantes.map((estudiante) => (
-                <TableRow key={estudiante.id}>
-                  <TableCell>{estudiante.nombre}</TableCell>
+              {students?.map((student) => (
+                <TableRow key={student.id}>
+                  <TableCell>{student.name}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
-                        variant={asistencias[estudiante.id] ? "default" : "outline"}
+                        variant={asistencias[student.id] ? "default" : "outline"}
                         size="icon"
-                        onClick={() => marcarAsistencia(estudiante.id, true)}
+                        onClick={() => marcarAsistencia(student.id, true)}
                       >
                         <Check className="h-4 w-4" />
                       </Button>
                       <Button
                         variant={
-                          asistencias[estudiante.id] === false
+                          asistencias[student.id] === false
                             ? "destructive"
                             : "outline"
                         }
                         size="icon"
-                        onClick={() => marcarAsistencia(estudiante.id, false)}
+                        onClick={() => marcarAsistencia(student.id, false)}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -70,8 +112,12 @@ const TomarAsistencia = () => {
               ))}
             </TableBody>
           </Table>
-          <Button onClick={guardarAsistencia} className="mt-4">
-            Guardar Asistencia
+          <Button 
+            onClick={handleSaveAttendance} 
+            className="mt-4"
+            disabled={isLoading || Object.keys(asistencias).length === 0}
+          >
+            {isLoading ? "Guardando..." : "Guardar Asistencia"}
           </Button>
         </CardContent>
       </Card>
