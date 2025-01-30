@@ -8,13 +8,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Users, UserPlus, ClipboardList, History } from "lucide-react";
+import { Users, UserPlus, ClipboardList, History, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const items = [
   {
-    title: "Lista de Alumnos",
+    title: "Inicio",
     url: "/",
+    icon: Home,
+  },{
+    title: "Lista de Alumnos",
+    url: "/listar",
     icon: Users,
   },
   {
