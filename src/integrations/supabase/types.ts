@@ -80,6 +80,7 @@ export type Database = {
           address: string | null
           age: number | null
           created_at: string
+          gender: string
           id: string
           name: string
           phone: string | null
@@ -89,6 +90,7 @@ export type Database = {
           address?: string | null
           age?: number | null
           created_at?: string
+          gender?: string
           id?: string
           name: string
           phone?: string | null
@@ -98,6 +100,7 @@ export type Database = {
           address?: string | null
           age?: number | null
           created_at?: string
+          gender?: string
           id?: string
           name?: string
           phone?: string | null
