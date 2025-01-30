@@ -4,44 +4,101 @@ import { Plus, Edit2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { EventForm } from "@/components/EventForm";
-
-interface Event {
-  id: number;
-  title: string;
-  date: string;
-  description: string;
-}
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getEvents, createEvent, updateEvent, deleteEvent } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
+import type { Event } from "@/types/database";
 
 const Index = () => {
-  const [events, setEvents] = useState<Event[]>([
-    { 
-      id: 1, 
-      title: "Encuentro de Adolescentes", 
-      date: "2024-03-20", 
-      description: "Reunión especial con juegos y alabanzas" 
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch events
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ['events'],
+    queryFn: getEvents
+  });
+
+  // Create event mutation
+  const createEventMutation = useMutation({
+    mutationFn: (newEvent: Omit<Event, "id" | "created_at" | "updated_at">) => createEvent(newEvent),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Evento creado",
+        description: "El evento ha sido creado exitosamente"
+      });
     },
-    { 
-      id: 2, 
-      title: "Taller de Liderazgo", 
-      date: "2024-03-25", 
-      description: "Capacitación para líderes juveniles" 
+    onError: (error) => {
+      console.error('Error creating event:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear el evento",
+        variant: "destructive"
+      });
     }
-  ]);
+  });
 
-  const handleAddEvent = (newEvent: Omit<Event, "id">) => {
-    const id = Math.max(0, ...events.map(e => e.id)) + 1;
-    setEvents([...events, { ...newEvent, id }]);
+  // Update event mutation
+  const updateEventMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Event> }) => updateEvent(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Evento actualizado",
+        description: "El evento ha sido actualizado exitosamente"
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating event:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el evento",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete event mutation
+  const deleteEventMutation = useMutation({
+    mutationFn: deleteEvent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Evento eliminado",
+        description: "El evento ha sido eliminado exitosamente"
+      });
+    },
+    onError: (error) => {
+      console.error('Error deleting event:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el evento",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleAddEvent = (newEvent: Omit<Event, "id" | "created_at" | "updated_at">) => {
+    createEventMutation.mutate(newEvent);
   };
 
-  const handleEditEvent = (updatedEvent: Event) => {
-    setEvents(events.map(event => 
-      event.id === updatedEvent.id ? updatedEvent : event
-    ));
+  const handleEditEvent = (event: Event) => {
+    const { id, created_at, updated_at, ...updateData } = event;
+    updateEventMutation.mutate({ id, data: updateData });
   };
 
-  const handleDeleteEvent = (id: number) => {
-    setEvents(events.filter(event => event.id !== id));
+  const handleDeleteEvent = (id: string) => {
+    deleteEventMutation.mutate(id);
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex justify-center items-center">
+        <p>Cargando eventos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 min-h-screen" style={{ background: "linear-gradient(109.6deg, rgba(223,234,247,1) 11.2%, rgba(244,248,252,1) 91.1%)" }}>
@@ -86,7 +143,10 @@ const Index = () => {
                         <DialogHeader>
                           <DialogTitle>Editar Evento</DialogTitle>
                         </DialogHeader>
-                        <EventForm onSubmit={(updatedEvent) => handleEditEvent({ ...updatedEvent, id: event.id })} initialData={event} />
+                        <EventForm 
+                          onSubmit={(updatedEvent) => handleEditEvent({ ...updatedEvent, id: event.id, created_at: event.created_at, updated_at: event.updated_at })} 
+                          initialData={event} 
+                        />
                       </DialogContent>
                     </Dialog>
                     <Button 

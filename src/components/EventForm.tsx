@@ -1,19 +1,16 @@
 import { Button } from "@/components/ui/button";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
+import type { Event } from "@/types/database";
 
-interface EventFormData {
-  title: string;
-  date: string;
-  description: string;
-}
+type EventFormData = Omit<Event, "id" | "created_at" | "updated_at">;
 
 interface EventFormProps {
   onSubmit: (data: EventFormData) => void;
-  initialData?: EventFormData;
+  initialData?: Event;
 }
 
 export function EventForm({ onSubmit, initialData }: EventFormProps) {
@@ -48,6 +45,7 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
               <FormControl>
                 <Input {...field} placeholder="Ingrese el título del evento" />
               </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />
@@ -61,6 +59,7 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
               <FormControl>
                 <Input type="date" {...field} />
               </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />
@@ -78,6 +77,7 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
                   className="min-h-[100px]"
                 />
               </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />
