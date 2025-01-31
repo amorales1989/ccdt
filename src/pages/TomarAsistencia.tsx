@@ -5,13 +5,15 @@ import { Check, X } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getStudents, markAttendance, createEvent } from "@/lib/api";
+import { getStudents, markAttendance, getEvents } from "@/lib/api";
 import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TomarAsistencia = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [asistencias, setAsistencias] = useState<Record<string, boolean>>({});
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: students, isLoading: isLoadingStudents } = useQuery({
@@ -19,22 +21,28 @@ const TomarAsistencia = () => {
     queryFn: getStudents,
   });
 
+  const { data: events } = useQuery({
+    queryKey: ["events"],
+    queryFn: getEvents,
+  });
+
   const handleSaveAttendance = async () => {
+    if (!selectedEventId) {
+      toast({
+        title: "Error",
+        description: "Por favor seleccione un evento",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Primero creamos el evento para hoy
-      const event = await createEvent({
-        title: `Asistencia ${format(new Date(), "dd/MM/yyyy")}`,
-        date: format(new Date(), "yyyy-MM-dd"),
-        description: "Registro de asistencia",
-      });
-
-      // Luego guardamos la asistencia de cada alumno
       await Promise.all(
         Object.entries(asistencias).map(([studentId, status]) =>
           markAttendance({
             student_id: studentId,
-            event_id: event.id,
+            event_id: selectedEventId,
             status,
           })
         )
@@ -45,7 +53,6 @@ const TomarAsistencia = () => {
         description: "La asistencia ha sido registrada exitosamente",
       });
 
-      // Limpiar el estado
       setAsistencias({});
       
     } catch (error) {
@@ -74,7 +81,20 @@ const TomarAsistencia = () => {
         <CardHeader>
           <CardTitle>Tomar Asistencia - {format(new Date(), "dd/MM/yyyy")}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <Select onValueChange={setSelectedEventId} value={selectedEventId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar evento" />
+            </SelectTrigger>
+            <SelectContent>
+              {events?.map((event) => (
+                <SelectItem key={event.id} value={event.id}>
+                  {event.title} - {format(new Date(event.date), "dd/MM/yyyy")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -114,8 +134,8 @@ const TomarAsistencia = () => {
           </Table>
           <Button 
             onClick={handleSaveAttendance} 
-            className="mt-4"
-            disabled={isLoading || Object.keys(asistencias).length === 0}
+            className="w-full"
+            disabled={isLoading || Object.keys(asistencias).length === 0 || !selectedEventId}
           >
             {isLoading ? "Guardando..." : "Guardar Asistencia"}
           </Button>

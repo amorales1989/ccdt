@@ -76,8 +76,8 @@ export function AppSidebar() {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0">
-            <Sidebar>
+          <SheetContent side="left" className="p-0 w-[80%] max-w-[300px]">
+            <Sidebar className="border-none">
               <SidebarContent>
                 <SidebarGroup>
                   <SidebarGroupLabel>Adolescentes</SidebarGroupLabel>
