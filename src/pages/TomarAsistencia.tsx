@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getStudents, markAttendance, getEvents } from "@/lib/api";
@@ -25,6 +25,22 @@ const TomarAsistencia = () => {
     queryKey: ["events"],
     queryFn: getEvents,
   });
+
+  // Set default event on component mount
+  useEffect(() => {
+    if (events && events.length > 0 && !selectedEventId) {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const todayEvent = events.find(event => 
+        format(new Date(event.date), 'yyyy-MM-dd') === today && 
+        event.title.toLowerCase().includes('reunion')
+      );
+      
+      if (todayEvent) {
+        setSelectedEventId(todayEvent.id);
+        console.log('Selected default event:', todayEvent.title);
+      }
+    }
+  }, [events, selectedEventId]);
 
   const handleSaveAttendance = async () => {
     if (!selectedEventId) {
