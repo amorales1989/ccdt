@@ -19,17 +19,19 @@ const AppContent = () => {
   const isMobile = useIsMobile();
   
   return (
-    <div className="min-h-screen flex w-full">
+    <div className="min-h-screen flex w-full bg-gradient-to-br from-background to-accent/20">
       <AppSidebar />
-      <main className={`flex-1 ${isMobile ? "pt-16" : ""}`}>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/agregar" element={<AgregarAlumno />} />
-          <Route path="/asistencia" element={<TomarAsistencia />} />
-          <Route path="/historial" element={<HistorialAsistencia />} />
-          <Route path="/listar" element={<ListarAlumnos />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+      <main className={`flex-1 ${isMobile ? "pt-16" : ""} p-4`}>
+        <div className="max-w-7xl mx-auto">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/agregar" element={<AgregarAlumno />} />
+            <Route path="/asistencia" element={<TomarAsistencia />} />
+            <Route path="/historial" element={<HistorialAsistencia />} />
+            <Route path="/listar" element={<ListarAlumnos />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
       </main>
     </div>
   );
@@ -38,13 +40,15 @@ const AppContent = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <SidebarProvider>
-          <AppContent />
-        </SidebarProvider>
-      </BrowserRouter>
+      <div className="min-h-screen bg-background">
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <SidebarProvider>
+            <AppContent />
+          </SidebarProvider>
+        </BrowserRouter>
+      </div>
     </TooltipProvider>
   </QueryClientProvider>
 );
