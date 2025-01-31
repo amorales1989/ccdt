@@ -4,6 +4,8 @@ export interface Student {
   age?: number;
   phone?: string;
   address?: string;
+  gender: string;
+  birthdate?: string;
   created_at: string;
   updated_at: string;
 }
