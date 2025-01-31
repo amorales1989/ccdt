@@ -9,29 +9,16 @@ import { getAttendance, getEvents } from "@/lib/api";
 const HistorialAsistencia = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
 
-  // Fetch events for the selected date
-  const { data: events, isLoading: eventsLoading } = useQuery({
-    queryKey: ['events', date ? format(date, 'yyyy-MM-dd') : null],
+  // Fetch attendance for the selected date
+  const { data: attendance, isLoading: attendanceLoading } = useQuery({
+    queryKey: ["attendance", date ? format(date, "yyyy-MM-dd") : null],
     queryFn: async () => {
       if (!date) return [];
-      const allEvents = await getEvents();
-      console.log('Filtering events for date:', format(date, 'yyyy-MM-dd'));
-      return allEvents.filter(event => 
-        event.date === format(date, 'yyyy-MM-dd')
-      );
+      const formattedDate = format(date, "yyyy-MM-dd");
+      console.log("Fetching attendance for date:", formattedDate);
+      return getAttendance(formattedDate);
     },
     enabled: !!date,
-  });
-
-  // Fetch attendance for the first event of the selected date
-  const { data: attendance, isLoading: attendanceLoading } = useQuery({
-    queryKey: ['attendance', events?.[0]?.id],
-    queryFn: async () => {
-      if (!events?.[0]?.id) return [];
-      console.log('Fetching attendance for event:', events[0].id);
-      return getAttendance(events[0].id);
-    },
-    enabled: !!events?.[0]?.id,
   });
 
   return (
@@ -46,7 +33,7 @@ const HistorialAsistencia = () => {
               mode="single"
               selected={date}
               onSelect={(newDate) => {
-                console.log('Date selected:', newDate ? format(newDate, 'yyyy-MM-dd') : 'none');
+                console.log("Date selected:", newDate ? format(newDate, "yyyy-MM-dd") : "none");
                 setDate(newDate);
               }}
               className="rounded-md border"
@@ -57,14 +44,14 @@ const HistorialAsistencia = () => {
         <Card>
           <CardHeader>
             <CardTitle>
-              Asistencia del {date ? format(date, 'dd/MM/yyyy') : ''}
+              Asistencia del {date ? format(date, "dd/MM/yyyy") : ""}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {eventsLoading || attendanceLoading ? (
+            {attendanceLoading ? (
               <p className="text-muted-foreground">Cargando...</p>
-            ) : !events?.length ? (
-              <p className="text-muted-foreground">No hay eventos registrados para esta fecha.</p>
+            ) : !attendance?.length ? (
+              <p className="text-muted-foreground">No hay registros de asistencia para esta fecha.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -74,10 +61,10 @@ const HistorialAsistencia = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attendance?.map((record) => (
+                  {attendance.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell>{record.students?.name}</TableCell>
-                      <TableCell>{record.status ? 'Presente' : 'Ausente'}</TableCell>
+                      <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

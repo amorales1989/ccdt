@@ -4,16 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getStudents, markAttendance, getEvents } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { getStudents, markAttendance } from "@/lib/api";
 import { format } from "date-fns";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TomarAsistencia = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [asistencias, setAsistencias] = useState<Record<string, boolean>>({});
-  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: students, isLoading: isLoadingStudents } = useQuery({
@@ -21,32 +19,11 @@ const TomarAsistencia = () => {
     queryFn: getStudents,
   });
 
-  const { data: events } = useQuery({
-    queryKey: ["events"],
-    queryFn: getEvents,
-  });
-
-  // Set default event on component mount
-  useEffect(() => {
-    if (events && events.length > 0 && !selectedEventId) {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const todayEvent = events.find(event => 
-        format(new Date(event.date), 'yyyy-MM-dd') === today && 
-        event.title.toLowerCase().includes('reunion')
-      );
-      
-      if (todayEvent) {
-        setSelectedEventId(todayEvent.id);
-        console.log('Selected default event:', todayEvent.title);
-      }
-    }
-  }, [events, selectedEventId]);
-
   const handleSaveAttendance = async () => {
-    if (!selectedEventId) {
+    if (!selectedDate) {
       toast({
         title: "Error",
-        description: "Por favor seleccione un evento",
+        description: "Por favor seleccione una fecha",
         variant: "destructive",
       });
       return;
@@ -58,7 +35,7 @@ const TomarAsistencia = () => {
         Object.entries(asistencias).map(([studentId, status]) =>
           markAttendance({
             student_id: studentId,
-            event_id: selectedEventId,
+            date: selectedDate,
             status,
           })
         )
@@ -70,7 +47,6 @@ const TomarAsistencia = () => {
       });
 
       setAsistencias({});
-      
     } catch (error) {
       console.error("Error al guardar asistencia:", error);
       toast({
@@ -95,22 +71,15 @@ const TomarAsistencia = () => {
     <div className="p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Tomar Asistencia - {format(new Date(), "dd/MM/yyyy")}</CardTitle>
+          <CardTitle>Tomar Asistencia</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Select onValueChange={setSelectedEventId} value={selectedEventId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar evento" />
-            </SelectTrigger>
-            <SelectContent>
-              {events?.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.title} - {format(new Date(event.date), "dd/MM/yyyy")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="border p-2 rounded w-full"
+          />
           <Table>
             <TableHeader>
               <TableRow>
@@ -151,7 +120,7 @@ const TomarAsistencia = () => {
           <Button 
             onClick={handleSaveAttendance} 
             className="w-full"
-            disabled={isLoading || Object.keys(asistencias).length === 0 || !selectedEventId}
+            disabled={isLoading || Object.keys(asistencias).length === 0 || !selectedDate}
           >
             {isLoading ? "Guardando..." : "Guardar Asistencia"}
           </Button>

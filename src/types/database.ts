@@ -22,7 +22,8 @@ export interface Event {
 export interface Attendance {
   id: string;
   student_id: string;
-  event_id: string;
+  event_id?: string;
+  date: string;
   status: boolean;
   created_at: string;
 }
