@@ -79,6 +79,7 @@ export type Database = {
         Row: {
           address: string | null
           age: number | null
+          birthdate: string | null
           created_at: string
           gender: string
           id: string
@@ -89,6 +90,7 @@ export type Database = {
         Insert: {
           address?: string | null
           age?: number | null
+          birthdate?: string | null
           created_at?: string
           gender?: string
           id?: string
@@ -99,6 +101,7 @@ export type Database = {
         Update: {
           address?: string | null
           age?: number | null
+          birthdate?: string | null
           created_at?: string
           gender?: string
           id?: string

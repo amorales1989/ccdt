@@ -2,10 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { createStudent } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 
 const AgregarAlumno = () => {
   const { toast } = useToast();
@@ -16,6 +18,8 @@ const AgregarAlumno = () => {
     age: "",
     phone: "",
     address: "",
+    gender: "masculino",
+    birthdate: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,6 +31,8 @@ const AgregarAlumno = () => {
         age: formData.age ? parseInt(formData.age) : null,
         phone: formData.phone || null,
         address: formData.address || null,
+        gender: formData.gender,
+        birthdate: formData.birthdate || null,
       });
       
       toast({
@@ -66,13 +72,33 @@ const AgregarAlumno = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="age">Edad</Label>
+              <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
               <Input
-                id="age"
-                type="number"
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                id="birthdate"
+                type="date"
+                value={formData.birthdate}
+                onChange={(e) =>
+                  setFormData({ ...formData, birthdate: e.target.value })
+                }
+                required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gender">Género</Label>
+              <Select
+                value={formData.gender}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, gender: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar género" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="masculino">Masculino</SelectItem>
+                  <SelectItem value="femenino">Femenino</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Teléfono</Label>
