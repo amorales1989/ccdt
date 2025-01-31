@@ -12,6 +12,7 @@ export type Database = {
       attendance: {
         Row: {
           created_at: string
+          date: string | null
           event_id: string | null
           id: string
           status: boolean
@@ -19,6 +20,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          date?: string | null
           event_id?: string | null
           id?: string
           status?: boolean
@@ -26,19 +28,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          date?: string | null
           event_id?: string | null
           id?: string
           status?: boolean
           student_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "attendance_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "attendance_student_id_fkey"
             columns: ["student_id"]

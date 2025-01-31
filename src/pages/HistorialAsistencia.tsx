@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { getAttendance, getEvents } from "@/lib/api";
+import { getAttendance } from "@/lib/api";
 
 const HistorialAsistencia = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());

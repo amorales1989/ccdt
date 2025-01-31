@@ -110,7 +110,8 @@ export const deleteEvent = async (id: string) => {
 };
 
 // Attendance API
-export const getAttendance = async (eventId: string) => {
+export const getAttendance = async (date: string) => {
+  console.log('Fetching attendance for date:', date);
   const { data, error } = await supabase
     .from("attendance")
     .select(`
@@ -120,9 +121,12 @@ export const getAttendance = async (eventId: string) => {
         name
       )
     `)
-    .eq("event_id", eventId);
+    .eq("date", date);
   
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching attendance:', error);
+    throw error;
+  }
   return data;
 };
 
