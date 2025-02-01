@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2 } from "lucide-react";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -85,6 +85,15 @@ const NavigationMenu = () => {
 
   return (
     <SidebarMenu>
+      <SidebarMenuItem className="mb-4">
+        <div className="flex items-center gap-2 p-2 rounded-md bg-accent/30">
+          <UserRound className="h-5 w-5" />
+          <div className="flex flex-col">
+            <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
+            <span className="text-sm text-muted-foreground capitalize">{profile?.role}</span>
+          </div>
+        </div>
+      </SidebarMenuItem>
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton
