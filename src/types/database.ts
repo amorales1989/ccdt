@@ -1,11 +1,11 @@
 export interface Student {
   id: string;
   name: string;
-  age?: number;
   phone?: string;
   address?: string;
   gender: string;
   birthdate?: string;
+  department?: "niños" | "adolescentes" | "jovenes" | "adultos";
   created_at: string;
   updated_at: string;
 }

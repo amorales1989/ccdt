@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 type Profile = {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  role: "admin" | "lider" | "director" | "maestro" | "secretaria";
+  role: Database["public"]["Enums"]["app_role"];
+  departments: Database["public"]["Enums"]["department_type"][] | null;
 };
 
 type AuthContextType = {
