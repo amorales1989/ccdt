@@ -42,7 +42,9 @@ export default function Auth() {
       // Handle specific error cases
       let errorMessage = "Ha ocurrido un error";
       
-      if (error.message.includes("email_not_confirmed")) {
+      if (error.message.includes("email_provider_disabled")) {
+        errorMessage = "El inicio de sesión por correo electrónico está deshabilitado. Por favor contacte al administrador.";
+      } else if (error.message.includes("email_not_confirmed")) {
         errorMessage = "Por favor confirma tu correo electrónico antes de iniciar sesión";
       } else if (error.message.includes("Invalid login credentials")) {
         errorMessage = "Credenciales inválidas";
