@@ -73,18 +73,21 @@ export type Database = {
       }
       profiles: {
         Row: {
+          departments: Database["public"]["Enums"]["department_type"][] | null
           first_name: string | null
           id: string
           last_name: string | null
           role: Database["public"]["Enums"]["app_role"]
         }
         Insert: {
+          departments?: Database["public"]["Enums"]["department_type"][] | null
           first_name?: string | null
           id: string
           last_name?: string | null
           role?: Database["public"]["Enums"]["app_role"]
         }
         Update: {
+          departments?: Database["public"]["Enums"]["department_type"][] | null
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -97,6 +100,7 @@ export type Database = {
           address: string | null
           birthdate: string | null
           created_at: string
+          department: Database["public"]["Enums"]["department_type"] | null
           gender: string
           id: string
           name: string
@@ -107,6 +111,7 @@ export type Database = {
           address?: string | null
           birthdate?: string | null
           created_at?: string
+          department?: Database["public"]["Enums"]["department_type"] | null
           gender?: string
           id?: string
           name: string
@@ -117,6 +122,7 @@ export type Database = {
           address?: string | null
           birthdate?: string | null
           created_at?: string
+          department?: Database["public"]["Enums"]["department_type"] | null
           gender?: string
           id?: string
           name?: string
@@ -134,6 +140,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "lider" | "director" | "maestro" | "secretaria"
+      department_type: "niños" | "adolescentes" | "jovenes" | "adultos"
     }
     CompositeTypes: {
       [_ in never]: never

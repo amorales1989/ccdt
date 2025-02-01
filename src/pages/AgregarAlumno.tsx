@@ -7,7 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { createStudent } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
 
 const AgregarAlumno = () => {
   const { toast } = useToast();
@@ -15,7 +14,6 @@ const AgregarAlumno = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    age: "",
     phone: "",
     address: "",
     gender: "masculino",
@@ -28,7 +26,6 @@ const AgregarAlumno = () => {
     try {
       await createStudent({
         name: formData.name,
-        age: formData.age ? parseInt(formData.age) : null,
         phone: formData.phone || null,
         address: formData.address || null,
         gender: formData.gender,
