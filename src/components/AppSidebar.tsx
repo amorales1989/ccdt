@@ -10,41 +10,72 @@ import {
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ClipboardList, History, Home, Menu } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
-const items = [
-  {
-    title: "Inicio",
-    url: "/",
-    icon: Home,
-  },
-  {
-    title: "Lista de Alumnos",
-    url: "/listar",
-    icon: Users,
-  },
-  {
-    title: "Agregar Alumno",
-    url: "/agregar",
-    icon: UserPlus,
-  },
-  {
-    title: "Tomar Asistencia",
-    url: "/asistencia",
-    icon: ClipboardList,
-  },
-  {
-    title: "Historial",
-    url: "/historial",
-    icon: History,
-  },
-];
+const getItems = (role: string | undefined) => {
+  const baseItems = [
+    {
+      title: "Inicio",
+      url: "/",
+      icon: Home,
+    },
+    {
+      title: "Lista de Alumnos",
+      url: "/listar",
+      icon: Users,
+    },
+    {
+      title: "Agregar Alumno",
+      url: "/agregar",
+      icon: UserPlus,
+    },
+    {
+      title: "Tomar Asistencia",
+      url: "/asistencia",
+      icon: ClipboardList,
+    },
+    {
+      title: "Historial",
+      url: "/historial",
+      icon: History,
+    },
+  ];
+
+  if (role === "admin" || role === "secretaria") {
+    baseItems.push({
+      title: "Secretaría",
+      url: "/secretaria",
+      icon: FileText,
+    });
+  }
+
+  return baseItems;
+};
 
 const NavigationMenu = () => {
   const location = useLocation();
+  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const items = getItems(profile?.role);
   
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/auth");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <SidebarMenu>
       {items.map((item) => (
@@ -60,12 +91,26 @@ const NavigationMenu = () => {
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          onClick={handleSignOut}
+          className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/50 w-full"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="font-medium">Cerrar Sesión</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
     </SidebarMenu>
   );
 };
 
 export function AppSidebar() {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+
+  if (!user) {
+    return null;
+  }
 
   if (isMobile) {
     return (
