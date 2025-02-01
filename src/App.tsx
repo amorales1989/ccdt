@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Register from "./pages/Register";
 import AgregarAlumno from "./pages/AgregarAlumno";
 import TomarAsistencia from "./pages/TomarAsistencia";
 import HistorialAsistencia from "./pages/HistorialAsistencia";
@@ -46,6 +47,14 @@ const AppContent = () => {
         <div className="max-w-7xl mx-auto">
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/register"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "secretaria"]}>
+                  <Register />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/"
               element={

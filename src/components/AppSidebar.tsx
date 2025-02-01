@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut } from "lucide-react";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,11 +46,18 @@ const getItems = (role: string | undefined) => {
   ];
 
   if (role === "admin" || role === "secretaria") {
-    baseItems.push({
-      title: "Secretaría",
-      url: "/secretaria",
-      icon: FileText,
-    });
+    baseItems.push(
+      {
+        title: "Secretaría",
+        url: "/secretaria",
+        icon: FileText,
+      },
+      {
+        title: "Registrar Usuario",
+        url: "/register",
+        icon: UserPlus2,
+      }
+    );
   }
 
   return baseItems;
