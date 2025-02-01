@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { createStudent } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { Student } from "@/types/database";
 
 const AgregarAlumno = () => {
   const { toast } = useToast();
@@ -21,13 +21,13 @@ const AgregarAlumno = () => {
     address: "",
     gender: "masculino",
     birthdate: "",
-    department: "",
+    department: "" as Student["department"],
   });
 
   useEffect(() => {
     // Set default department if user only has one department
     if (profile?.departments && profile.departments.length === 1) {
-      setFormData(prev => ({ ...prev, department: profile.departments[0] }));
+      setFormData(prev => ({ ...prev, department: profile.departments[0] as Student["department"] }));
     }
   }, [profile]);
 
@@ -135,9 +135,9 @@ const AgregarAlumno = () => {
             <div className="space-y-2">
               <Label htmlFor="department">Departamento</Label>
               <Select
-                value={formData.department}
+                value={formData.department || ""}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, department: value })
+                  setFormData({ ...formData, department: value as Student["department"] })
                 }
                 required
               >
