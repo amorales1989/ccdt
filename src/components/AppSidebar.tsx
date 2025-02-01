@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound } from "lucide-react";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -92,12 +92,26 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   return (
     <SidebarMenu>
       <SidebarMenuItem className="mb-4">
-        <div className="flex items-center gap-2 p-2 rounded-md bg-accent/30">
-          <UserRound className="h-5 w-5" />
-          <div className="flex flex-col">
-            <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
-            <span className="text-sm text-muted-foreground capitalize">{profile?.role}</span>
+        <div className="flex flex-col gap-2 p-2 rounded-md bg-accent/30">
+          <div className="flex items-center gap-2">
+            <UserRound className="h-5 w-5" />
+            <div className="flex flex-col">
+              <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
+              <span className="text-sm text-muted-foreground capitalize">{profile?.role}</span>
+            </div>
           </div>
+          {profile?.departments && profile.departments.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+              <FolderIcon className="h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-wrap gap-1">
+                {profile.departments.map((dept) => (
+                  <span key={dept} className="text-xs bg-accent px-2 py-0.5 rounded-full capitalize">
+                    {dept}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </SidebarMenuItem>
       {items.map((item) => (
