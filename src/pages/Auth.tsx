@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Auth() {
@@ -53,12 +51,6 @@ export default function Auth() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                Si no tienes una cuenta, por favor contacta al director o líder de tu área para solicitar acceso.
-              </AlertDescription>
-            </Alert>
             <div className="space-y-2">
               <Label htmlFor="email">Correo Electrónico</Label>
               <Input
@@ -80,10 +72,13 @@ export default function Auth() {
               />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full">
               Iniciar Sesión
             </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              *Si no tienes una cuenta, por favor contacta al director o líder de tu área para solicitar acceso.
+            </p>
           </CardFooter>
         </form>
       </Card>

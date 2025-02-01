@@ -63,7 +63,7 @@ const getItems = (role: string | undefined) => {
   return baseItems;
 };
 
-const NavigationMenu = () => {
+const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -74,6 +74,7 @@ const NavigationMenu = () => {
     try {
       await signOut();
       navigate("/auth");
+      onItemClick?.();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -81,6 +82,10 @@ const NavigationMenu = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleItemClick = () => {
+    onItemClick?.();
   };
 
   return (
@@ -99,6 +104,7 @@ const NavigationMenu = () => {
           <SidebarMenuButton
             asChild
             className={location.pathname === item.url ? "bg-accent" : ""}
+            onClick={handleItemClick}
           >
             <Link to={item.url} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/50">
               <item.icon className="h-5 w-5" />
@@ -123,6 +129,7 @@ const NavigationMenu = () => {
 export function AppSidebar() {
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const [isOpen, setIsOpen] = React.useState(false);
 
   if (!user) {
     return null;
@@ -131,7 +138,7 @@ export function AppSidebar() {
   if (isMobile) {
     return (
       <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-        <Sheet>
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="hover:bg-accent/50">
               <Menu className="h-5 w-5" />
@@ -144,7 +151,7 @@ export function AppSidebar() {
                 <h2 className="text-lg font-semibold">Menú</h2>
               </div>
               <nav className="p-2">
-                <NavigationMenu />
+                <NavigationMenu onItemClick={() => setIsOpen(false)} />
               </nav>
             </div>
           </SheetContent>

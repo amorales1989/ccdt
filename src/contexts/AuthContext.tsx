@@ -20,10 +20,40 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastActivity, setLastActivity] = useState(Date.now());
+
+  useEffect(() => {
+    const handleActivity = () => {
+      setLastActivity(Date.now());
+    };
+
+    // Add event listeners for user activity
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+
+    const checkInactivity = setInterval(() => {
+      if (user && Date.now() - lastActivity > INACTIVITY_TIMEOUT) {
+        console.log('User inactive for 10 minutes, logging out...');
+        signOut();
+      }
+    }, 60000); // Check every minute
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      clearInterval(checkInactivity);
+    };
+  }, [user, lastActivity]);
 
   useEffect(() => {
     // Check active sessions and get user profile
@@ -69,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
     });
     if (error) throw error;
+    setLastActivity(Date.now());
   }
 
   async function signUp(email: string, password: string, userData: { first_name: string; last_name: string; role: Profile["role"] }) {
