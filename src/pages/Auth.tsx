@@ -69,6 +69,16 @@ export default function Auth() {
     navigate("/");
   };
 
+  const getDepartmentLabel = (dept: string) => {
+    const labels: Record<string, string> = {
+      'niños': 'Niños',
+      'adolescentes': 'Adolescentes',
+      'jovenes': 'Jóvenes',
+      'adultos': 'Adultos'
+    };
+    return labels[dept] || dept;
+  };
+
   if (showDepartmentSelect) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
@@ -76,22 +86,25 @@ export default function Auth() {
           <CardHeader>
             <CardTitle>Seleccionar Departamento</CardTitle>
             <CardDescription>
-              Selecciona el departamento con el que deseas ingresar
+              Selecciona el departamento con el que deseas trabajar
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Select onValueChange={handleDepartmentSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {userDepartments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>
-                    {dept.charAt(0).toUpperCase() + dept.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-4">
+              <Label>Departamento</Label>
+              <Select onValueChange={handleDepartmentSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {userDepartments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {getDepartmentLabel(dept)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
       </div>
