@@ -23,11 +23,21 @@ export default function Auth() {
     e.preventDefault();
     try {
       await signIn(email, password);
-      // After successful login, check if user has departments
-      if (profile?.departments && profile.departments.length > 0) {
+      console.log("Login successful, checking departments:", profile?.departments);
+      
+      // After successful login, check if user has multiple departments
+      if (profile?.departments && profile.departments.length > 1) {
+        console.log("User has multiple departments, showing selector");
         setUserDepartments(profile.departments);
         setShowDepartmentSelect(true);
+      } else if (profile?.departments && profile.departments.length === 1) {
+        // If user has exactly one department, use it automatically
+        console.log("User has one department, using it automatically:", profile.departments[0]);
+        localStorage.setItem('selectedDepartment', profile.departments[0]);
+        navigate("/");
       } else {
+        // If user has no departments, just navigate
+        console.log("User has no departments, proceeding to main page");
         navigate("/");
       }
     } catch (error: any) {
@@ -52,6 +62,7 @@ export default function Auth() {
   };
 
   const handleDepartmentSelect = (value: string) => {
+    console.log("Department selected:", value);
     setSelectedDepartment(value as Database["public"]["Enums"]["department_type"]);
     // Store selected department in localStorage
     localStorage.setItem('selectedDepartment', value);
