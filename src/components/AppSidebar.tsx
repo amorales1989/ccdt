@@ -70,9 +70,11 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const items = getItems(profile?.role);
+  const selectedDepartment = localStorage.getItem('selectedDepartment');
   
   const handleSignOut = async () => {
     try {
+      localStorage.removeItem('selectedDepartment'); // Clear selected department on logout
       await signOut();
       navigate("/auth");
       onItemClick?.();
@@ -97,7 +99,14 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
             <UserRound className="h-5 w-5" />
             <div className="flex flex-col">
               <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
-              <span className="text-sm text-muted-foreground capitalize">{profile?.role}</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-sm text-muted-foreground capitalize">{profile?.role}</span>
+                {selectedDepartment && (
+                  <span className="text-sm text-muted-foreground capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
+                    {selectedDepartment}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           {profile?.departments && profile.departments.length > 0 && (
