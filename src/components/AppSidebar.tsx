@@ -66,7 +66,7 @@ const getItems = (role: string | undefined) => {
 
 const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  const { profile, session, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const items = getItems(profile?.role);
@@ -74,11 +74,17 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   
   const handleSignOut = async () => {
     try {
-      localStorage.removeItem('selectedDepartment'); // Clear selected department on logout
+      if (!session) {
+        console.log("No active session, redirecting to auth page");
+        navigate("/auth");
+        return;
+      }
+      
       await signOut();
       navigate("/auth");
       onItemClick?.();
     } catch (error: any) {
+      console.error("Sign out error:", error);
       toast({
         title: "Error",
         description: error.message,

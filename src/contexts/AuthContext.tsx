@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import type { User, Session } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = {
@@ -15,6 +15,7 @@ type AuthContextType = {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  session: Session | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, userData: { 
     first_name: string; 
@@ -31,6 +32,7 @@ const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastActivity, setLastActivity] = useState(Date.now());
@@ -62,17 +64,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, lastActivity]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        getProfile(session.user.id);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("Initial session check:", currentSession);
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      if (currentSession?.user) {
+        getProfile(currentSession.user.id);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        getProfile(session.user.id);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      console.log("Auth state changed:", _event, currentSession);
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      if (currentSession?.user) {
+        getProfile(currentSession.user.id);
       } else {
         setProfile(null);
       }
@@ -118,7 +124,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }) {
     console.log("Attempting sign up with data:", { email, ...userData });
     
-    // Ensure departments is properly formatted as an array of department_type
     const formattedDepartments = userData.departments?.map(dept => 
       dept as Database["public"]["Enums"]["department_type"]
     ) || [];
@@ -140,12 +145,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
+    console.log("Attempting to sign out. Current session:", session);
+    if (!session) {
+      console.log("No active session found, skipping sign out");
+      return;
+    }
+    
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (error) {
+      console.error("Sign out error:", error);
+      throw error;
+    }
+    
+    // Clear local storage
+    localStorage.removeItem('selectedDepartment');
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
