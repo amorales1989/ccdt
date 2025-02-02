@@ -40,7 +40,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLastActivity(Date.now());
     };
 
-    // Add event listeners for user activity
     window.addEventListener('mousemove', handleActivity);
     window.addEventListener('keydown', handleActivity);
     window.addEventListener('click', handleActivity);
@@ -63,7 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, lastActivity]);
 
   useEffect(() => {
-    // Check active sessions and get user profile
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -85,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function getProfile(userId: string) {
     try {
+      console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -92,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) throw error;
+      console.log("Profile data:", data);
       setProfile(data);
     } catch (error) {
       console.error("Error loading user profile:", error);
@@ -101,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signIn(email: string, password: string) {
+    console.log("Attempting sign in for:", email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -115,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role: Profile["role"];
     departments: Profile["departments"];
   }) {
+    console.log("Attempting sign up with data:", { email, ...userData });
     const { error } = await supabase.auth.signUp({
       email,
       password,

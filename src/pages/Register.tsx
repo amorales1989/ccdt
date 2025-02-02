@@ -31,6 +31,8 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Submitting registration with departments:", departments);
+    
     if (departments.length === 0) {
       toast({
         title: "Error",
@@ -44,9 +46,10 @@ export default function Register() {
       await signUp(email, password, {
         first_name: firstName,
         last_name: lastName,
-        role: role as "admin" | "lider" | "director" | "maestro" | "secretaria",
+        role: role as Database["public"]["Enums"]["app_role"],
         departments: departments,
       });
+      
       toast({
         title: "Registro exitoso",
         description: "El usuario ha sido registrado exitosamente.",
@@ -146,12 +149,17 @@ export default function Register() {
                     type="button"
                     variant={departments.includes(dept) ? "default" : "outline"}
                     onClick={() => handleDepartmentChange(dept)}
-                    className="w-full"
+                    className="w-full capitalize"
                   >
-                    {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                    {dept}
                   </Button>
                 ))}
               </div>
+              {departments.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Departamentos seleccionados: {departments.map(d => d).join(", ")}
+                </p>
+              )}
             </div>
           </CardContent>
           <CardFooter>
