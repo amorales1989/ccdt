@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -15,36 +15,42 @@ export default function Auth() {
   const [showDepartmentSelect, setShowDepartmentSelect] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<Database["public"]["Enums"]["department_type"] | null>(null);
   const [userDepartments, setUserDepartments] = useState<Database["public"]["Enums"]["department_type"][]>([]);
-  const { signIn, profile } = useAuth();
+  const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // useEffect para verificar cuando el perfil se haya cargado completamente
+  useEffect(() => {
+    if (profile) {
+      console.log("Perfil cargado correctamente:", profile);
+      if (profile.departments && profile.departments.length > 1) {
+        setUserDepartments(profile.departments);
+        setShowDepartmentSelect(true); // Mostrar selector si tiene más de un departamento
+      } else if (profile.departments && profile.departments.length === 1) {
+        const dept = profile.departments[0];
+        localStorage.setItem('selectedDepartment', dept);
+        navigate("/"); // Si solo tiene un departamento, proceder al login automáticamente
+      } else {
+        navigate("/"); // Si no tiene departamentos, también procede al login
+      }
+    }
+  }, [profile, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signIn(email, password);
-      console.log("Login successful, checking departments:", profile?.departments);
-      
-      // After successful login, check if user has multiple departments
+      await signIn(email, password); // Intentar iniciar sesión
+
+      // Si el perfil tiene más de un departamento, no debemos continuar hasta que se seleccione uno
       if (profile?.departments && profile.departments.length > 1) {
-        console.log("User has multiple departments, showing selector");
-        setUserDepartments(profile.departments);
-        setShowDepartmentSelect(true);
-      } else if (profile?.departments && profile.departments.length === 1) {
-        // If user has exactly one department, use it automatically
-        console.log("User has one department, using it automatically:", profile.departments[0]);
-        localStorage.setItem('selectedDepartment', profile.departments[0]);
-        navigate("/");
-      } else {
-        // If user has no departments, just navigate
-        console.log("User has no departments, proceeding to main page");
-        navigate("/");
+        return; // No continuamos con el inicio de sesión si tiene más de un departamento
       }
+
+      console.log("Login exitoso, verificando departamentos:", profile?.departments);
     } catch (error: any) {
-      console.error("Auth error:", error);
-      
+      console.error("Error de autenticación:", error);
       let errorMessage = "Ha ocurrido un error";
-      
+
       if (error.message.includes("email_provider_disabled")) {
         errorMessage = "El inicio de sesión por correo electrónico está deshabilitado. Por favor contacte al administrador.";
       } else if (error.message.includes("email_not_confirmed")) {
@@ -52,7 +58,7 @@ export default function Auth() {
       } else if (error.message.includes("Invalid login credentials")) {
         errorMessage = "Credenciales inválidas";
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -62,11 +68,11 @@ export default function Auth() {
   };
 
   const handleDepartmentSelect = (value: string) => {
-    console.log("Department selected:", value);
+    console.log("Departamento seleccionado:", value);
     setSelectedDepartment(value as Database["public"]["Enums"]["department_type"]);
-    // Store selected department in localStorage
+    // Guardamos el departamento seleccionado en el almacenamiento local
     localStorage.setItem('selectedDepartment', value);
-    navigate("/");
+    navigate("/"); // Procedemos al login después de seleccionar el departamento
   };
 
   const getDepartmentLabel = (dept: string) => {
@@ -79,6 +85,7 @@ export default function Auth() {
     return labels[dept] || dept;
   };
 
+  // Mostrar la vista del selector de departamento si el usuario tiene más de uno
   if (showDepartmentSelect) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
@@ -111,6 +118,7 @@ export default function Auth() {
     );
   }
 
+  // Vista de inicio de sesión cuando no hay que seleccionar departamento
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
       <Card className="w-full max-w-md">
