@@ -117,14 +117,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     departments: Profile["departments"];
   }) {
     console.log("Attempting sign up with data:", { email, ...userData });
+    
+    // Ensure departments is properly formatted as an array of department_type
+    const formattedDepartments = userData.departments?.map(dept => 
+      dept as Database["public"]["Enums"]["department_type"]
+    ) || [];
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: userData,
+        data: {
+          ...userData,
+          departments: formattedDepartments
+        },
       },
     });
-    if (error) throw error;
+    if (error) {
+      console.error("Signup error:", error);
+      throw error;
+    }
   }
 
   async function signOut() {
