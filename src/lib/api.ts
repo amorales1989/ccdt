@@ -131,15 +131,33 @@ export const getAttendance = async (date: string) => {
 };
 
 export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at">) => {
+  console.log('Marking attendance with data:', attendance);
+  
+  // Ensure all required fields are present
+  if (!attendance.student_id || !attendance.date) {
+    throw new Error('Missing required fields for attendance');
+  }
+
   const { data, error } = await supabase
     .from("attendance")
-    .upsert([attendance], {
-      onConflict: 'student_id,event_id'
-    })
+    .upsert([
+      {
+        student_id: attendance.student_id,
+        date: attendance.date,
+        status: attendance.status,
+        // event_id is optional in the schema
+        ...(attendance.event_id && { event_id: attendance.event_id })
+      }
+    ])
     .select()
     .single();
   
-  if (error) throw error;
+  if (error) {
+    console.error('Error marking attendance:', error);
+    throw error;
+  }
+  
+  console.log('Successfully marked attendance:', data);
   return data;
 };
 
