@@ -31,7 +31,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   }
 
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
-    return <Navigate to="/" />;
+    return <Navigate to="/dashboard" />;
   }
 
   return <>{children}</>;
@@ -39,6 +39,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
 
 const AppContent = () => {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   
   return (
     <div className="min-h-screen flex w-full bg-gradient-to-br from-background to-accent/20">
@@ -46,8 +47,14 @@ const AppContent = () => {
       <main className={`flex-1 ${isMobile ? "pt-16" : ""} p-4`}>
         <div className="max-w-7xl mx-auto">
           <Routes>
-            <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="/auth" element={<Auth />} />
+            <Route 
+              path="/" 
+              element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} 
+            />
+            <Route 
+              path="/auth" 
+              element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
+            />
             <Route
               path="/register"
               element={
