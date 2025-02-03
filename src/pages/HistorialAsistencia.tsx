@@ -13,7 +13,7 @@ import * as XLSX from 'xlsx';
 const HistorialAsistencia = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
 
   // Fetch attendance for the selected date range
   const { data: attendance = [], isLoading: attendanceLoading } = useQuery({
@@ -23,7 +23,7 @@ const HistorialAsistencia = () => {
       const formattedStartDate = format(startDate, "yyyy-MM-dd");
       const formattedEndDate = format(endDate, "yyyy-MM-dd");
       console.log("Fetching attendance for date range:", formattedStartDate, "to", formattedEndDate, "department:", selectedDepartment);
-      return getAttendance(formattedStartDate, formattedEndDate, selectedDepartment);
+      return getAttendance(formattedStartDate, formattedEndDate, selectedDepartment === "all" ? "" : selectedDepartment);
     },
     enabled: !!startDate && !!endDate,
   });
@@ -57,7 +57,7 @@ const HistorialAsistencia = () => {
                     <SelectValue placeholder="Seleccionar departamento" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="niños">Niños</SelectItem>
                     <SelectItem value="adolescentes">Adolescentes</SelectItem>
                     <SelectItem value="jovenes">Jóvenes</SelectItem>
