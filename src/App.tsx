@@ -104,7 +104,7 @@ const AppContent = () => {
               path="/listar"
               element={
                 <ProtectedRoute>
-                  <ListarAlumno />
+                  <ListarAlumnos />
                 </ProtectedRoute>
               }
             />
