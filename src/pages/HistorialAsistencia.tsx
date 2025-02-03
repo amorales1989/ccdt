@@ -32,7 +32,8 @@ const HistorialAsistencia = () => {
     const data = attendance.map(record => ({
       Nombre: record.students?.name,
       Estado: record.status ? "Presente" : "Ausente",
-      Fecha: new Date(record.date).toLocaleDateString()
+      Fecha: new Date(record.date).toLocaleDateString(),
+      Departamento: record.students?.department
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -109,6 +110,7 @@ const HistorialAsistencia = () => {
                     <TableHead>Nombre</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Fecha</TableHead>
+                    <TableHead>Departamento</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -117,6 +119,7 @@ const HistorialAsistencia = () => {
                       <TableCell>{record.students?.name}</TableCell>
                       <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
                       <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="capitalize">{record.students?.department}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Download } from "lucide-react";
+import { Plus, Edit2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { EventForm } from "@/components/EventForm";
@@ -111,7 +111,7 @@ const Index = () => {
           <CardTitle>Estadísticas de Alumnos</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {departments.map(dept => {
               const deptStudents = students.filter(s => s.department === dept);
               const maleStudents = deptStudents.filter(s => s.gender === "masculino");
