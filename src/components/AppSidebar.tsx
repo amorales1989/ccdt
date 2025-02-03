@@ -97,6 +97,27 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
     onItemClick?.();
   };
 
+  // Si el usuario tiene múltiples departamentos y no ha seleccionado uno, mostrar mensaje
+  if (profile?.departments && profile.departments.length > 1 && !selectedDepartment) {
+    return (
+      <div className="p-4 text-center">
+        <div className="flex flex-col gap-2 p-4 rounded-md bg-accent/30">
+          <UserRound className="h-8 w-8 mx-auto text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Por favor selecciona un departamento en la página de inicio de sesión para acceder al menú
+          </p>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/auth")}
+            className="mt-2"
+          >
+            Seleccionar Departamento
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem className="mb-4">
