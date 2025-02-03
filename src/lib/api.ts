@@ -110,23 +110,36 @@ export const deleteEvent = async (id: string) => {
 };
 
 // Attendance API
-export const getAttendance = async (date: string) => {
-  console.log('Fetching attendance for date:', date);
-  const { data, error } = await supabase
+export const getAttendance = async (startDate?: string, endDate?: string, department?: string) => {
+  console.log('Fetching attendance with params:', { startDate, endDate, department });
+  
+  let query = supabase
     .from("attendance")
     .select(`
       *,
       students (
         id,
-        name
+        name,
+        department
       )
-    `)
-    .eq("date", date);
+    `);
+
+  if (startDate && endDate) {
+    query = query.gte('date', startDate).lte('date', endDate);
+  }
+
+  const { data, error } = await query;
   
   if (error) {
     console.error('Error fetching attendance:', error);
     throw error;
   }
+
+  // Filter by department if specified
+  if (department && data) {
+    return data.filter(record => record.students?.department === department);
+  }
+
   return data;
 };
 

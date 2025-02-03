@@ -46,6 +46,7 @@ const AppContent = () => {
       <main className={`flex-1 ${isMobile ? "pt-16" : ""} p-4`}>
         <div className="max-w-7xl mx-auto">
           <Routes>
+            <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="/auth" element={<Auth />} />
             <Route
               path="/register"
@@ -56,7 +57,7 @@ const AppContent = () => {
               }
             />
             <Route
-              path="/"
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Index />

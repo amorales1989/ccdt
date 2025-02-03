@@ -1,22 +1,30 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getEvents, createEvent, updateEvent, deleteEvent } from "@/lib/api";
+import { getEvents, createEvent, updateEvent, deleteEvent, getStudents } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Event } from "@/types/database";
 
 const Index = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
   // Fetch events
-  const { data: events = [], isLoading } = useQuery({
+  const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
     queryFn: getEvents
+  });
+
+  // Fetch students for statistics
+  const { data: students = [], isLoading: studentsLoading } = useQuery({
+    queryKey: ['students'],
+    queryFn: getStudents
   });
 
   // Create event mutation
@@ -92,16 +100,51 @@ const Index = () => {
     deleteEventMutation.mutate(id);
   };
 
-  if (isLoading) {
+  const departments = ["niños", "adolescentes", "jovenes", "adultos"];
+
+  const renderStudentStats = () => {
+    if (!["admin", "secretaria"].includes(profile?.role || "")) return null;
+
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Estadísticas de Alumnos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            {departments.map(dept => {
+              const deptStudents = students.filter(s => s.department === dept);
+              const maleStudents = deptStudents.filter(s => s.gender === "masculino");
+              const femaleStudents = deptStudents.filter(s => s.gender === "femenino");
+
+              return (
+                <Card key={dept} className="p-4">
+                  <h3 className="font-semibold text-lg capitalize mb-2">{dept}</h3>
+                  <div className="space-y-2">
+                    <p>Varones: {maleStudents.length}</p>
+                    <p>Mujeres: {femaleStudents.length}</p>
+                    <p className="font-semibold">Total: {deptStudents.length}</p>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  if (eventsLoading || studentsLoading) {
     return (
       <div className="p-6 flex justify-center items-center">
-        <p>Cargando eventos...</p>
+        <p>Cargando...</p>
       </div>
     );
   }
 
   return (
     <div className="p-6 min-h-screen" style={{ background: "linear-gradient(109.6deg, rgba(223,234,247,1) 11.2%, rgba(244,248,252,1) 91.1%)" }}>
+      {renderStudentStats()}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Próximos Eventos</CardTitle>
