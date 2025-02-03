@@ -39,17 +39,22 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
 
 const AppContent = () => {
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   
+  // If still loading, show loading state
+  if (loading) {
+    return <div>Cargando...</div>;
+  }
+
   return (
     <div className="min-h-screen flex w-full bg-gradient-to-br from-background to-accent/20">
-      <AppSidebar />
-      <main className={`flex-1 ${isMobile ? "pt-16" : ""} p-4`}>
+      {user && <AppSidebar />}
+      <main className={`flex-1 ${isMobile && user ? "pt-16" : ""} p-4`}>
         <div className="max-w-7xl mx-auto">
           <Routes>
             <Route 
               path="/" 
-              element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} 
+              element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} 
             />
             <Route 
               path="/auth" 
@@ -99,7 +104,7 @@ const AppContent = () => {
               path="/listar"
               element={
                 <ProtectedRoute>
-                  <ListarAlumnos />
+                  <ListarAlumno />
                 </ProtectedRoute>
               }
             />
