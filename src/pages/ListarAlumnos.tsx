@@ -1,12 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { getStudents } from "@/lib/api";
 import { differenceInYears } from "date-fns";
-import { MessageSquare } from "lucide-react";
+import { Download, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import * as XLSX from 'xlsx';
 
 const ListarAlumnos = () => {
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  
   const { data: students = [] } = useQuery({
     queryKey: ['students'],
     queryFn: getStudents,
@@ -23,8 +28,31 @@ const ListarAlumnos = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  const maleStudents = students.filter(student => student.gender === 'masculino');
-  const femaleStudents = students.filter(student => student.gender === 'femenino');
+  const filteredStudents = selectedDepartment
+    ? students.filter(student => student.department === selectedDepartment)
+    : students;
+
+  const maleStudents = filteredStudents.filter(student => student.gender === 'masculino');
+  const femaleStudents = filteredStudents.filter(student => student.gender === 'femenino');
+
+  const exportToExcel = () => {
+    const data = filteredStudents.map(student => ({
+      Nombre: student.name,
+      Edad: calculateAge(student.birthdate),
+      Género: student.gender === 'masculino' ? 'Varón' : 'Mujer',
+      Departamento: student.department || 'No asignado',
+      Teléfono: student.phone || 'No registrado'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Alumnos");
+    
+    // Generate filename with department if selected
+    const filename = `alumnos${selectedDepartment ? `_${selectedDepartment}` : ''}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    XLSX.writeFile(wb, filename);
+  };
 
   const StudentTable = ({ students, title }: { students: typeof maleStudents, title: string }) => (
     <Card>
@@ -37,6 +65,7 @@ const ListarAlumnos = () => {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Edad</TableHead>
+              <TableHead>Departamento</TableHead>
               <TableHead>Contacto</TableHead>
             </TableRow>
           </TableHeader>
@@ -45,6 +74,7 @@ const ListarAlumnos = () => {
               <TableRow key={student.id}>
                 <TableCell>{student.name}</TableCell>
                 <TableCell>{calculateAge(student.birthdate)}</TableCell>
+                <TableCell>{student.department || 'No asignado'}</TableCell>
                 <TableCell>
                   <Button
                     variant="outline"
@@ -66,6 +96,26 @@ const ListarAlumnos = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Todos los departamentos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Todos los departamentos</SelectItem>
+            <SelectItem value="niños">Niños</SelectItem>
+            <SelectItem value="adolescentes">Adolescentes</SelectItem>
+            <SelectItem value="jovenes">Jóvenes</SelectItem>
+            <SelectItem value="adultos">Adultos</SelectItem>
+          </SelectContent>
+        </Select>
+        
+        <Button onClick={exportToExcel} variant="outline">
+          <Download className="mr-2" />
+          Exportar a Excel
+        </Button>
+      </div>
+      
       <StudentTable title="Varones" students={maleStudents} />
       <StudentTable title="Mujeres" students={femaleStudents} />
     </div>
