@@ -74,20 +74,16 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   
   const handleSignOut = async () => {
     try {
-      if (!session) {
-        console.log("No active session, redirecting to auth page");
-        navigate("/auth");
-        return;
-      }
-      
+      console.log("Starting sign out from sidebar");
       await signOut();
+      console.log("Sign out successful, navigating to auth");
       navigate("/auth");
       onItemClick?.();
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error al cerrar sesión",
+        description: "Por favor intenta nuevamente",
         variant: "destructive",
       });
     }
