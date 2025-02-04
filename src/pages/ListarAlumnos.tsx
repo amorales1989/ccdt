@@ -7,11 +7,14 @@ import { getStudents } from "@/lib/api";
 import { differenceInYears } from "date-fns";
 import { Download, MessageSquare, Search } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from "xlsx";
 
 const ListarAlumnos = () => {
   const [searchDepartment, setSearchDepartment] = useState<string>("all");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const { profile } = useAuth();
+  const isAuthorized = profile?.role === "admin" || profile?.role === "secretaria";
 
   const { data: students = [], refetch } = useQuery({
     queryKey: ["students", searchDepartment],
@@ -102,6 +105,7 @@ const ListarAlumnos = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {isAuthorized && (
       <div className="flex justify-between items-center mb-6">
         <div className="flex gap-4">
           <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
@@ -128,6 +132,7 @@ const ListarAlumnos = () => {
           Exportar a Excel
         </Button>
       </div>
+      )}
 
       <StudentTable title="Varones" students={maleStudents} />
       <StudentTable title="Mujeres" students={femaleStudents} />
