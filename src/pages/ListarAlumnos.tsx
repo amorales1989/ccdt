@@ -17,6 +17,9 @@ const ListarAlumnos = () => {
     queryFn: getStudents,
   });
 
+  console.log('Students data:', students);
+  console.log('Selected department:', selectedDepartment);
+
   const calculateAge = (birthdate: string | null) => {
     if (!birthdate) return '-';
     return differenceInYears(new Date(), new Date(birthdate));
@@ -32,8 +35,13 @@ const ListarAlumnos = () => {
     ? students 
     : students.filter(student => student.department === selectedDepartment);
 
+  console.log('Filtered students:', filteredStudents);
+
   const maleStudents = filteredStudents.filter(student => student.gender === 'masculino');
   const femaleStudents = filteredStudents.filter(student => student.gender === 'femenino');
+
+  console.log('Male students:', maleStudents);
+  console.log('Female students:', femaleStudents);
 
   const exportToExcel = () => {
     const data = filteredStudents.map(student => ({
