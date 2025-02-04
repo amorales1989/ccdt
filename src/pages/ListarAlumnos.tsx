@@ -10,7 +10,7 @@ import { useState } from "react";
 import * as XLSX from 'xlsx';
 
 const ListarAlumnos = () => {
-  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   
   const { data: students = [] } = useQuery({
     queryKey: ['students'],
@@ -28,9 +28,9 @@ const ListarAlumnos = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  const filteredStudents = selectedDepartment
-    ? students.filter(student => student.department === selectedDepartment)
-    : students;
+  const filteredStudents = selectedDepartment === "all" 
+    ? students 
+    : students.filter(student => student.department === selectedDepartment);
 
   const maleStudents = filteredStudents.filter(student => student.gender === 'masculino');
   const femaleStudents = filteredStudents.filter(student => student.gender === 'femenino');
@@ -49,7 +49,7 @@ const ListarAlumnos = () => {
     XLSX.utils.book_append_sheet(wb, ws, "Alumnos");
     
     // Generate filename with department if selected
-    const filename = `alumnos${selectedDepartment ? `_${selectedDepartment}` : ''}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const filename = `alumnos${selectedDepartment !== "all" ? `_${selectedDepartment}` : ''}_${new Date().toISOString().split('T')[0]}.xlsx`;
     
     XLSX.writeFile(wb, filename);
   };
@@ -99,10 +99,10 @@ const ListarAlumnos = () => {
       <div className="flex justify-between items-center mb-6">
         <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Todos los departamentos" />
+            <SelectValue placeholder="Seleccionar departamento" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos los departamentos</SelectItem>
+            <SelectItem value="all">Todos los departamentos</SelectItem>
             <SelectItem value="niños">Niños</SelectItem>
             <SelectItem value="adolescentes">Adolescentes</SelectItem>
             <SelectItem value="jovenes">Jóvenes</SelectItem>
