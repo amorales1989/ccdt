@@ -5,9 +5,9 @@ import { Student, Event, Attendance } from "@/types/database";
 export const getStudents = async () => {
   const { data, error } = await supabase
     .from("students")
-    .select("*")
-    .order("name");
-  
+    .select("*") 
+    //.eq("department", department); 
+    console.log('Fetching students:', data);
   if (error) throw error;
   return data;
 };
