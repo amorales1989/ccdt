@@ -22,6 +22,7 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) => {
   const { user, profile, loading } = useAuth();
 
+  // Show loading state only for a brief moment
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20">
@@ -30,10 +31,12 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
     );
   }
 
+  // If no user is logged in, redirect to auth page
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
 
+  // Check role permissions
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -45,7 +48,7 @@ const AppContent = () => {
   const isMobile = useIsMobile();
   const { user, loading } = useAuth();
   
-  // If still loading, show loading state with better styling
+  // Show loading state only for a brief moment
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20">
@@ -60,14 +63,27 @@ const AppContent = () => {
       <main className={`flex-1 ${isMobile && user ? "pt-16" : ""} p-4`}>
         <div className="max-w-7xl mx-auto">
           <Routes>
+            {/* Redirect root to auth if not logged in, dashboard if logged in */}
             <Route 
               path="/" 
-              element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} 
+              element={
+                loading ? (
+                  <div className="min-h-screen flex items-center justify-center">
+                    <div className="text-lg">Cargando...</div>
+                  </div>
+                ) : (
+                  <Navigate to={user ? "/dashboard" : "/auth"} replace />
+                )
+              } 
             />
+            
+            {/* Public auth route - redirect to dashboard if already logged in */}
             <Route 
               path="/auth" 
               element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
             />
+
+            {/* Protected routes */}
             <Route
               path="/register"
               element={
