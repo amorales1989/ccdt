@@ -20,24 +20,17 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) => {
-  const { user, profile, loading } = useAuth();
-
-  // Show loading state only for a brief moment
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20">
-        <div className="text-lg">Cargando...</div>
-      </div>
-    );
-  }
+  const { user, profile } = useAuth();
 
   // If no user is logged in, redirect to auth page
   if (!user) {
+    console.log("No authenticated user found, redirecting to auth page");
     return <Navigate to="/auth" replace />;
   }
 
   // Check role permissions
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
+    console.log(`User role ${profile.role} not allowed. Required roles:`, allowedRoles);
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -46,16 +39,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
 
 const AppContent = () => {
   const isMobile = useIsMobile();
-  const { user, loading } = useAuth();
-  
-  // Show loading state only for a brief moment
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20">
-        <div className="text-lg">Cargando...</div>
-      </div>
-    );
-  }
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen flex w-full bg-gradient-to-br from-background to-accent/20">
@@ -66,15 +50,7 @@ const AppContent = () => {
             {/* Redirect root to auth if not logged in, dashboard if logged in */}
             <Route 
               path="/" 
-              element={
-                loading ? (
-                  <div className="min-h-screen flex items-center justify-center">
-                    <div className="text-lg">Cargando...</div>
-                  </div>
-                ) : (
-                  <Navigate to={user ? "/dashboard" : "/auth"} replace />
-                )
-              } 
+              element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} 
             />
             
             {/* Public auth route - redirect to dashboard if already logged in */}
