@@ -23,15 +23,19 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   const { user, profile, loading } = useAuth();
 
   if (loading) {
-    return <div>Cargando...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20">
+        <div className="text-lg">Cargando...</div>
+      </div>
+    );
   }
 
   if (!user) {
-    return <Navigate to="/auth" />;
+    return <Navigate to="/auth" replace />;
   }
 
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -41,9 +45,13 @@ const AppContent = () => {
   const isMobile = useIsMobile();
   const { user, loading } = useAuth();
   
-  // If still loading, show loading state
+  // If still loading, show loading state with better styling
   if (loading) {
-    return <div>Cargando...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20">
+        <div className="text-lg">Cargando...</div>
+      </div>
+    );
   }
 
   return (
