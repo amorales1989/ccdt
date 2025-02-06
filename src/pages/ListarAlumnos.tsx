@@ -5,10 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery } from "@tanstack/react-query";
 import { getStudents } from "@/lib/api";
 import { differenceInYears } from "date-fns";
-import { Download, MessageSquare, Search } from "lucide-react";
+import { Download, MessageCircle, Eye, Edit2, Trash2, Search } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from "xlsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const ListarAlumnos = () => {
   const [searchDepartment, setSearchDepartment] = useState<string>("all");
@@ -63,6 +64,18 @@ const ListarAlumnos = () => {
     XLSX.writeFile(wb, filename);
   };
 
+  const StudentDetails = ({ student }: { student: typeof students[0] }) => (
+    <div className="space-y-2">
+      <p><strong>Nombre:</strong> {student.name}</p>
+      <p><strong>Edad:</strong> {calculateAge(student.birthdate)}</p>
+      <p><strong>Género:</strong> {student.gender === "masculino" ? "Varón" : "Mujer"}</p>
+      <p><strong>Departamento:</strong> {student.department || "No asignado"}</p>
+      <p><strong>Teléfono:</strong> {student.phone || "No registrado"}</p>
+      <p><strong>Dirección:</strong> {student.address || "No registrada"}</p>
+      <p><strong>Fecha de nacimiento:</strong> {student.birthdate || "No registrada"}</p>
+    </div>
+  );
+
   const StudentTable = ({ students, title }: { students: typeof maleStudents; title: string }) => (
     <Card>
       <CardHeader>
@@ -75,7 +88,7 @@ const ListarAlumnos = () => {
               <TableHead>Nombre</TableHead>
               <TableHead>Edad</TableHead>
               <TableHead>Departamento</TableHead>
-              <TableHead>Contacto</TableHead>
+              <TableHead>Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -85,15 +98,41 @@ const ListarAlumnos = () => {
                 <TableCell>{calculateAge(student.birthdate)}</TableCell>
                 <TableCell>{student.department || "No asignado"}</TableCell>
                 <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleWhatsAppClick(student.phone)}
-                    disabled={!student.phone}
-                  >
-                    <MessageSquare className="mr-2" />
-                    Mensaje
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleWhatsAppClick(student.phone)}
+                      disabled={!student.phone}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Detalles del Alumno</DialogTitle>
+                        </DialogHeader>
+                        <StudentDetails student={student} />
+                      </DialogContent>
+                    </Dialog>
+
+                    {isAuthorized && (
+                      <>
+                        <Button variant="ghost" size="icon">
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
