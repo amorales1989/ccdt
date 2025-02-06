@@ -156,43 +156,33 @@ const ListarAlumnos = () => {
       </Card>
 
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Detalles del Alumno</DialogTitle>
-          </DialogHeader>
-          {selectedStudent && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <span className="font-semibold">Nombre:</span>
-                <span className="col-span-3">{selectedStudent.name}</span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <span className="font-semibold">Teléfono:</span>
-                <span className="col-span-3">{selectedStudent.phone || "No especificado"}</span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <span className="font-semibold">Dirección:</span>
-                <span className="col-span-3">{selectedStudent.address || "No especificada"}</span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <span className="font-semibold">Departamento:</span>
-                <span className="col-span-3 capitalize">{selectedStudent.department}</span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <span className="font-semibold">Género:</span>
-                <span className="col-span-3 capitalize">{selectedStudent.gender}</span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <span className="font-semibold">Fecha de nacimiento:</span>
-                <span className="col-span-3">
-                  {selectedStudent.birthdate 
-                    ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy")
-                    : "No especificada"}
-                </span>
-              </div>
-            </div>
-          )}
-        </DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
+  <DialogHeader>
+    <DialogTitle>Detalles del Alumno</DialogTitle>
+  </DialogHeader>
+  {selectedStudent && (
+    <div className="grid gap-4 py-4">
+      {[
+        { label: "Nombre", value: selectedStudent.name },
+        { label: "Teléfono", value: selectedStudent.phone || "No especificado" },
+        { label: "Dirección", value: selectedStudent.address || "No especificada" },
+        { label: "Departamento", value: selectedStudent.department, capitalize: true },
+        { label: "Género", value: selectedStudent.gender, capitalize: true },
+        { 
+          label: "Fecha de nacimiento", 
+          value: selectedStudent.birthdate 
+            ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy") 
+            : "No especificada"
+        },
+      ].map(({ label, value, capitalize }, index) => (
+        <div key={index} className="grid grid-cols-2 items-center gap-4">
+          <span className="font-semibold">{label}:</span>
+          <span className={capitalize ? "capitalize" : ""}>{value}</span>
+        </div>
+      ))}
+    </div>
+  )}
+</DialogContent>
       </Dialog>
     </div>
   );
