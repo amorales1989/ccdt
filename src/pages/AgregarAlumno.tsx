@@ -24,12 +24,15 @@ const AgregarAlumno = () => {
     department: "" as Student["department"],
   });
 
+  const departments = ["niños", "adolescentes", "jovenes", "adultos"];
+  const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
+
   useEffect(() => {
-    // Set default department if user only has one department
-    if (profile?.departments && profile.departments.length === 1) {
+    // Set default department if user only has one department and is not admin/secretaria
+    if (!isAdminOrSecretaria && profile?.departments && profile.departments.length === 1) {
       setFormData(prev => ({ ...prev, department: profile.departments[0] as Student["department"] }));
     }
-  }, [profile]);
+  }, [profile, isAdminOrSecretaria]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +73,7 @@ const AgregarAlumno = () => {
     }
   };
 
-  if (!profile?.departments?.length) {
+  if (!isAdminOrSecretaria && (!profile?.departments?.length)) {
     return (
       <div className="p-6">
         <Card>
@@ -135,7 +138,7 @@ const AgregarAlumno = () => {
             <div className="space-y-2">
               <Label htmlFor="department">Departamento</Label>
               <Select
-                value={formData.department || ""}
+                value={formData.department}
                 onValueChange={(value) =>
                   setFormData({ ...formData, department: value as Student["department"] })
                 }
@@ -145,7 +148,7 @@ const AgregarAlumno = () => {
                   <SelectValue placeholder="Seleccionar departamento" />
                 </SelectTrigger>
                 <SelectContent>
-                  {profile?.departments?.map((dept) => (
+                  {(isAdminOrSecretaria ? departments : profile?.departments)?.map((dept) => (
                     <SelectItem key={dept} value={dept}>
                       {dept.charAt(0).toUpperCase() + dept.slice(1)}
                     </SelectItem>
