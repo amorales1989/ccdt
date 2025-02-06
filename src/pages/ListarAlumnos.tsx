@@ -1,180 +1,195 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
-import { getStudents } from "@/lib/api";
-import { differenceInYears } from "date-fns";
-import { Download, MessageCircle, Eye, Edit2, Trash2, Search } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Eye, Pencil, Trash2, MessageCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import * as XLSX from "xlsx";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { format } from "date-fns";
 
 const ListarAlumnos = () => {
-  const [searchDepartment, setSearchDepartment] = useState<string>("all");
-  const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const { profile } = useAuth();
-  const isAuthorized = profile?.role === "admin" || profile?.role === "secretaria";
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
-  const { data: students = [], refetch } = useQuery({
-    queryKey: ["students", searchDepartment],
-    queryFn: () => getStudents(),
-    enabled: !!searchDepartment, 
+  const { data: students = [], isLoading } = useQuery({
+    queryKey: ["students", selectedDepartment],
+    queryFn: async () => {
+      console.log("Fetching students with department filter:", selectedDepartment);
+      let query = supabase.from("students").select("*");
+      
+      if (selectedDepartment) {
+        query = query.eq("department", selectedDepartment);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      console.log("Fetched students:", data);
+      return data || [];
+    },
   });
 
-  const calculateAge = (birthdate: string | null) => {
-    if (!birthdate) return "-";
-    return differenceInYears(new Date(), new Date(birthdate));
-  };
-
-  const handleWhatsAppClick = (phone: string | null) => {
+  const handleWhatsAppClick = (phone: string) => {
     if (!phone) return;
-    const whatsappUrl = `https://wa.me/${phone.replace(/\D/g, "")}`;
-    window.open(whatsappUrl, "_blank");
+    const formattedPhone = phone.replace(/\D/g, "");
+    window.open(`https://wa.me/${formattedPhone}`, "_blank");
   };
 
-  const handleSearch = () => {
-    setSearchDepartment(selectedDepartment);
-    refetch();
+  const handleViewDetails = (student: any) => {
+    setSelectedStudent(student);
+    setShowDetailsDialog(true);
   };
 
-  const filteredStudents = searchDepartment === "all" ? students : students.filter(student => student.department === searchDepartment);
-
-  const maleStudents = filteredStudents.filter(student => student.gender === "masculino");
-  const femaleStudents = filteredStudents.filter(student => student.gender === "femenino");
-
-  const exportToExcel = () => {
-    const data = filteredStudents.map(student => ({
-      Nombre: student.name,
-      Edad: calculateAge(student.birthdate),
-      Género: student.gender === "masculino" ? "Varón" : "Mujer",
-      Departamento: student.department || "No asignado",
-      Teléfono: student.phone || "No registrado",
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Alumnos");
-
-    const filename = `alumnos${searchDepartment !== "all" ? `_${searchDepartment}` : ""}_${new Date()
-      .toISOString()
-      .split("T")[0]}.xlsx`;
-
-    XLSX.writeFile(wb, filename);
-  };
-
-  const StudentDetails = ({ student }: { student: typeof students[0] }) => (
-    <div className="space-y-2">
-      <p><strong>Nombre:</strong> {student.name}</p>
-      <p><strong>Edad:</strong> {calculateAge(student.birthdate)}</p>
-      <p><strong>Género:</strong> {student.gender === "masculino" ? "Varón" : "Mujer"}</p>
-      <p><strong>Departamento:</strong> {student.department || "No asignado"}</p>
-      <p><strong>Teléfono:</strong> {student.phone || "No registrado"}</p>
-      <p><strong>Dirección:</strong> {student.address || "No registrada"}</p>
-      <p><strong>Fecha de nacimiento:</strong> {student.birthdate || "No registrada"}</p>
-    </div>
-  );
-
-  const StudentTable = ({ students, title }: { students: typeof maleStudents; title: string }) => (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Edad</TableHead>
-              <TableHead>Departamento</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.map(student => (
-              <TableRow key={student.id}>
-                <TableCell>{student.name}</TableCell>
-                <TableCell>{calculateAge(student.birthdate)}</TableCell>
-                <TableCell>{student.department || "No asignado"}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleWhatsAppClick(student.phone)}
-                      disabled={!student.phone}
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                    </Button>
-
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Detalles del Alumno</DialogTitle>
-                        </DialogHeader>
-                        <StudentDetails student={student} />
-                      </DialogContent>
-                    </Dialog>
-
-                    {isAuthorized && (
-                      <>
-                        <Button variant="ghost" size="icon">
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
+  const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
   return (
-    <div className="p-6 space-y-6">
-      {isAuthorized && (
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex gap-4">
-          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Seleccionar departamento" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los departamentos</SelectItem>
-              <SelectItem value="niños">Niños</SelectItem>
-              <SelectItem value="adolescentes">Adolescentes</SelectItem>
-              <SelectItem value="jovenes">Jóvenes</SelectItem>
-              <SelectItem value="adultos">Adultos</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button onClick={handleSearch}>
-            <Search className="mr-2" />
-            Buscar
-          </Button>
+    <div className="container mx-auto py-6">
+      <Card className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Lista de Alumnos</h2>
+          {isAdminOrSecretaria && (
+            <Select
+              value={selectedDepartment}
+              onValueChange={setSelectedDepartment}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="niños">Niños</SelectItem>
+                <SelectItem value="adolescentes">Adolescentes</SelectItem>
+                <SelectItem value="jovenes">Jóvenes</SelectItem>
+                <SelectItem value="adultos">Adultos</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
-        <Button onClick={exportToExcel} variant="outline">
-          <Download className="mr-2" />
-          Exportar a Excel
-        </Button>
-      </div>
-      )}
+        {isLoading ? (
+          <div className="text-center py-4">Cargando...</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Departamento</TableHead>
+                <TableHead>Género</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {students.map((student) => (
+                <TableRow key={student.id}>
+                  <TableCell>{student.name}</TableCell>
+                  <TableCell className="capitalize">{student.department}</TableCell>
+                  <TableCell className="capitalize">{student.gender}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleWhatsAppClick(student.phone)}
+                        title="Enviar mensaje de WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewDetails(student)}
+                        title="Ver detalles"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {isAdminOrSecretaria && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Editar alumno"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Eliminar alumno"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
 
-      <StudentTable title="Varones" students={maleStudents} />
-      <StudentTable title="Mujeres" students={femaleStudents} />
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detalles del Alumno</DialogTitle>
+          </DialogHeader>
+          {selectedStudent && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="font-semibold">Nombre:</span>
+                <span className="col-span-3">{selectedStudent.name}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="font-semibold">Teléfono:</span>
+                <span className="col-span-3">{selectedStudent.phone || "No especificado"}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="font-semibold">Dirección:</span>
+                <span className="col-span-3">{selectedStudent.address || "No especificada"}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="font-semibold">Departamento:</span>
+                <span className="col-span-3 capitalize">{selectedStudent.department}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="font-semibold">Género:</span>
+                <span className="col-span-3 capitalize">{selectedStudent.gender}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="font-semibold">Fecha de nacimiento:</span>
+                <span className="col-span-3">
+                  {selectedStudent.birthdate 
+                    ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy")
+                    : "No especificada"}
+                </span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
