@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useState } from "react";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getEvents, createEvent, updateEvent, deleteEvent, getStudents } from "@/lib/api";
@@ -105,6 +104,19 @@ const Index = () => {
   const renderStudentStats = () => {
     if (!["admin", "secretaria"].includes(profile?.role || "")) return null;
 
+    // Group students by department
+    const studentsByDepartment = departments.reduce((acc, dept) => {
+      const deptStudents = students.filter(s => s.department === dept);
+      acc[dept] = {
+        male: deptStudents.filter(s => s.gender === "masculino").length,
+        female: deptStudents.filter(s => s.gender === "femenino").length,
+        total: deptStudents.length
+      };
+      return acc;
+    }, {} as Record<string, { male: number; female: number; total: number }>);
+
+    console.log('Students by department:', studentsByDepartment);
+
     return (
       <Card className="mb-6">
         <CardHeader>
@@ -113,17 +125,14 @@ const Index = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {departments.map(dept => {
-              const deptStudents = students.filter(s => s.department === dept);
-              const maleStudents = deptStudents.filter(s => s.gender === "masculino");
-              const femaleStudents = deptStudents.filter(s => s.gender === "femenino");
-
+              const stats = studentsByDepartment[dept] || { male: 0, female: 0, total: 0 };
               return (
                 <Card key={dept} className="p-4">
                   <h3 className="font-semibold text-lg capitalize mb-2">{dept}</h3>
                   <div className="space-y-2">
-                    <p>Varones: {maleStudents.length}</p>
-                    <p>Mujeres: {femaleStudents.length}</p>
-                    <p className="font-semibold">Total: {deptStudents.length}</p>
+                    <p>Varones: {stats.male}</p>
+                    <p>Mujeres: {stats.female}</p>
+                    <p className="font-semibold">Total: {stats.total}</p>
                   </div>
                 </Card>
               );
