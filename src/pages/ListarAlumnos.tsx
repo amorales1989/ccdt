@@ -23,15 +23,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, Pencil, Trash2, MessageCircle } from "lucide-react";
+import { MessageSquare, Eye, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 
+type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
+
 const ListarAlumnos = () => {
   const { profile } = useAuth();
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   const { data: students = [], isLoading } = useQuery({
@@ -71,14 +73,13 @@ const ListarAlumnos = () => {
           <h2 className="text-2xl font-bold">Lista de Alumnos</h2>
           {isAdminOrSecretaria && (
             <Select
-              value={selectedDepartment}
-              onValueChange={setSelectedDepartment}
+              value={selectedDepartment || undefined}
+              onValueChange={(value: Department) => setSelectedDepartment(value)}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filtrar por departamento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
                 <SelectItem value="niños">Niños</SelectItem>
                 <SelectItem value="adolescentes">Adolescentes</SelectItem>
                 <SelectItem value="jovenes">Jóvenes</SelectItem>
@@ -114,7 +115,7 @@ const ListarAlumnos = () => {
                         onClick={() => handleWhatsAppClick(student.phone)}
                         title="Enviar mensaje de WhatsApp"
                       >
-                        <MessageCircle className="h-4 w-4" />
+                        <MessageSquare className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
