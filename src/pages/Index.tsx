@@ -150,9 +150,9 @@ const Index = () => {
           <CardTitle>Próximos Eventos</CardTitle>
           <Dialog>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Evento
+              <Button size="icon" className="rounded-full w-10 h-10">
+                <Plus className="h-5 w-5" />
+                <span className="sr-only">Nuevo Evento</span>
               </Button>
             </DialogTrigger>
             <DialogContent>

@@ -109,6 +109,14 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
           >
             Seleccionar Departamento
           </Button>
+          <Button
+            variant="ghost"
+            onClick={handleSignOut}
+            className="flex items-center gap-2 mt-2"
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="font-medium">Cerrar Sesión</span>
+          </Button>
         </div>
       </div>
     );
