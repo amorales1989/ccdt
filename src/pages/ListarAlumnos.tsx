@@ -47,7 +47,10 @@ const ListarAlumnos = () => {
       }
       
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching students:", error);
+        throw error;
+      }
       console.log("Fetched students:", data);
       return data || [];
     },
