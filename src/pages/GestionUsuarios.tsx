@@ -18,12 +18,15 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria";
+type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
+
 type Profile = {
   id: string;
   first_name: string;
   last_name: string;
-  role: string;
-  departments: string[];
+  role: AppRole;
+  departments: Department[];
   email?: string;
 };
 
@@ -44,30 +47,18 @@ const GestionUsuarios = () => {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
+      console.log("Fetching profiles...");
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*');
 
       if (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching profiles:", error);
         throw error;
       }
 
-      // Fetch emails from auth.users
-      const { data: authUsers, error: authError } = await supabase
-        .from('auth.users')
-        .select('id, email');
-
-      if (authError) {
-        console.error("Error fetching auth users:", authError);
-        throw authError;
-      }
-
-      // Combine profiles with emails
-      return profiles.map(profile => ({
-        ...profile,
-        email: authUsers?.find(u => u.id === profile.id)?.email
-      }));
+      console.log("Fetched profiles:", profiles);
+      return profiles as Profile[];
     }
   });
 
@@ -78,8 +69,8 @@ const GestionUsuarios = () => {
         .update({
           first_name: updatedUser.first_name,
           last_name: updatedUser.last_name,
-          role: updatedUser.role,
-          departments: updatedUser.departments
+          role: updatedUser.role as AppRole,
+          departments: updatedUser.departments as Department[]
         })
         .eq('id', updatedUser.id);
 
@@ -208,7 +199,7 @@ const GestionUsuarios = () => {
                             <Label htmlFor="role">Rol</Label>
                             <Select
                               value={selectedUser?.role}
-                              onValueChange={(value) =>
+                              onValueChange={(value: AppRole) =>
                                 setSelectedUser(prev => prev ? {
                                   ...prev,
                                   role: value
@@ -234,13 +225,13 @@ const GestionUsuarios = () => {
                                 <Button
                                   key={dept}
                                   type="button"
-                                  variant={selectedUser?.departments?.includes(dept) ? "default" : "outline"}
+                                  variant={selectedUser?.departments?.includes(dept as Department) ? "default" : "outline"}
                                   onClick={() =>
                                     setSelectedUser(prev => {
                                       if (!prev) return null;
-                                      const newDepts = prev.departments?.includes(dept)
+                                      const newDepts = prev.departments?.includes(dept as Department)
                                         ? prev.departments.filter(d => d !== dept)
-                                        : [...(prev.departments || []), dept];
+                                        : [...(prev.departments || []), dept as Department];
                                       return { ...prev, departments: newDepts };
                                     })
                                   }
