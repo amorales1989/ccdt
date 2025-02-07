@@ -24,10 +24,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare, Eye, Pencil, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MessageSquare, Eye, Pencil, Trash2, MoreVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
 
@@ -38,6 +45,7 @@ const ListarAlumnos = () => {
     profile?.departments?.[0] || null
   );
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const isMobile = useIsMobile();
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
@@ -48,17 +56,14 @@ const ListarAlumnos = () => {
       let query = supabase.from("students").select("*");
       
       if (isAdminOrSecretaria) {
-        // Admin y secretaria pueden ver todos los alumnos o filtrar por departamento
         if (selectedDepartment) {
           query = query.eq("department", selectedDepartment);
         }
       } else {
-        // Otros usuarios solo pueden ver alumnos de sus departamentos asignados
         if (!profile?.departments?.length) {
           console.log("Usuario sin departamentos asignados");
           return [];
         }
-        // Si el usuario tiene múltiples departamentos, permitir seleccionar entre ellos
         query = query.eq("department", selectedDepartment || profile.departments[0]);
       }
       
@@ -83,17 +88,98 @@ const ListarAlumnos = () => {
     setShowDetailsDialog(true);
   };
 
+  const renderActions = (student: any) => {
+    const actions = (
+      <>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleWhatsAppClick(student.phone)}
+          title="Enviar mensaje de WhatsApp"
+        >
+          <MessageSquare className="h-4 w-4" />
+          {isMobile && <span className="ml-2">WhatsApp</span>}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleViewDetails(student)}
+          title="Ver detalles"
+        >
+          <Eye className="h-4 w-4" />
+          {isMobile && <span className="ml-2">Ver detalles</span>}
+        </Button>
+        {isAdminOrSecretaria && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Editar alumno"
+            >
+              <Pencil className="h-4 w-4" />
+              {isMobile && <span className="ml-2">Editar</span>}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Eliminar alumno"
+            >
+              <Trash2 className="h-4 w-4" />
+              {isMobile && <span className="ml-2">Eliminar</span>}
+            </Button>
+          </>
+        )}
+      </>
+    );
+
+    if (isMobile) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white">
+            <DropdownMenuItem onClick={() => handleWhatsAppClick(student.phone)}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleViewDetails(student)}>
+              <Eye className="h-4 w-4 mr-2" />
+              Ver detalles
+            </DropdownMenuItem>
+            {isAdminOrSecretaria && (
+              <>
+                <DropdownMenuItem>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
+    return <div className="flex gap-2">{actions}</div>;
+  };
+
   return (
-    <div className="container mx-auto py-6">
-      <Card className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Lista de Alumnos</h2>
+    <div className="container mx-auto py-6 px-4">
+      <Card className="p-4 md:p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
           {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
             <Select
               value={selectedDepartment || undefined}
               onValueChange={(value: Department) => setSelectedDepartment(value)}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filtrar por departamento" />
               </SelectTrigger>
               <SelectContent>
@@ -119,63 +205,28 @@ const ListarAlumnos = () => {
         {isLoading ? (
           <div className="text-center py-4">Cargando...</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Departamento</TableHead>
-                <TableHead>Género</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>{student.name}</TableCell>
-                  <TableCell className="capitalize">{student.department}</TableCell>
-                  <TableCell className="capitalize">{student.gender}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleWhatsAppClick(student.phone)}
-                        title="Enviar mensaje de WhatsApp"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleViewDetails(student)}
-                        title="Ver detalles"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {isAdminOrSecretaria && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Editar alumno"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Eliminar alumno"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Departamento</TableHead>
+                  <TableHead>Género</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {students.map((student) => (
+                  <TableRow key={student.id}>
+                    <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell className="capitalize">{student.department}</TableCell>
+                    <TableCell className="capitalize">{student.gender}</TableCell>
+                    <TableCell className="text-right">{renderActions(student)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
 
