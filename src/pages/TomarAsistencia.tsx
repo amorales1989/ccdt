@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -5,18 +6,39 @@ import { Check, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { getStudents, markAttendance } from "@/lib/api";
+import { markAttendance } from "@/lib/api";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const TomarAsistencia = () => {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const [asistencias, setAsistencias] = useState<Record<string, boolean>>({});
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: students, isLoading: isLoadingStudents } = useQuery({
-    queryKey: ["students"],
-    queryFn: getStudents,
+  const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
+
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery({
+    queryKey: ["students-attendance"],
+    queryFn: async () => {
+      console.log("Fetching students for attendance...");
+      let query = supabase.from("students").select("*");
+
+      if (!isAdminOrSecretaria && profile?.departments?.length) {
+        // Si no es admin/secretaria, filtrar por el primer departamento asignado
+        query = query.eq("department", profile.departments[0]);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("Error fetching students for attendance:", error);
+        throw error;
+      }
+      console.log("Fetched students for attendance:", data);
+      return data;
+    },
   });
 
   const handleSaveAttendance = async () => {

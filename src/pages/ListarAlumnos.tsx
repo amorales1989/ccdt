@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -23,18 +24,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare, Eye, Pencil, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MessageSquare, Eye, Pencil, Trash2, MoreVertical, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+import * as XLSX from 'xlsx';
 
 type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
 
 const ListarAlumnos = () => {
   const { profile } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
+    profile?.departments?.[0] || null
+  );
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const isMobile = useIsMobile();
+
+  const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["students", selectedDepartment],
@@ -42,8 +56,16 @@ const ListarAlumnos = () => {
       console.log("Fetching students with department filter:", selectedDepartment);
       let query = supabase.from("students").select("*");
       
-      if (selectedDepartment) {
-        query = query.eq("department", selectedDepartment);
+      if (isAdminOrSecretaria) {
+        if (selectedDepartment) {
+          query = query.eq("department", selectedDepartment);
+        }
+      } else {
+        if (!profile?.departments?.length) {
+          console.log("Usuario sin departamentos asignados");
+          return [];
+        }
+        query = query.eq("department", selectedDepartment || profile.departments[0]);
       }
       
       const { data, error } = await query;
@@ -67,125 +89,210 @@ const ListarAlumnos = () => {
     setShowDetailsDialog(true);
   };
 
-  const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
+  const handleExport = () => {
+    // Create worksheet from the current filtered students data
+    const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
+      Nombre: student.name,
+      Departamento: student.department,
+      Teléfono: student.phone || '',
+      Dirección: student.address || '',
+      Género: student.gender,
+      'Fecha de Nacimiento': student.birthdate ? format(new Date(student.birthdate), "dd/MM/yyyy") : ''
+    })));
+
+    // Create workbook and append the worksheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
+
+    // Generate and download the file
+    const fileName = `alumnos_${selectedDepartment || 'todos'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  const renderActions = (student: any) => {
+    const actions = (
+      <>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleWhatsAppClick(student.phone)}
+          title="Enviar mensaje de WhatsApp"
+        >
+          <MessageSquare className="h-4 w-4" />
+          {isMobile && <span className="ml-2">WhatsApp</span>}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleViewDetails(student)}
+          title="Ver detalles"
+        >
+          <Eye className="h-4 w-4" />
+          {isMobile && <span className="ml-2">Ver detalles</span>}
+        </Button>
+        {isAdminOrSecretaria && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Editar alumno"
+            >
+              <Pencil className="h-4 w-4" />
+              {isMobile && <span className="ml-2">Editar</span>}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Eliminar alumno"
+            >
+              <Trash2 className="h-4 w-4" />
+              {isMobile && <span className="ml-2">Eliminar</span>}
+            </Button>
+          </>
+        )}
+      </>
+    );
+
+    if (isMobile) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white">
+            <DropdownMenuItem onClick={() => handleWhatsAppClick(student.phone)}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleViewDetails(student)}>
+              <Eye className="h-4 w-4 mr-2" />
+              Ver detalles
+            </DropdownMenuItem>
+            {isAdminOrSecretaria && (
+              <>
+                <DropdownMenuItem>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
+    return <div className="flex gap-2">{actions}</div>;
+  };
 
   return (
-    <div className="container mx-auto py-6">
-      <Card className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Lista de Alumnos</h2>
-          {isAdminOrSecretaria && (
-            <Select
-              value={selectedDepartment || undefined}
-              onValueChange={(value: Department) => setSelectedDepartment(value)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="niños">Niños</SelectItem>
-                <SelectItem value="adolescentes">Adolescentes</SelectItem>
-                <SelectItem value="jovenes">Jóvenes</SelectItem>
-                <SelectItem value="adultos">Adultos</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+    <div className="container mx-auto py-6 px-4">
+      <Card className="p-4 md:p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
+          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+            {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
+              <Select
+                value={selectedDepartment || undefined}
+                onValueChange={(value: Department) => setSelectedDepartment(value)}
+              >
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Filtrar por departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isAdminOrSecretaria ? (
+                    <>
+                      <SelectItem value="niños">Niños</SelectItem>
+                      <SelectItem value="adolescentes">Adolescentes</SelectItem>
+                      <SelectItem value="jovenes">Jóvenes</SelectItem>
+                      <SelectItem value="adultos">Adultos</SelectItem>
+                    </>
+                  ) : (
+                    profile?.departments?.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+            {isAdminOrSecretaria && (
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                className="w-full md:w-auto"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
           <div className="text-center py-4">Cargando...</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Departamento</TableHead>
-                <TableHead>Género</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>{student.name}</TableCell>
-                  <TableCell className="capitalize">{student.department}</TableCell>
-                  <TableCell className="capitalize">{student.gender}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleWhatsAppClick(student.phone)}
-                        title="Enviar mensaje de WhatsApp"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleViewDetails(student)}
-                        title="Ver detalles"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {isAdminOrSecretaria && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Editar alumno"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Eliminar alumno"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Departamento</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {students.map((student) => (
+                  <TableRow key={student.id}>
+                    <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell className="capitalize">{student.department}</TableCell>
+                    <TableCell className="text-right">{renderActions(student)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
 
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-      <DialogContent className="sm:max-w-[425px]">
-  <DialogHeader>
-    <DialogTitle>Detalles del Alumno</DialogTitle>
-  </DialogHeader>
-  {selectedStudent && (
-    <div className="grid gap-4 py-4">
-      {[
-        { label: "Nombre", value: selectedStudent.name },
-        { label: "Teléfono", value: selectedStudent.phone || "No especificado" },
-        { label: "Dirección", value: selectedStudent.address || "No especificada" },
-        { label: "Departamento", value: selectedStudent.department, capitalize: true },
-        { label: "Género", value: selectedStudent.gender, capitalize: true },
-        { 
-          label: "Fecha de nacimiento", 
-          value: selectedStudent.birthdate 
-            ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy") 
-            : "No especificada"
-        },
-      ].map(({ label, value, capitalize }, index) => (
-        <div key={index} className="grid grid-cols-2 items-center gap-4">
-          <span className="font-semibold">{label}:</span>
-          <span className={capitalize ? "capitalize" : ""}>{value}</span>
-        </div>
-      ))}
-    </div>
-  )}
-</DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detalles del Alumno</DialogTitle>
+          </DialogHeader>
+          {selectedStudent && (
+            <div className="grid gap-4 py-4">
+              {[
+                { label: "Nombre", value: selectedStudent.name },
+                { label: "Teléfono", value: selectedStudent.phone || "No especificado" },
+                { label: "Dirección", value: selectedStudent.address || "No especificada" },
+                { label: "Departamento", value: selectedStudent.department, capitalize: true },
+                { label: "Género", value: selectedStudent.gender, capitalize: true },
+                { 
+                  label: "Fecha de nacimiento", 
+                  value: selectedStudent.birthdate 
+                    ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy") 
+                    : "No especificada"
+                },
+              ].map(({ label, value, capitalize }, index) => (
+                <div key={index} className="grid grid-cols-2 items-center gap-4">
+                  <span className="font-semibold">{label}:</span>
+                  <span className={capitalize ? "capitalize" : ""}>{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
       </Dialog>
     </div>
   );
 };
 
 export default ListarAlumnos;
+
