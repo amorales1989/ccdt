@@ -91,6 +91,7 @@ export default function Auth() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
+          <img src="/fire.png" alt="Fire Logo" className="w-16 h-16 mb-2" />
             <CardTitle>Seleccionar Departamento</CardTitle>
             <CardDescription>
               Selecciona el departamento con el que deseas trabajar
@@ -123,6 +124,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
+        <img src="/fire.png" alt="Fire Logo" className="w-16 h-16 mb-2" />
           <CardTitle>Iniciar Sesión</CardTitle>
           <CardDescription>
             Ingresa tus credenciales para acceder

@@ -219,7 +219,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Adolescentes</SidebarGroupLabel>
+          <SidebarGroupLabel>Comunidad Cristiana Don Torcuato</SidebarGroupLabel>
           <SidebarGroupContent>
             <NavigationMenu />
           </SidebarGroupContent>
