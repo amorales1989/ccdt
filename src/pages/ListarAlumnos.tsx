@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -33,8 +34,12 @@ type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
 const ListarAlumnos = () => {
   const { profile } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
+    profile?.departments?.[0] || null
+  );
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+
+  const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["students", selectedDepartment],
@@ -42,8 +47,19 @@ const ListarAlumnos = () => {
       console.log("Fetching students with department filter:", selectedDepartment);
       let query = supabase.from("students").select("*");
       
-      if (selectedDepartment) {
-        query = query.eq("department", selectedDepartment);
+      if (isAdminOrSecretaria) {
+        // Admin y secretaria pueden ver todos los alumnos o filtrar por departamento
+        if (selectedDepartment) {
+          query = query.eq("department", selectedDepartment);
+        }
+      } else {
+        // Otros usuarios solo pueden ver alumnos de sus departamentos asignados
+        if (!profile?.departments?.length) {
+          console.log("Usuario sin departamentos asignados");
+          return [];
+        }
+        // Si el usuario tiene múltiples departamentos, permitir seleccionar entre ellos
+        query = query.eq("department", selectedDepartment || profile.departments[0]);
       }
       
       const { data, error } = await query;
@@ -67,14 +83,12 @@ const ListarAlumnos = () => {
     setShowDetailsDialog(true);
   };
 
-  const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
-
   return (
     <div className="container mx-auto py-6">
       <Card className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Lista de Alumnos</h2>
-          {isAdminOrSecretaria && (
+          {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
             <Select
               value={selectedDepartment || undefined}
               onValueChange={(value: Department) => setSelectedDepartment(value)}
@@ -83,10 +97,20 @@ const ListarAlumnos = () => {
                 <SelectValue placeholder="Filtrar por departamento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="niños">Niños</SelectItem>
-                <SelectItem value="adolescentes">Adolescentes</SelectItem>
-                <SelectItem value="jovenes">Jóvenes</SelectItem>
-                <SelectItem value="adultos">Adultos</SelectItem>
+                {isAdminOrSecretaria ? (
+                  <>
+                    <SelectItem value="niños">Niños</SelectItem>
+                    <SelectItem value="adolescentes">Adolescentes</SelectItem>
+                    <SelectItem value="jovenes">Jóvenes</SelectItem>
+                    <SelectItem value="adultos">Adultos</SelectItem>
+                  </>
+                ) : (
+                  profile?.departments?.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           )}
@@ -156,33 +180,33 @@ const ListarAlumnos = () => {
       </Card>
 
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-      <DialogContent className="sm:max-w-[425px]">
-  <DialogHeader>
-    <DialogTitle>Detalles del Alumno</DialogTitle>
-  </DialogHeader>
-  {selectedStudent && (
-    <div className="grid gap-4 py-4">
-      {[
-        { label: "Nombre", value: selectedStudent.name },
-        { label: "Teléfono", value: selectedStudent.phone || "No especificado" },
-        { label: "Dirección", value: selectedStudent.address || "No especificada" },
-        { label: "Departamento", value: selectedStudent.department, capitalize: true },
-        { label: "Género", value: selectedStudent.gender, capitalize: true },
-        { 
-          label: "Fecha de nacimiento", 
-          value: selectedStudent.birthdate 
-            ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy") 
-            : "No especificada"
-        },
-      ].map(({ label, value, capitalize }, index) => (
-        <div key={index} className="grid grid-cols-2 items-center gap-4">
-          <span className="font-semibold">{label}:</span>
-          <span className={capitalize ? "capitalize" : ""}>{value}</span>
-        </div>
-      ))}
-    </div>
-  )}
-</DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detalles del Alumno</DialogTitle>
+          </DialogHeader>
+          {selectedStudent && (
+            <div className="grid gap-4 py-4">
+              {[
+                { label: "Nombre", value: selectedStudent.name },
+                { label: "Teléfono", value: selectedStudent.phone || "No especificado" },
+                { label: "Dirección", value: selectedStudent.address || "No especificada" },
+                { label: "Departamento", value: selectedStudent.department, capitalize: true },
+                { label: "Género", value: selectedStudent.gender, capitalize: true },
+                { 
+                  label: "Fecha de nacimiento", 
+                  value: selectedStudent.birthdate 
+                    ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy") 
+                    : "No especificada"
+                },
+              ].map(({ label, value, capitalize }, index) => (
+                <div key={index} className="grid grid-cols-2 items-center gap-4">
+                  <span className="font-semibold">{label}:</span>
+                  <span className={capitalize ? "capitalize" : ""}>{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
       </Dialog>
     </div>
   );
