@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -83,19 +84,19 @@ const HistorialAsistencia = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="grid gap-6 md:grid-cols-[300px_1fr]">
-        <div className="space-y-6">
+    <div className="p-2 sm:p-4 md:p-6">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-[300px_1fr]">
+        <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Filtros</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Filtros</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isAdminOrSecretaria && (
                 <div>
                   <label className="text-sm font-medium mb-2 block">Departamento</label>
                   <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Seleccionar departamento" />
                     </SelectTrigger>
                     <SelectContent>
@@ -111,7 +112,7 @@ const HistorialAsistencia = () => {
               <div>
                 <label className="text-sm font-medium mb-2 block">Período</label>
                 <Select value={selectedRange} onValueChange={handleDateRangeChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar período" />
                   </SelectTrigger>
                   <SelectContent>
@@ -141,7 +142,7 @@ const HistorialAsistencia = () => {
                           {startDate ? format(startDate, "dd/MM/yyyy") : "Seleccionar fecha"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
+                      <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
                           selected={startDate}
@@ -166,7 +167,7 @@ const HistorialAsistencia = () => {
                           {endDate ? format(endDate, "dd/MM/yyyy") : "Seleccionar fecha"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
+                      <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
                           selected={endDate}
@@ -183,12 +184,12 @@ const HistorialAsistencia = () => {
         </div>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="text-lg md:text-xl">
               Asistencia del {format(startDate, "dd/MM/yyyy")} al {format(endDate, "dd/MM/yyyy")}
             </CardTitle>
             {isAdminOrSecretaria && (
-              <Button onClick={handleExportToExcel} disabled={!attendance.length}>
+              <Button onClick={handleExportToExcel} disabled={!attendance.length} className="w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />
                 Exportar Excel
               </Button>
@@ -200,26 +201,28 @@ const HistorialAsistencia = () => {
             ) : !attendance?.length ? (
               <p className="text-muted-foreground">No hay registros de asistencia para este período.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Departamento</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {attendance.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell>{record.students?.name}</TableCell>
-                      <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
-                      <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="capitalize">{record.students?.department}</TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Departamento</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {attendance.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium">{record.students?.name}</TableCell>
+                        <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
+                        <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                        <TableCell className="capitalize">{record.students?.department}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
