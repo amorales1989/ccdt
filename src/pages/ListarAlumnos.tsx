@@ -30,11 +30,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MessageSquare, Eye, Pencil, Trash2, MoreVertical } from "lucide-react";
+import { MessageSquare, Eye, Pencil, Trash2, MoreVertical, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
+import * as XLSX from 'xlsx';
 
 type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
 
@@ -86,6 +87,26 @@ const ListarAlumnos = () => {
   const handleViewDetails = (student: any) => {
     setSelectedStudent(student);
     setShowDetailsDialog(true);
+  };
+
+  const handleExport = () => {
+    // Create worksheet from the current filtered students data
+    const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
+      Nombre: student.name,
+      Departamento: student.department,
+      Teléfono: student.phone || '',
+      Dirección: student.address || '',
+      Género: student.gender,
+      'Fecha de Nacimiento': student.birthdate ? format(new Date(student.birthdate), "dd/MM/yyyy") : ''
+    })));
+
+    // Create workbook and append the worksheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
+
+    // Generate and download the file
+    const fileName = `alumnos_${selectedDepartment || 'todos'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   const renderActions = (student: any) => {
@@ -174,32 +195,44 @@ const ListarAlumnos = () => {
       <Card className="p-4 md:p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
-          {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
-            <Select
-              value={selectedDepartment || undefined}
-              onValueChange={(value: Department) => setSelectedDepartment(value)}
-            >
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filtrar por departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {isAdminOrSecretaria ? (
-                  <>
-                    <SelectItem value="niños">Niños</SelectItem>
-                    <SelectItem value="adolescentes">Adolescentes</SelectItem>
-                    <SelectItem value="jovenes">Jóvenes</SelectItem>
-                    <SelectItem value="adultos">Adultos</SelectItem>
-                  </>
-                ) : (
-                  profile?.departments?.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept.charAt(0).toUpperCase() + dept.slice(1)}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          )}
+          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+            {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
+              <Select
+                value={selectedDepartment || undefined}
+                onValueChange={(value: Department) => setSelectedDepartment(value)}
+              >
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Filtrar por departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isAdminOrSecretaria ? (
+                    <>
+                      <SelectItem value="niños">Niños</SelectItem>
+                      <SelectItem value="adolescentes">Adolescentes</SelectItem>
+                      <SelectItem value="jovenes">Jóvenes</SelectItem>
+                      <SelectItem value="adultos">Adultos</SelectItem>
+                    </>
+                  ) : (
+                    profile?.departments?.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+            {isAdminOrSecretaria && (
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                className="w-full md:w-auto"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
@@ -211,7 +244,6 @@ const ListarAlumnos = () => {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Departamento</TableHead>
-                  <TableHead>Género</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -220,7 +252,6 @@ const ListarAlumnos = () => {
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.name}</TableCell>
                     <TableCell className="capitalize">{student.department}</TableCell>
-                    <TableCell className="capitalize">{student.gender}</TableCell>
                     <TableCell className="text-right">{renderActions(student)}</TableCell>
                   </TableRow>
                 ))}
@@ -264,3 +295,4 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
+
