@@ -1,0 +1,22 @@
+{
+    "name": "ccdt App",
+    "short_name": "ccdt",
+    "description": "Lovable Generated Project",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ff5722",
+    "icons": [
+      {
+        "src": "/fire.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "/fire.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }
+  
