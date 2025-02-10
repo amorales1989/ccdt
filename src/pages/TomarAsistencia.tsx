@@ -6,10 +6,20 @@ import { Check, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { markAttendance } from "@/lib/api";
+import { markAttendance, getAttendance } from "@/lib/api";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const TomarAsistencia = () => {
   const { toast } = useToast();
@@ -17,6 +27,7 @@ const TomarAsistencia = () => {
   const [asistencias, setAsistencias] = useState<Record<string, boolean>>({});
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isLoading, setIsLoading] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
@@ -27,7 +38,6 @@ const TomarAsistencia = () => {
       let query = supabase.from("students").select("*");
 
       if (!isAdminOrSecretaria && profile?.departments?.length) {
-        // Si no es admin/secretaria, filtrar por el primer departamento asignado
         query = query.eq("department", profile.departments[0]);
       }
 
@@ -41,6 +51,16 @@ const TomarAsistencia = () => {
     },
   });
 
+  const checkExistingAttendance = async (date: string) => {
+    try {
+      const { data } = await getAttendance(date, date);
+      return data && data.length > 0;
+    } catch (error) {
+      console.error("Error checking existing attendance:", error);
+      return false;
+    }
+  };
+
   const handleSaveAttendance = async () => {
     if (!selectedDate) {
       toast({
@@ -53,6 +73,15 @@ const TomarAsistencia = () => {
 
     setIsLoading(true);
     try {
+      // Check for existing attendance
+      const hasExistingAttendance = await checkExistingAttendance(selectedDate);
+      
+      if (hasExistingAttendance) {
+        setShowAlert(true);
+        setIsLoading(false);
+        return;
+      }
+
       await Promise.all(
         Object.entries(asistencias).map(([studentId, status]) =>
           markAttendance({
@@ -148,8 +177,23 @@ const TomarAsistencia = () => {
           </Button>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Asistencia ya registrada</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ya existe un registro de asistencia para la fecha seleccionada. Por favor, seleccione otra fecha o consulte el historial de asistencia.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowAlert(false)}>Aceptar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
 
 export default TomarAsistencia;
+
