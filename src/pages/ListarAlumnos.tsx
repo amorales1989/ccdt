@@ -216,11 +216,6 @@ const ListarAlumnos = () => {
       <h3 className="text-lg font-semibold mb-4">{title}</h3>
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-full">Nombre</TableHead>
-            </TableRow>
-          </TableHeader>
           <TableBody>
             {students.map((student) => (
               <Collapsible
