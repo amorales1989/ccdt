@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -11,13 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -30,7 +24,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MessageSquare, Eye, Pencil, Trash2, MoreVertical, Download } from "lucide-react";
+import { 
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger 
+} from "@/components/ui/collapsible";
+import { MessageSquare, Eye, Pencil, Trash2, MoreVertical, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -45,7 +44,6 @@ const ListarAlumnos = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
     profile?.departments?.[0] || null
   );
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const isMobile = useIsMobile();
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
@@ -84,19 +82,6 @@ const ListarAlumnos = () => {
     window.open(`https://wa.me/${formattedPhone}`, "_blank");
   };
 
-  const handleViewDetails = (student: any) => {
-    setSelectedStudent(student);
-    setShowDetailsDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setShowDetailsDialog(false);
-    const timer = setTimeout(() => {
-      setSelectedStudent(null);
-    }, 300);
-    return () => clearTimeout(timer);
-  };
-
   const handleExport = () => {
     const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
       Nombre: student.name,
@@ -114,6 +99,29 @@ const ListarAlumnos = () => {
     XLSX.writeFile(workbook, fileName);
   };
 
+  const renderStudentDetails = (student: any) => (
+    <div className="grid gap-4 py-4 px-4 bg-muted/30 rounded-lg">
+      {[
+        { label: "Nombre", value: student.name },
+        { label: "Teléfono", value: student.phone || "No especificado" },
+        { label: "Dirección", value: student.address || "No especificada" },
+        { label: "Departamento", value: student.department, capitalize: true },
+        { label: "Género", value: student.gender, capitalize: true },
+        { 
+          label: "Fecha de nacimiento", 
+          value: student.birthdate 
+            ? format(new Date(student.birthdate), "dd/MM/yyyy") 
+            : "No especificada"
+        },
+      ].map(({ label, value, capitalize }, index) => (
+        <div key={index} className="grid grid-cols-2 items-center gap-4">
+          <span className="font-semibold">{label}:</span>
+          <span className={capitalize ? "capitalize" : ""}>{value}</span>
+        </div>
+      ))}
+    </div>
+  );
+
   const renderActions = (student: any) => {
     const actions = (
       <>
@@ -126,15 +134,20 @@ const ListarAlumnos = () => {
           <MessageSquare className="h-4 w-4" />
           {isMobile && <span className="ml-2">WhatsApp</span>}
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleViewDetails(student)}
-          title="Ver detalles"
-        >
-          <Eye className="h-4 w-4" />
-          {isMobile && <span className="ml-2">Ver detalles</span>}
-        </Button>
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Ver detalles"
+          >
+            {selectedStudent?.id === student.id ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+            {isMobile && <span className="ml-2">Ver detalles</span>}
+          </Button>
+        </CollapsibleTrigger>
         {isAdminOrSecretaria && (
           <>
             <Button
@@ -171,8 +184,12 @@ const ListarAlumnos = () => {
               <MessageSquare className="h-4 w-4 mr-2" />
               WhatsApp
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleViewDetails(student)}>
-              <Eye className="h-4 w-4 mr-2" />
+            <DropdownMenuItem onClick={() => setSelectedStudent(selectedStudent?.id === student.id ? null : student)}>
+              {selectedStudent?.id === student.id ? (
+                <ChevronUp className="h-4 w-4 mr-2" />
+              ) : (
+                <ChevronDown className="h-4 w-4 mr-2" />
+              )}
               Ver detalles
             </DropdownMenuItem>
             {isAdminOrSecretaria && (
@@ -254,59 +271,32 @@ const ListarAlumnos = () => {
               </TableHeader>
               <TableBody>
                 {students.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.name}</TableCell>
-                    <TableCell className="capitalize">{student.department}</TableCell>
-                    <TableCell className="text-right">{renderActions(student)}</TableCell>
-                  </TableRow>
+                  <Collapsible
+                    key={student.id}
+                    open={selectedStudent?.id === student.id}
+                    onOpenChange={() => {
+                      setSelectedStudent(selectedStudent?.id === student.id ? null : student);
+                    }}
+                  >
+                    <TableRow>
+                      <TableCell className="font-medium">{student.name}</TableCell>
+                      <TableCell className="capitalize">{student.department}</TableCell>
+                      <TableCell className="text-right">{renderActions(student)}</TableCell>
+                    </TableRow>
+                    <CollapsibleContent>
+                      <TableRow>
+                        <TableCell colSpan={3} className="p-0">
+                          {renderStudentDetails(student)}
+                        </TableCell>
+                      </TableRow>
+                    </CollapsibleContent>
+                  </Collapsible>
                 ))}
               </TableBody>
             </Table>
           </div>
         )}
       </Card>
-
-      <Dialog 
-        open={showDetailsDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCloseDialog();
-          }
-        }}
-      >
-        <DialogContent 
-          className="sm:max-w-[425px]"
-        >
-          <DialogHeader>
-            <DialogTitle>Detalles del Alumno</DialogTitle>
-            <DialogDescription>
-              Información detallada del alumno seleccionado
-            </DialogDescription>
-          </DialogHeader>
-          {selectedStudent && (
-            <div className="grid gap-4 py-4">
-              {[
-                { label: "Nombre", value: selectedStudent.name },
-                { label: "Teléfono", value: selectedStudent.phone || "No especificado" },
-                { label: "Dirección", value: selectedStudent.address || "No especificada" },
-                { label: "Departamento", value: selectedStudent.department, capitalize: true },
-                { label: "Género", value: selectedStudent.gender, capitalize: true },
-                { 
-                  label: "Fecha de nacimiento", 
-                  value: selectedStudent.birthdate 
-                    ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy") 
-                    : "No especificada"
-                },
-              ].map(({ label, value, capitalize }, index) => (
-                <div key={index} className="grid grid-cols-2 items-center gap-4">
-                  <span className="font-semibold">{label}:</span>
-                  <span className={capitalize ? "capitalize" : ""}>{value}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
