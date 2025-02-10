@@ -231,10 +231,14 @@ const ListarAlumnos = () => {
               >
                 <TableRow>
                   <TableCell>
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{student.name}</span>
-                      <div className="flex items-center">
-                        <span className="mr-4 text-muted-foreground">{calculateAge(student.birthdate)}</span>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="w-1/2">
+                        <span className="font-medium">{student.name}</span>
+                      </div>
+                      <div className="flex items-center justify-end gap-6 w-1/2">
+                        <span className="text-muted-foreground min-w-[100px] text-right">
+                          {calculateAge(student.birthdate)}
+                        </span>
                         {renderActions(student)}
                       </div>
                     </div>
