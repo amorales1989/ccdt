@@ -264,9 +264,9 @@ const ListarAlumnos = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Departamento</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead className="w-[40%]">Nombre</TableHead>
+                  <TableHead className="w-[30%]">Departamento</TableHead>
+                  <TableHead className="w-[30%] text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -281,7 +281,11 @@ const ListarAlumnos = () => {
                     <TableRow>
                       <TableCell className="font-medium">{student.name}</TableCell>
                       <TableCell className="capitalize">{student.department}</TableCell>
-                      <TableCell className="text-right">{renderActions(student)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end">
+                          {renderActions(student)}
+                        </div>
+                      </TableCell>
                     </TableRow>
                     <CollapsibleContent>
                       <TableRow>
