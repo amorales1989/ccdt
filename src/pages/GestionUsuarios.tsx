@@ -60,24 +60,30 @@ const GestionUsuarios = () => {
         throw error;
       }
 
-      // Fetch email addresses for each profile
-      const profilesWithEmail = await Promise.all(
+      // Get user data using admin API
+      const usersData = await Promise.all(
         profiles.map(async (profile) => {
-          const { data: userData, error: userError } = await supabase
-            .from('auth')
-            .select('email')
-            .eq('id', profile.id)
-            .single();
+          const { data: adminData, error: adminError } = await supabase.auth.admin.getUserById(
+            profile.id
+          );
+
+          if (adminError) {
+            console.error("Error fetching user data:", adminError);
+            return {
+              ...profile,
+              email: ''
+            };
+          }
 
           return {
             ...profile,
-            email: userData?.email || ''
+            email: adminData.user.email || ''
           };
         })
       );
 
-      console.log("Fetched profiles:", profilesWithEmail);
-      return profilesWithEmail as Profile[];
+      console.log("Fetched profiles:", usersData);
+      return usersData as Profile[];
     }
   });
 
@@ -98,22 +104,17 @@ const GestionUsuarios = () => {
 
       updatePromises.push(profileUpdate);
 
-      // Update email if provided
-      if (updatedUser.newEmail) {
-        const emailUpdate = supabase.auth.admin.updateUserById(
+      // Update email and/or password using admin API
+      if (updatedUser.newEmail || updatedUser.newPassword) {
+        const { error: adminError } = await supabase.auth.admin.updateUserById(
           updatedUser.id,
-          { email: updatedUser.newEmail }
+          {
+            email: updatedUser.newEmail,
+            password: updatedUser.newPassword
+          }
         );
-        updatePromises.push(emailUpdate);
-      }
 
-      // Update password if provided
-      if (updatedUser.newPassword) {
-        const passwordUpdate = supabase.auth.admin.updateUserById(
-          updatedUser.id,
-          { password: updatedUser.newPassword }
-        );
-        updatePromises.push(passwordUpdate);
+        if (adminError) throw adminError;
       }
 
       await Promise.all(updatePromises);
@@ -345,3 +346,4 @@ const GestionUsuarios = () => {
 };
 
 export default GestionUsuarios;
+
