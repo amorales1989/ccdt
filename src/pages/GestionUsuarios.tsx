@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,7 @@ const GestionUsuarios = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
@@ -61,26 +62,23 @@ const GestionUsuarios = () => {
       }
 
       // Get user data using admin API
-      const usersData = await Promise.all(
-        profiles.map(async (profile) => {
-          const { data: adminData, error: adminError } = await supabase.auth.admin.getUserById(
-            profile.id
-          );
+      const { data: { users: adminUsersData }, error: adminError } = await supabase.functions.invoke('manage-users', {
+        body: { action: 'list' }
+      });
 
-          if (adminError) {
-            console.error("Error fetching user data:", adminError);
-            return {
-              ...profile,
-              email: ''
-            };
-          }
+      if (adminError) {
+        console.error("Error fetching admin users data:", adminError);
+        throw adminError;
+      }
 
-          return {
-            ...profile,
-            email: adminData.user.email || ''
-          };
-        })
-      );
+      // Map profiles with admin data
+      const usersData = profiles.map(profile => {
+        const adminData = adminUsersData.find((user: any) => user.id === profile.id);
+        return {
+          ...profile,
+          email: adminData?.email || ''
+        };
+      });
 
       console.log("Fetched profiles:", usersData);
       return usersData as Profile[];
@@ -89,10 +87,34 @@ const GestionUsuarios = () => {
 
   const updateUserMutation = useMutation({
     mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
-      const updatePromises = [];
+      const updateData: any = {
+        action: 'update',
+        userId: updatedUser.id,
+        userData: {
+          first_name: updatedUser.first_name,
+          last_name: updatedUser.last_name,
+          role: updatedUser.role,
+          departments: updatedUser.departments,
+        }
+      };
+
+      if (updatedUser.newEmail) {
+        updateData.userData.email = updatedUser.newEmail;
+      }
+
+      if (updatedUser.newPassword) {
+        updateData.userData.password = updatedUser.newPassword;
+      }
+
+      // Update user data using the edge function
+      const { error: adminError } = await supabase.functions.invoke('manage-users', {
+        body: updateData
+      });
+
+      if (adminError) throw adminError;
 
       // Update profile data
-      const profileUpdate = supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           first_name: updatedUser.first_name,
@@ -102,22 +124,7 @@ const GestionUsuarios = () => {
         })
         .eq('id', updatedUser.id);
 
-      updatePromises.push(profileUpdate);
-
-      // Update email and/or password using admin API
-      if (updatedUser.newEmail || updatedUser.newPassword) {
-        const { error: adminError } = await supabase.auth.admin.updateUserById(
-          updatedUser.id,
-          {
-            email: updatedUser.newEmail,
-            password: updatedUser.newPassword
-          }
-        );
-
-        if (adminError) throw adminError;
-      }
-
-      await Promise.all(updatePromises);
+      if (profileError) throw profileError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -141,8 +148,9 @@ const GestionUsuarios = () => {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete auth user (this will cascade to profile due to foreign key)
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      const { error } = await supabase.functions.invoke('manage-users', {
+        body: { action: 'delete', userId }
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -194,6 +202,7 @@ const GestionUsuarios = () => {
                         setSelectedUser(null);
                         setNewEmail("");
                         setNewPassword("");
+                        setShowPassword(false);
                       }
                     }}>
                       <DialogTrigger asChild>
@@ -249,15 +258,30 @@ const GestionUsuarios = () => {
                               onChange={(e) => setNewEmail(e.target.value)}
                             />
                           </div>
-                          <div>
-                            <Label htmlFor="password">Nueva Contraseña (dejar en blanco para no cambiar)</Label>
-                            <Input
-                              id="password"
-                              type="password"
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              placeholder="••••••••"
-                            />
+                          <div className="relative">
+                            <Label htmlFor="password">Nueva Contraseña</Label>
+                            <div className="relative">
+                              <Input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                className="pr-10"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full"
+                                onClick={() => setShowPassword(!showPassword)}
+                              >
+                                {showPassword ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
                           </div>
                           <div>
                             <Label htmlFor="role">Rol</Label>
@@ -346,4 +370,3 @@ const GestionUsuarios = () => {
 };
 
 export default GestionUsuarios;
-
