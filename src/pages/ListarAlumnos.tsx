@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -92,9 +91,10 @@ const ListarAlumnos = () => {
 
   const handleCloseDialog = () => {
     setShowDetailsDialog(false);
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setSelectedStudent(null);
-    }, 200); // Pequeño delay para asegurar que la animación del diálogo termine
+    }, 300);
+    return () => clearTimeout(timer);
   };
 
   const handleExport = () => {
@@ -267,13 +267,16 @@ const ListarAlumnos = () => {
       </Card>
 
       <Dialog 
-        open={showDetailsDialog} 
+        open={showDetailsDialog}
         onOpenChange={(open) => {
-          if (!open) handleCloseDialog();
-          else setShowDetailsDialog(true);
+          if (!open) {
+            handleCloseDialog();
+          }
         }}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent 
+          className="sm:max-w-[425px]"
+        >
           <DialogHeader>
             <DialogTitle>Detalles del Alumno</DialogTitle>
             <DialogDescription>
