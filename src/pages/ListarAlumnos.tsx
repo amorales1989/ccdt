@@ -92,7 +92,7 @@ const ListarAlumnos = () => {
 
   const handleCloseDialog = () => {
     setShowDetailsDialog(false);
-    setSelectedStudent(null); // Limpiamos el estudiante seleccionado al cerrar
+    setSelectedStudent(null);
   };
 
   const handleExport = () => {
@@ -264,40 +264,43 @@ const ListarAlumnos = () => {
         )}
       </Card>
 
-      <Dialog open={showDetailsDialog} onOpenChange={handleCloseDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Detalles del Alumno</DialogTitle>
-            <DialogDescription>
-              Información detallada del alumno seleccionado
-            </DialogDescription>
-          </DialogHeader>
-          {selectedStudent && (
-            <div className="grid gap-4 py-4">
-              {[
-                { label: "Nombre", value: selectedStudent.name },
-                { label: "Teléfono", value: selectedStudent.phone || "No especificado" },
-                { label: "Dirección", value: selectedStudent.address || "No especificada" },
-                { label: "Departamento", value: selectedStudent.department, capitalize: true },
-                { label: "Género", value: selectedStudent.gender, capitalize: true },
-                { 
-                  label: "Fecha de nacimiento", 
-                  value: selectedStudent.birthdate 
-                    ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy") 
-                    : "No especificada"
-                },
-              ].map(({ label, value, capitalize }, index) => (
-                <div key={index} className="grid grid-cols-2 items-center gap-4">
-                  <span className="font-semibold">{label}:</span>
-                  <span className={capitalize ? "capitalize" : ""}>{value}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {showDetailsDialog && (
+        <Dialog open={true} onOpenChange={handleCloseDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Detalles del Alumno</DialogTitle>
+              <DialogDescription>
+                Información detallada del alumno seleccionado
+              </DialogDescription>
+            </DialogHeader>
+            {selectedStudent && (
+              <div className="grid gap-4 py-4">
+                {[
+                  { label: "Nombre", value: selectedStudent.name },
+                  { label: "Teléfono", value: selectedStudent.phone || "No especificado" },
+                  { label: "Dirección", value: selectedStudent.address || "No especificada" },
+                  { label: "Departamento", value: selectedStudent.department, capitalize: true },
+                  { label: "Género", value: selectedStudent.gender, capitalize: true },
+                  { 
+                    label: "Fecha de nacimiento", 
+                    value: selectedStudent.birthdate 
+                      ? format(new Date(selectedStudent.birthdate), "dd/MM/yyyy") 
+                      : "No especificada"
+                  },
+                ].map(({ label, value, capitalize }, index) => (
+                  <div key={index} className="grid grid-cols-2 items-center gap-4">
+                    <span className="font-semibold">{label}:</span>
+                    <span className={capitalize ? "capitalize" : ""}>{value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
 
 export default ListarAlumnos;
+
