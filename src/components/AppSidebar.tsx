@@ -57,6 +57,11 @@ const getItems = (role: string | undefined) => {
         title: "Registrar Usuario",
         url: "/register",
         icon: UserPlus2,
+      },
+      {
+        title: "Gestión de Usuarios",
+        url: "/gestion-usuarios",
+        icon: UserRound,
       }
     );
   }
