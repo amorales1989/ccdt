@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -196,7 +197,7 @@ const ListarAlumnos = () => {
     <Card className="p-4 md:p-6 mb-6">
       <h3 className="text-lg font-semibold mb-4">{title}</h3>
       <div className="overflow-x-auto">
-        <Table>
+        <Table className="w-full">
           <TableBody>
             {students.map((student) => (
               <Collapsible
@@ -207,17 +208,17 @@ const ListarAlumnos = () => {
                 }}
               >
                 <TableRow>
-                  <TableCell>
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="w-1/2">
+                  <TableCell className="p-0">
+                    <div className="flex items-center justify-between gap-4 p-4">
+                      <div className="w-[40%] md:w-[60%]">
                         <CollapsibleTrigger asChild>
                           <button className="font-medium hover:underline text-left">
                             {student.name}
                           </button>
                         </CollapsibleTrigger>
                       </div>
-                      <div className="flex items-center justify-end gap-6 w-1/2">
-                        <span className="text-muted-foreground min-w-[100px] text-right">
+                      <div className="flex items-center justify-end gap-2 md:gap-6 w-[60%] md:w-[40%]">
+                        <span className="text-muted-foreground text-right w-24">
                           {calculateAge(student.birthdate)}
                         </span>
                         {renderActions(student)}
@@ -300,3 +301,4 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
+
