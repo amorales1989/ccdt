@@ -196,7 +196,7 @@ const ListarAlumnos = () => {
   const renderStudentList = (students: any[], title: string) => (
     <Card className="p-4 md:p-6 mb-6">
       <h3 className="text-lg font-semibold mb-4">{title}</h3>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto w-full">
         <Table className="w-full">
           <TableBody>
             {students.map((student) => (
@@ -208,17 +208,17 @@ const ListarAlumnos = () => {
                 }}
               >
                 <TableRow>
-                  <TableCell className="p-0">
-                    <div className="flex items-center justify-between gap-4 p-4">
-                      <div className="w-[40%] md:w-[60%]">
+                  <TableCell className="p-0 w-full">
+                    <div className="flex items-center justify-between gap-4 p-4 w-full">
+                      <div className="w-full md:w-[60%]">
                         <CollapsibleTrigger asChild>
-                          <button className="font-medium hover:underline text-left">
+                          <button className="font-medium hover:underline text-left w-full">
                             {student.name}
                           </button>
                         </CollapsibleTrigger>
                       </div>
-                      <div className="flex items-center justify-end gap-2 md:gap-6 w-[60%] md:w-[40%]">
-                        <span className="text-muted-foreground text-right w-24">
+                      <div className="flex items-center justify-end gap-2 md:gap-6 shrink-0 md:w-[40%]">
+                        <span className="text-muted-foreground text-right w-24 shrink-0">
                           {calculateAge(student.birthdate)}
                         </span>
                         {renderActions(student)}
@@ -228,7 +228,7 @@ const ListarAlumnos = () => {
                 </TableRow>
                 <CollapsibleContent>
                   <TableRow>
-                    <TableCell className="p-0">
+                    <TableCell className="p-0 w-full">
                       {renderStudentDetails(student)}
                     </TableCell>
                   </TableRow>
