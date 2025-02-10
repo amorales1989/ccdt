@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -27,7 +26,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger 
 } from "@/components/ui/collapsible";
-import { MessageSquare, Eye, Pencil, Trash2, MoreVertical, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageSquare, Pencil, Trash2, MoreVertical, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears } from "date-fns";
@@ -137,20 +136,6 @@ const ListarAlumnos = () => {
           <MessageSquare className="h-4 w-4" />
           {isMobile && <span className="ml-2">WhatsApp</span>}
         </Button>
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Ver detalles"
-          >
-            {selectedStudent?.id === student.id ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-            {isMobile && <span className="ml-2">Ver detalles</span>}
-          </Button>
-        </CollapsibleTrigger>
         {isAdminOrSecretaria && (
           <>
             <Button
@@ -186,14 +171,6 @@ const ListarAlumnos = () => {
             <DropdownMenuItem onClick={() => handleWhatsAppClick(student.phone)}>
               <MessageSquare className="h-4 w-4 mr-2" />
               WhatsApp
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSelectedStudent(selectedStudent?.id === student.id ? null : student)}>
-              {selectedStudent?.id === student.id ? (
-                <ChevronUp className="h-4 w-4 mr-2" />
-              ) : (
-                <ChevronDown className="h-4 w-4 mr-2" />
-              )}
-              Ver detalles
             </DropdownMenuItem>
             {isAdminOrSecretaria && (
               <>
@@ -233,7 +210,11 @@ const ListarAlumnos = () => {
                   <TableCell>
                     <div className="flex items-center justify-between gap-4">
                       <div className="w-1/2">
-                        <span className="font-medium">{student.name}</span>
+                        <CollapsibleTrigger asChild>
+                          <button className="font-medium hover:underline text-left">
+                            {student.name}
+                          </button>
+                        </CollapsibleTrigger>
                       </div>
                       <div className="flex items-center justify-end gap-6 w-1/2">
                         <span className="text-muted-foreground min-w-[100px] text-right">
@@ -319,4 +300,3 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
-
