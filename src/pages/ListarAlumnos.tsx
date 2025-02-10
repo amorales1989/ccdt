@@ -264,9 +264,7 @@ const ListarAlumnos = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40%]">Nombre</TableHead>
-                  <TableHead className="w-[30%]">Departamento</TableHead>
-                  <TableHead className="w-[30%] text-right">Acciones</TableHead>
+                  <TableHead className="w-full">Nombre</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -279,17 +277,19 @@ const ListarAlumnos = () => {
                     }}
                   >
                     <TableRow>
-                      <TableCell className="font-medium">{student.name}</TableCell>
-                      <TableCell className="capitalize">{student.department}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end">
-                          {renderActions(student)}
+                      <TableCell>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{student.name}</span>
+                          <div className="flex items-center">
+                            <span className="mr-4 text-muted-foreground capitalize">{student.department}</span>
+                            {renderActions(student)}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
                     <CollapsibleContent>
                       <TableRow>
-                        <TableCell colSpan={3} className="p-0">
+                        <TableCell className="p-0">
                           {renderStudentDetails(student)}
                         </TableCell>
                       </TableRow>
@@ -306,3 +306,4 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
+
