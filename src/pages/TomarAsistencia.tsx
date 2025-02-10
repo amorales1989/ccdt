@@ -53,8 +53,8 @@ const TomarAsistencia = () => {
 
   const checkExistingAttendance = async (date: string) => {
     try {
-      const { data } = await getAttendance(date, date);
-      return data && data.length > 0;
+      const attendanceData = await getAttendance(date, date);
+      return attendanceData && attendanceData.length > 0;
     } catch (error) {
       console.error("Error checking existing attendance:", error);
       return false;
@@ -73,7 +73,6 @@ const TomarAsistencia = () => {
 
     setIsLoading(true);
     try {
-      // Check for existing attendance
       const hasExistingAttendance = await checkExistingAttendance(selectedDate);
       
       if (hasExistingAttendance) {
