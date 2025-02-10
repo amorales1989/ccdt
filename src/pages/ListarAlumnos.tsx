@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -6,8 +7,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import {
@@ -31,7 +30,7 @@ import {
 import { MessageSquare, Eye, Pencil, Trash2, MoreVertical, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { format, differenceInYears } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
 
@@ -79,6 +78,11 @@ const ListarAlumnos = () => {
     if (!phone) return;
     const formattedPhone = phone.replace(/\D/g, "");
     window.open(`https://wa.me/${formattedPhone}`, "_blank");
+  };
+
+  const calculateAge = (birthdate: string | null) => {
+    if (!birthdate) return "N/A";
+    return `${differenceInYears(new Date(), new Date(birthdate))} años`;
   };
 
   const handleExport = () => {
@@ -230,7 +234,7 @@ const ListarAlumnos = () => {
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{student.name}</span>
                       <div className="flex items-center">
-                        <span className="mr-4 text-muted-foreground capitalize">{student.department}</span>
+                        <span className="mr-4 text-muted-foreground">{calculateAge(student.birthdate)}</span>
                         {renderActions(student)}
                       </div>
                     </div>
@@ -311,3 +315,4 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
+
