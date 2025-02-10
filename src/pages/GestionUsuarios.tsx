@@ -38,6 +38,8 @@ const GestionUsuarios = () => {
   const navigate = useNavigate();
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
@@ -58,14 +60,33 @@ const GestionUsuarios = () => {
         throw error;
       }
 
-      console.log("Fetched profiles:", profiles);
-      return profiles as Profile[];
+      // Fetch email addresses for each profile
+      const profilesWithEmail = await Promise.all(
+        profiles.map(async (profile) => {
+          const { data: userData, error: userError } = await supabase
+            .from('auth')
+            .select('email')
+            .eq('id', profile.id)
+            .single();
+
+          return {
+            ...profile,
+            email: userData?.email || ''
+          };
+        })
+      );
+
+      console.log("Fetched profiles:", profilesWithEmail);
+      return profilesWithEmail as Profile[];
     }
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async (updatedUser: Profile) => {
-      const { error } = await supabase
+    mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
+      const updatePromises = [];
+
+      // Update profile data
+      const profileUpdate = supabase
         .from('profiles')
         .update({
           first_name: updatedUser.first_name,
@@ -75,7 +96,27 @@ const GestionUsuarios = () => {
         })
         .eq('id', updatedUser.id);
 
-      if (error) throw error;
+      updatePromises.push(profileUpdate);
+
+      // Update email if provided
+      if (updatedUser.newEmail) {
+        const emailUpdate = supabase.auth.admin.updateUserById(
+          updatedUser.id,
+          { email: updatedUser.newEmail }
+        );
+        updatePromises.push(emailUpdate);
+      }
+
+      // Update password if provided
+      if (updatedUser.newPassword) {
+        const passwordUpdate = supabase.auth.admin.updateUserById(
+          updatedUser.id,
+          { password: updatedUser.newPassword }
+        );
+        updatePromises.push(passwordUpdate);
+      }
+
+      await Promise.all(updatePromises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -84,6 +125,8 @@ const GestionUsuarios = () => {
         description: "El usuario ha sido actualizado exitosamente"
       });
       setIsEditing(false);
+      setNewEmail("");
+      setNewPassword("");
     },
     onError: (error) => {
       console.error("Error updating user:", error);
@@ -97,11 +140,8 @@ const GestionUsuarios = () => {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
-
+      // Delete auth user (this will cascade to profile due to foreign key)
+      const { error } = await supabase.auth.admin.deleteUser(userId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -151,6 +191,8 @@ const GestionUsuarios = () => {
                       if (!open) {
                         setIsEditing(false);
                         setSelectedUser(null);
+                        setNewEmail("");
+                        setNewPassword("");
                       }
                     }}>
                       <DialogTrigger asChild>
@@ -160,6 +202,7 @@ const GestionUsuarios = () => {
                           onClick={() => {
                             setSelectedUser(user);
                             setIsEditing(true);
+                            setNewEmail(user.email || "");
                           }}
                         >
                           <Pencil className="h-4 w-4" />
@@ -194,6 +237,25 @@ const GestionUsuarios = () => {
                                   last_name: e.target.value
                                 } : null)
                               }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              value={newEmail}
+                              onChange={(e) => setNewEmail(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="password">Nueva Contraseña (dejar en blanco para no cambiar)</Label>
+                            <Input
+                              id="password"
+                              type="password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="••••••••"
                             />
                           </div>
                           <div>
@@ -247,7 +309,11 @@ const GestionUsuarios = () => {
                             className="w-full"
                             onClick={() => {
                               if (selectedUser) {
-                                updateUserMutation.mutate(selectedUser);
+                                updateUserMutation.mutate({
+                                  ...selectedUser,
+                                  newEmail: newEmail !== selectedUser.email ? newEmail : undefined,
+                                  newPassword: newPassword || undefined
+                                });
                               }
                             }}
                           >
