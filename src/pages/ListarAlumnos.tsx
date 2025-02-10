@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -89,8 +90,12 @@ const ListarAlumnos = () => {
     setShowDetailsDialog(true);
   };
 
+  const handleCloseDialog = () => {
+    setShowDetailsDialog(false);
+    setSelectedStudent(null); // Limpiamos el estudiante seleccionado al cerrar
+  };
+
   const handleExport = () => {
-    // Create worksheet from the current filtered students data
     const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
       Nombre: student.name,
       Departamento: student.department,
@@ -100,11 +105,9 @@ const ListarAlumnos = () => {
       'Fecha de Nacimiento': student.birthdate ? format(new Date(student.birthdate), "dd/MM/yyyy") : ''
     })));
 
-    // Create workbook and append the worksheet
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
 
-    // Generate and download the file
     const fileName = `alumnos_${selectedDepartment || 'todos'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
@@ -261,10 +264,13 @@ const ListarAlumnos = () => {
         )}
       </Card>
 
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+      <Dialog open={showDetailsDialog} onOpenChange={handleCloseDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Detalles del Alumno</DialogTitle>
+            <DialogDescription>
+              Información detallada del alumno seleccionado
+            </DialogDescription>
           </DialogHeader>
           {selectedStudent && (
             <div className="grid gap-4 py-4">
@@ -295,4 +301,3 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
-
