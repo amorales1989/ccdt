@@ -143,6 +143,8 @@ const Index = () => {
     );
   };
 
+  const canManageEvents = profile?.role === 'admin' || profile?.role === 'secretaria';
+
   if (eventsLoading || studentsLoading) {
     return (
       <div className="p-6 flex justify-center items-center">
@@ -157,20 +159,22 @@ const Index = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Próximos Eventos</CardTitle>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="icon" className="rounded-full w-10 h-10">
-                <Plus className="h-5 w-5" />
-                <span className="sr-only">Nuevo Evento</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Crear Nuevo Evento</DialogTitle>
-              </DialogHeader>
-              <EventForm onSubmit={handleAddEvent} />
-            </DialogContent>
-          </Dialog>
+          {canManageEvents && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="icon" className="rounded-full w-10 h-10">
+                  <Plus className="h-5 w-5" />
+                  <span className="sr-only">Nuevo Evento</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Crear Nuevo Evento</DialogTitle>
+                </DialogHeader>
+                <EventForm onSubmit={handleAddEvent} />
+              </DialogContent>
+            </Dialog>
+          )}
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
@@ -184,31 +188,33 @@ const Index = () => {
                     </p>
                     <p className="mt-2">{event.description}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Editar Evento</DialogTitle>
-                        </DialogHeader>
-                        <EventForm 
-                          onSubmit={(updatedEvent) => handleEditEvent({ ...updatedEvent, id: event.id, created_at: event.created_at, updated_at: event.updated_at })} 
-                          initialData={event} 
-                        />
-                      </DialogContent>
-                    </Dialog>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleDeleteEvent(event.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+                  {canManageEvents && (
+                    <div className="flex gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Editar Evento</DialogTitle>
+                          </DialogHeader>
+                          <EventForm 
+                            onSubmit={(updatedEvent) => handleEditEvent({ ...updatedEvent, id: event.id, created_at: event.created_at, updated_at: event.updated_at })} 
+                            initialData={event} 
+                          />
+                        </DialogContent>
+                      </Dialog>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleDeleteEvent(event.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </Card>
             ))}

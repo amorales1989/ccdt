@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -88,7 +89,7 @@ export default function Auth() {
   // Mostrar la vista del selector de departamento si el usuario tiene más de uno
   if (showDepartmentSelect) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4 -mt-16">
         <Card className="w-full max-w-md">
           <CardHeader>
           <img src="/fire.png" alt="Fire Logo" className="w-16 h-16 mb-2" />
@@ -121,7 +122,7 @@ export default function Auth() {
 
   // Vista de inicio de sesión cuando no hay que seleccionar departamento
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4 -mt-16">
       <Card className="w-full max-w-md">
         <CardHeader>
         <img src="/fire.png" alt="Fire Logo" className="w-16 h-16 mb-2" />
