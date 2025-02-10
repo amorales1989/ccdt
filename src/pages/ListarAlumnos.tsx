@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -212,98 +211,108 @@ const ListarAlumnos = () => {
     return <div className="flex gap-2">{actions}</div>;
   };
 
+  const renderStudentList = (students: any[], title: string) => (
+    <Card className="p-4 md:p-6 mb-6">
+      <h3 className="text-lg font-semibold mb-4">{title}</h3>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-full">Nombre</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {students.map((student) => (
+              <Collapsible
+                key={student.id}
+                open={selectedStudent?.id === student.id}
+                onOpenChange={() => {
+                  setSelectedStudent(selectedStudent?.id === student.id ? null : student);
+                }}
+              >
+                <TableRow>
+                  <TableCell>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{student.name}</span>
+                      <div className="flex items-center">
+                        <span className="mr-4 text-muted-foreground capitalize">{student.department}</span>
+                        {renderActions(student)}
+                      </div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                <CollapsibleContent>
+                  <TableRow>
+                    <TableCell className="p-0">
+                      {renderStudentDetails(student)}
+                    </TableCell>
+                  </TableRow>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </Card>
+  );
+
+  const maleStudents = students.filter(student => student.gender === "masculino");
+  const femaleStudents = students.filter(student => student.gender === "femenino");
+
   return (
     <div className="container mx-auto py-6 px-4">
-      <Card className="p-4 md:p-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
-          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-            {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
-              <Select
-                value={selectedDepartment || undefined}
-                onValueChange={(value: Department) => setSelectedDepartment(value)}
-              >
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Filtrar por departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isAdminOrSecretaria ? (
-                    <>
-                      <SelectItem value="niños">Niños</SelectItem>
-                      <SelectItem value="adolescentes">Adolescentes</SelectItem>
-                      <SelectItem value="jovenes">Jóvenes</SelectItem>
-                      <SelectItem value="adultos">Adultos</SelectItem>
-                    </>
-                  ) : (
-                    profile?.departments?.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept.charAt(0).toUpperCase() + dept.slice(1)}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            )}
-            {isAdminOrSecretaria && (
-              <Button
-                variant="outline"
-                onClick={handleExport}
-                className="w-full md:w-auto"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
-              </Button>
-            )}
-          </div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
+        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+          {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
+            <Select
+              value={selectedDepartment || undefined}
+              onValueChange={(value: Department) => setSelectedDepartment(value)}
+            >
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filtrar por departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {isAdminOrSecretaria ? (
+                  <>
+                    <SelectItem value="niños">Niños</SelectItem>
+                    <SelectItem value="adolescentes">Adolescentes</SelectItem>
+                    <SelectItem value="jovenes">Jóvenes</SelectItem>
+                    <SelectItem value="adultos">Adultos</SelectItem>
+                  </>
+                ) : (
+                  profile?.departments?.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          )}
+          {isAdminOrSecretaria && (
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              className="w-full md:w-auto"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar
+            </Button>
+          )}
         </div>
+      </div>
 
-        {isLoading ? (
-          <div className="text-center py-4">Cargando...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-full">Nombre</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.map((student) => (
-                  <Collapsible
-                    key={student.id}
-                    open={selectedStudent?.id === student.id}
-                    onOpenChange={() => {
-                      setSelectedStudent(selectedStudent?.id === student.id ? null : student);
-                    }}
-                  >
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{student.name}</span>
-                          <div className="flex items-center">
-                            <span className="mr-4 text-muted-foreground capitalize">{student.department}</span>
-                            {renderActions(student)}
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <CollapsibleContent>
-                      <TableRow>
-                        <TableCell className="p-0">
-                          {renderStudentDetails(student)}
-                        </TableCell>
-                      </TableRow>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </Card>
+      {isLoading ? (
+        <div className="text-center py-4">Cargando...</div>
+      ) : (
+        <>
+          {renderStudentList(maleStudents, "Varones")}
+          {renderStudentList(femaleStudents, "Mujeres")}
+        </>
+      )}
     </div>
   );
 };
 
 export default ListarAlumnos;
-
