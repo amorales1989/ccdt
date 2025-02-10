@@ -30,6 +30,7 @@ const TomarAsistencia = () => {
   const [showAlert, setShowAlert] = useState(false);
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
+  const currentDepartment = profile?.departments?.[0];
 
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: ["students-attendance"],
@@ -37,8 +38,8 @@ const TomarAsistencia = () => {
       console.log("Fetching students for attendance...");
       let query = supabase.from("students").select("*");
 
-      if (!isAdminOrSecretaria && profile?.departments?.length) {
-        query = query.eq("department", profile.departments[0]);
+      if (!isAdminOrSecretaria && currentDepartment) {
+        query = query.eq("department", currentDepartment);
       }
 
       const { data, error } = await query;
@@ -53,8 +54,10 @@ const TomarAsistencia = () => {
 
   const checkExistingAttendance = async (date: string) => {
     try {
-      const attendanceData = await getAttendance(date, date);
-      return attendanceData && attendanceData.length > 0;
+      const attendanceData = await getAttendance(date, date, currentDepartment);
+      const hasAttendance = attendanceData && attendanceData.length > 0;
+      console.log("Checking attendance for date:", date, "department:", currentDepartment, "exists:", hasAttendance);
+      return hasAttendance;
     } catch (error) {
       console.error("Error checking existing attendance:", error);
       return false;
@@ -182,7 +185,7 @@ const TomarAsistencia = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Asistencia ya registrada</AlertDialogTitle>
             <AlertDialogDescription>
-              Ya existe un registro de asistencia para la fecha seleccionada. Por favor, seleccione otra fecha o consulte el historial de asistencia.
+              Ya existe un registro de asistencia para la fecha seleccionada en este departamento. Por favor, seleccione otra fecha o consulte el historial de asistencia.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
