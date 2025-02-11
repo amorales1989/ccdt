@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
@@ -165,8 +164,13 @@ export const deleteEvent = async (id: string) => {
 // Attendance API
 export const getAttendance = async (startDate?: string, endDate?: string, department?: string) => {
   try {
-    console.log('Fetching attendance with params:', { startDate, endDate, department });
+    console.log('Starting attendance fetch with params:', { startDate, endDate, department });
     
+    if (!startDate || !endDate) {
+      console.error('Missing required date parameters');
+      throw new Error('Start date and end date are required');
+    }
+
     let query = supabase
       .from("attendance")
       .select(`
@@ -176,25 +180,29 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
           name,
           department
         )
-      `) as PostgrestFilterBuilder<any, any, any>;
-
-    if (startDate && endDate) {
-      query = query.gte('date', startDate).lte('date', endDate);
-    }
+      `)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false }) as PostgrestFilterBuilder<any, any, any>;
 
     if (department) {
+      console.log('Filtering by department:', department);
       query = query.eq('students.department', department);
     }
 
     const { data, error } = await query;
     
-    console.log('Attendance query result:', { data, error });
-    
     if (error) {
-      console.error('Error fetching attendance:', error);
+      console.error('Supabase error fetching attendance:', error);
       throw error;
     }
 
+    if (!data) {
+      console.log('No attendance records found for the given criteria');
+      return [];
+    }
+
+    console.log(`Successfully fetched ${data.length} attendance records`);
     return data;
   } catch (error) {
     console.error('Error in getAttendance:', error);
@@ -204,10 +212,12 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
 
 export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at" | "updated_at">) => {
   try {
-    console.log('Marking attendance with data:', attendance);
+    console.log('Starting attendance marking with data:', attendance);
     
     if (!attendance.student_id || !attendance.date) {
-      throw new Error('Missing required fields for attendance');
+      const error = new Error('Missing required fields for attendance');
+      console.error(error);
+      throw error;
     }
 
     // First, get the student's department
@@ -215,26 +225,34 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       .from('students')
       .select('department')
       .eq('id', attendance.student_id)
-      .single();
+      .maybeSingle();
 
     if (studentError) {
       console.error('Error fetching student department:', studentError);
       throw studentError;
     }
 
+    if (!student) {
+      const error = new Error(`No student found with ID: ${attendance.student_id}`);
+      console.error(error);
+      throw error;
+    }
+
+    const attendanceData = {
+      student_id: attendance.student_id,
+      date: attendance.date,
+      status: attendance.status,
+      department: student.department,
+      ...(attendance.event_id && { event_id: attendance.event_id })
+    };
+
+    console.log('Upserting attendance record:', attendanceData);
+
     const { data, error } = await supabase
       .from("attendance")
-      .upsert([
-        {
-          student_id: attendance.student_id,
-          date: attendance.date,
-          status: attendance.status,
-          department: student.department,
-          ...(attendance.event_id && { event_id: attendance.event_id })
-        }
-      ])
+      .upsert([attendanceData])
       .select()
-      .single();
+      .maybeSingle();
     
     if (error) {
       console.error('Error marking attendance:', error);
@@ -251,13 +269,20 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
 
 export const deleteAttendance = async (studentId: string, eventId: string) => {
   try {
+    console.log('Attempting to delete attendance record:', { studentId, eventId });
+
     const { error } = await supabase
       .from("attendance")
       .delete()
       .eq("student_id", studentId)
       .eq("event_id", eventId);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error deleting attendance:', error);
+      throw error;
+    }
+
+    console.log('Successfully deleted attendance record');
   } catch (error) {
     console.error('Error in deleteAttendance:', error);
     throw error;
