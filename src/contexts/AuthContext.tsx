@@ -151,23 +151,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear local storage first
       localStorage.removeItem('selectedDepartment');
       
-      // Reset state
+      // Reset state before attempting to sign out
       setUser(null);
       setProfile(null);
       setSession(null);
       
-      // Attempt to sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Supabase sign out error:", error);
-        // Even if there's an error, we want to clear the local state
+      try {
+        // Attempt to sign out from Supabase
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.warn("Supabase sign out warning:", error);
+        }
+      } catch (supabaseError) {
+        console.warn("Supabase sign out warning:", supabaseError);
       }
       
       console.log("Sign out completed");
     } catch (error) {
       console.error("Sign out process error:", error);
-      // Re-throw the error to be handled by the component
-      throw error;
     }
   }
 
