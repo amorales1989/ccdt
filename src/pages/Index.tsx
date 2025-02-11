@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -100,7 +101,8 @@ const Index = () => {
     deleteEventMutation.mutate(id);
   };
 
-  const departments = ["niños", "adolescentes", "jovenes", "adultos"];
+  type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
+  const departments: Department[] = ["niños", "adolescentes", "jovenes", "adultos"];
 
   const renderStudentStats = () => {
     if (!profile) return null;
@@ -111,7 +113,7 @@ const Index = () => {
     // Group students by department
     const studentsByDepartment = departments.reduce((acc, dept) => {
       // Solo procesar departamentos relevantes para el usuario
-      if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
+      if (!isAdminOrSecretary && !userDepartments.includes(dept as Department)) {
         return acc;
       }
 
@@ -122,7 +124,7 @@ const Index = () => {
         total: deptStudents.length
       };
       return acc;
-    }, {} as Record<string, { male: number; female: number; total: number }>);
+    }, {} as Record<Department, { male: number; female: number; total: number }>);
 
     return (
       <Card className="mb-6">
@@ -133,7 +135,7 @@ const Index = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {departments.map(dept => {
               // Solo mostrar departamentos relevantes para el usuario
-              if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
+              if (!isAdminOrSecretary && !userDepartments.includes(dept as Department)) {
                 return null;
               }
 
