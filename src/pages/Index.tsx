@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -8,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getEvents, createEvent, updateEvent, deleteEvent, getStudents } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
 import type { Event } from "@/types/database";
 
 const Index = () => {
@@ -124,8 +124,6 @@ const Index = () => {
       return acc;
     }, {} as Record<string, { male: number; female: number; total: number }>);
 
-    console.log('Students by department:', studentsByDepartment);
-
     return (
       <Card className="mb-6">
         <CardHeader>
@@ -198,7 +196,7 @@ const Index = () => {
                   <div>
                     <h3 className="font-semibold text-lg">{event.title}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(event.date).toLocaleDateString()}
+                      {format(new Date(event.date), "dd/MM/yyyy")}
                     </p>
                     <p className="mt-2">{event.description}</p>
                   </div>

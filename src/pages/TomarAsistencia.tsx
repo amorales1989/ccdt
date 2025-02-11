@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -117,6 +116,10 @@ const TomarAsistencia = () => {
     setAsistencias((prev) => ({ ...prev, [id]: presente }));
   };
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value);
+  };
+
   if (isLoadingStudents) {
     return <div className="p-6">Cargando alumnos...</div>;
   }
@@ -125,13 +128,13 @@ const TomarAsistencia = () => {
     <div className="p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Tomar Asistencia</CardTitle>
+          <CardTitle>Tomar Asistencia - {format(new Date(selectedDate), "dd/MM/yyyy")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <input
             type="date"
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={handleDateChange}
             className="border p-2 rounded w-full"
           />
           <Table>
@@ -186,7 +189,8 @@ const TomarAsistencia = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Asistencia ya registrada</AlertDialogTitle>
             <AlertDialogDescription>
-              Ya existe un registro de asistencia para la fecha seleccionada en este departamento. Por favor, seleccione otra fecha o consulte el historial de asistencia.
+              Ya existe un registro de asistencia para la fecha {format(new Date(selectedDate), "dd/MM/yyyy")} en este departamento. 
+              Por favor, seleccione otra fecha o consulte el historial de asistencia.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

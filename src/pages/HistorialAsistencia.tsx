@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,7 +31,6 @@ const HistorialAsistencia = () => {
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
 
-  // Handle date range selection
   const handleDateRangeChange = (value: string) => {
     setSelectedRange(value);
     const today = new Date();
@@ -56,14 +54,12 @@ const HistorialAsistencia = () => {
     }
   };
 
-  // Fetch attendance for the selected date range
   const { data: attendance = [], isLoading: attendanceLoading } = useQuery({
     queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment],
     queryFn: async () => {
       const formattedStartDate = format(startDate, "yyyy-MM-dd");
       const formattedEndDate = format(endDate, "yyyy-MM-dd");
       console.log("Fetching attendance for date range:", formattedStartDate, "to", formattedEndDate);
-      // If user is not admin/secretaria, force their department
       const departmentToUse = isAdminOrSecretaria ? (selectedDepartment === "all" ? "" : selectedDepartment) : userDepartment || "";
       return getAttendance(formattedStartDate, formattedEndDate, departmentToUse);
     },
@@ -73,7 +69,7 @@ const HistorialAsistencia = () => {
     const data = attendance.map(record => ({
       Nombre: record.students?.name,
       Estado: record.status ? "Presente" : "Ausente",
-      Fecha: new Date(record.date).toLocaleDateString(),
+      Fecha: format(new Date(record.date), "dd/MM/yyyy"),
       Departamento: record.students?.department
     }));
 
@@ -216,7 +212,7 @@ const HistorialAsistencia = () => {
                       <TableRow key={record.id}>
                         <TableCell className="font-medium">{record.students?.name}</TableCell>
                         <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
-                        <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{format(new Date(record.date), "dd/MM/yyyy")}</TableCell>
                         <TableCell className="capitalize">{record.students?.department}</TableCell>
                       </TableRow>
                     ))}
