@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Sidebar,
@@ -5,13 +6,13 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenu,
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon } from "lucide-react";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, FolderIcon, UserRound } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,16 +53,6 @@ const getItems = (role: string | undefined) => {
         title: "Secretaría",
         url: "/secretaria",
         icon: FileText,
-      },
-      {
-        title: "Registrar Usuario",
-        url: "/register",
-        icon: UserPlus2,
-      },
-      {
-        title: "Gestión de Usuarios",
-        url: "/gestion-usuarios",
-        icon: UserRound,
       }
     );
   }
@@ -71,7 +62,7 @@ const getItems = (role: string | undefined) => {
 
 const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   const location = useLocation();
-  const { profile, session, signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const items = getItems(profile?.role);
