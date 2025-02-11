@@ -17,6 +17,7 @@ import HistorialAsistencia from "./pages/HistorialAsistencia";
 import ListarAlumnos from "./pages/ListarAlumnos";
 import Secretaria from "./pages/Secretaria";
 import NotFound from "./pages/NotFound";
+import GestionUsuarios from "./pages/GestionUsuarios";
 
 const queryClient = new QueryClient();
 
@@ -114,6 +115,14 @@ const AppContent = () => {
               element={
                 <ProtectedRoute allowedRoles={["admin", "secretaria"]}>
                   <Secretaria />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestion-usuarios"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "secretaria"]}>
+                  <GestionUsuarios />
                 </ProtectedRoute>
               }
             />
