@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance } from "@/types/database";
+import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 // Students API
 export const getStudents = async () => {
@@ -122,7 +122,7 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
         name,
         department
       )
-    `);
+    `) as PostgrestFilterBuilder<any, any, any>;
 
   if (startDate && endDate) {
     query = query.gte('date', startDate).lte('date', endDate);
