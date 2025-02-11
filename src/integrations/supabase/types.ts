@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           created_at: string
           date: string | null
+          department: Database["public"]["Enums"]["department_type"] | null
           event_id: string | null
           id: string
           status: boolean
@@ -21,6 +22,7 @@ export type Database = {
         Insert: {
           created_at?: string
           date?: string | null
+          department?: Database["public"]["Enums"]["department_type"] | null
           event_id?: string | null
           id?: string
           status?: boolean
@@ -29,6 +31,7 @@ export type Database = {
         Update: {
           created_at?: string
           date?: string | null
+          department?: Database["public"]["Enums"]["department_type"] | null
           event_id?: string | null
           id?: string
           status?: boolean

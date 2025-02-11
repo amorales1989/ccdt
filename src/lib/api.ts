@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
@@ -129,7 +130,7 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
   }
 
   if (department) {
-    query = query.eq('department', department);
+    query = query.eq('students.department', department);
   }
 
   const { data, error } = await query;
@@ -150,6 +151,18 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
     throw new Error('Missing required fields for attendance');
   }
 
+  // First, get the student's department
+  const { data: student, error: studentError } = await supabase
+    .from('students')
+    .select('department')
+    .eq('id', attendance.student_id)
+    .single();
+
+  if (studentError) {
+    console.error('Error fetching student department:', studentError);
+    throw studentError;
+  }
+
   const { data, error } = await supabase
     .from("attendance")
     .upsert([
@@ -157,7 +170,7 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
         student_id: attendance.student_id,
         date: attendance.date,
         status: attendance.status,
-        department: attendance.department,
+        department: student.department,
         // event_id is optional in the schema
         ...(attendance.event_id && { event_id: attendance.event_id })
       }
