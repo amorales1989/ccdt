@@ -90,6 +90,7 @@ const TomarAsistencia = () => {
             student_id: studentId,
             date: selectedDate,
             status,
+            department: currentDepartment,
           })
         )
       );
@@ -198,4 +199,3 @@ const TomarAsistencia = () => {
 };
 
 export default TomarAsistencia;
-
