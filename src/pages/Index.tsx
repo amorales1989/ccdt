@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -102,10 +103,18 @@ const Index = () => {
   const departments = ["niños", "adolescentes", "jovenes", "adultos"];
 
   const renderStudentStats = () => {
-    if (!["admin", "secretaria"].includes(profile?.role || "")) return null;
+    if (!profile) return null;
+
+    const isAdminOrSecretary = ["admin", "secretaria"].includes(profile.role);
+    const userDepartments = profile.departments || [];
 
     // Group students by department
     const studentsByDepartment = departments.reduce((acc, dept) => {
+      // Solo procesar departamentos relevantes para el usuario
+      if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
+        return acc;
+      }
+
       const deptStudents = students.filter(s => s.department === dept);
       acc[dept] = {
         male: deptStudents.filter(s => s.gender === "masculino").length,
@@ -125,6 +134,11 @@ const Index = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {departments.map(dept => {
+              // Solo mostrar departamentos relevantes para el usuario
+              if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
+                return null;
+              }
+
               const stats = studentsByDepartment[dept] || { male: 0, female: 0, total: 0 };
               return (
                 <Card key={dept} className="p-4">
