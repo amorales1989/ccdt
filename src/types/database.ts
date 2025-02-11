@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   name: string;
@@ -26,7 +25,5 @@ export interface Attendance {
   event_id?: string;
   date: string;
   status: boolean;
-  department?: "niños" | "adolescentes" | "jovenes" | "adultos";
   created_at: string;
-  updated_at: string;
 }

@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance } from "@/types/database";
-import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 // Students API
 export const getStudents = async () => {
@@ -122,14 +121,10 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
         name,
         department
       )
-    `) as PostgrestFilterBuilder<any, any, any>;
+    `);
 
   if (startDate && endDate) {
     query = query.gte('date', startDate).lte('date', endDate);
-  }
-
-  if (department) {
-    query = query.eq('department', department);
   }
 
   const { data, error } = await query;
@@ -139,10 +134,15 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
     throw error;
   }
 
+  // Filter by department if specified
+  if (department && data) {
+    return data.filter(record => record.students?.department === department);
+  }
+
   return data;
 };
 
-export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at" | "updated_at">) => {
+export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at">) => {
   console.log('Marking attendance with data:', attendance);
   
   // Ensure all required fields are present
@@ -157,7 +157,6 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
         student_id: attendance.student_id,
         date: attendance.date,
         status: attendance.status,
-        department: attendance.department,
         // event_id is optional in the schema
         ...(attendance.event_id && { event_id: attendance.event_id })
       }
