@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,13 +7,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { getAttendance } from "@/lib/api";
-import { Download } from "lucide-react";
+import { Download, Search, UserCheck, UserX } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { useAuth } from "@/contexts/AuthContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -26,6 +28,7 @@ const HistorialAsistencia = () => {
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 7));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const { profile } = useAuth();
 
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
@@ -66,7 +69,7 @@ const HistorialAsistencia = () => {
   });
 
   const handleExportToExcel = () => {
-    const data = attendance.map(record => ({
+    const data = filteredAttendance.map(record => ({
       Nombre: record.students?.name,
       Estado: record.status ? "Presente" : "Ausente",
       Fecha: format(new Date(record.date), "dd/MM/yyyy"),
@@ -77,6 +80,16 @@ const HistorialAsistencia = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
     XLSX.writeFile(wb, `asistencia_${format(startDate, "dd-MM-yyyy")}_${format(endDate, "dd-MM-yyyy")}.xlsx`);
+  };
+
+  const filteredAttendance = attendance.filter(record => 
+    searchQuery === "" || 
+    record.students?.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const attendanceStats = {
+    present: filteredAttendance.filter(record => record.status).length,
+    absent: filteredAttendance.filter(record => !record.status).length
   };
 
   return (
@@ -175,7 +188,34 @@ const HistorialAsistencia = () => {
                   </div>
                 </>
               )}
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Buscar por nombre</label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Nombre del alumno"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8"
+                    disabled={attendance.length === 0}
+                  />
+                </div>
+              </div>
             </CardContent>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex justify-between items-center gap-4">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-green-500" />
+                <span>Presentes: {attendanceStats.present}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <UserX className="h-5 w-5 text-red-500" />
+                <span>Ausentes: {attendanceStats.absent}</span>
+              </div>
+            </div>
           </Card>
         </div>
 
@@ -185,7 +225,7 @@ const HistorialAsistencia = () => {
               Asistencia del {format(startDate, "dd/MM/yyyy")} al {format(endDate, "dd/MM/yyyy")}
             </CardTitle>
             {isAdminOrSecretaria && (
-              <Button onClick={handleExportToExcel} disabled={!attendance.length} className="w-full sm:w-auto">
+              <Button onClick={handleExportToExcel} disabled={!filteredAttendance.length} className="w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />
                 Exportar Excel
               </Button>
@@ -194,7 +234,7 @@ const HistorialAsistencia = () => {
           <CardContent>
             {attendanceLoading ? (
               <p className="text-muted-foreground">Cargando...</p>
-            ) : !attendance?.length ? (
+            ) : !filteredAttendance?.length ? (
               <p className="text-muted-foreground">No hay registros de asistencia para este período.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -208,7 +248,7 @@ const HistorialAsistencia = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {attendance.map((record) => (
+                    {filteredAttendance.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell className="font-medium">{record.students?.name}</TableCell>
                         <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
