@@ -70,7 +70,8 @@ const ListarAlumnos = () => {
         throw error;
       }
       console.log("Fetched students:", data);
-      return data || [];
+      // Ordenar alumnos alfabéticamente por nombre
+      return (data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
@@ -103,25 +104,50 @@ const ListarAlumnos = () => {
   };
 
   const renderStudentDetails = (student: any) => (
-    <div className="grid gap-4 py-4 px-4 bg-muted/30 rounded-lg">
-      {[
-        { label: "Nombre", value: student.name },
-        { label: "Teléfono", value: student.phone || "No especificado" },
-        { label: "Dirección", value: student.address || "No especificada" },
-        { label: "Departamento", value: student.department, capitalize: true },
-        { label: "Género", value: student.gender, capitalize: true },
-        { 
-          label: "Fecha de nacimiento", 
-          value: student.birthdate 
-            ? format(new Date(student.birthdate), "dd/MM/yyyy") 
-            : "No especificada"
-        },
-      ].map(({ label, value, capitalize }, index) => (
-        <div key={index} className="grid grid-cols-2 items-center gap-4">
-          <span className="font-semibold">{label}:</span>
-          <span className={capitalize ? "capitalize" : ""}>{value}</span>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 px-4 bg-muted/30 rounded-lg">
+      <div className="space-y-2">
+        <div className="font-semibold">Información Personal</div>
+        <div>
+          <span className="font-medium">Nombre:</span>
+          <span className="ml-2">{student.name}</span>
         </div>
-      ))}
+        <div>
+          <span className="font-medium">Género:</span>
+          <span className="ml-2 capitalize">{student.gender}</span>
+        </div>
+        <div>
+          <span className="font-medium">Edad:</span>
+          <span className="ml-2">{calculateAge(student.birthdate)}</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="font-semibold">Contacto</div>
+        <div>
+          <span className="font-medium">Teléfono:</span>
+          <span className="ml-2">{student.phone || "No especificado"}</span>
+        </div>
+        <div>
+          <span className="font-medium">Dirección:</span>
+          <span className="ml-2">{student.address || "No especificada"}</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="font-semibold">Información Académica</div>
+        <div>
+          <span className="font-medium">Departamento:</span>
+          <span className="ml-2 capitalize">{student.department}</span>
+        </div>
+        <div>
+          <span className="font-medium">Fecha de nacimiento:</span>
+          <span className="ml-2">
+            {student.birthdate 
+              ? format(new Date(student.birthdate), "dd/MM/yyyy") 
+              : "No especificada"}
+          </span>
+        </div>
+      </div>
     </div>
   );
 
@@ -301,4 +327,3 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
-
