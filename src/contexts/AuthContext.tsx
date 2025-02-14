@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -64,27 +65,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, lastActivity]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log("Initial session check:", currentSession);
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      if (currentSession?.user) {
-        getProfile(currentSession.user.id);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    // Configurar la persistencia de la sesión
+    supabase.auth.onAuthStateChange(async (_event, currentSession) => {
       console.log("Auth state changed:", _event, currentSession);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      
       if (currentSession?.user) {
-        getProfile(currentSession.user.id);
+        await getProfile(currentSession.user.id);
       } else {
         setProfile(null);
+        setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Intentar recuperar la sesión inicial
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        console.log("Initial session check:", initialSession);
+        
+        if (initialSession?.user) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          await getProfile(initialSession.user.id);
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   async function getProfile(userId: string) {
@@ -148,22 +161,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Starting sign out process");
       
-      // Clear local storage first
-      localStorage.removeItem('selectedDepartment');
+      // Limpiar el localStorage primero
+      localStorage.clear(); // Limpiamos todo el localStorage para asegurar
       
-      // Reset state before attempting to sign out
+      // Resetear el estado antes de intentar cerrar sesión
       setUser(null);
       setProfile(null);
       setSession(null);
       
-      try {
-        // Attempt to sign out from Supabase
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-          console.warn("Supabase sign out warning:", error);
-        }
-      } catch (supabaseError) {
-        console.warn("Supabase sign out warning:", supabaseError);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.warn("Supabase sign out warning:", error);
       }
       
       console.log("Sign out completed");
