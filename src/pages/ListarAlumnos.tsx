@@ -120,7 +120,7 @@ const ListarAlumnos = () => {
           <span className="ml-2">{calculateAge(student.birthdate)}</span>
         </div>
       </div>
-  
+
       <div className="space-y-2">
         <div className="font-semibold">Contacto</div>
         <div>
@@ -132,7 +132,7 @@ const ListarAlumnos = () => {
           <span className="ml-2">{student.address || "No especificada"}</span>
         </div>
       </div>
-  
+
       <div className="space-y-2">
         <div className="font-semibold">Información Académica</div>
         <div>
@@ -150,7 +150,6 @@ const ListarAlumnos = () => {
       </div>
     </div>
   );
-  
 
   const renderActions = (student: any) => {
     const actions = (
@@ -221,45 +220,49 @@ const ListarAlumnos = () => {
   };
 
   const renderStudentList = (students: any[], title: string) => (
-    <Card className="p-4 md:p-6 mb-6">
+    <Card className="p-4 md:p-6 mb-6 w-full">
       <h3 className="text-lg font-semibold mb-4">{title}</h3>
       <div className="overflow-x-auto w-full">
-      <Table className="w-full">
-  <TableBody>
-    {students.map((student) => (
-      <Collapsible
-        key={student.id}
-        open={selectedStudent?.id === student.id}
-        onOpenChange={() => {
-          setSelectedStudent(selectedStudent?.id === student.id ? null : student);
-        }}
-      >
-        <TableRow className="border-b">
-          <TableCell className="p-4 text-left min-w-[200px] font-medium">
-            <CollapsibleTrigger asChild>
-              <button className="hover:underline">{student.name}</button>
-            </CollapsibleTrigger>
-          </TableCell>
-          <TableCell className="p-4 text-center min-w-[80px]">
-            {calculateAge(student.birthdate)}
-          </TableCell>
-          <TableCell className="p-4 text-right min-w-[100px]">
-            {student.phone || "No especificado"}
-          </TableCell>
-          <TableCell className="p-4 text-right">{renderActions(student)}</TableCell>
-        </TableRow>
-        <CollapsibleContent>
-          <TableRow>
-            <TableCell colSpan={4} className="p-4">
-              {renderStudentDetails(student)}
-            </TableCell>
-          </TableRow>
-        </CollapsibleContent>
-      </Collapsible>
-    ))}
-  </TableBody>
-</Table>
-
+        <Table className="w-full">
+          <TableBody>
+            {students.map((student) => (
+              <Collapsible
+                key={student.id}
+                open={selectedStudent?.id === student.id}
+                onOpenChange={() => {
+                  setSelectedStudent(selectedStudent?.id === student.id ? null : student);
+                }}
+              >
+                <TableRow>
+                  <TableCell className="p-0 w-full">
+                    <div className="flex items-center justify-between gap-2 p-4 w-full">
+                      <div className="flex-1">
+                        <CollapsibleTrigger asChild>
+                          <button className="font-medium hover:underline text-left w-full">
+                            {student.name}
+                          </button>
+                        </CollapsibleTrigger>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 shrink-0">
+                        <span className="text-muted-foreground md:text-right hidden md:block">
+                          {student.phone || "No especificado"}
+                        </span>
+                        {renderActions(student)}
+                      </div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                <CollapsibleContent>
+                  <TableRow>
+                    <TableCell className="p-0 w-full">
+                      {renderStudentDetails(student)}
+                    </TableCell>
+                  </TableRow>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </Card>
   );
