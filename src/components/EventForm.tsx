@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import type { Event } from "@/types/database";
+import { format } from "date-fns";
 
 type EventFormData = Omit<Event, "id" | "created_at" | "updated_at">;
 
@@ -15,6 +17,10 @@ interface EventFormProps {
 
 export function EventForm({ onSubmit, initialData }: EventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Obtener la fecha actual en formato YYYY-MM-DD
+  const today = format(new Date(), 'yyyy-MM-dd');
+
   const form = useForm<EventFormData>({
     defaultValues: initialData || {
       title: "",
@@ -57,7 +63,11 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
             <FormItem>
               <FormLabel>Fecha</FormLabel>
               <FormControl>
-                <Input type="date" {...field} />
+                <Input 
+                  type="date" 
+                  {...field} 
+                  min={today} // Establecer la fecha mínima como hoy
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -16,7 +16,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { format } from "date-fns";
+import { format, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { CalendarPlus } from "lucide-react";
@@ -34,8 +34,13 @@ export default function Calendario() {
     queryFn: getEvents
   });
 
-  // Crear un objeto con las fechas que tienen eventos
-  const eventDates = events.reduce((acc: Record<string, any[]>, event) => {
+  // Filtrar eventos futuros
+  const futureEvents = events.filter(event => 
+    !isBefore(new Date(event.date), startOfDay(new Date()))
+  );
+
+  // Crear un objeto con las fechas que tienen eventos futuros
+  const eventDates = futureEvents.reduce((acc: Record<string, any[]>, event) => {
     const dateStr = format(new Date(event.date), 'yyyy-MM-dd');
     if (!acc[dateStr]) {
       acc[dateStr] = [];
