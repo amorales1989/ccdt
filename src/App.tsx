@@ -49,16 +49,29 @@ const AppContent = () => {
       <main className={`flex-1 ${isMobile && user ? "pt-16" : ""} p-4`}>
         <div className="max-w-7xl mx-auto">
           <Routes>
-            {/* Redirect root to auth if not logged in, dashboard if logged in */}
+            {/* Root route - show Index if logged in, Auth if not */}
             <Route 
               path="/" 
-              element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} 
+              element={
+                user ? (
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                ) : (
+                  <Auth />
+                )
+              } 
             />
             
-            {/* Public auth route - redirect to dashboard if already logged in */}
+            {/* Auth route - redirect to root if logged in */}
             <Route 
               path="/auth" 
-              element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
+              element={user ? <Navigate to="/" replace /> : <Auth />} 
+            />
+
+            <Route
+              path="/dashboard"
+              element={<Navigate to="/" replace />}
             />
 
             {/* Protected routes */}
@@ -67,14 +80,6 @@ const AppContent = () => {
               element={
                 <ProtectedRoute allowedRoles={["admin", "secretaria"]}>
                   <Register />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Index />
                 </ProtectedRoute>
               }
             />
