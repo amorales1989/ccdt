@@ -1,160 +1,79 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Register from "./pages/Register";
-import AgregarAlumno from "./pages/AgregarAlumno";
-import TomarAsistencia from "./pages/TomarAsistencia";
-import HistorialAsistencia from "./pages/HistorialAsistencia";
-import ListarAlumnos from "./pages/ListarAlumnos";
-import Secretaria from "./pages/Secretaria";
-import NotFound from "./pages/NotFound";
-import GestionUsuarios from "./pages/GestionUsuarios";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { Layout } from "@/components/Layout";
+import Index from "@/pages/Index";
+import ListarAlumnos from "@/pages/ListarAlumnos";
+import AgregarAlumno from "@/pages/AgregarAlumno";
+import TomarAsistencia from "@/pages/TomarAsistencia";
+import HistorialAsistencia from "@/pages/HistorialAsistencia";
+import Auth from "@/pages/Auth";
+import NotFound from "@/pages/NotFound";
+import Register from "@/pages/Register";
+import GestionUsuarios from "@/pages/GestionUsuarios";
+import Calendario from "@/pages/Calendario";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) => {
-  const { user, profile } = useAuth();
-
-  // If no user is logged in, redirect to auth page
-  if (!user) {
-    console.log("No authenticated user found, redirecting to auth page");
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Check role permissions
-  if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
-    console.log(`User role ${profile.role} not allowed. Required roles:`, allowedRoles);
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-const AppContent = () => {
-  const isMobile = useIsMobile();
-  const { user } = useAuth();
-
+function App() {
   return (
-    <div className="min-h-screen flex w-full bg-gradient-to-br from-background to-accent/20">
-      {user && <AppSidebar />}
-      <main className={`flex-1 ${isMobile && user ? "pt-16" : ""} p-4`}>
-        <div className="max-w-7xl mx-auto">
-          <Routes>
-            {/* Root route - show Index if logged in, Auth if not */}
-            <Route 
-              path="/" 
-              element={
-                user ? (
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                ) : (
-                  <Auth />
-                )
-              } 
-            />
-            
-            {/* Auth route - redirect to root if logged in */}
-            <Route 
-              path="/auth" 
-              element={user ? <Navigate to="/" replace /> : <Auth />} 
-            />
-
-            <Route
-              path="/dashboard"
-              element={<Navigate to="/" replace />}
-            />
-
-            {/* Protected routes */}
-            <Route
-              path="/register"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "secretaria"]}>
-                  <Register />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/agregar"
-              element={
-                <ProtectedRoute>
-                  <AgregarAlumno />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/asistencia"
-              element={
-                <ProtectedRoute>
-                  <TomarAsistencia />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/historial"
-              element={
-                <ProtectedRoute>
-                  <HistorialAsistencia />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/listar"
-              element={
-                <ProtectedRoute>
-                  <ListarAlumnos />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/secretaria"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "secretaria"]}>
-                  <Secretaria />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestion-usuarios"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "secretaria"]}>
-                  <GestionUsuarios />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </div>
-      </main>
-    </div>
-  );
-};
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <div className="min-h-screen bg-background">
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <SidebarProvider>
-              <AppContent />
-            </SidebarProvider>
-          </BrowserRouter>
-        </div>
+        <RouterProvider
+          router={createBrowserRouter([
+            {
+              element: <Layout />,
+              children: [
+                {
+                  path: "/",
+                  element: <Index />,
+                },
+                {
+                  path: "/listar",
+                  element: <ListarAlumnos />,
+                },
+                {
+                  path: "/agregar",
+                  element: <AgregarAlumno />,
+                },
+                {
+                  path: "/asistencia",
+                  element: <TomarAsistencia />,
+                },
+                {
+                  path: "/historial",
+                  element: <HistorialAsistencia />,
+                },
+                {
+                  path: "/calendario",
+                  element: <Calendario />,
+                },
+                {
+                  path: "/register",
+                  element: <Register />,
+                },
+                {
+                  path: "/gestion-usuarios",
+                  element: <GestionUsuarios />,
+                },
+                {
+                  path: "*",
+                  element: <NotFound />,
+                },
+              ],
+            },
+            {
+              path: "/auth",
+              element: <Auth />,
+            },
+          ])}
+        />
       </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      <Toaster />
+    </QueryClientProvider>
+  );
+}
 
 export default App;

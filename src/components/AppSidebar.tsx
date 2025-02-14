@@ -50,8 +50,8 @@ const getItems = (role: string | undefined) => {
   if (role === "admin" || role === "secretaria") {
     baseItems.push(
       {
-        title: "Secretaría",
-        url: "/secretaria",
+        title: "Calendario",
+        url: "/calendario",
         icon: FileText,
       },
       {
