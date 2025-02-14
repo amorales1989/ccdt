@@ -1,8 +1,6 @@
 {
-  "build": {
-    "env": {
-      "VITE_BASE_URL": "/"
-    },
-    "outputDirectory": "dist"
+    "rewrites": [
+      { "source": "/(.*)", "destination": "/index.html" }
+    ]
   }
-}
+  
