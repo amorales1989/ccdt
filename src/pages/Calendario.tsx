@@ -5,17 +5,30 @@ import { Calendar } from "@/components/ui/calendar";
 import { getEvents } from "@/lib/api";
 import { useState } from "react";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { CalendarPlus } from "lucide-react";
+import { EventForm } from "@/components/EventForm";
+import { useToast } from "@/components/ui/use-toast";
+import { createEvent } from "@/lib/api";
 
 export default function Calendario() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const { toast } = useToast();
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data: events = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
     queryFn: getEvents
   });
@@ -29,6 +42,23 @@ export default function Calendario() {
     acc[dateStr].push(event);
     return acc;
   }, {});
+
+  const handleCreateEvent = async (eventData: any) => {
+    try {
+      await createEvent(eventData);
+      await refetch();
+      toast({
+        title: "Evento creado",
+        description: "El evento se ha creado exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo crear el evento.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const modifiers = {
     hasEvent: (date: Date) => {
@@ -60,8 +90,22 @@ export default function Calendario() {
   return (
     <div className="container mx-auto p-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Calendario de Eventos</CardTitle>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-primary/90">
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                Agregar Evento
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Crear Nuevo Evento</DialogTitle>
+              </DialogHeader>
+              <EventForm onSubmit={handleCreateEvent} />
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent className="flex flex-col items-center">
           <div className="relative w-full max-w-3xl">
