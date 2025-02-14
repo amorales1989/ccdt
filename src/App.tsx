@@ -1,4 +1,3 @@
-
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
@@ -22,57 +21,55 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <div className="min-h-screen w-full">
-          <RouterProvider
-            router={createBrowserRouter([
-              {
-                element: <Layout />,
-                children: [
-                  {
-                    path: "/",
-                    element: <Index />,
-                  },
-                  {
-                    path: "/listar",
-                    element: <ListarAlumnos />,
-                  },
-                  {
-                    path: "/agregar",
-                    element: <AgregarAlumno />,
-                  },
-                  {
-                    path: "/asistencia",
-                    element: <TomarAsistencia />,
-                  },
-                  {
-                    path: "/historial",
-                    element: <HistorialAsistencia />,
-                  },
-                  {
-                    path: "/calendario",
-                    element: <Calendario />,
-                  },
-                  {
-                    path: "/register",
-                    element: <Register />,
-                  },
-                  {
-                    path: "/gestion-usuarios",
-                    element: <GestionUsuarios />,
-                  },
-                  {
-                    path: "*",
-                    element: <NotFound />,
-                  },
-                ],
-              },
-              {
-                path: "/auth",
-                element: <Auth />,
-              },
-            ])}
-          />
-        </div>
+        <RouterProvider
+          router={createBrowserRouter([
+            {
+              element: <Layout />,
+              children: [
+                {
+                  path: "/",
+                  element: <Index />,
+                },
+                {
+                  path: "/listar",
+                  element: <ListarAlumnos />,
+                },
+                {
+                  path: "/agregar",
+                  element: <AgregarAlumno />,
+                },
+                {
+                  path: "/asistencia",
+                  element: <TomarAsistencia />,
+                },
+                {
+                  path: "/historial",
+                  element: <HistorialAsistencia />,
+                },
+                {
+                  path: "/calendario",
+                  element: <Calendario />,
+                },
+                {
+                  path: "/register",
+                  element: <Register />,
+                },
+                {
+                  path: "/gestion-usuarios",
+                  element: <GestionUsuarios />,
+                },
+                {
+                  path: "*",
+                  element: <NotFound />,
+                },
+              ],
+            },
+            {
+              path: "/auth",
+              element: <Auth />,
+            },
+          ])}
+        />
       </AuthProvider>
       <Toaster />
     </QueryClientProvider>
