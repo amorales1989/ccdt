@@ -1,9 +1,8 @@
 {
-    "routes": [
-      {
-        "src": "/(.*)",  
-        "dest": "/index.html"
-      }
-    ]
+  "build": {
+    "env": {
+      "VITE_BASE_URL": "/"
+    },
+    "outputDirectory": "dist"
   }
-  
+}
