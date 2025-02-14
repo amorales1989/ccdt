@@ -225,7 +225,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarContent>
+      <SidebarContent className="w-64">
         <SidebarGroup>
           <SidebarGroupLabel>Comunidad Cristiana Don Torcuato</SidebarGroupLabel>
           <SidebarGroupContent>
