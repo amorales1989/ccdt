@@ -9,32 +9,19 @@ const NotFound = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Si el usuario está autenticado y la ruta existe en nuestra aplicación,
-    // intentamos navegar a ella
-    if (user) {
-      const validRoutes = [
-        "/dashboard",
-        "/register",
-        "/agregar",
-        "/asistencia",
-        "/historial",
-        "/listar",
-        "/secretaria",
-        "/gestion-usuarios"
-      ];
-
-      if (validRoutes.includes(location.pathname)) {
-        console.log("Redirigiendo a ruta válida:", location.pathname);
-        navigate(location.pathname, { replace: true });
-        return;
-      }
+    // Si estamos en una ruta que no es "/" y no es una ruta válida,
+    // redirigimos a la página principal
+    if (location.pathname !== "/") {
+      console.log("Redirigiendo a página principal desde:", location.pathname);
+      navigate("/", { replace: true });
+      return;
     }
 
     console.error(
       "404 Error: Usuario intentó acceder a ruta inexistente:",
       location.pathname
     );
-  }, [location.pathname, navigate, user]);
+  }, [location.pathname, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
