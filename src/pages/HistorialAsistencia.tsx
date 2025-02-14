@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -30,6 +30,7 @@ const HistorialAsistencia = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const { profile } = useAuth();
+  const isMobile = useIsMobile();
 
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
@@ -244,7 +245,7 @@ const HistorialAsistencia = () => {
                       <TableHead>Nombre</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Fecha</TableHead>
-                      <TableHead>Departamento</TableHead>
+                      {!isMobile && <TableHead>Departamento</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -253,7 +254,7 @@ const HistorialAsistencia = () => {
                         <TableCell className="font-medium">{record.students?.name}</TableCell>
                         <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
                         <TableCell>{format(new Date(record.date), "dd/MM/yyyy")}</TableCell>
-                        <TableCell className="capitalize">{record.students?.department}</TableCell>
+                        {!isMobile && <TableCell className="capitalize">{record.students?.department}</TableCell>}
                       </TableRow>
                     ))}
                   </TableBody>
