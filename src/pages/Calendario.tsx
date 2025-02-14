@@ -26,6 +26,7 @@ import { createEvent } from "@/lib/api";
 
 export default function Calendario() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: events = [], isLoading, refetch } = useQuery({
@@ -47,6 +48,7 @@ export default function Calendario() {
     try {
       await createEvent(eventData);
       await refetch();
+      setDialogOpen(false); // Cerrar el modal después de crear el evento
       toast({
         title: "Evento creado",
         description: "El evento se ha creado exitosamente.",
@@ -69,8 +71,8 @@ export default function Calendario() {
 
   const modifiersStyles = {
     hasEvent: {
-      backgroundColor: '#e9d5ff',
-      color: '#000',
+      backgroundColor: '#86efac', // Color verde claro
+      color: '#064e3b', // Verde oscuro para el texto
       fontWeight: 'bold'
     }
   };
@@ -92,7 +94,7 @@ export default function Calendario() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Calendario de Eventos</CardTitle>
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90">
                 <CalendarPlus className="mr-2 h-4 w-4" />
