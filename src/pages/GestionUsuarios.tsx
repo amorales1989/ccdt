@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,16 +18,17 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Department } from "@/types/database";
+import { Database } from "@/integrations/supabase/types";
 
-type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria";
-type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
+type AppRole = Database["public"]["Enums"]["app_role"];
+type DepartmentType = Database["public"]["Enums"]["department_type"];
 
 type Profile = {
   id: string;
   first_name: string;
   last_name: string;
   role: AppRole;
-  departments: Department[];
+  departments: DepartmentType[];
   assigned_class?: string;
   email?: string;
 };
@@ -115,8 +115,18 @@ const GestionUsuarios = () => {
     }
   }, [selectedDepartment, departments]);
 
+  // Actualizar la mutación updateUserMutation
   const updateUserMutation = useMutation({
     mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
+      // Encontrar el departamento seleccionado para obtener su tipo enum
+      const selectedDepartmentObject = departments.find(d => d.name === selectedDepartment);
+      if (!selectedDepartmentObject) {
+        throw new Error("Departamento no válido");
+      }
+
+      // Mapear el nombre del departamento al tipo enum correcto
+      const departmentType = selectedDepartmentObject.name.toLowerCase() as DepartmentType;
+
       const updateData: any = {
         action: 'update',
         userId: updatedUser.id,
@@ -124,7 +134,7 @@ const GestionUsuarios = () => {
           first_name: updatedUser.first_name,
           last_name: updatedUser.last_name,
           role: updatedUser.role,
-          departments: [selectedDepartment],
+          departments: [departmentType],
           assigned_class: selectedClass
         }
       };
@@ -132,7 +142,7 @@ const GestionUsuarios = () => {
       if (updatedUser.newEmail) {
         updateData.userData.email = updatedUser.newEmail;
       }
-
+      
       if (updatedUser.newPassword) {
         updateData.userData.password = updatedUser.newPassword;
       }
@@ -150,8 +160,8 @@ const GestionUsuarios = () => {
         .update({
           first_name: updatedUser.first_name,
           last_name: updatedUser.last_name,
-          role: updatedUser.role as AppRole,
-          departments: [selectedDepartment] as Department[],
+          role: updatedUser.role,
+          departments: [departmentType],
           assigned_class: selectedClass
         })
         .eq('id', updatedUser.id);
