@@ -15,9 +15,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { Department } from "@/types/database";
 
 type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria";
 type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
@@ -28,6 +29,7 @@ type Profile = {
   last_name: string;
   role: AppRole;
   departments: Department[];
+  assigned_class?: string;
   email?: string;
 };
 
@@ -41,12 +43,28 @@ const GestionUsuarios = () => {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
 
   // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
     return null;
   }
+
+  // Fetch departments
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('*');
+      
+      if (error) throw error;
+      return data as Department[];
+    }
+  });
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
@@ -85,6 +103,18 @@ const GestionUsuarios = () => {
     }
   });
 
+  // Update available classes when department changes
+  useEffect(() => {
+    if (selectedDepartment) {
+      const department = departments.find(d => d.name === selectedDepartment);
+      setAvailableClasses(department?.classes || []);
+      setSelectedClass(""); // Reset selected class when department changes
+    } else {
+      setAvailableClasses([]);
+      setSelectedClass("");
+    }
+  }, [selectedDepartment, departments]);
+
   const updateUserMutation = useMutation({
     mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
       const updateData: any = {
@@ -94,7 +124,8 @@ const GestionUsuarios = () => {
           first_name: updatedUser.first_name,
           last_name: updatedUser.last_name,
           role: updatedUser.role,
-          departments: updatedUser.departments,
+          departments: [selectedDepartment],
+          assigned_class: selectedClass
         }
       };
 
@@ -120,7 +151,8 @@ const GestionUsuarios = () => {
           first_name: updatedUser.first_name,
           last_name: updatedUser.last_name,
           role: updatedUser.role as AppRole,
-          departments: updatedUser.departments as Department[]
+          departments: [selectedDepartment] as Department[],
+          assigned_class: selectedClass
         })
         .eq('id', updatedUser.id);
 
@@ -135,6 +167,8 @@ const GestionUsuarios = () => {
       setIsEditing(false);
       setNewEmail("");
       setNewPassword("");
+      setSelectedDepartment("");
+      setSelectedClass("");
     },
     onError: (error) => {
       console.error("Error updating user:", error);
@@ -194,6 +228,9 @@ const GestionUsuarios = () => {
                     <p className="text-sm">
                       Departamentos: {user.departments?.join(", ") || "Ninguno"}
                     </p>
+                    {user.assigned_class && (
+                      <p className="text-sm">Clase asignada: {user.assigned_class}</p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Dialog open={isEditing && selectedUser?.id === user.id} onOpenChange={(open) => {
@@ -203,6 +240,8 @@ const GestionUsuarios = () => {
                         setNewEmail("");
                         setNewPassword("");
                         setShowPassword(false);
+                        setSelectedDepartment("");
+                        setSelectedClass("");
                       }
                     }}>
                       <DialogTrigger asChild>
@@ -213,6 +252,8 @@ const GestionUsuarios = () => {
                             setSelectedUser(user);
                             setIsEditing(true);
                             setNewEmail(user.email || "");
+                            setSelectedDepartment(user.departments?.[0] || "");
+                            setSelectedClass(user.assigned_class || "");
                           }}
                         >
                           <Pencil className="h-4 w-4" />
@@ -307,29 +348,43 @@ const GestionUsuarios = () => {
                             </Select>
                           </div>
                           <div>
-                            <Label>Departamentos</Label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {["niños", "adolescentes", "jovenes", "adultos"].map((dept) => (
-                                <Button
-                                  key={dept}
-                                  type="button"
-                                  variant={selectedUser?.departments?.includes(dept as Department) ? "default" : "outline"}
-                                  onClick={() =>
-                                    setSelectedUser(prev => {
-                                      if (!prev) return null;
-                                      const newDepts = prev.departments?.includes(dept as Department)
-                                        ? prev.departments.filter(d => d !== dept)
-                                        : [...(prev.departments || []), dept as Department];
-                                      return { ...prev, departments: newDepts };
-                                    })
-                                  }
-                                  className="w-full capitalize"
-                                >
-                                  {dept}
-                                </Button>
-                              ))}
-                            </div>
+                            <Label htmlFor="department">Departamento</Label>
+                            <Select
+                              value={selectedDepartment}
+                              onValueChange={setSelectedDepartment}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar departamento" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {departments.map((dept) => (
+                                  <SelectItem key={dept.id} value={dept.name}>
+                                    {dept.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
+                          {selectedDepartment && availableClasses.length > 0 && (
+                            <div>
+                              <Label htmlFor="class">Clase</Label>
+                              <Select
+                                value={selectedClass}
+                                onValueChange={setSelectedClass}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar clase" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableClasses.map((className) => (
+                                    <SelectItem key={className} value={className}>
+                                      {className}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                           <Button
                             className="w-full"
                             onClick={() => {

@@ -103,6 +103,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          assigned_class: string | null
           departments: Database["public"]["Enums"]["department_type"][] | null
           first_name: string | null
           id: string
@@ -110,6 +111,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }
         Insert: {
+          assigned_class?: string | null
           departments?: Database["public"]["Enums"]["department_type"][] | null
           first_name?: string | null
           id: string
@@ -117,6 +119,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
         }
         Update: {
+          assigned_class?: string | null
           departments?: Database["public"]["Enums"]["department_type"][] | null
           first_name?: string | null
           id?: string

@@ -44,7 +44,8 @@ serve(async (req) => {
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
-            departments: userData.departments
+            departments: userData.departments,
+            assigned_class: userData.assigned_class
           }
         })
         if (createError) throw createError
@@ -58,7 +59,8 @@ serve(async (req) => {
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
-            departments: userData.departments
+            departments: userData.departments,
+            assigned_class: userData.assigned_class
           }
         }
 
