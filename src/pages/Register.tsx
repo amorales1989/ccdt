@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -73,9 +72,7 @@ export default function Register() {
         last_name: lastName,
         role,
         departments: [selectedDepartment],
-        profile: {
-          assigned_class: selectedClass || null
-        }
+        assigned_class: selectedClass || null
       });
       
       toast({
@@ -169,7 +166,7 @@ export default function Register() {
             <div className="space-y-2">
               <Label htmlFor="department">Departamento</Label>
               <Select 
-                value={selectedDepartment || ""} 
+                value={selectedDepartment || undefined}
                 onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
               >
                 <SelectTrigger>
@@ -177,7 +174,7 @@ export default function Register() {
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.name}>
+                    <SelectItem key={dept.id} value={dept.name as DepartmentType}>
                       {dept.name}
                     </SelectItem>
                   ))}

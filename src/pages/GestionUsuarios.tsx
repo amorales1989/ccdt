@@ -1,27 +1,20 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Eye, EyeOff } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { Department } from "@/types/database";
+import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
+import { Department } from "@/types/database";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
 type DepartmentType = Database["public"]["Enums"]["department_type"];
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 type Profile = {
   id: string;
@@ -43,7 +36,7 @@ const GestionUsuarios = () => {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType>("");
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
 
@@ -60,7 +53,7 @@ const GestionUsuarios = () => {
       const { data, error } = await supabase
         .from('departments')
         .select('*')
-        .in('name', ['niños', 'adolescentes', 'jovenes', 'adultos']);
+        .order('name');
       
       if (error) throw error;
       return data as Department[];
@@ -178,7 +171,7 @@ const GestionUsuarios = () => {
       setIsEditing(false);
       setNewEmail("");
       setNewPassword("");
-      setSelectedDepartment("");
+      setSelectedDepartment(null);
       setSelectedClass("");
     },
     onError: (error) => {
@@ -251,7 +244,7 @@ const GestionUsuarios = () => {
                         setNewEmail("");
                         setNewPassword("");
                         setShowPassword(false);
-                        setSelectedDepartment("");
+                        setSelectedDepartment(null);
                         setSelectedClass("");
                       }
                     }}>
@@ -263,7 +256,7 @@ const GestionUsuarios = () => {
                             setSelectedUser(user);
                             setIsEditing(true);
                             setNewEmail(user.email || "");
-                            setSelectedDepartment(user.departments?.[0] || "");
+                            setSelectedDepartment(user.departments?.[0] || null);
                             setSelectedClass(user.assigned_class || "");
                           }}
                         >
@@ -361,15 +354,15 @@ const GestionUsuarios = () => {
                           <div>
                             <Label htmlFor="department">Departamento</Label>
                             <Select
-                              value={selectedDepartment}
-                              onValueChange={setSelectedDepartment}
+                              value={selectedDepartment || undefined}
+                              onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Seleccionar departamento" />
                               </SelectTrigger>
                               <SelectContent>
                                 {departments.map((dept) => (
-                                  <SelectItem key={dept.id} value={dept.name}>
+                                  <SelectItem key={dept.id} value={dept.name as DepartmentType}>
                                     {dept.name}
                                   </SelectItem>
                                 ))}
