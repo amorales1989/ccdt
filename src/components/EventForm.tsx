@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { useState } from "react";
 import type { Event } from "@/types/database";
 import { format, parseISO } from "date-fns";
-import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 type EventFormData = Omit<Event, "id" | "created_at" | "updated_at">;
 
@@ -21,12 +21,12 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
   const timeZone = 'America/Argentina/Buenos_Aires';
   
   // Obtener la fecha actual en formato YYYY-MM-DD en la zona horaria de Argentina
-  const today = format(utcToZonedTime(new Date(), timeZone), 'yyyy-MM-dd');
+  const today = format(toZonedTime(new Date(), timeZone), 'yyyy-MM-dd');
 
   const form = useForm<EventFormData>({
     defaultValues: {
       title: initialData?.title || "",
-      date: initialData?.date ? format(utcToZonedTime(parseISO(initialData.date), timeZone), 'yyyy-MM-dd') : "",
+      date: initialData?.date ? format(toZonedTime(parseISO(initialData.date), timeZone), 'yyyy-MM-dd') : "",
       description: initialData?.description || ""
     }
   });
@@ -36,7 +36,7 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
     try {
       // Convertir la fecha local a UTC antes de enviar
       const localDate = parseISO(data.date);
-      const utcDate = zonedTimeToUtc(localDate, timeZone);
+      const utcDate = fromZonedTime(localDate, timeZone);
       
       const formattedData = {
         ...data,
