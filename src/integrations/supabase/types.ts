@@ -49,6 +49,7 @@ export type Database = {
       }
       departments: {
         Row: {
+          classes: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -56,6 +57,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          classes?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -63,6 +65,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          classes?: string[] | null
           created_at?: string
           description?: string | null
           id?: string

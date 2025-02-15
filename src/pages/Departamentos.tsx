@@ -4,7 +4,7 @@ import { getDepartments, updateDepartment, createDepartment, deleteDepartment } 
 import { Department } from "@/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash, Plus } from "lucide-react";
+import { Pencil, Trash, Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,12 +36,15 @@ const Departamentos = () => {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [newClass, setNewClass] = useState("");
+  const [classes, setClasses] = useState<string[]>([]);
 
   // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
@@ -64,6 +68,7 @@ const Departamentos = () => {
       setIsCreating(false);
       setName("");
       setDescription("");
+      setClasses([]);
     },
     onError: (error) => {
       console.error("Error creating department:", error);
@@ -76,18 +81,19 @@ const Departamentos = () => {
   });
 
   const updateDepartmentMutation = useMutation({
-    mutationFn: async ({ id, description }: { id: string; description: string }) => {
-      return updateDepartment(id, description);
+    mutationFn: async ({ id, description, classes }: { id: string; description?: string; classes?: string[] }) => {
+      return updateDepartment(id, { description, classes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
       toast({
         title: "Departamento actualizado",
-        description: "La descripción del departamento ha sido actualizada exitosamente"
+        description: "El departamento ha sido actualizado exitosamente"
       });
       setIsEditing(false);
       setSelectedDepartment(null);
       setDescription("");
+      setClasses([]);
     },
     onError: (error) => {
       console.error("Error updating department:", error);
@@ -120,6 +126,17 @@ const Departamentos = () => {
     }
   });
 
+  const handleAddClass = () => {
+    if (newClass.trim() && !classes.includes(newClass.trim())) {
+      setClasses([...classes, newClass.trim()]);
+      setNewClass("");
+    }
+  };
+
+  const handleRemoveClass = (classToRemove: string) => {
+    setClasses(classes.filter(c => c !== classToRemove));
+  };
+
   if (isLoading) {
     return <div className="p-6">Cargando...</div>;
   }
@@ -132,8 +149,8 @@ const Departamentos = () => {
           <Dialog open={isCreating} onOpenChange={setIsCreating}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Departamento
+                <Plus className="h-4 w-4" />
+                {!isMobile && <span className="ml-2">Nuevo Departamento</span>}
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -160,13 +177,54 @@ const Departamentos = () => {
                     className="min-h-[100px]"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="classes">Clases</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      id="classes"
+                      value={newClass}
+                      onChange={(e) => setNewClass(e.target.value)}
+                      placeholder="Nombre de la clase"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddClass();
+                        }
+                      }}
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={handleAddClass}
+                      disabled={!newClass.trim()}
+                    >
+                      Agregar
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {classes.map((className, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-1 bg-secondary px-2 py-1 rounded"
+                      >
+                        <span>{className}</span>
+                        <button
+                          onClick={() => handleRemoveClass(className)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <Button
                   className="w-full"
                   onClick={() => {
                     if (name.trim()) {
                       createDepartmentMutation.mutate({
                         name: name.trim(),
-                        description: description.trim() || undefined
+                        description: description.trim() || undefined,
+                        classes
                       });
                     }
                   }}
@@ -183,9 +241,21 @@ const Departamentos = () => {
             {departments.map((department) => (
               <Card key={department.id} className="p-4">
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="space-y-2">
                     <h3 className="font-semibold capitalize">{department.name}</h3>
                     <p className="text-sm text-muted-foreground">{department.description || "Sin descripción"}</p>
+                    {department.classes && department.classes.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {department.classes.map((className, index) => (
+                          <span
+                            key={index}
+                            className="bg-secondary px-2 py-1 rounded text-sm"
+                          >
+                            {className}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Dialog open={isEditing && selectedDepartment?.id === department.id} onOpenChange={(open) => {
@@ -193,6 +263,7 @@ const Departamentos = () => {
                         setIsEditing(false);
                         setSelectedDepartment(null);
                         setDescription("");
+                        setClasses([]);
                       }
                     }}>
                       <DialogTrigger asChild>
@@ -203,6 +274,7 @@ const Departamentos = () => {
                             setSelectedDepartment(department);
                             setIsEditing(true);
                             setDescription(department.description || "");
+                            setClasses(department.classes || []);
                           }}
                         >
                           <Pencil className="h-4 w-4" />
@@ -227,13 +299,54 @@ const Departamentos = () => {
                               className="min-h-[100px]"
                             />
                           </div>
+                          <div>
+                            <Label htmlFor="classes">Clases</Label>
+                            <div className="flex gap-2 mb-2">
+                              <Input
+                                id="classes"
+                                value={newClass}
+                                onChange={(e) => setNewClass(e.target.value)}
+                                placeholder="Nombre de la clase"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddClass();
+                                  }
+                                }}
+                              />
+                              <Button 
+                                type="button" 
+                                onClick={handleAddClass}
+                                disabled={!newClass.trim()}
+                              >
+                                Agregar
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {classes.map((className, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-1 bg-secondary px-2 py-1 rounded"
+                                >
+                                  <span>{className}</span>
+                                  <button
+                                    onClick={() => handleRemoveClass(className)}
+                                    className="text-muted-foreground hover:text-destructive"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                           <Button
                             className="w-full"
                             onClick={() => {
                               if (selectedDepartment) {
                                 updateDepartmentMutation.mutate({
                                   id: selectedDepartment.id,
-                                  description
+                                  description,
+                                  classes
                                 });
                               }
                             }}

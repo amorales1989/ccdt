@@ -321,11 +321,11 @@ export const getDepartment = async (id: string) => {
   }
 };
 
-export const updateDepartment = async (id: string, description: string) => {
+export const updateDepartment = async (id: string, updates: { description?: string; classes?: string[] }) => {
   try {
     const { data, error } = await supabase
       .from("departments")
-      .update({ description })
+      .update(updates)
       .eq("id", id)
       .select()
       .single();
@@ -338,7 +338,7 @@ export const updateDepartment = async (id: string, description: string) => {
   }
 };
 
-export const createDepartment = async (department: { name: string; description?: string }) => {
+export const createDepartment = async (department: { name: string; description?: string; classes: string[] }) => {
   try {
     const { data, error } = await supabase
       .from("departments")
