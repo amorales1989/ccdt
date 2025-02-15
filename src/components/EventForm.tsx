@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import type { Event } from "@/types/database";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, addDays } from "date-fns";
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 type EventFormData = Omit<Event, "id" | "created_at" | "updated_at">;
@@ -34,9 +34,10 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
   const handleSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
     try {
-      // Convertir la fecha local a UTC antes de enviar
+      // Convertir la fecha local a UTC antes de enviar y sumar un día
       const localDate = parseISO(data.date);
-      const utcDate = fromZonedTime(localDate, timeZone);
+      const dateWithAddedDay = addDays(localDate, 1);
+      const utcDate = fromZonedTime(dateWithAddedDay, timeZone);
       
       const formattedData = {
         ...data,
