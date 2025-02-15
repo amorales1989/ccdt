@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import type { Event } from "@/types/database";
-import { format } from "date-fns";
+import { format, parseISO, addDays } from "date-fns";
 
 type EventFormData = Omit<Event, "id" | "created_at" | "updated_at">;
 
@@ -24,7 +24,8 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
   const form = useForm<EventFormData>({
     defaultValues: {
       title: initialData?.title || "",
-      date: initialData?.date || "",
+      // Ajustamos la fecha inicial si existe
+      date: initialData?.date ? format(addDays(parseISO(initialData.date), 1), 'yyyy-MM-dd') : "",
       description: initialData?.description || ""
     }
   });
@@ -32,7 +33,12 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
   const handleSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
     try {
-      await onSubmit(data);
+      // Ajustamos la fecha antes de enviar
+      const formattedData = {
+        ...data,
+        date: format(parseISO(data.date), 'yyyy-MM-dd')
+      };
+      await onSubmit(formattedData);
       if (!initialData) {
         form.reset();
       }
