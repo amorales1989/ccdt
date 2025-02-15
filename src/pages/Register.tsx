@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,9 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Department } from "@/types/database";
+import { Department, DepartmentType } from "@/types/database";
 
-type DepartmentType = Database["public"]["Enums"]["department_type"];
 type AppRole = Database["public"]["Enums"]["app_role"];
 
 export default function Register() {
@@ -72,7 +72,7 @@ export default function Register() {
         last_name: lastName,
         role,
         departments: [selectedDepartment],
-        assigned_class: selectedClass || null
+        assigned_class: selectedClass
       });
       
       toast({
@@ -173,11 +173,10 @@ export default function Register() {
                   <SelectValue placeholder="Selecciona un departamento" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.name as DepartmentType}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="niños">Niños</SelectItem>
+                  <SelectItem value="adolescentes">Adolescentes</SelectItem>
+                  <SelectItem value="jovenes">Jóvenes</SelectItem>
+                  <SelectItem value="adultos">Adultos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
