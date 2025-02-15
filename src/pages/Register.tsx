@@ -13,13 +13,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Department } from "@/types/database";
 
+type DepartmentType = Database["public"]["Enums"]["department_type"];
+type AppRole = Database["public"]["Enums"]["app_role"];
+
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [role, setRole] = useState<string>("maestro");
-  const [selectedDepartment, setSelectedDepartment] = useState<Database["public"]["Enums"]["department_type"] | "">("");
+  const [role, setRole] = useState<AppRole>("maestro");
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const { signUp } = useAuth();
@@ -68,9 +71,11 @@ export default function Register() {
       await signUp(email, password, {
         first_name: firstName,
         last_name: lastName,
-        role: role as Database["public"]["Enums"]["app_role"],
+        role,
         departments: [selectedDepartment],
-        assigned_class: selectedClass || undefined,
+        profile: {
+          assigned_class: selectedClass || null
+        }
       });
       
       toast({
@@ -148,7 +153,7 @@ export default function Register() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select value={role} onValueChange={setRole}>
+              <Select value={role} onValueChange={(value: AppRole) => setRole(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un rol" />
                 </SelectTrigger>
@@ -163,7 +168,10 @@ export default function Register() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="department">Departamento</Label>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <Select 
+                value={selectedDepartment || ""} 
+                onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un departamento" />
                 </SelectTrigger>
