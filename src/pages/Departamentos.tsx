@@ -31,6 +31,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+type DepartmentName = "niños" | "adolescentes" | "jovenes" | "adultos";
+
 const Departamentos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -41,7 +43,7 @@ const Departamentos = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [name, setName] = useState("");
+  const [name, setName] = useState<DepartmentName>("niños");
   const [description, setDescription] = useState("");
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
@@ -66,7 +68,7 @@ const Departamentos = () => {
         description: "El departamento ha sido creado exitosamente"
       });
       setIsCreating(false);
-      setName("");
+      setName("niños");
       setDescription("");
       setClasses([]);
     },
@@ -160,12 +162,17 @@ const Departamentos = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">Nombre</Label>
-                  <Input
+                  <select
                     id="name"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ingrese el nombre del departamento"
-                  />
+                    onChange={(e) => setName(e.target.value as DepartmentName)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    <option value="niños">Niños</option>
+                    <option value="adolescentes">Adolescentes</option>
+                    <option value="jovenes">Jóvenes</option>
+                    <option value="adultos">Adultos</option>
+                  </select>
                 </div>
                 <div>
                   <Label htmlFor="description">Descripción</Label>
@@ -220,15 +227,15 @@ const Departamentos = () => {
                 <Button
                   className="w-full"
                   onClick={() => {
-                    if (name.trim()) {
+                    if (name) {
                       createDepartmentMutation.mutate({
-                        name: name.trim(),
+                        name,
                         description: description.trim() || undefined,
                         classes
                       });
                     }
                   }}
-                  disabled={!name.trim()}
+                  disabled={!name}
                 >
                   Crear Departamento
                 </Button>
@@ -271,7 +278,11 @@ const Departamentos = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            setSelectedDepartment(department);
+                            const departmentToEdit: Department = {
+                              ...department,
+                              name: department.name as DepartmentName
+                            };
+                            setSelectedDepartment(departmentToEdit);
                             setIsEditing(true);
                             setDescription(department.description || "");
                             setClasses(department.classes || []);
