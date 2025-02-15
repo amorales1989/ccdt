@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import type { Event } from "@/types/database";
-import { format, parseISO, addDays } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 
 type EventFormData = Omit<Event, "id" | "created_at" | "updated_at">;
 
@@ -17,15 +18,15 @@ interface EventFormProps {
 
 export function EventForm({ onSubmit, initialData }: EventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const timeZone = 'America/Argentina/Buenos_Aires';
   
-  // Obtener la fecha actual en formato YYYY-MM-DD
-  const today = format(new Date(), 'yyyy-MM-dd');
+  // Obtener la fecha actual en formato YYYY-MM-DD en la zona horaria de Argentina
+  const today = format(utcToZonedTime(new Date(), timeZone), 'yyyy-MM-dd');
 
   const form = useForm<EventFormData>({
     defaultValues: {
       title: initialData?.title || "",
-      // Ajustamos la fecha inicial si existe
-      date: initialData?.date ? format(addDays(parseISO(initialData.date), 1), 'yyyy-MM-dd') : "",
+      date: initialData?.date ? format(utcToZonedTime(parseISO(initialData.date), timeZone), 'yyyy-MM-dd') : "",
       description: initialData?.description || ""
     }
   });
@@ -33,11 +34,15 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
   const handleSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
     try {
-      // Ajustamos la fecha antes de enviar
+      // Convertir la fecha local a UTC antes de enviar
+      const localDate = parseISO(data.date);
+      const utcDate = zonedTimeToUtc(localDate, timeZone);
+      
       const formattedData = {
         ...data,
-        date: format(parseISO(data.date), 'yyyy-MM-dd')
+        date: format(utcDate, 'yyyy-MM-dd')
       };
+      
       await onSubmit(formattedData);
       if (!initialData) {
         form.reset();
