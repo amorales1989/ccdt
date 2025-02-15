@@ -6,7 +6,7 @@ export interface Student {
   address?: string;
   gender: string;
   birthdate?: string;
-  department?: string;
+  department?: "niños" | "adolescentes" | "jovenes" | "adultos";
   created_at: string;
   updated_at: string;
 }
@@ -33,7 +33,7 @@ export interface Attendance {
 
 export interface Department {
   id: string;
-  name: string;
+  name: "niños" | "adolescentes" | "jovenes" | "adultos";
   description?: string;
   classes: string[];
   created_at: string;

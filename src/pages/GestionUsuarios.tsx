@@ -59,7 +59,8 @@ const GestionUsuarios = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
-        .select('*');
+        .select('*')
+        .in('name', ['niños', 'adolescentes', 'jovenes', 'adultos']);
       
       if (error) throw error;
       return data as Department[];
