@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +13,7 @@ import { Database } from "@/integrations/supabase/types";
 import { Department } from "@/types/database";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 type DepartmentType = Database["public"]["Enums"]["department_type"];
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -362,7 +364,7 @@ const GestionUsuarios = () => {
                               </SelectTrigger>
                               <SelectContent>
                                 {departments.map((dept) => (
-                                  <SelectItem key={dept.id} value={dept.name as DepartmentType}>
+                                  <SelectItem key={dept.id} value={dept.name}>
                                     {dept.name}
                                   </SelectItem>
                                 ))}
