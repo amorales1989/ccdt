@@ -7,6 +7,7 @@ export interface Student {
   gender: string;
   birthdate?: string;
   department?: DepartmentType;
+  assigned_class?: string;
   created_at: string;
   updated_at: string;
 }

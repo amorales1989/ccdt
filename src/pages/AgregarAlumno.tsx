@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -5,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { createStudent } from "@/lib/api";
+import { createStudent, getDepartments } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Student } from "@/types/database";
+import { Student, Department } from "@/types/database";
+import { useQuery } from "@tanstack/react-query";
 
 const AgregarAlumno = () => {
   const { toast } = useToast();
@@ -22,15 +24,27 @@ const AgregarAlumno = () => {
     gender: "masculino",
     birthdate: "",
     department: "" as Student["department"],
+    assigned_class: "",
   });
 
-  const departments = ["niños", "adolescentes", "jovenes", "adultos"];
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: getDepartments,
+  });
+
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
 
+  const availableDepartments = isAdminOrSecretaria 
+    ? departments 
+    : departments.filter(dept => profile?.departments?.includes(dept.name));
+
+  const availableClasses = formData.department
+    ? departments.find(d => d.name === formData.department)?.classes || []
+    : [];
+
   useEffect(() => {
-    // Set default department if user only has one department and is not admin/secretaria
     if (!isAdminOrSecretaria && profile?.departments && profile.departments.length === 1) {
-      setFormData(prev => ({ ...prev, department: profile.departments[0] as Student["department"] }));
+      setFormData(prev => ({ ...prev, department: profile.departments[0] }));
     }
   }, [profile, isAdminOrSecretaria]);
 
@@ -45,6 +59,15 @@ const AgregarAlumno = () => {
       return;
     }
 
+    if (!formData.assigned_class) {
+      toast({
+        title: "Error",
+        description: "Por favor seleccione una clase",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       await createStudent({
@@ -54,6 +77,7 @@ const AgregarAlumno = () => {
         gender: formData.gender,
         birthdate: formData.birthdate || null,
         department: formData.department,
+        assigned_class: formData.assigned_class,
       });
       
       toast({
@@ -139,23 +163,50 @@ const AgregarAlumno = () => {
               <Label htmlFor="department">Departamento</Label>
               <Select
                 value={formData.department}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, department: value as Student["department"] })
-                }
+                onValueChange={(value) => {
+                  setFormData({ 
+                    ...formData, 
+                    department: value as Student["department"],
+                    assigned_class: "" // Reset class when department changes
+                  });
+                }}
                 required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar departamento" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(isAdminOrSecretaria ? departments : profile?.departments)?.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                  {availableDepartments.map((dept) => (
+                    <SelectItem key={dept.name} value={dept.name}>
+                      {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, " ")}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            {formData.department && (
+              <div className="space-y-2">
+                <Label htmlFor="assigned_class">Clase</Label>
+                <Select
+                  value={formData.assigned_class}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, assigned_class: value })
+                  }
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar clase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableClasses.map((className) => (
+                      <SelectItem key={className} value={className}>
+                        {className}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="phone">Teléfono</Label>
               <Input

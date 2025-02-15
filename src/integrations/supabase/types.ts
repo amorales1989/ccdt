@@ -128,8 +128,10 @@ export type Database = {
       students: {
         Row: {
           address: string | null
+          assigned_class: string | null
           birthdate: string | null
           created_at: string
+          department: Database["public"]["Enums"]["department_type"] | null
           gender: string
           id: string
           name: string
@@ -138,8 +140,10 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          assigned_class?: string | null
           birthdate?: string | null
           created_at?: string
+          department?: Database["public"]["Enums"]["department_type"] | null
           gender?: string
           id?: string
           name: string
@@ -148,8 +152,10 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          assigned_class?: string | null
           birthdate?: string | null
           created_at?: string
+          department?: Database["public"]["Enums"]["department_type"] | null
           gender?: string
           id?: string
           name?: string
