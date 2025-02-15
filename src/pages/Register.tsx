@@ -71,8 +71,7 @@ export default function Register() {
         first_name: firstName,
         last_name: lastName,
         role,
-        departments: [selectedDepartment],
-        assigned_class: selectedClass
+        departments: [selectedDepartment]
       });
       
       toast({
@@ -173,10 +172,11 @@ export default function Register() {
                   <SelectValue placeholder="Selecciona un departamento" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="niños">Niños</SelectItem>
-                  <SelectItem value="adolescentes">Adolescentes</SelectItem>
-                  <SelectItem value="jovenes">Jóvenes</SelectItem>
-                  <SelectItem value="adultos">Adultos</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.name}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
