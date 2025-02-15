@@ -6,7 +6,7 @@ export interface Student {
   address?: string;
   gender: string;
   birthdate?: string;
-  department?: "niños" | "adolescentes" | "jovenes" | "adultos";
+  department?: DepartmentType;
   created_at: string;
   updated_at: string;
 }
@@ -26,19 +26,19 @@ export interface Attendance {
   event_id?: string;
   date: string;
   status: boolean;
-  department?: "niños" | "adolescentes" | "jovenes" | "adultos";
+  department?: DepartmentType;
   created_at: string;
   updated_at: string;
 }
 
 export interface Department {
   id: string;
-  name: "niños" | "adolescentes" | "jovenes" | "adultos";
+  name: DepartmentType;
   description?: string;
   classes: string[];
   created_at: string;
   updated_at: string;
 }
 
-export type DepartmentType = "niños" | "adolescentes" | "jovenes" | "adultos";
+export type DepartmentType = "escuelita_central" | "pre_adolescentes" | "adolescentes" | "jovenes" | "jovenes_adultos" | "adultos";
 
