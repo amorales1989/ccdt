@@ -43,10 +43,22 @@ const AgregarAlumno = () => {
     : [];
 
   useEffect(() => {
-    if (!isAdminOrSecretaria && profile?.departments && profile.departments.length === 1) {
-      setFormData(prev => ({ ...prev, department: profile.departments[0] }));
+    // Si el usuario tiene un departamento y clase asignados, pre-seleccionarlos
+    if (profile?.departments?.[0] && profile.assigned_class) {
+      setFormData(prev => ({ 
+        ...prev, 
+        department: profile.departments[0],
+        assigned_class: profile.assigned_class 
+      }));
     }
-  }, [profile, isAdminOrSecretaria]);
+    // Si solo tiene departamento, pre-seleccionar solo el departamento
+    else if (profile?.departments?.[0]) {
+      setFormData(prev => ({ 
+        ...prev, 
+        department: profile.departments[0] 
+      }));
+    }
+  }, [profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,7 +184,7 @@ const AgregarAlumno = () => {
                 }}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger disabled={!isAdminOrSecretaria && profile?.departments?.length === 1}>
                   <SelectValue placeholder="Seleccionar departamento" />
                 </SelectTrigger>
                 <SelectContent>
@@ -194,7 +206,7 @@ const AgregarAlumno = () => {
                   }
                   required
                 >
-                  <SelectTrigger>
+                  <SelectTrigger disabled={!isAdminOrSecretaria && profile?.assigned_class}>
                     <SelectValue placeholder="Seleccionar clase" />
                   </SelectTrigger>
                   <SelectContent>

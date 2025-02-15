@@ -104,7 +104,6 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
     onItemClick?.();
   };
 
-  // Si el usuario tiene múltiples departamentos y no ha seleccionado uno, mostrar mensaje
   if (profile?.departments && profile.departments.length > 1 && !selectedDepartment) {
     return (
       <div className="p-4 text-center">
@@ -147,6 +146,11 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
                   {selectedDepartment && (
                     <span className="text-sm text-muted-foreground capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
                       {selectedDepartment}
+                    </span>
+                  )}
+                  {profile?.assigned_class && (
+                    <span className="text-sm text-muted-foreground bg-accent px-2 py-0.5 rounded-full inline-block">
+                      Clase: {profile.assigned_class}
                     </span>
                   )}
                 </div>
