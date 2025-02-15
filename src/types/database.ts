@@ -26,7 +26,7 @@ export interface Attendance {
   event_id?: string;
   date: string;
   status: boolean;
-  department?: string;
+  department?: "niños" | "adolescentes" | "jovenes" | "adultos";
   created_at: string;
   updated_at: string;
 }
@@ -39,3 +39,6 @@ export interface Department {
   created_at: string;
   updated_at: string;
 }
+
+export type DepartmentType = "niños" | "adolescentes" | "jovenes" | "adultos";
+
