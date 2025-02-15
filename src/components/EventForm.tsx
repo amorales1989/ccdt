@@ -22,18 +22,20 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const form = useForm<EventFormData>({
-    defaultValues: initialData || {
-      title: "",
-      date: "",
-      description: ""
+    defaultValues: {
+      title: initialData?.title || "",
+      date: initialData?.date || "",
+      description: initialData?.description || ""
     }
   });
 
   const handleSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
     try {
-      onSubmit(data);
-      form.reset();
+      await onSubmit(data);
+      if (!initialData) {
+        form.reset();
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -66,7 +68,7 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
                 <Input 
                   type="date" 
                   {...field} 
-                  min={today} // Establecer la fecha mínima como hoy
+                  min={today}
                 />
               </FormControl>
               <FormMessage />
@@ -93,7 +95,7 @@ export function EventForm({ onSubmit, initialData }: EventFormProps) {
         />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Guardando..." : "Guardar Evento"}
+          {isSubmitting ? "Guardando..." : initialData ? "Actualizar Evento" : "Crear Evento"}
         </Button>
       </form>
     </Form>

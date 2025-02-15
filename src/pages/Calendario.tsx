@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,11 +21,13 @@ import { Button } from "@/components/ui/button";
 import { CalendarPlus } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { useToast } from "@/components/ui/use-toast";
-import { createEvent } from "@/lib/api";
+import { createEvent, updateEvent } from "@/lib/api";
+import type { Event } from "@/types/database";
 
 export default function Calendario() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const { toast } = useToast();
 
   const { data: events = [], isLoading, refetch } = useQuery({
@@ -56,20 +57,36 @@ export default function Calendario() {
 
   const handleCreateEvent = async (eventData: any) => {
     try {
-      await createEvent(eventData);
+      if (selectedEvent) {
+        await updateEvent(selectedEvent.id, eventData);
+        toast({
+          title: "Evento actualizado",
+          description: "El evento se ha actualizado exitosamente.",
+        });
+      } else {
+        await createEvent(eventData);
+        toast({
+          title: "Evento creado",
+          description: "El evento se ha creado exitosamente.",
+        });
+      }
       await refetch();
       setDialogOpen(false);
-      toast({
-        title: "Evento creado",
-        description: "El evento se ha creado exitosamente.",
-      });
+      setSelectedEvent(null);
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudo crear el evento.",
+        description: selectedEvent 
+          ? "No se pudo actualizar el evento." 
+          : "No se pudo crear el evento.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setDialogOpen(true);
   };
 
   const modifiers = {
@@ -104,7 +121,13 @@ export default function Calendario() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Calendario de Eventos</CardTitle>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog 
+            open={dialogOpen} 
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) setSelectedEvent(null);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90">
                 <CalendarPlus className="mr-2 h-4 w-4" />
@@ -113,9 +136,14 @@ export default function Calendario() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Crear Nuevo Evento</DialogTitle>
+                <DialogTitle>
+                  {selectedEvent ? "Editar Evento" : "Crear Nuevo Evento"}
+                </DialogTitle>
               </DialogHeader>
-              <EventForm onSubmit={handleCreateEvent} />
+              <EventForm 
+                onSubmit={handleCreateEvent} 
+                initialData={selectedEvent || undefined}
+              />
             </DialogContent>
           </Dialog>
         </CardHeader>
@@ -149,7 +177,11 @@ export default function Calendario() {
                         <HoverCardContent className="w-80">
                           <div className="space-y-2">
                             {dayEvents.map((event) => (
-                              <div key={event.id} className="p-2 rounded-md bg-accent/50">
+                              <div 
+                                key={event.id} 
+                                className="p-2 rounded-md bg-accent/50 cursor-pointer hover:bg-accent"
+                                onClick={() => handleEventClick(event)}
+                              >
                                 <h4 className="font-semibold">{event.title}</h4>
                                 <p className="text-sm text-muted-foreground">{event.description}</p>
                               </div>
@@ -169,7 +201,11 @@ export default function Calendario() {
               <div className="space-y-2">
                 {currentMonthEvents.length > 0 ? (
                   currentMonthEvents.map((event) => (
-                    <div key={event.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/50">
+                    <div 
+                      key={event.id} 
+                      className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/50 cursor-pointer"
+                      onClick={() => handleEventClick(event)}
+                    >
                       <span className="font-medium">
                         {format(new Date(event.date), 'dd/MM')}
                       </span>
