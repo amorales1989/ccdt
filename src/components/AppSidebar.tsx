@@ -63,6 +63,11 @@ const getItems = (role: string | undefined) => {
         title: "Gestión de Usuarios",
         url: "/gestion-usuarios",
         icon: UserRound,
+      },
+      {
+        title: "Departamentos",
+        url: "/departamentos",
+        icon: FolderIcon,
       }
     );
   }

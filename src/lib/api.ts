@@ -288,3 +288,52 @@ export const deleteAttendance = async (studentId: string, eventId: string) => {
     throw error;
   }
 };
+
+// Departments API
+export const getDepartments = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("departments")
+      .select("*")
+      .order('name');
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in getDepartments:', error);
+    throw error;
+  }
+};
+
+export const getDepartment = async (id: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("departments")
+      .select("*")
+      .eq("id", id)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in getDepartment:', error);
+    throw error;
+  }
+};
+
+export const updateDepartment = async (id: string, description: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("departments")
+      .update({ description })
+      .eq("id", id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in updateDepartment:', error);
+    throw error;
+  }
+};

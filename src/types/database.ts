@@ -30,3 +30,11 @@ export interface Attendance {
   created_at: string;
   updated_at: string;
 }
+
+export interface Department {
+  id: string;
+  name: "niños" | "adolescentes" | "jovenes" | "adultos";
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
