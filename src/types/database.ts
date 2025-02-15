@@ -6,7 +6,7 @@ export interface Student {
   address?: string;
   gender: string;
   birthdate?: string;
-  department?: "niños" | "adolescentes" | "jovenes" | "adultos";
+  department?: string;
   created_at: string;
   updated_at: string;
 }
@@ -26,14 +26,14 @@ export interface Attendance {
   event_id?: string;
   date: string;
   status: boolean;
-  department?: "niños" | "adolescentes" | "jovenes" | "adultos";
+  department?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface Department {
   id: string;
-  name: "niños" | "adolescentes" | "jovenes" | "adultos";
+  name: string;
   description?: string;
   created_at: string;
   updated_at: string;

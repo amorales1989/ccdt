@@ -337,3 +337,33 @@ export const updateDepartment = async (id: string, description: string) => {
     throw error;
   }
 };
+
+export const createDepartment = async (department: { name: string; description?: string }) => {
+  try {
+    const { data, error } = await supabase
+      .from("departments")
+      .insert([department])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in createDepartment:', error);
+    throw error;
+  }
+};
+
+export const deleteDepartment = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from("departments")
+      .delete()
+      .eq("id", id);
+    
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error in deleteDepartment:', error);
+    throw error;
+  }
+};
