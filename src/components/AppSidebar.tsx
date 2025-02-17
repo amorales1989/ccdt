@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Sidebar,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound } from "lucide-react";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,6 +62,11 @@ const getItems = (role: string | undefined) => {
         title: "Gestión de Usuarios",
         url: "/gestion-usuarios",
         icon: UserRound,
+      },
+      {
+        title: "Departamentos",
+        url: "/departamentos",
+        icon: FolderIcon,
       }
     );
   }
