@@ -82,6 +82,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   const { toast } = useToast();
   const items = getItems(profile?.role);
   const selectedDepartment = localStorage.getItem('selectedDepartment');
+  const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
   
   const handleSignOut = async () => {
     try {
@@ -104,7 +105,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
     onItemClick?.();
   };
 
-  if (profile?.departments && profile.departments.length > 1 && !selectedDepartment) {
+  if (profile?.departments && profile.departments.length > 1 && !selectedDepartment && !isAdminOrSecretary) {
     return (
       <div className="p-4 text-center">
         <div className="flex flex-col gap-2 p-4 rounded-md bg-accent/30">
@@ -143,31 +144,14 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
                 <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
                 <div className="flex flex-col gap-1">
                   <span className="text-sm text-muted-foreground capitalize">{profile?.role}</span>
-                  {selectedDepartment && (
+                  {!isAdminOrSecretary && selectedDepartment && (
                     <span className="text-sm text-muted-foreground capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
                       {selectedDepartment}
-                    </span>
-                  )}
-                  {profile?.assigned_class && (
-                    <span className="text-sm text-muted-foreground bg-accent px-2 py-0.5 rounded-full inline-block">
-                      Clase: {profile.assigned_class}
                     </span>
                   )}
                 </div>
               </div>
             </div>
-            {profile?.departments && profile.departments.length > 0 && (
-              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-                <FolderIcon className="h-4 w-4 text-muted-foreground" />
-                <div className="flex flex-wrap gap-1">
-                  {profile.departments.map((dept) => (
-                    <span key={dept} className="text-xs bg-accent px-2 py-0.5 rounded-full capitalize">
-                      {dept}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </SidebarMenuItem>
         {items.map((item) => (
