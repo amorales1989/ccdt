@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { DepartmentType } from "@/types/database";
+import { DepartmentType, Student } from "@/types/database";
 
 const AgregarAlumno = () => {
   const { profile } = useAuth();
@@ -25,23 +26,21 @@ const AgregarAlumno = () => {
   const [birthdate, setBirthdate] = useState("");
   const { toast } = useToast();
 
-  const { mutate: createStudent, isLoading } = useMutation(
-    async () => {
+  const { mutate: createStudent, isPending } = useMutation({
+    mutationFn: async () => {
       if (!selectedDepartment) {
         throw new Error("Debes seleccionar un departamento");
       }
 
-      const { data, error } = await supabase.from("students").insert([
-        {
-          name,
-          phone,
-          address,
-          gender,
-          birthdate,
-          department: selectedDepartment,
-          assigned_class: selectedClass,
-        },
-      ]);
+      const { data, error } = await supabase.from("students").insert([{
+        name,
+        phone,
+        address,
+        gender,
+        birthdate,
+        department: selectedDepartment,
+        assigned_class: selectedClass,
+      }]).select().single();
 
       if (error) {
         throw error;
@@ -49,29 +48,27 @@ const AgregarAlumno = () => {
 
       return data;
     },
-    {
-      onSuccess: () => {
-        toast({
-          title: "Éxito",
-          description: "Alumno creado correctamente",
-        });
-        // Reset form fields
-        setName("");
-        setPhone("");
-        setAddress("");
-        setGender("masculino");
-        setBirthdate("");
-        setSelectedClass(undefined);
-      },
-      onError: (error: any) => {
-        toast({
-          title: "Error",
-          description: error.message || "Hubo un error al crear el alumno",
-          variant: "destructive",
-        });
-      },
-    }
-  );
+    onSuccess: () => {
+      toast({
+        title: "Éxito",
+        description: "Alumno creado correctamente",
+      });
+      // Reset form fields
+      setName("");
+      setPhone("");
+      setAddress("");
+      setGender("masculino");
+      setBirthdate("");
+      setSelectedClass(undefined);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Hubo un error al crear el alumno",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,8 +175,8 @@ const AgregarAlumno = () => {
                 />
               </div>
             </div>
-            <Button disabled={isLoading} type="submit">
-              {isLoading ? "Creando..." : "Crear Alumno"}
+            <Button disabled={isPending} type="submit">
+              {isPending ? "Creando..." : "Crear Alumno"}
             </Button>
           </form>
         </CardContent>
