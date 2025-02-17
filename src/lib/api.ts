@@ -38,11 +38,23 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
   try {
     const { data, error } = await supabase
       .from("students")
-      .insert([student])
+      .insert([{
+        name: student.name,
+        department: student.department,
+        phone: student.phone,
+        address: student.address,
+        gender: student.gender,
+        birthdate: student.birthdate,
+        assigned_class: student.assigned_class
+      }])
       .select()
       .single();
-    
-    if (error) throw error;
+
+    if (error) {
+      console.error('Error creating student:', error);
+      throw error;
+    }
+
     return data;
   } catch (error) {
     console.error('Error in createStudent:', error);

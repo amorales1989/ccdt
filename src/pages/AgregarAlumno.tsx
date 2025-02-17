@@ -1,246 +1,185 @@
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { createStudent, getDepartments } from "@/lib/api";
-import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Student, Department } from "@/types/database";
-import { useQuery } from "@tanstack/react-query";
+import { DepartmentType } from "@/types/database";
 
 const AgregarAlumno = () => {
-  const { toast } = useToast();
-  const navigate = useNavigate();
   const { profile } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    address: "",
-    gender: "masculino",
-    birthdate: "",
-    department: "" as Student["department"],
-    assigned_class: "",
-  });
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | undefined>(
+    profile?.departments?.[0] || undefined
+  );
+  const [selectedClass, setSelectedClass] = useState<string | undefined>(
+    profile?.assigned_class || undefined
+  );
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [gender, setGender] = useState("masculino");
+  const [birthdate, setBirthdate] = useState("");
+  const { toast } = useToast();
 
-  const { data: departments = [] } = useQuery({
-    queryKey: ["departments"],
-    queryFn: getDepartments,
-  });
+  const { mutate: createStudent, isLoading } = useMutation(
+    async () => {
+      if (!selectedDepartment) {
+        throw new Error("Debes seleccionar un departamento");
+      }
 
-  const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
+      const { data, error } = await supabase.from("students").insert([
+        {
+          name,
+          phone,
+          address,
+          gender,
+          birthdate,
+          department: selectedDepartment,
+          assigned_class: selectedClass,
+        },
+      ]);
 
-  const availableDepartments = isAdminOrSecretaria 
-    ? departments 
-    : departments.filter(dept => profile?.departments?.includes(dept.name));
+      if (error) {
+        throw error;
+      }
 
-  const availableClasses = formData.department
-    ? departments.find(d => d.name === formData.department)?.classes || []
-    : [];
-
-  useEffect(() => {
-    // Si el usuario tiene un departamento y clase asignados, pre-seleccionarlos
-    if (profile?.departments?.[0] && profile.assigned_class) {
-      setFormData(prev => ({ 
-        ...prev, 
-        department: profile.departments[0],
-        assigned_class: profile.assigned_class 
-      }));
+      return data;
+    },
+    {
+      onSuccess: () => {
+        toast({
+          title: "Éxito",
+          description: "Alumno creado correctamente",
+        });
+        // Reset form fields
+        setName("");
+        setPhone("");
+        setAddress("");
+        setGender("masculino");
+        setBirthdate("");
+        setSelectedClass(undefined);
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "Hubo un error al crear el alumno",
+          variant: "destructive",
+        });
+      },
     }
-    // Si solo tiene departamento, pre-seleccionar solo el departamento
-    else if (profile?.departments?.[0]) {
-      setFormData(prev => ({ 
-        ...prev, 
-        department: profile.departments[0] 
-      }));
-    }
-  }, [profile]);
+  );
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.department) {
-      toast({
-        title: "Error",
-        description: "Por favor seleccione un departamento",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.assigned_class) {
-      toast({
-        title: "Error",
-        description: "Por favor seleccione una clase",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await createStudent({
-        name: formData.name,
-        phone: formData.phone || null,
-        address: formData.address || null,
-        gender: formData.gender,
-        birthdate: formData.birthdate || null,
-        department: formData.department,
-        assigned_class: formData.assigned_class,
-      });
-      
-      toast({
-        title: "Alumno agregado",
-        description: "El alumno ha sido agregado exitosamente",
-      });
-      navigate("/");
-    } catch (error) {
-      console.error("Error al crear alumno:", error);
-      toast({
-        title: "Error",
-        description: "Hubo un error al agregar el alumno",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    createStudent();
   };
 
-  if (!isAdminOrSecretaria && (!profile?.departments?.length)) {
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              No tiene departamentos asignados. Contacte al administrador.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6">
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Agregar Alumno</h1>
+      </div>
+      
       <Card>
         <CardHeader>
-          <CardTitle>Agregar Nuevo Alumno</CardTitle>
+          <CardTitle>Información del Alumno</CardTitle>
+          <CardDescription>Ingrese los datos del nuevo alumno</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre completo</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-              <Input
-                id="birthdate"
-                type="date"
-                value={formData.birthdate}
-                onChange={(e) =>
-                  setFormData({ ...formData, birthdate: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gender">Género</Label>
-              <Select
-                value={formData.gender}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, gender: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar género" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="masculino">Masculino</SelectItem>
-                  <SelectItem value="femenino">Femenino</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="department">Departamento</Label>
-              <Select
-                value={formData.department}
-                onValueChange={(value) => {
-                  setFormData({ 
-                    ...formData, 
-                    department: value as Student["department"],
-                    assigned_class: "" // Reset class when department changes
-                  });
-                }}
-                required
-              >
-                <SelectTrigger disabled={!isAdminOrSecretaria && profile?.departments?.length === 1}>
-                  <SelectValue placeholder="Seleccionar departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableDepartments.map((dept) => (
-                    <SelectItem key={dept.name} value={dept.name}>
-                      {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {formData.department && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="assigned_class">Clase</Label>
-                <Select
-                  value={formData.assigned_class}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, assigned_class: value })
-                  }
+                <Label htmlFor="name">Nombre</Label>
+                <Input
+                  type="text"
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ingrese el nombre del alumno"
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Departamento</Label>
+                <Select
+                  value={selectedDepartment}
+                  onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
                 >
-                  <SelectTrigger disabled={!isAdminOrSecretaria && profile?.assigned_class}>
-                    <SelectValue placeholder="Seleccionar clase" />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccione un departamento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableClasses.map((className) => (
-                      <SelectItem key={className} value={className}>
-                        {className}
+                    {profile?.departments?.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="phone">Teléfono</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Dirección</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Teléfono</Label>
+                <Input
+                  type="tel"
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Ingrese el teléfono del alumno"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Dirección</Label>
+                <Input
+                  type="text"
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Ingrese la dirección del alumno"
+                />
+              </div>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Agregando..." : "Agregar Alumno"}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="gender">Género</Label>
+                <Select value={gender} onValueChange={(value: string) => setGender(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione un género" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="femenino">Femenino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
+                <Input
+                  type="date"
+                  id="birthdate"
+                  value={birthdate}
+                  onChange={(e) => setBirthdate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Clase Asignada</Label>
+                <Input
+                  type="text"
+                  value={selectedClass || ''}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  placeholder="Ingrese la clase asignada"
+                />
+              </div>
+            </div>
+            <Button disabled={isLoading} type="submit">
+              {isLoading ? "Creando..." : "Crear Alumno"}
             </Button>
           </form>
         </CardContent>

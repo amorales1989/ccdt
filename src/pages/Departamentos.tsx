@@ -137,6 +137,10 @@ const Departamentos = () => {
     setClasses(classes.filter(c => c !== classToRemove));
   };
 
+  const handleDepartmentClick = (departmentName: DepartmentType) => {
+    setName(departmentName);
+  };
+
   if (isLoading) {
     return <div className="p-6">Cargando...</div>;
   }

@@ -78,6 +78,7 @@ const ListarAlumnos = () => {
 
   const importMutation = useMutation({
     mutationFn: async (students: Omit<Student, "id" | "created_at" | "updated_at">[]) => {
+      console.log('Importing students:', students);
       const results = await Promise.all(
         students.map(student => createStudent(student))
       );
@@ -129,9 +130,11 @@ const ListarAlumnos = () => {
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
 
+        console.log('Excel data:', jsonData);
+
         const students = jsonData.map(row => ({
           name: row.Nombre,
-          department: row.Departamento,
+          department: row.Departamento as DepartmentType,
           phone: row.Teléfono,
           address: row.Dirección,
           gender: row.Género.toLowerCase(),
@@ -139,6 +142,7 @@ const ListarAlumnos = () => {
           assigned_class: row.Clase || undefined
         }));
 
+        console.log('Processed students:', students);
         await importMutation.mutateAsync(students);
       } catch (error) {
         toast({
