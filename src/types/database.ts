@@ -55,4 +55,5 @@ export interface Profile {
   last_name: string | null;
   role: "admin" | "lider" | "director" | "maestro" | "secretaria";
   departments: DepartmentType[] | null;
+  assigned_class?: string | null;
 }

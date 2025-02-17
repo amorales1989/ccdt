@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
 import { Department } from "@/types/database";
@@ -48,7 +47,6 @@ const Departamentos = () => {
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
 
-  // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
     return null;

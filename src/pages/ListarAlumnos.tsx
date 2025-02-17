@@ -39,7 +39,7 @@ import { Student } from "@/types/database";
 const ListarAlumnos = () => {
   const { profile } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(
     profile?.departments?.[0] || null
   );
   const isMobile = useIsMobile();
@@ -399,7 +399,7 @@ const ListarAlumnos = () => {
           {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
             <Select
               value={selectedDepartment || undefined}
-              onValueChange={(value: string) => setSelectedDepartment(value)}
+              onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
             >
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filtrar por departamento" />

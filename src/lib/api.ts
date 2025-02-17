@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Student, Event, Attendance } from "@/types/database";
+import { Student, Event, Attendance, DepartmentType } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 // Students API
@@ -338,7 +338,7 @@ export const updateDepartment = async (id: string, updates: { description?: stri
   }
 };
 
-export const createDepartment = async (department: { name: string; description?: string; classes: string[] }) => {
+export const createDepartment = async (department: { name: DepartmentType; description?: string; classes: string[] }) => {
   try {
     const { data, error } = await supabase
       .from("departments")
