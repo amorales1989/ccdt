@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -16,19 +15,16 @@ const Index = () => {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
 
-  // Fetch events
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
     queryFn: getEvents
   });
 
-  // Fetch students for statistics
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students'],
     queryFn: getStudents
   });
 
-  // Create event mutation
   const createEventMutation = useMutation({
     mutationFn: (newEvent: Omit<Event, "id" | "created_at" | "updated_at">) => createEvent(newEvent),
     onSuccess: () => {
@@ -48,7 +44,6 @@ const Index = () => {
     }
   });
 
-  // Update event mutation
   const updateEventMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Event> }) => updateEvent(id, data),
     onSuccess: () => {
@@ -68,7 +63,6 @@ const Index = () => {
     }
   });
 
-  // Delete event mutation
   const deleteEventMutation = useMutation({
     mutationFn: deleteEvent,
     onSuccess: () => {
@@ -101,8 +95,8 @@ const Index = () => {
     deleteEventMutation.mutate(id);
   };
 
-  type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
-  const departments: Department[] = ["niños", "adolescentes", "jovenes", "adultos"];
+  type DepartmentType = "niños" | "adolescentes" | "jovenes" | "adultos";
+  const departments: DepartmentType[] = ["niños", "adolescentes", "jovenes", "adultos"];
 
   const renderStudentStats = () => {
     if (!profile) return null;
@@ -110,10 +104,15 @@ const Index = () => {
     const isAdminOrSecretary = ["admin", "secretaria"].includes(profile.role);
     const userDepartments = profile.departments || [];
 
-    // Group students by department
-    const studentsByDepartment = departments.reduce((acc, dept) => {
-      // Solo procesar departamentos relevantes para el usuario
-      if (!isAdminOrSecretary && !userDepartments.includes(dept as Department)) {
+    const studentsByDepartment = [
+      "escuelita_central",
+      "pre_adolescentes",
+      "adolescentes",
+      "jovenes",
+      "jovenes_adultos",
+      "adultos"
+    ].reduce((acc, dept) => {
+      if (!isAdminOrSecretary && !userDepartments.includes(dept as DepartmentType)) {
         return acc;
       }
 
@@ -124,7 +123,7 @@ const Index = () => {
         total: deptStudents.length
       };
       return acc;
-    }, {} as Record<Department, { male: number; female: number; total: number }>);
+    }, {} as Record<string, { male: number; female: number; total: number }>);
 
     return (
       <Card className="mb-6">
@@ -134,8 +133,7 @@ const Index = () => {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {departments.map(dept => {
-              // Solo mostrar departamentos relevantes para el usuario
-              if (!isAdminOrSecretary && !userDepartments.includes(dept as Department)) {
+              if (!isAdminOrSecretary && !userDepartments.includes(dept as DepartmentType)) {
                 return null;
               }
 

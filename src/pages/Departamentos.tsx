@@ -43,7 +43,7 @@ const Departamentos = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [name, setName] = useState<DepartmentName>("niños");
+  const [name, setName] = useState<DepartmentType>("escuelita_central");
   const [description, setDescription] = useState("");
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
@@ -165,12 +165,14 @@ const Departamentos = () => {
                   <select
                     id="name"
                     value={name}
-                    onChange={(e) => setName(e.target.value as DepartmentName)}
+                    onChange={(e) => setName(e.target.value as DepartmentType)}
                     className="w-full rounded-md border border-input bg-background px-3 py-2"
                   >
-                    <option value="niños">Niños</option>
+                    <option value="escuelita_central">Escuelita Central</option>
+                    <option value="pre_adolescentes">Pre Adolescentes</option>
                     <option value="adolescentes">Adolescentes</option>
                     <option value="jovenes">Jóvenes</option>
+                    <option value="jovenes_adultos">Jóvenes Adultos</option>
                     <option value="adultos">Adultos</option>
                   </select>
                 </div>

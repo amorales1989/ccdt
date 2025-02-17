@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -34,12 +33,12 @@ import { format, differenceInYears } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
 
-type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
+type DepartmentType = "escuelita_central" | "pre_adolescentes" | "adolescentes" | "jovenes" | "jovenes_adultos" | "adultos";
 
 const ListarAlumnos = () => {
   const { profile } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(
     profile?.departments?.[0] || null
   );
   const isMobile = useIsMobile();
@@ -70,7 +69,6 @@ const ListarAlumnos = () => {
         throw error;
       }
       console.log("Fetched students:", data);
-      // Ordenar alumnos alfabéticamente por nombre
       return (data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
@@ -281,7 +279,7 @@ const ListarAlumnos = () => {
           {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
             <Select
               value={selectedDepartment || undefined}
-              onValueChange={(value: Department) => setSelectedDepartment(value)}
+              onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
             >
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filtrar por departamento" />
@@ -289,15 +287,17 @@ const ListarAlumnos = () => {
               <SelectContent>
                 {isAdminOrSecretaria ? (
                   <>
-                    <SelectItem value="niños">Niños</SelectItem>
+                    <SelectItem value="escuelita_central">Escuelita Central</SelectItem>
+                    <SelectItem value="pre_adolescentes">Pre Adolescentes</SelectItem>
                     <SelectItem value="adolescentes">Adolescentes</SelectItem>
                     <SelectItem value="jovenes">Jóvenes</SelectItem>
+                    <SelectItem value="jovenes_adultos">Jóvenes Adultos</SelectItem>
                     <SelectItem value="adultos">Adultos</SelectItem>
                   </>
                 ) : (
                   profile?.departments?.map((dept) => (
                     <SelectItem key={dept} value={dept}>
-                      {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                      {dept.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </SelectItem>
                   ))
                 )}

@@ -41,5 +41,18 @@ export interface Department {
   updated_at: string;
 }
 
-export type DepartmentType = "escuelita_central" | "pre_adolescentes" | "adolescentes" | "jovenes" | "jovenes_adultos" | "adultos";
+export type DepartmentType = 
+  | "escuelita_central" 
+  | "pre_adolescentes" 
+  | "adolescentes" 
+  | "jovenes" 
+  | "jovenes_adultos" 
+  | "adultos";
 
+export interface Profile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: "admin" | "lider" | "director" | "maestro" | "secretaria";
+  departments: DepartmentType[] | null;
+}
