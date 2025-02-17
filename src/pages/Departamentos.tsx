@@ -30,8 +30,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type DepartmentName = "niños" | "adolescentes" | "jovenes" | "adultos";
-
 const Departamentos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();

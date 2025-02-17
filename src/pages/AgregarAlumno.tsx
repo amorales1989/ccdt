@@ -16,9 +16,7 @@ const AgregarAlumno = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | undefined>(
     profile?.departments?.[0] || undefined
   );
-  const [selectedClass, setSelectedClass] = useState<string | undefined>(
-    profile?.assigned_class || undefined
-  );
+  const [selectedClass, setSelectedClass] = useState<string | undefined>(undefined);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
