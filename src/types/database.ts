@@ -55,5 +55,13 @@ export interface Profile {
   last_name: string | null;
   role: "admin" | "lider" | "director" | "maestro" | "secretaria";
   departments: DepartmentType[] | null;
-  assigned_class?: string | null;
+  assigned_class: string | null;
+}
+
+export interface UserMetadata {
+  first_name: string;
+  last_name: string;
+  role: Profile['role'];
+  departments: DepartmentType[];
+  assigned_class?: string;
 }

@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Department, DepartmentType } from "@/types/database";
+import { Department, DepartmentType, UserMetadata } from "@/types/database";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -67,13 +67,15 @@ export default function Register() {
     }
 
     try {
-      await signUp(email, password, {
+      const metadata: UserMetadata = {
         first_name: firstName,
         last_name: lastName,
         role,
         departments: [selectedDepartment],
-        assigned_class: selectedClass
-      });
+        assigned_class: selectedClass || undefined
+      };
+
+      await signUp(email, password, metadata);
       
       toast({
         title: "Registro exitoso",

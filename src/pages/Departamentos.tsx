@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
-import { Department } from "@/types/database";
+import { Department, DepartmentType } from "@/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash, Plus, X } from "lucide-react";

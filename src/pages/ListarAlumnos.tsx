@@ -34,7 +34,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/components/ui/use-toast";
 import * as XLSX from 'xlsx';
 import { createStudent } from "@/lib/api";
-import { Student } from "@/types/database";
+import { Student, DepartmentType } from "@/types/database";
 
 const ListarAlumnos = () => {
   const { profile } = useAuth();
