@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Sidebar,
@@ -155,6 +156,18 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
                 </div>
               </div>
             </div>
+            {profile?.departments && profile.departments.length > 0 && (
+              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+                <FolderIcon className="h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-wrap gap-1">
+                  {profile.departments.map((dept) => (
+                    <span key={dept} className="text-xs bg-accent px-2 py-0.5 rounded-full capitalize">
+                      {dept}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </SidebarMenuItem>
         {items.map((item) => (
