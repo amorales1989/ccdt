@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -108,7 +107,8 @@ const ListarAlumnos = () => {
       Teléfono: '',
       Dirección: '',
       Género: 'masculino',
-      'Fecha de Nacimiento': 'DD/MM/YYYY'
+      'Fecha de Nacimiento': 'DD/MM/YYYY',
+      Clase: ''
     }];
 
     const worksheet = XLSX.utils.json_to_sheet(template);
@@ -135,7 +135,8 @@ const ListarAlumnos = () => {
           phone: row.Teléfono,
           address: row.Dirección,
           gender: row.Género.toLowerCase(),
-          birthdate: row['Fecha de Nacimiento'] ? format(new Date(row['Fecha de Nacimiento']), 'yyyy-MM-dd') : undefined
+          birthdate: row['Fecha de Nacimiento'] ? format(new Date(row['Fecha de Nacimiento']), 'yyyy-MM-dd') : undefined,
+          assigned_class: row.Clase || undefined
         }));
 
         await importMutation.mutateAsync(students);
@@ -169,7 +170,8 @@ const ListarAlumnos = () => {
       Teléfono: student.phone || '',
       Dirección: student.address || '',
       Género: student.gender,
-      'Fecha de Nacimiento': student.birthdate ? format(new Date(student.birthdate), "dd/MM/yyyy") : ''
+      'Fecha de Nacimiento': student.birthdate ? format(new Date(student.birthdate), "dd/MM/yyyy") : '',
+      Clase: student.assigned_class || ''
     })));
 
     const workbook = XLSX.utils.book_new();
