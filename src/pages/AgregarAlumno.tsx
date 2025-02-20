@@ -17,14 +17,16 @@ const AgregarAlumno = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Inicializar formData con los valores del perfil del usuario
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     address: "",
     gender: "masculino",
     birthdate: "",
-    department: "" as DepartmentType,
-    assigned_class: "",
+    department: profile?.departments?.[0] || "" as DepartmentType,
+    assigned_class: profile?.assigned_class || "",
   });
 
   const { data: departments = [] } = useQuery({
@@ -42,16 +44,16 @@ const AgregarAlumno = () => {
     ? departments.find(d => d.name === formData.department)?.classes || []
     : [];
 
+  // Actualizar formData cuando el perfil esté disponible
   useEffect(() => {
-    if (!isAdminOrSecretaria && profile?.departments?.[0]) {
-      // Si no es admin/secretaria, asignar automáticamente el departamento y clase del usuario
-      setFormData(prev => ({ 
-        ...prev, 
+    if (profile?.departments?.[0]) {
+      setFormData(prev => ({
+        ...prev,
         department: profile.departments[0],
         assigned_class: profile.assigned_class || ""
       }));
     }
-  }, [profile, isAdminOrSecretaria]);
+  }, [profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +103,20 @@ const AgregarAlumno = () => {
       setIsLoading(false);
     }
   };
+
+  if (!isAdminOrSecretaria && (!profile?.departments?.length)) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              No tiene departamentos asignados. Contacte al administrador.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
