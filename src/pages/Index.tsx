@@ -15,92 +15,15 @@ const Index = () => {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
 
-  type DepartmentStats = Record<DepartmentType, { male: number; female: number; total: number }>;
-
-  // Fetch events
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
     queryFn: getEvents
   });
 
-  // Fetch students for statistics
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students'],
     queryFn: getStudents
   });
-
-  // Create event mutation
-  const createEventMutation = useMutation({
-    mutationFn: (newEvent: Omit<Event, "id" | "created_at" | "updated_at">) => createEvent(newEvent),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      toast({
-        title: "Evento creado",
-        description: "El evento ha sido creado exitosamente"
-      });
-    },
-    onError: (error) => {
-      console.error('Error creating event:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo crear el evento",
-        variant: "destructive"
-      });
-    }
-  });
-
-  // Update event mutation
-  const updateEventMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Event> }) => updateEvent(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      toast({
-        title: "Evento actualizado",
-        description: "El evento ha sido actualizado exitosamente"
-      });
-    },
-    onError: (error) => {
-      console.error('Error updating event:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el evento",
-        variant: "destructive"
-      });
-    }
-  });
-
-  // Delete event mutation
-  const deleteEventMutation = useMutation({
-    mutationFn: deleteEvent,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      toast({
-        title: "Evento eliminado",
-        description: "El evento ha sido eliminado exitosamente"
-      });
-    },
-    onError: (error) => {
-      console.error('Error deleting event:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el evento",
-        variant: "destructive"
-      });
-    }
-  });
-
-  const handleAddEvent = (newEvent: Omit<Event, "id" | "created_at" | "updated_at">) => {
-    createEventMutation.mutate(newEvent);
-  };
-
-  const handleEditEvent = (event: Event) => {
-    const { id, created_at, updated_at, ...updateData } = event;
-    updateEventMutation.mutate({ id, data: updateData });
-  };
-
-  const handleDeleteEvent = (id: string) => {
-    deleteEventMutation.mutate(id);
-  };
 
   const renderStudentStats = () => {
     if (!profile) return null;
@@ -109,7 +32,8 @@ const Index = () => {
     const userDepartments = profile.departments || [];
 
     // Group students by department
-    const studentsByDepartment = Object.values(DepartmentType).reduce((acc, dept) => {
+    const departmentTypes: DepartmentType[] = ["escuelita_central", "pre_adolescentes", "adolescentes", "jovenes", "jovenes_adultos", "adultos"];
+    const studentsByDepartment = departmentTypes.reduce((acc, dept) => {
       // Solo procesar departamentos relevantes para el usuario
       if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
         return acc;
@@ -122,7 +46,7 @@ const Index = () => {
         total: deptStudents.length
       };
       return acc;
-    }, {} as DepartmentStats);
+    }, {} as Record<DepartmentType, { male: number; female: number; total: number }>);
 
     return (
       <Card className="mb-6">
@@ -135,6 +59,11 @@ const Index = () => {
               <Card key={dept} className="p-4">
                 <h3 className="font-semibold text-lg capitalize mb-2">
                   {dept.replace(/_/g, ' ')}
+                  {profile.role === "maestro" && profile.class && (
+                    <span className="block text-sm text-muted-foreground">
+                      Clase: {profile.class}
+                    </span>
+                  )}
                 </h3>
                 <div className="space-y-2">
                   <p>Varones: {stats.male}</p>
@@ -149,82 +78,142 @@ const Index = () => {
     );
   };
 
-  const canManageEvents = profile?.role === 'admin' || profile?.role === 'secretaria';
+  const { mutate: createEventMutate } = useMutation(createEvent, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['events']);
+      toast({
+        title: "Evento creado",
+        description: "El evento ha sido creado exitosamente",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Hubo un error al crear el evento",
+        variant: "destructive",
+      });
+    }
+  });
 
-  if (eventsLoading || studentsLoading) {
-    return (
-      <div className="p-6 flex justify-center items-center">
-        <p>Cargando...</p>
-      </div>
-    );
-  }
+  const { mutate: updateEventMutate } = useMutation(updateEvent, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['events']);
+      toast({
+        title: "Evento actualizado",
+        description: "El evento ha sido actualizado exitosamente",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Hubo un error al actualizar el evento",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const { mutate: deleteEventMutate } = useMutation(deleteEvent, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['events']);
+      toast({
+        title: "Evento eliminado",
+        description: "El evento ha sido eliminado exitosamente",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Hubo un error al eliminar el evento",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleCreateEvent = async (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => {
+    createEventMutate(event);
+  };
+
+  const handleUpdateEvent = async (event: Event) => {
+    updateEventMutate(event);
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    deleteEventMutate(id);
+  };
 
   return (
-    <div className="p-6 min-h-screen" style={{ background: "linear-gradient(109.6deg, rgba(223,234,247,1) 11.2%, rgba(244,248,252,1) 91.1%)" }}>
+    <div>
       {renderStudentStats()}
+
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Próximos Eventos</CardTitle>
-          {canManageEvents && (
+        <CardHeader>
+          <CardTitle>Calendario de Eventos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="icon" className="rounded-full w-10 h-10">
-                  <Plus className="h-5 w-5" />
-                  <span className="sr-only">Nuevo Evento</span>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar Evento
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Crear Nuevo Evento</DialogTitle>
+                  <DialogTitle>Agregar Evento</DialogTitle>
                 </DialogHeader>
-                <EventForm onSubmit={handleAddEvent} />
+                <EventForm onSubmit={handleCreateEvent} />
               </DialogContent>
             </Dialog>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            {events.map((event) => (
-              <Card key={event.id} className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg">{event.title}</h3>
+          </div>
+          {eventsLoading ? (
+            <p>Cargando eventos...</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {events.map((event) => (
+                <Card key={event.id}>
+                  <CardHeader>
+                    <CardTitle>{event.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(event.date), "dd/MM/yyyy")}
+                      {format(new Date(event.date), "PPP")}
                     </p>
-                    <p className="mt-2">{event.description}</p>
-                  </div>
-                  {canManageEvents && (
-                    <div className="flex gap-2">
+                    {event.description && (
+                      <p className="text-sm mt-2">{event.description}</p>
+                    )}
+                    <div className="flex justify-end mt-4 space-x-2">
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Edit2 className="h-4 w-4" />
+                          <Button variant="secondary" size="sm">
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Editar
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle>Editar Evento</DialogTitle>
                           </DialogHeader>
-                          <EventForm 
-                            onSubmit={(updatedEvent) => handleEditEvent({ ...updatedEvent, id: event.id, created_at: event.created_at, updated_at: event.updated_at })} 
-                            initialData={event} 
+                          <EventForm
+                            event={event}
+                            onSubmit={handleUpdateEvent}
                           />
                         </DialogContent>
                       </Dialog>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
+                      <Button
+                        variant="destructive"
+                        size="sm"
                         onClick={() => handleDeleteEvent(event.id)}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar
                       </Button>
                     </div>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

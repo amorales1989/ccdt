@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,10 +44,13 @@ const AgregarAlumno = () => {
 
   useEffect(() => {
     if (profile?.departments?.[0]) {
+      const userDepartment = profile.departments[0];
+      const userClass = profile.role === "maestro" ? profile.class : "";
+      
       setFormData(prev => ({ 
         ...prev, 
-        department: profile.departments[0],
-        ...(profile.assigned_class && { assigned_class: profile.assigned_class })
+        department: userDepartment,
+        assigned_class: userClass
       }));
     }
   }, [profile]);
@@ -174,8 +178,9 @@ const AgregarAlumno = () => {
                   });
                 }}
                 required
+                disabled={!isAdminOrSecretaria && profile?.departments?.length === 1}
               >
-                <SelectTrigger disabled={!isAdminOrSecretaria && profile?.departments?.length === 1}>
+                <SelectTrigger>
                   <SelectValue placeholder="Seleccionar departamento" />
                 </SelectTrigger>
                 <SelectContent>
@@ -196,8 +201,9 @@ const AgregarAlumno = () => {
                     setFormData({ ...formData, assigned_class: value })
                   }
                   required
+                  disabled={!isAdminOrSecretaria && profile?.role === "maestro"}
                 >
-                  <SelectTrigger disabled={!isAdminOrSecretaria && profile?.assigned_class}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Seleccionar clase" />
                   </SelectTrigger>
                   <SelectContent>
