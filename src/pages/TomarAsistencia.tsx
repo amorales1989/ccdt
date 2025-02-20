@@ -157,7 +157,9 @@ const TomarAsistencia = () => {
     <div className="p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Tomar Asistencia - {format(new Date(selectedDate), "dd/MM/yyyy")}</CardTitle>
+          <CardTitle>
+            Tomar Asistencia - {format(addDays(new Date(selectedDate), 1), "dd/MM/yyyy")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <input
@@ -218,7 +220,7 @@ const TomarAsistencia = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Asistencia ya registrada</AlertDialogTitle>
             <AlertDialogDescription>
-              Ya existe un registro de asistencia para la fecha {format(new Date(selectedDate), "dd/MM/yyyy")} en este departamento. 
+              Ya existe un registro de asistencia para la fecha {format(addDays(new Date(selectedDate), 1), "dd/MM/yyyy")} en este departamento. 
               Por favor, seleccione otra fecha o consulte el historial de asistencia.
             </AlertDialogDescription>
           </AlertDialogHeader>
