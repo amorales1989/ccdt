@@ -220,10 +220,10 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       throw error;
     }
 
-    // First, get the student's department
+    // First, get the student's department and class
     const { data: student, error: studentError } = await supabase
       .from('students')
-      .select('department')
+      .select('department, assigned_class')
       .eq('id', attendance.student_id)
       .maybeSingle();
 
@@ -243,6 +243,7 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       date: attendance.date,
       status: attendance.status,
       department: student.department,
+      assigned_class: student.assigned_class,
       ...(attendance.event_id && { event_id: attendance.event_id })
     };
 

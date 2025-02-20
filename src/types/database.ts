@@ -28,6 +28,7 @@ export interface Attendance {
   date: string;
   status: boolean;
   department?: DepartmentType;
+  assigned_class?: string;
   created_at: string;
   updated_at: string;
   students?: Student;

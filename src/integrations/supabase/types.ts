@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       attendance: {
         Row: {
+          assigned_class: string | null
           created_at: string
           date: string | null
           department: Database["public"]["Enums"]["department_type"] | null
@@ -18,8 +19,10 @@ export type Database = {
           id: string
           status: boolean
           student_id: string | null
+          updated_at: string
         }
         Insert: {
+          assigned_class?: string | null
           created_at?: string
           date?: string | null
           department?: Database["public"]["Enums"]["department_type"] | null
@@ -27,8 +30,10 @@ export type Database = {
           id?: string
           status?: boolean
           student_id?: string | null
+          updated_at?: string
         }
         Update: {
+          assigned_class?: string | null
           created_at?: string
           date?: string | null
           department?: Database["public"]["Enums"]["department_type"] | null
@@ -36,6 +41,7 @@ export type Database = {
           id?: string
           status?: boolean
           student_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
