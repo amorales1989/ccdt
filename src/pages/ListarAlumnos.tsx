@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -39,7 +40,16 @@ const ListarAlumnos = () => {
           console.log("Usuario sin departamentos asignados");
           return [];
         }
-        query = query.eq("department", selectedDepartment || profile.departments[0]);
+
+        // Si el usuario tiene una clase asignada, filtrar por departamento y clase
+        if (profile?.assigned_class) {
+          query = query
+            .eq("department", selectedDepartment || profile.departments[0])
+            .eq("assigned_class", profile.assigned_class);
+        } else {
+          // Si no tiene clase asignada, solo filtrar por departamento
+          query = query.eq("department", selectedDepartment || profile.departments[0]);
+        }
       }
       
       const { data, error } = await query;
