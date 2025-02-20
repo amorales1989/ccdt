@@ -134,47 +134,49 @@ const HistorialAsistencia = () => {
             <CardContent className="space-y-4">
               <div className="space-y-4">
                 {isAdminOrSecretaria && (
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Departamento</label>
-                    <Select value={selectedDepartment} onValueChange={(value) => {
-                      setSelectedDepartment(value);
-                      setSelectedClass("all");
-                    }}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Seleccionar departamento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        {departments.map((dept) => (
-                          <SelectItem key={dept.value} value={dept.value}>
-                            {dept.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                  <>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Departamento</label>
+                      <Select value={selectedDepartment} onValueChange={(value) => {
+                        setSelectedDepartment(value);
+                        setSelectedClass("all");
+                      }}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Seleccionar departamento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {departments.map((dept) => (
+                            <SelectItem key={dept.value} value={dept.value}>
+                              {dept.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Clase</label>
-                  <Select 
-                    value={selectedClass} 
-                    onValueChange={setSelectedClass}
-                    disabled={selectedDepartment === "all"}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleccionar clase" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      {availableClasses.map((className) => (
-                        <SelectItem key={className} value={className}>
-                          {className}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Clase</label>
+                      <Select 
+                        value={selectedClass} 
+                        onValueChange={setSelectedClass}
+                        disabled={selectedDepartment === "all"}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Seleccionar clase" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {availableClasses.map((className) => (
+                            <SelectItem key={className} value={className}>
+                              {className}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <label className="text-sm font-medium mb-2 block">Período</label>
