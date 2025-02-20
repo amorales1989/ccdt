@@ -1,8 +1,9 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { getAttendance } from "@/lib/api";
@@ -23,11 +24,21 @@ const dateRangeOptions = [
   { label: "Rango personalizado", value: "custom" }
 ];
 
+const departments = [
+  { value: "escuelita_central", label: "Escuelita Central" },
+  { value: "pre_adolescentes", label: "Pre-adolescentes" },
+  { value: "adolescentes", label: "Adolescentes" },
+  { value: "jovenes", label: "Jóvenes" },
+  { value: "jovenes_adultos", label: "Jóvenes Adultos" },
+  { value: "adultos", label: "Adultos" }
+];
+
 const HistorialAsistencia = () => {
   const [selectedRange, setSelectedRange] = useState("today");
   const [startDate, setStartDate] = useState<Date>(startOfDay(new Date()));
   const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()));
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const [selectedClass, setSelectedClass] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const { profile } = useAuth();
   const isMobile = useIsMobile();
@@ -59,7 +70,7 @@ const HistorialAsistencia = () => {
   };
 
   const { data: attendance = [], isLoading: attendanceLoading } = useQuery({
-    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment],
+    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment, selectedClass],
     queryFn: async () => {
       const formattedStartDate = format(startDate, "yyyy-MM-dd");
       const formattedEndDate = format(endDate, "yyyy-MM-dd");
@@ -74,7 +85,8 @@ const HistorialAsistencia = () => {
       Nombre: record.students?.name,
       Estado: record.status ? "Presente" : "Ausente",
       Fecha: format(new Date(record.date), "dd/MM/yyyy"),
-      Departamento: record.students?.department
+      Departamento: record.students?.department,
+      Clase: record.students?.assigned_class || 'Sin asignar'
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -83,15 +95,24 @@ const HistorialAsistencia = () => {
     XLSX.writeFile(wb, `asistencia_${format(startDate, "dd-MM-yyyy")}_${format(endDate, "dd-MM-yyyy")}.xlsx`);
   };
 
-  const filteredAttendance = attendance.filter(record => 
-    searchQuery === "" || 
-    record.students?.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAttendance = attendance.filter(record => {
+    const matchesSearch = searchQuery === "" || 
+      record.students?.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesClass = selectedClass === "all" || 
+      record.students?.assigned_class === selectedClass;
+    return matchesSearch && matchesClass;
+  });
 
   const attendanceStats = {
     present: filteredAttendance.filter(record => record.status).length,
     absent: filteredAttendance.filter(record => !record.status).length
   };
+
+  // Obtener las clases únicas del departamento seleccionado
+  const availableClasses = [...new Set(attendance
+    .filter(record => record.students?.assigned_class)
+    .map(record => record.students?.assigned_class))
+  ].filter(Boolean) as string[];
 
   return (
     <div className="p-2 sm:p-4 md:p-6">
@@ -105,20 +126,42 @@ const HistorialAsistencia = () => {
               {isAdminOrSecretaria && (
                 <div>
                   <label className="text-sm font-medium mb-2 block">Departamento</label>
-                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <Select value={selectedDepartment} onValueChange={(value) => {
+                    setSelectedDepartment(value);
+                    setSelectedClass("all"); // Reset class selection when department changes
+                  }}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Seleccionar departamento" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="niños">Niños</SelectItem>
-                      <SelectItem value="adolescentes">Adolescentes</SelectItem>
-                      <SelectItem value="jovenes">Jóvenes</SelectItem>
-                      <SelectItem value="adultos">Adultos</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.value} value={dept.value}>
+                          {dept.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               )}
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Clase</label>
+                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccionar clase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {availableClasses.map((className) => (
+                      <SelectItem key={className} value={className}>
+                        {className}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <label className="text-sm font-medium mb-2 block">Período</label>
                 <Select value={selectedRange} onValueChange={handleDateRangeChange}>
@@ -245,7 +288,12 @@ const HistorialAsistencia = () => {
                       <TableHead>Nombre</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Fecha</TableHead>
-                      {!isMobile && <TableHead>Departamento</TableHead>}
+                      {!isMobile && (
+                        <>
+                          <TableHead>Departamento</TableHead>
+                          <TableHead>Clase</TableHead>
+                        </>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -254,7 +302,12 @@ const HistorialAsistencia = () => {
                         <TableCell className="font-medium">{record.students?.name}</TableCell>
                         <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
                         <TableCell>{format(new Date(record.date), "dd/MM/yyyy")}</TableCell>
-                        {!isMobile && <TableCell className="capitalize">{record.students?.department}</TableCell>}
+                        {!isMobile && (
+                          <>
+                            <TableCell className="capitalize">{record.students?.department?.replace(/_/g, ' ')}</TableCell>
+                            <TableCell>{record.students?.assigned_class || 'Sin asignar'}</TableCell>
+                          </>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
