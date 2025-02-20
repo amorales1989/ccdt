@@ -231,12 +231,14 @@ const GestionUsuarios = () => {
                     </h3>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
                     <p className="text-sm">Rol: {user.role}</p>
-                    <p className="text-sm">
-                      Departamentos: {user.departments?.join(", ") || "Ninguno"}
-                    </p>
-                    {user.assigned_class && (
-                      <p className="text-sm">Clase asignada: {user.assigned_class}</p>
-                    )}
+                    <div className="text-sm space-y-1">
+                      <p>Departamentos: {user.departments?.join(", ") || "Ninguno"}</p>
+                      {user.assigned_class && (
+                        <p className="text-sm bg-accent/50 inline-block px-2 py-0.5 rounded">
+                          Clase: {user.assigned_class}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Dialog open={isEditing && selectedUser?.id === user.id} onOpenChange={(open) => {
