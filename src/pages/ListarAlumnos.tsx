@@ -13,7 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
-import { DepartmentType } from "@/types/database";
+import { DepartmentType, Department } from "@/types/database";
 
 const ListarAlumnos = () => {
   const { profile } = useAuth();
@@ -21,17 +21,39 @@ const ListarAlumnos = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(
     profile?.departments?.[0] || null
   );
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
   const userDepartment = profile?.departments?.[0];
   const userClass = profile?.assigned_class;
 
+  // Obtener departamentos y sus clases
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("*")
+        .order('name');
+      
+      if (error) throw error;
+      return data as Department[];
+    },
+    enabled: isAdminOrSecretaria,
+  });
+
+  // Obtener las clases del departamento seleccionado
+  const availableClasses = selectedDepartment 
+    ? departments.find(d => d.name === selectedDepartment)?.classes || []
+    : [];
+
   const { data: students = [], isLoading } = useQuery({
-    queryKey: ["students", selectedDepartment, userClass],
+    queryKey: ["students", selectedDepartment, selectedClass, userClass],
     queryFn: async () => {
       console.log("Fetching students with filters:", { 
         selectedDepartment, 
+        selectedClass,
         userDepartment,
         userClass,
         isAdminOrSecretaria 
@@ -40,9 +62,14 @@ const ListarAlumnos = () => {
       let query = supabase.from("students").select("*");
       
       if (isAdminOrSecretaria) {
-        // Admins y secretarias pueden filtrar por departamento
+        // Admins y secretarias pueden filtrar por departamento y clase
         if (selectedDepartment) {
           query = query.eq("department", selectedDepartment);
+          
+          // Si hay una clase seleccionada, filtrar por ella
+          if (selectedClass) {
+            query = query.eq("assigned_class", selectedClass);
+          }
         }
       } else {
         // Verificar si el usuario tiene departamentos asignados
@@ -276,31 +303,54 @@ const ListarAlumnos = () => {
         <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
           {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
-            <Select
-              value={selectedDepartment || undefined}
-              onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
-            >
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filtrar por departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {isAdminOrSecretaria ? (
-                  <>
-                    <SelectItem value="niños">Niños</SelectItem>
-                    <SelectItem value="adolescentes">Adolescentes</SelectItem>
-                    <SelectItem value="jovenes">Jóvenes</SelectItem>
-                    <SelectItem value="adultos">Adultos</SelectItem>
-                  </>
-                ) : (
-                  profile?.departments?.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept.charAt(0).toUpperCase() + dept.slice(1)}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col md:flex-row gap-4">
+              <Select
+                value={selectedDepartment || undefined}
+                onValueChange={(value: DepartmentType) => {
+                  setSelectedDepartment(value);
+                  setSelectedClass(null); // Reset selected class when department changes
+                }}
+              >
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Filtrar por departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isAdminOrSecretaria ? (
+                    departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name}>
+                        {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, ' ')}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    profile?.departments?.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept.charAt(0).toUpperCase() + dept.slice(1).replace(/_/g, ' ')}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+
+              {isAdminOrSecretaria && selectedDepartment && availableClasses.length > 0 && (
+                <Select
+                  value={selectedClass || undefined}
+                  onValueChange={setSelectedClass}
+                >
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Filtrar por clase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableClasses.map((className) => (
+                      <SelectItem key={className} value={className}>
+                        {className}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           )}
+          
           {isAdminOrSecretaria && (
             <Button
               variant="outline"
@@ -318,8 +368,8 @@ const ListarAlumnos = () => {
         <div className="text-center py-4">Cargando...</div>
       ) : (
         <>
-          {renderStudentList(maleStudents, "Varones")}
-          {renderStudentList(femaleStudents, "Mujeres")}
+          {renderStudentList(students.filter(student => student.gender === "masculino"), "Varones")}
+          {renderStudentList(students.filter(student => student.gender === "femenino"), "Mujeres")}
         </>
       )}
     </div>
