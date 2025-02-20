@@ -117,7 +117,7 @@ const HistorialAsistencia = () => {
     const data = filteredAttendance.map(record => ({
       Nombre: record.students?.name,
       Estado: record.status ? "Presente" : "Ausente",
-      Fecha: format(new Date(record.date), "dd/MM/yyyy"),
+      Fecha: adjustDateForDisplay(record.date),
       Departamento: record.department,
       Clase: record.assigned_class || 'Sin asignar'
     }));
