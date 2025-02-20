@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,7 +47,7 @@ const AgregarAlumno = () => {
       setFormData(prev => ({ 
         ...prev, 
         department: profile.departments[0],
-        assigned_class: profile.assigned_class || ""
+        assigned_class: profile?.assigned_class || ""
       }));
     }
   }, [profile]);

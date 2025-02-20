@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -32,10 +31,8 @@ const Index = () => {
     const isAdminOrSecretary = ["admin", "secretaria"].includes(profile.role);
     const userDepartments = profile.departments || [];
 
-    // Group students by department
     const departmentTypes: DepartmentType[] = ["escuelita_central", "pre_adolescentes", "adolescentes", "jovenes", "jovenes_adultos", "adultos"];
     const studentsByDepartment = departmentTypes.reduce((acc, dept) => {
-      // Solo procesar departamentos relevantes para el usuario
       if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
         return acc;
       }
@@ -60,9 +57,9 @@ const Index = () => {
               <Card key={dept} className="p-4">
                 <h3 className="font-semibold text-lg capitalize mb-2">
                   {dept.replace(/_/g, ' ')}
-                  {profile.role === "maestro" && profile.assigned_class && (
+                  {profile?.role === "maestro" && profile?.assigned_class && (
                     <span className="block text-sm text-muted-foreground">
-                      Clase: {profile.assigned_class}
+                      Clase: {profile?.assigned_class}
                     </span>
                   )}
                 </h3>
