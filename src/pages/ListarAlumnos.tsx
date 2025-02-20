@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -24,7 +23,6 @@ const ListarAlumnos = () => {
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
-  // Obtener departamentos y sus clases
   const { data: departments = [] } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
@@ -38,7 +36,6 @@ const ListarAlumnos = () => {
     },
   });
 
-  // Obtener las clases disponibles para el departamento seleccionado
   const availableClasses = selectedDepartment 
     ? departments.find(d => d.name === selectedDepartment)?.classes || []
     : [];
@@ -48,12 +45,10 @@ const ListarAlumnos = () => {
     queryFn: async () => {
       let query = supabase.from("students").select("*");
       
-      // Aplicar filtro por departamento si está seleccionado
       if (selectedDepartment) {
         query = query.eq("department", selectedDepartment);
       }
       
-      // Aplicar filtro por clase si está seleccionada
       if (selectedClass) {
         query = query.eq("assigned_class", selectedClass);
       }
@@ -132,7 +127,7 @@ const ListarAlumnos = () => {
         </div>
         <div>
           <span className="font-medium">Clase:</span>
-          <span className="ml-2">{student.assigned_class || "No especificada"}</span>
+          <span className="ml-2">{student.assigned_class || "Sin asignar"}</span>
         </div>
         <div>
           <span className="font-medium">Fecha de nacimiento:</span>
@@ -230,7 +225,7 @@ const ListarAlumnos = () => {
               >
                 <TableRow>
                   <TableCell className="p-0 w-full">
-                    <div className="grid grid-cols-[1fr,auto,auto] items-center gap-4 p-4 w-full">
+                    <div className="grid grid-cols-[1fr,auto,auto,auto] items-center gap-4 p-4 w-full">
                       <div className="min-w-[150px]">
                         <CollapsibleTrigger asChild>
                           <button className="font-medium hover:underline text-left w-full">
@@ -240,6 +235,9 @@ const ListarAlumnos = () => {
                       </div>
                       <div className="text-muted-foreground text-right whitespace-nowrap">
                         {calculateAge(student.birthdate)}
+                      </div>
+                      <div className="text-muted-foreground text-right hidden md:block whitespace-nowrap">
+                        {student.assigned_class || "Sin asignar"}
                       </div>
                       <div className="flex items-center justify-end gap-2 shrink-0">
                         <span className="text-muted-foreground text-right hidden md:block whitespace-nowrap">
@@ -275,7 +273,7 @@ const ListarAlumnos = () => {
               value={selectedDepartment || undefined}
               onValueChange={(value: DepartmentType) => {
                 setSelectedDepartment(value);
-                setSelectedClass(null); // Reset selected class when department changes
+                setSelectedClass(null);
               }}
             >
               <SelectTrigger className="w-full md:w-[180px]">
