@@ -49,8 +49,8 @@ export interface Profile {
   last_name: string;
   role: AppRole;
   departments: DepartmentType[];
-  assigned_class?: string;
   email?: string;
+  assigned_class?: string;  // Aseguramos que esta propiedad esté definida correctamente
 }
 
 export type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria";
