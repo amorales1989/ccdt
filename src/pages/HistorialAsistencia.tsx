@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -127,6 +126,12 @@ const HistorialAsistencia = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
     XLSX.writeFile(wb, `asistencia_${format(startDate, "dd-MM-yyyy")}_${format(endDate, "dd-MM-yyyy")}.xlsx`);
+  };
+
+  const adjustDateForDisplay = (dateString: string) => {
+    const date = new Date(dateString);
+    date.setDate(date.getDate() + 1);
+    return format(date, "dd/MM/yyyy");
   };
 
   return (
@@ -324,7 +329,7 @@ const HistorialAsistencia = () => {
                       <TableRow key={record.id}>
                         <TableCell className="font-medium">{record.students?.name}</TableCell>
                         <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
-                        <TableCell>{format(new Date(record.date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{adjustDateForDisplay(record.date)}</TableCell>
                         {!isMobile && (
                           <>
                             <TableCell className="capitalize">
