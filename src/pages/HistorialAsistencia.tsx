@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -94,11 +95,10 @@ const HistorialAsistencia = () => {
       record.students.name.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesDepartment = selectedDepartment === "all" || 
-      record.students.department === selectedDepartment;
+      record.department === selectedDepartment;
 
     const matchesClass = selectedClass === "all" || 
-      (record.students.department === selectedDepartment && 
-       record.students.assigned_class === selectedClass);
+      record.assigned_class === selectedClass;
 
     return matchesSearch && matchesDepartment && matchesClass;
   });
@@ -113,8 +113,8 @@ const HistorialAsistencia = () => {
       Nombre: record.students?.name,
       Estado: record.status ? "Presente" : "Ausente",
       Fecha: format(new Date(record.date), "dd/MM/yyyy"),
-      Departamento: record.students?.department,
-      Clase: record.students?.assigned_class || 'Sin asignar'
+      Departamento: record.department,
+      Clase: record.assigned_class || 'Sin asignar'
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -320,10 +320,10 @@ const HistorialAsistencia = () => {
                         {!isMobile && (
                           <>
                             <TableCell className="capitalize">
-                              {record.students?.department?.replace(/_/g, ' ')}
+                              {record.department?.replace(/_/g, ' ')}
                             </TableCell>
                             <TableCell>
-                              {record.students?.assigned_class || 'Sin asignar'}
+                              {record.assigned_class || 'Sin asignar'}
                             </TableCell>
                           </>
                         )}
