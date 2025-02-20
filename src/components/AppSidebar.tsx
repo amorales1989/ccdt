@@ -34,18 +34,24 @@ const getItems = (role: string | undefined) => {
       title: "Agregar Alumno",
       url: "/agregar",
       icon: UserPlus,
-    },
-    {
+    }
+  ];
+
+  // Solo agregar "Tomar Asistencia" si el rol NO es secretaria
+  if (role !== "secretaria") {
+    baseItems.push({
       title: "Tomar Asistencia",
       url: "/asistencia",
       icon: ClipboardList,
-    },
-    {
-      title: "Historial",
-      url: "/historial",
-      icon: History,
-    },
-  ];
+    });
+  }
+
+  // Agregar el resto de los items comunes
+  baseItems.push({
+    title: "Historial",
+    url: "/historial",
+    icon: History,
+  });
 
   if (role === "admin" || role === "secretaria") {
     baseItems.push(
