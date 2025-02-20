@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
 import { Department } from "@/types/database";
@@ -31,7 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type DepartmentName = "niños" | "adolescentes" | "jovenes" | "adultos";
+type DepartmentType = "escuelita_central" | "escuelita_niños" | "escuelita_adolescentes" | "escuelita_jovenes" | "escuelita_adultos";
 
 const Departamentos = () => {
   const { toast } = useToast();
@@ -43,12 +42,11 @@ const Departamentos = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [name, setName] = useState<DepartmentName>("niños");
+  const [name, setName] = useState<DepartmentType>("escuelita_central");
   const [description, setDescription] = useState("");
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
 
-  // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
     return null;
@@ -68,7 +66,7 @@ const Departamentos = () => {
         description: "El departamento ha sido creado exitosamente"
       });
       setIsCreating(false);
-      setName("niños");
+      setName("escuelita_central");
       setDescription("");
       setClasses([]);
     },
@@ -165,13 +163,14 @@ const Departamentos = () => {
                   <select
                     id="name"
                     value={name}
-                    onChange={(e) => setName(e.target.value as DepartmentName)}
+                    onChange={(e) => setName(e.target.value as DepartmentType)}
                     className="w-full rounded-md border border-input bg-background px-3 py-2"
                   >
-                    <option value="niños">Niños</option>
-                    <option value="adolescentes">Adolescentes</option>
-                    <option value="jovenes">Jóvenes</option>
-                    <option value="adultos">Adultos</option>
+                    <option value="escuelita_central">Escuela Central</option>
+                    <option value="escuelita_niños">Escuela Niños</option>
+                    <option value="escuelita_adolescentes">Escuela Adolescentes</option>
+                    <option value="escuelita_jovenes">Escuela Jóvenes</option>
+                    <option value="escuelita_adultos">Escuela Adultos</option>
                   </select>
                 </div>
                 <div>
@@ -280,7 +279,7 @@ const Departamentos = () => {
                           onClick={() => {
                             const departmentToEdit: Department = {
                               ...department,
-                              name: department.name as DepartmentName
+                              name: department.name as DepartmentType
                             };
                             setSelectedDepartment(departmentToEdit);
                             setIsEditing(true);

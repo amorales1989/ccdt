@@ -72,7 +72,7 @@ export default function Register() {
         last_name: lastName,
         role,
         departments: [selectedDepartment],
-        assigned_class: selectedClass
+        assigned_class: selectedClass || undefined
       });
       
       toast({

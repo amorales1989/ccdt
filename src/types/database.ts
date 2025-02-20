@@ -43,3 +43,13 @@ export interface Department {
 
 export type DepartmentType = "escuelita_central" | "pre_adolescentes" | "adolescentes" | "jovenes" | "jovenes_adultos" | "adultos";
 
+export interface Profile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  role: AppRole;
+  departments: DepartmentType[];
+  assigned_class?: string;
+}
+
+export type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria";
