@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
 import { Department, DepartmentType } from "@/types/database";
@@ -64,7 +65,7 @@ const Departamentos = () => {
         description: "El departamento ha sido creado exitosamente"
       });
       setIsCreating(false);
-      setName("niños");
+      setName("escuelita_central");
       setDescription("");
       setClasses([]);
     },
