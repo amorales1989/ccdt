@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -59,9 +60,9 @@ const Index = () => {
               <Card key={dept} className="p-4">
                 <h3 className="font-semibold text-lg capitalize mb-2">
                   {dept.replace(/_/g, ' ')}
-                  {profile.role === "maestro" && profile.class && (
+                  {profile.role === "maestro" && profile.assigned_class && (
                     <span className="block text-sm text-muted-foreground">
-                      Clase: {profile.class}
+                      Clase: {profile.assigned_class}
                     </span>
                   )}
                 </h3>
@@ -78,15 +79,16 @@ const Index = () => {
     );
   };
 
-  const { mutate: createEventMutate } = useMutation(createEvent, {
+  const { mutate: createEventMutate } = useMutation({
+    mutationFn: (newEvent: Omit<Event, "id" | "created_at" | "updated_at">) => createEvent(newEvent),
     onSuccess: () => {
-      queryClient.invalidateQueries(['events']);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       toast({
         title: "Evento creado",
         description: "El evento ha sido creado exitosamente",
       });
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Hubo un error al crear el evento",
@@ -95,15 +97,16 @@ const Index = () => {
     }
   });
 
-  const { mutate: updateEventMutate } = useMutation(updateEvent, {
+  const { mutate: updateEventMutate } = useMutation({
+    mutationFn: (event: Event) => updateEvent(event.id, event),
     onSuccess: () => {
-      queryClient.invalidateQueries(['events']);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       toast({
         title: "Evento actualizado",
         description: "El evento ha sido actualizado exitosamente",
       });
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Hubo un error al actualizar el evento",
@@ -112,15 +115,16 @@ const Index = () => {
     }
   });
 
-  const { mutate: deleteEventMutate } = useMutation(deleteEvent, {
+  const { mutate: deleteEventMutate } = useMutation({
+    mutationFn: (id: string) => deleteEvent(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['events']);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       toast({
         title: "Evento eliminado",
         description: "El evento ha sido eliminado exitosamente",
       });
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Hubo un error al eliminar el evento",
@@ -129,15 +133,15 @@ const Index = () => {
     }
   });
 
-  const handleCreateEvent = async (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleCreateEvent = (event: Omit<Event, "id" | "created_at" | "updated_at">) => {
     createEventMutate(event);
   };
 
-  const handleUpdateEvent = async (event: Event) => {
+  const handleUpdateEvent = (event: Event) => {
     updateEventMutate(event);
   };
 
-  const handleDeleteEvent = async (id: string) => {
+  const handleDeleteEvent = (id: string) => {
     deleteEventMutate(id);
   };
 
@@ -195,7 +199,7 @@ const Index = () => {
                             <DialogTitle>Editar Evento</DialogTitle>
                           </DialogHeader>
                           <EventForm
-                            event={event}
+                            initialData={event}
                             onSubmit={handleUpdateEvent}
                           />
                         </DialogContent>

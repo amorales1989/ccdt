@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,13 +43,10 @@ const AgregarAlumno = () => {
 
   useEffect(() => {
     if (profile?.departments?.[0]) {
-      const userDepartment = profile.departments[0];
-      const userClass = profile.role === "maestro" ? profile.class : "";
-      
       setFormData(prev => ({ 
         ...prev, 
-        department: userDepartment,
-        assigned_class: userClass
+        department: profile.departments[0],
+        assigned_class: profile.assigned_class || ""
       }));
     }
   }, [profile]);

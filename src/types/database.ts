@@ -49,7 +49,7 @@ export interface Profile {
   last_name: string;
   role: AppRole;
   departments: DepartmentType[];
-  class?: string;
+  assigned_class?: string;
   email?: string;
 }
 
