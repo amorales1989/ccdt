@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Sidebar,
@@ -149,14 +148,14 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
               <div className="flex flex-col">
                 <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm text-muted-foreground capitalize">{profile?.role}</span>
+                  <span className="text-sm text-white capitalize">{profile?.role}</span>
                   {!isAdminOrSecretary && selectedDepartment && (
                     <>
-                      <span className="text-sm text-muted-foreground capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
+                      <span className="text-sm text-white capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
                         {selectedDepartment}
                       </span>
                       {profile?.assigned_class && (
-                        <span className="text-sm text-muted-foreground capitalize bg-accent/50 px-2 py-0.5 rounded-full inline-block">
+                        <span className="text-sm text-white capitalize bg-accent/50 px-2 py-0.5 rounded-full inline-block">
                           Clase: {profile.assigned_class}
                         </span>
                       )}
