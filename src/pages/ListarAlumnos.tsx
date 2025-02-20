@@ -18,15 +18,11 @@ import { DepartmentType, Department } from "@/types/database";
 const ListarAlumnos = () => {
   const { profile } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(
-    profile?.departments?.[0] || null
-  );
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
-  const userDepartment = profile?.departments?.[0];
-  const userClass = profile?.assigned_class;
 
   // Obtener departamentos y sus clases
   const { data: departments = [] } = useQuery({
@@ -40,61 +36,31 @@ const ListarAlumnos = () => {
       if (error) throw error;
       return data as Department[];
     },
-    enabled: isAdminOrSecretaria,
   });
 
-  // Obtener las clases del departamento seleccionado
+  // Obtener las clases disponibles para el departamento seleccionado
   const availableClasses = selectedDepartment 
     ? departments.find(d => d.name === selectedDepartment)?.classes || []
     : [];
 
   const { data: students = [], isLoading } = useQuery({
-    queryKey: ["students", selectedDepartment, selectedClass, userClass],
+    queryKey: ["students", selectedDepartment, selectedClass],
     queryFn: async () => {
-      console.log("Fetching students with filters:", { 
-        selectedDepartment, 
-        selectedClass,
-        userDepartment,
-        userClass,
-        isAdminOrSecretaria 
-      });
-
       let query = supabase.from("students").select("*");
       
-      if (isAdminOrSecretaria) {
-        // Admins y secretarias pueden filtrar por departamento y clase
-        if (selectedDepartment) {
-          query = query.eq("department", selectedDepartment);
-          
-          // Si hay una clase seleccionada, filtrar por ella
-          if (selectedClass) {
-            query = query.eq("assigned_class", selectedClass);
-          }
-        }
-      } else {
-        // Verificar si el usuario tiene departamentos asignados
-        if (!userDepartment) {
-          console.log("Usuario sin departamentos asignados");
-          return [];
-        }
-
-        // Aplicar filtros de departamento y clase
-        query = query.eq("department", selectedDepartment || userDepartment);
-        
-        // Si el usuario tiene una clase asignada, filtrar por esa clase específica
-        if (userClass) {
-          console.log("Filtrando por clase específica:", userClass);
-          query = query.eq("assigned_class", userClass);
-        }
+      // Aplicar filtro por departamento si está seleccionado
+      if (selectedDepartment) {
+        query = query.eq("department", selectedDepartment);
+      }
+      
+      // Aplicar filtro por clase si está seleccionada
+      if (selectedClass) {
+        query = query.eq("assigned_class", selectedClass);
       }
       
       const { data, error } = await query;
-      if (error) {
-        console.error("Error fetching students:", error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log("Fetched students:", data);
       return (data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
@@ -161,7 +127,11 @@ const ListarAlumnos = () => {
         <div className="font-semibold">Información Académica</div>
         <div>
           <span className="font-medium">Departamento:</span>
-          <span className="ml-2 capitalize">{student.department}</span>
+          <span className="ml-2 capitalize">{student.department?.replace(/_/g, ' ') || "No especificado"}</span>
+        </div>
+        <div>
+          <span className="font-medium">Clase:</span>
+          <span className="ml-2">{student.assigned_class || "No especificada"}</span>
         </div>
         <div>
           <span className="font-medium">Fecha de nacimiento:</span>
@@ -294,62 +264,49 @@ const ListarAlumnos = () => {
     </Card>
   );
 
-  const maleStudents = students.filter(student => student.gender === "masculino");
-  const femaleStudents = students.filter(student => student.gender === "femenino");
-
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-          {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
-            <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <Select
+              value={selectedDepartment || undefined}
+              onValueChange={(value: DepartmentType) => {
+                setSelectedDepartment(value);
+                setSelectedClass(null); // Reset selected class when department changes
+              }}
+            >
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filtrar por departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.name}>
+                    {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {selectedDepartment && availableClasses.length > 0 && (
               <Select
-                value={selectedDepartment || undefined}
-                onValueChange={(value: DepartmentType) => {
-                  setSelectedDepartment(value);
-                  setSelectedClass(null); // Reset selected class when department changes
-                }}
+                value={selectedClass || undefined}
+                onValueChange={setSelectedClass}
               >
                 <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Filtrar por departamento" />
+                  <SelectValue placeholder="Filtrar por clase" />
                 </SelectTrigger>
                 <SelectContent>
-                  {isAdminOrSecretaria ? (
-                    departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.name}>
-                        {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, ' ')}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    profile?.departments?.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept.charAt(0).toUpperCase() + dept.slice(1).replace(/_/g, ' ')}
-                      </SelectItem>
-                    ))
-                  )}
+                  {availableClasses.map((className) => (
+                    <SelectItem key={className} value={className}>
+                      {className}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-
-              {isAdminOrSecretaria && selectedDepartment && availableClasses.length > 0 && (
-                <Select
-                  value={selectedClass || undefined}
-                  onValueChange={setSelectedClass}
-                >
-                  <SelectTrigger className="w-full md:w-[180px]">
-                    <SelectValue placeholder="Filtrar por clase" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableClasses.map((className) => (
-                      <SelectItem key={className} value={className}>
-                        {className}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
+            )}
+          </div>
           
           {isAdminOrSecretaria && (
             <Button
