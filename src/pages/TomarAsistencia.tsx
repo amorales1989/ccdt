@@ -166,7 +166,8 @@ const TomarAsistencia = () => {
             type="date"
             value={selectedDate}
             onChange={handleDateChange}
-            className="border p-2 rounded w-full"
+            className="border p-2 rounded w-full [&::-webkit-datetime-edit]:-ml-0.5 [&::-webkit-calendar-picker-indicator]:opacity-100"
+            style={{ WebkitAppearance: 'textfield' }}
           />
           <Table>
             <TableHeader>
