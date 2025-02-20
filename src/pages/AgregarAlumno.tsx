@@ -43,14 +43,15 @@ const AgregarAlumno = () => {
     : [];
 
   useEffect(() => {
-    if (profile?.departments?.[0]) {
+    if (!isAdminOrSecretaria && profile?.departments?.[0]) {
+      // Si no es admin/secretaria, asignar automáticamente el departamento y clase del usuario
       setFormData(prev => ({ 
         ...prev, 
         department: profile.departments[0],
-        assigned_class: profile?.assigned_class || ""
+        assigned_class: profile.assigned_class || ""
       }));
     }
-  }, [profile]);
+  }, [profile, isAdminOrSecretaria]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,20 +101,6 @@ const AgregarAlumno = () => {
       setIsLoading(false);
     }
   };
-
-  if (!isAdminOrSecretaria && (!profile?.departments?.length)) {
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              No tiene departamentos asignados. Contacte al administrador.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6">
@@ -175,7 +162,7 @@ const AgregarAlumno = () => {
                   });
                 }}
                 required
-                disabled={!isAdminOrSecretaria && profile?.departments?.length === 1}
+                disabled={!isAdminOrSecretaria}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar departamento" />
@@ -198,7 +185,7 @@ const AgregarAlumno = () => {
                     setFormData({ ...formData, assigned_class: value })
                   }
                   required
-                  disabled={!isAdminOrSecretaria && profile?.role === "maestro"}
+                  disabled={!isAdminOrSecretaria}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar clase" />
