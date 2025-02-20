@@ -280,7 +280,7 @@ const ListarAlumnos = () => {
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filtrar por departamento" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 {departments.map((dept) => (
                   <SelectItem key={dept.id} value={dept.name}>
                     {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, ' ')}
@@ -297,7 +297,7 @@ const ListarAlumnos = () => {
                 <SelectTrigger className="w-full md:w-[180px]">
                   <SelectValue placeholder="Filtrar por clase" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   {availableClasses.map((className) => (
                     <SelectItem key={className} value={className}>
                       {className}
