@@ -31,15 +31,28 @@ const TomarAsistencia = () => {
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
   const currentDepartment = profile?.departments?.[0];
+  const userClass = profile?.assigned_class;
 
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
-    queryKey: ["students-attendance"],
+    queryKey: ["students-attendance", currentDepartment, userClass],
     queryFn: async () => {
-      console.log("Fetching students for attendance...");
+      console.log("Fetching students for attendance...", { currentDepartment, userClass });
       let query = supabase.from("students").select("*");
 
-      if (!isAdminOrSecretaria && currentDepartment) {
+      if (!isAdminOrSecretaria) {
+        if (!currentDepartment) {
+          console.log("No department assigned to user");
+          return [];
+        }
+        
+        // Filtrar por departamento
         query = query.eq("department", currentDepartment);
+        
+        // Si el usuario tiene una clase asignada, filtrar también por clase
+        if (userClass) {
+          console.log("Filtering by class:", userClass);
+          query = query.eq("assigned_class", userClass);
+        }
       }
 
       const { data, error } = await query;
@@ -120,6 +133,20 @@ const TomarAsistencia = () => {
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedDate(e.target.value);
   };
+
+  if (!isAdminOrSecretaria && !currentDepartment) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              No tiene departamentos asignados. Contacte al administrador.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoadingStudents) {
     return <div className="p-6">Cargando alumnos...</div>;
