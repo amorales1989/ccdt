@@ -1,6 +1,7 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
-import { Department, DepartmentType } from "@/types/database";
+import { Department } from "@/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash, Plus, X } from "lucide-react";
@@ -30,6 +31,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+type DepartmentName = "niños" | "adolescentes" | "jovenes" | "adultos";
+
 const Departamentos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -40,11 +43,12 @@ const Departamentos = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [name, setName] = useState<DepartmentType>("escuelita_central");
+  const [name, setName] = useState<DepartmentName>("niños");
   const [description, setDescription] = useState("");
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
 
+  // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
     return null;
@@ -64,7 +68,7 @@ const Departamentos = () => {
         description: "El departamento ha sido creado exitosamente"
       });
       setIsCreating(false);
-      setName("escuelita_central");
+      setName("niños");
       setDescription("");
       setClasses([]);
     },
@@ -135,10 +139,6 @@ const Departamentos = () => {
     setClasses(classes.filter(c => c !== classToRemove));
   };
 
-  const handleDepartmentClick = (departmentName: DepartmentType) => {
-    setName(departmentName);
-  };
-
   if (isLoading) {
     return <div className="p-6">Cargando...</div>;
   }
@@ -165,14 +165,12 @@ const Departamentos = () => {
                   <select
                     id="name"
                     value={name}
-                    onChange={(e) => setName(e.target.value as DepartmentType)}
+                    onChange={(e) => setName(e.target.value as DepartmentName)}
                     className="w-full rounded-md border border-input bg-background px-3 py-2"
                   >
-                    <option value="escuelita_central">Escuelita Central</option>
-                    <option value="pre_adolescentes">Pre Adolescentes</option>
+                    <option value="niños">Niños</option>
                     <option value="adolescentes">Adolescentes</option>
                     <option value="jovenes">Jóvenes</option>
-                    <option value="jovenes_adultos">Jóvenes Adultos</option>
                     <option value="adultos">Adultos</option>
                   </select>
                 </div>
@@ -280,7 +278,11 @@ const Departamentos = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            setSelectedDepartment(department);
+                            const departmentToEdit: Department = {
+                              ...department,
+                              name: department.name as DepartmentName
+                            };
+                            setSelectedDepartment(departmentToEdit);
                             setIsEditing(true);
                             setDescription(department.description || "");
                             setClasses(department.classes || []);
