@@ -52,7 +52,6 @@ const HistorialAsistencia = () => {
     enabled: selectedDepartment !== "all"
   });
 
-  console.log('Department data:', departmentData);
   const availableClasses = departmentData?.classes || [];
 
   const handleDateRangeChange = (value: string) => {
@@ -78,11 +77,11 @@ const HistorialAsistencia = () => {
   };
 
   const { data: attendance = [], isLoading: attendanceLoading } = useQuery({
-    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment, selectedClass],
+    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment],
     queryFn: async () => {
       const formattedStartDate = format(startDate, "yyyy-MM-dd");
       const formattedEndDate = format(endDate, "yyyy-MM-dd");
-      console.log("Fetching attendance for date range:", formattedStartDate, "to", formattedEndDate);
+      console.log("Fetching attendance with params:", { formattedStartDate, formattedEndDate, selectedDepartment });
       const departmentToUse = isAdminOrSecretaria ? (selectedDepartment === "all" ? "" : selectedDepartment) : userDepartment || "";
       return getAttendance(formattedStartDate, formattedEndDate, departmentToUse);
     },
@@ -98,8 +97,8 @@ const HistorialAsistencia = () => {
       record.students.department === selectedDepartment;
 
     const matchesClass = selectedClass === "all" || 
-      (record.students.assigned_class === selectedClass && 
-       record.students.department === selectedDepartment);
+      (record.students.department === selectedDepartment && 
+       record.students.assigned_class === selectedClass);
 
     return matchesSearch && matchesDepartment && matchesClass;
   });
