@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +8,7 @@ import { useState, useEffect } from "react";
 import { createStudent, getDepartments } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Student, Department } from "@/types/database";
+import { Student, Department, DepartmentType } from "@/types/database";
 import { useQuery } from "@tanstack/react-query";
 
 const AgregarAlumno = () => {
@@ -23,7 +22,7 @@ const AgregarAlumno = () => {
     address: "",
     gender: "masculino",
     birthdate: "",
-    department: "" as Student["department"],
+    department: "" as DepartmentType,
     assigned_class: "",
   });
 
@@ -43,19 +42,11 @@ const AgregarAlumno = () => {
     : [];
 
   useEffect(() => {
-    // Si el usuario tiene un departamento y clase asignados, pre-seleccionarlos
-    if (profile?.departments?.[0] && profile.assigned_class) {
+    if (profile?.departments?.[0]) {
       setFormData(prev => ({ 
         ...prev, 
         department: profile.departments[0],
-        assigned_class: profile.assigned_class 
-      }));
-    }
-    // Si solo tiene departamento, pre-seleccionar solo el departamento
-    else if (profile?.departments?.[0]) {
-      setFormData(prev => ({ 
-        ...prev, 
-        department: profile.departments[0] 
+        ...(profile.assigned_class && { assigned_class: profile.assigned_class })
       }));
     }
   }, [profile]);
@@ -178,7 +169,7 @@ const AgregarAlumno = () => {
                 onValueChange={(value) => {
                   setFormData({ 
                     ...formData, 
-                    department: value as Student["department"],
+                    department: value as DepartmentType,
                     assigned_class: "" // Reset class when department changes
                   });
                 }}

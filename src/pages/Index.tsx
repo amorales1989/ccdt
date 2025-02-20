@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -9,12 +8,14 @@ import { getEvents, createEvent, updateEvent, deleteEvent, getStudents } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
-import type { Event } from "@/types/database";
+import type { Event, DepartmentType } from "@/types/database";
 
 const Index = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
+
+  type DepartmentStats = Record<DepartmentType, { male: number; female: number; total: number }>;
 
   // Fetch events
   const { data: events = [], isLoading: eventsLoading } = useQuery({
@@ -101,9 +102,6 @@ const Index = () => {
     deleteEventMutation.mutate(id);
   };
 
-  type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
-  const departments: Department[] = ["niños", "adolescentes", "jovenes", "adultos"];
-
   const renderStudentStats = () => {
     if (!profile) return null;
 
@@ -111,9 +109,9 @@ const Index = () => {
     const userDepartments = profile.departments || [];
 
     // Group students by department
-    const studentsByDepartment = departments.reduce((acc, dept) => {
+    const studentsByDepartment = Object.values(DepartmentType).reduce((acc, dept) => {
       // Solo procesar departamentos relevantes para el usuario
-      if (!isAdminOrSecretary && !userDepartments.includes(dept as Department)) {
+      if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
         return acc;
       }
 
@@ -124,7 +122,7 @@ const Index = () => {
         total: deptStudents.length
       };
       return acc;
-    }, {} as Record<Department, { male: number; female: number; total: number }>);
+    }, {} as DepartmentStats);
 
     return (
       <Card className="mb-6">
@@ -133,24 +131,18 @@ const Index = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {departments.map(dept => {
-              // Solo mostrar departamentos relevantes para el usuario
-              if (!isAdminOrSecretary && !userDepartments.includes(dept as Department)) {
-                return null;
-              }
-
-              const stats = studentsByDepartment[dept] || { male: 0, female: 0, total: 0 };
-              return (
-                <Card key={dept} className="p-4">
-                  <h3 className="font-semibold text-lg capitalize mb-2">{dept}</h3>
-                  <div className="space-y-2">
-                    <p>Varones: {stats.male}</p>
-                    <p>Mujeres: {stats.female}</p>
-                    <p className="font-semibold">Total: {stats.total}</p>
-                  </div>
-                </Card>
-              );
-            })}
+            {Object.entries(studentsByDepartment).map(([dept, stats]) => (
+              <Card key={dept} className="p-4">
+                <h3 className="font-semibold text-lg capitalize mb-2">
+                  {dept.replace(/_/g, ' ')}
+                </h3>
+                <div className="space-y-2">
+                  <p>Varones: {stats.male}</p>
+                  <p>Mujeres: {stats.female}</p>
+                  <p className="font-semibold">Total: {stats.total}</p>
+                </div>
+              </Card>
+            ))}
           </div>
         </CardContent>
       </Card>
