@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -7,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getEvents, createEvent, updateEvent, deleteEvent, getStudents } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { format, isBefore, startOfToday } from "date-fns";
 import type { Event, DepartmentType } from "@/types/database";
 
 const Index = () => {
@@ -25,10 +26,11 @@ const Index = () => {
     queryFn: getStudents
   });
 
+  const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
+
   const renderStudentStats = () => {
     if (!profile) return null;
 
-    const isAdminOrSecretary = ["admin", "secretaria"].includes(profile.role);
     const userDepartments = profile.departments || [];
 
     const departmentTypes: DepartmentType[] = ["escuelita_central", "pre_adolescentes", "adolescentes", "jovenes", "jovenes_adultos", "adultos"];
@@ -59,7 +61,7 @@ const Index = () => {
                   {dept.replace(/_/g, ' ')}
                   {profile?.role === "maestro" && profile?.assigned_class && (
                     <span className="block text-sm text-muted-foreground">
-                      Clase: {profile?.assigned_class}
+                      Clase: {profile.assigned_class}
                     </span>
                   )}
                 </h3>
@@ -142,6 +144,9 @@ const Index = () => {
     deleteEventMutate(id);
   };
 
+  // Filtrar eventos futuros
+  const futureEvents = events.filter(event => !isBefore(new Date(event.date), startOfToday()));
+
   return (
     <div>
       {renderStudentStats()}
@@ -151,27 +156,29 @@ const Index = () => {
           <CardTitle>Calendario de Eventos</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Agregar Evento
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Agregar Evento</DialogTitle>
-                </DialogHeader>
-                <EventForm onSubmit={handleCreateEvent} />
-              </DialogContent>
-            </Dialog>
-          </div>
+          {isAdminOrSecretary && (
+            <div className="mb-4">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Agregar Evento
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Agregar Evento</DialogTitle>
+                  </DialogHeader>
+                  <EventForm onSubmit={handleCreateEvent} />
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
           {eventsLoading ? (
             <p>Cargando eventos...</p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {events.map((event) => (
+              {futureEvents.map((event) => (
                 <Card key={event.id}>
                   <CardHeader>
                     <CardTitle>{event.title}</CardTitle>
@@ -183,33 +190,35 @@ const Index = () => {
                     {event.description && (
                       <p className="text-sm mt-2">{event.description}</p>
                     )}
-                    <div className="flex justify-end mt-4 space-x-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="secondary" size="sm">
-                            <Edit2 className="mr-2 h-4 w-4" />
-                            Editar
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Editar Evento</DialogTitle>
-                          </DialogHeader>
-                          <EventForm
-                            initialData={event}
-                            onSubmit={handleUpdateEvent}
-                          />
-                        </DialogContent>
-                      </Dialog>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteEvent(event.id)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </Button>
-                    </div>
+                    {isAdminOrSecretary && (
+                      <div className="flex justify-end mt-4 space-x-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="secondary" size="sm">
+                              <Edit2 className="mr-2 h-4 w-4" />
+                              Editar
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Editar Evento</DialogTitle>
+                            </DialogHeader>
+                            <EventForm
+                              initialData={event}
+                              onSubmit={handleUpdateEvent}
+                            />
+                          </DialogContent>
+                        </Dialog>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteEvent(event.id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
