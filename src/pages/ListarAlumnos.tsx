@@ -79,7 +79,8 @@ const ListarAlumnos = () => {
   const handleExport = () => {
     const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
       Nombre: student.name,
-      Departamento: student.department,
+      Departamento: student.department?.replace(/_/g, ' ') || '',
+      Clase: student.assigned_class || '',
       Teléfono: student.phone || '',
       Dirección: student.address || '',
       Género: student.gender,
