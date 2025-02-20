@@ -2,10 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
-import { getAttendance } from "@/lib/api";
+import { getAttendance, getDepartmentByName } from "@/lib/api";
 import { Download, Search, UserCheck, UserX } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,7 @@ import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DepartmentType } from "@/types/database";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -51,6 +52,7 @@ const HistorialAsistencia = () => {
     enabled: selectedDepartment !== "all"
   });
 
+  console.log('Department data:', departmentData);
   const availableClasses = departmentData?.classes || [];
 
   const handleDateRangeChange = (value: string) => {
@@ -71,7 +73,6 @@ const HistorialAsistencia = () => {
         setEndDate(today);
         break;
       case "custom":
-        // Keep current dates when switching to custom
         break;
     }
   };
@@ -129,7 +130,7 @@ const HistorialAsistencia = () => {
                   <label className="text-sm font-medium mb-2 block">Departamento</label>
                   <Select value={selectedDepartment} onValueChange={(value) => {
                     setSelectedDepartment(value);
-                    setSelectedClass("all"); // Reset class selection when department changes
+                    setSelectedClass("all");
                   }}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Seleccionar departamento" />
