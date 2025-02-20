@@ -36,8 +36,8 @@ const departments = [
 
 const HistorialAsistencia = () => {
   const [selectedRange, setSelectedRange] = useState("today");
-  const [startDate, setStartDate] = useState<Date>(startOfDay(new Date()));
-  const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()));
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedClass, setSelectedClass] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,8 +61,8 @@ const HistorialAsistencia = () => {
     
     switch (value) {
       case "today":
-        setStartDate(startOfDay(today));
-        setEndDate(endOfDay(today));
+        setStartDate(today);
+        setEndDate(today);
         break;
       case "7days":
         setStartDate(subDays(today, 7));
@@ -73,6 +73,7 @@ const HistorialAsistencia = () => {
         setEndDate(today);
         break;
       case "custom":
+        // Mantener las fechas actuales para el rango personalizado
         break;
     }
   };
@@ -80,8 +81,13 @@ const HistorialAsistencia = () => {
   const { data: attendance = [], isLoading: attendanceLoading } = useQuery({
     queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment],
     queryFn: async () => {
-      const formattedStartDate = format(startDate, "yyyy-MM-dd");
-      const formattedEndDate = format(endDate, "yyyy-MM-dd");
+      // Asegurarnos de que la fecha de inicio no sea posterior a la fecha de fin
+      const actualStartDate = startDate > endDate ? endDate : startDate;
+      const actualEndDate = endDate < startDate ? startDate : endDate;
+
+      const formattedStartDate = format(actualStartDate, "yyyy-MM-dd");
+      const formattedEndDate = format(actualEndDate, "yyyy-MM-dd");
+      
       console.log("Fetching attendance with params:", { formattedStartDate, formattedEndDate, selectedDepartment });
       const departmentToUse = isAdminOrSecretaria ? (selectedDepartment === "all" ? "" : selectedDepartment) : userDepartment || "";
       return getAttendance(formattedStartDate, formattedEndDate, departmentToUse);
