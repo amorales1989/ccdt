@@ -50,6 +50,7 @@ export interface Profile {
   role: AppRole;
   departments: DepartmentType[];
   assigned_class?: string;
+  email?: string;
 }
 
 export type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria";

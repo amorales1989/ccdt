@@ -1,45 +1,23 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { 
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger 
-} from "@/components/ui/collapsible";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MessageSquare, Pencil, Trash2, MoreVertical, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
-
-type Department = "niños" | "adolescentes" | "jovenes" | "adultos";
+import { DepartmentType } from "@/types/database";
 
 const ListarAlumnos = () => {
   const { profile } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(
     profile?.departments?.[0] || null
   );
   const isMobile = useIsMobile();
@@ -70,7 +48,6 @@ const ListarAlumnos = () => {
         throw error;
       }
       console.log("Fetched students:", data);
-      // Ordenar alumnos alfabéticamente por nombre
       return (data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
@@ -281,7 +258,7 @@ const ListarAlumnos = () => {
           {(isAdminOrSecretaria || (profile?.departments && profile.departments.length > 1)) && (
             <Select
               value={selectedDepartment || undefined}
-              onValueChange={(value: Department) => setSelectedDepartment(value)}
+              onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
             >
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filtrar por departamento" />

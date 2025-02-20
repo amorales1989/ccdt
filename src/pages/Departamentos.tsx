@@ -1,6 +1,7 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
-import { Department } from "@/types/database";
+import { Department, DepartmentType } from "@/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash, Plus, X } from "lucide-react";
@@ -29,8 +30,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-type DepartmentType = "escuelita_central" | "escuelita_niños" | "escuelita_adolescentes" | "escuelita_jovenes" | "escuelita_adultos";
 
 const Departamentos = () => {
   const { toast } = useToast();
@@ -166,11 +165,12 @@ const Departamentos = () => {
                     onChange={(e) => setName(e.target.value as DepartmentType)}
                     className="w-full rounded-md border border-input bg-background px-3 py-2"
                   >
-                    <option value="escuelita_central">Escuela Central</option>
-                    <option value="escuelita_niños">Escuela Niños</option>
-                    <option value="escuelita_adolescentes">Escuela Adolescentes</option>
-                    <option value="escuelita_jovenes">Escuela Jóvenes</option>
-                    <option value="escuelita_adultos">Escuela Adultos</option>
+                    <option value="escuelita_central">Escuelita Central</option>
+                    <option value="pre_adolescentes">Pre Adolescentes</option>
+                    <option value="adolescentes">Adolescentes</option>
+                    <option value="jovenes">Jóvenes</option>
+                    <option value="jovenes_adultos">Jóvenes Adultos</option>
+                    <option value="adultos">Adultos</option>
                   </select>
                 </div>
                 <div>

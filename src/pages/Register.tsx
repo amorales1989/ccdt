@@ -67,13 +67,15 @@ export default function Register() {
     }
 
     try {
-      await signUp(email, password, {
+      const profileData = {
         first_name: firstName,
         last_name: lastName,
         role,
         departments: [selectedDepartment],
         assigned_class: selectedClass || undefined
-      });
+      };
+
+      await signUp(email, password, profileData);
       
       toast({
         title: "Registro exitoso",
