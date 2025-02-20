@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
 import { Department, DepartmentType } from "@/types/database";
@@ -281,11 +280,7 @@ const Departamentos = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            const departmentToEdit: Department = {
-                              ...department,
-                              name: department.name as DepartmentName
-                            };
-                            setSelectedDepartment(departmentToEdit);
+                            setSelectedDepartment(department);
                             setIsEditing(true);
                             setDescription(department.description || "");
                             setClasses(department.classes || []);
