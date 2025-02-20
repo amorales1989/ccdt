@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { markAttendance, getAttendance } from "@/lib/api";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -45,10 +45,8 @@ const TomarAsistencia = () => {
           return [];
         }
         
-        // Filtrar por departamento
         query = query.eq("department", currentDepartment);
         
-        // Si el usuario tiene una clase asignada, filtrar también por clase
         if (userClass) {
           console.log("Filtering by class:", userClass);
           query = query.eq("assigned_class", userClass);
@@ -97,11 +95,14 @@ const TomarAsistencia = () => {
         return;
       }
 
+      // Ajustamos la fecha sumando un día antes de guardar
+      const adjustedDate = format(addDays(new Date(selectedDate), 1), "yyyy-MM-dd");
+
       await Promise.all(
         Object.entries(asistencias).map(([studentId, status]) =>
           markAttendance({
             student_id: studentId,
-            date: selectedDate,
+            date: adjustedDate,
             status,
             department: currentDepartment,
           })
