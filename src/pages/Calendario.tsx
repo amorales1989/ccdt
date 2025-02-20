@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,7 +16,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { format, isBefore, startOfDay, isSameMonth } from "date-fns";
+import { format, isBefore, startOfDay, isSameMonth, isAfter } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { CalendarPlus } from "lucide-react";
@@ -35,13 +36,8 @@ export default function Calendario() {
     queryFn: getEvents
   });
 
-  // Filtrar eventos futuros
-  const futureEvents = events.filter(event => 
-    !isBefore(new Date(event.date), startOfDay(new Date()))
-  );
-
-  // Crear un objeto con las fechas que tienen eventos futuros
-  const eventDates = futureEvents.reduce((acc: Record<string, any[]>, event) => {
+  // Filtrar eventos y crear objeto de fechas
+  const eventDates = events.reduce((acc: Record<string, any[]>, event) => {
     const dateStr = format(new Date(event.date), 'yyyy-MM-dd');
     if (!acc[dateStr]) {
       acc[dateStr] = [];
@@ -98,10 +94,18 @@ export default function Calendario() {
 
   const modifiersStyles = {
     hasEvent: {
-      backgroundColor: '#86efac',
+      backgroundColor: '#F2FCE2', // Color verde por defecto
       color: '#064e3b',
       fontWeight: 'bold'
     }
+  };
+
+  const getEventCardStyle = (eventDate: string) => {
+    const now = new Date();
+    const date = new Date(eventDate);
+    return isAfter(date, now) 
+      ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80" 
+      : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20";
   };
 
   if (isLoading) {
@@ -167,25 +171,41 @@ export default function Calendario() {
                       return <span>{date.getDate()}</span>;
                     }
 
+                    // Determinar si todos los eventos del día son pasados
+                    const allPastEvents = dayEvents.every(event => 
+                      isBefore(new Date(event.date), new Date())
+                    );
+
                     return (
                       <HoverCard>
                         <HoverCardTrigger asChild>
-                          <span className="cursor-pointer w-full h-full flex items-center justify-center">
+                          <span 
+                            className={`cursor-pointer w-full h-full flex items-center justify-center ${
+                              allPastEvents ? 'bg-[#ea384c]/10' : 'bg-[#F2FCE2]'
+                            }`}
+                          >
                             {date.getDate()}
                           </span>
                         </HoverCardTrigger>
                         <HoverCardContent className="w-80">
                           <div className="space-y-2">
-                            {dayEvents.map((event) => (
-                              <div 
-                                key={event.id} 
-                                className="p-2 rounded-md bg-accent/50 cursor-pointer hover:bg-accent"
-                                onClick={() => handleEventClick(event)}
-                              >
-                                <h4 className="font-semibold">{event.title}</h4>
-                                <p className="text-sm text-muted-foreground">{event.description}</p>
-                              </div>
-                            ))}
+                            {dayEvents.map((event) => {
+                              const isPastEvent = isBefore(new Date(event.date), new Date());
+                              return (
+                                <div 
+                                  key={event.id} 
+                                  className={`p-2 rounded-md cursor-pointer ${
+                                    isPastEvent 
+                                      ? "bg-[#ea384c]/10 hover:bg-[#ea384c]/20" 
+                                      : "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80"
+                                  }`}
+                                  onClick={() => handleEventClick(event)}
+                                >
+                                  <h4 className="font-semibold">{event.title}</h4>
+                                  <p className="text-sm text-muted-foreground">{event.description}</p>
+                                </div>
+                              );
+                            })}
                           </div>
                         </HoverCardContent>
                       </HoverCard>
@@ -203,7 +223,7 @@ export default function Calendario() {
                   currentMonthEvents.map((event) => (
                     <div 
                       key={event.id} 
-                      className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/50 cursor-pointer"
+                      className={`flex items-center gap-2 p-2 rounded-md cursor-pointer ${getEventCardStyle(event.date)}`}
                       onClick={() => handleEventClick(event)}
                     >
                       <span className="font-medium">
