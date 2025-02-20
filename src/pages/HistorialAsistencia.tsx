@@ -132,131 +132,133 @@ const HistorialAsistencia = () => {
               <CardTitle className="text-lg md:text-xl">Filtros</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isAdminOrSecretaria && (
+              <div className="space-y-4">
+                {isAdminOrSecretaria && (
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Departamento</label>
+                    <Select value={selectedDepartment} onValueChange={(value) => {
+                      setSelectedDepartment(value);
+                      setSelectedClass("all");
+                    }}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccionar departamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.value} value={dept.value}>
+                            {dept.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Departamento</label>
-                  <Select value={selectedDepartment} onValueChange={(value) => {
-                    setSelectedDepartment(value);
-                    setSelectedClass("all");
-                  }}>
+                  <label className="text-sm font-medium mb-2 block">Clase</label>
+                  <Select 
+                    value={selectedClass} 
+                    onValueChange={setSelectedClass}
+                    disabled={selectedDepartment === "all"}
+                  >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleccionar departamento" />
+                      <SelectValue placeholder="Seleccionar clase" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.value} value={dept.value}>
-                          {dept.label}
+                      <SelectItem value="all">Todas</SelectItem>
+                      {availableClasses.map((className) => (
+                        <SelectItem key={className} value={className}>
+                          {className}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Clase</label>
-                <Select 
-                  value={selectedClass} 
-                  onValueChange={setSelectedClass}
-                  disabled={selectedDepartment === "all" || !availableClasses.length}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccionar clase" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {availableClasses.map((className) => (
-                      <SelectItem key={className} value={className}>
-                        {className}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Período</label>
+                  <Select value={selectedRange} onValueChange={handleDateRangeChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccionar período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dateRangeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Período</label>
-                <Select value={selectedRange} onValueChange={handleDateRangeChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccionar período" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dateRangeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                {selectedRange === "custom" && (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Fecha Inicio</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !startDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {startDate ? format(startDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={startDate}
+                            onSelect={(date) => date && setStartDate(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Fecha Fin</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !endDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {endDate ? format(endDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={endDate}
+                            onSelect={(date) => date && setEndDate(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </>
+                )}
 
-              {selectedRange === "custom" && (
-                <>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Fecha Inicio</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !startDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {startDate ? format(startDate, "dd/MM/yyyy") : "Seleccionar fecha"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={startDate}
-                          onSelect={(date) => date && setStartDate(date)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Buscar por nombre</label>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Nombre del alumno"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8"
+                      disabled={attendance.length === 0}
+                    />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Fecha Fin</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !endDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {endDate ? format(endDate, "dd/MM/yyyy") : "Seleccionar fecha"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={endDate}
-                          onSelect={(date) => date && setEndDate(date)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Buscar por nombre</label>
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Nombre del alumno"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
-                    disabled={attendance.length === 0}
-                  />
                 </div>
               </div>
             </CardContent>

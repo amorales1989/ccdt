@@ -225,7 +225,7 @@ const ListarAlumnos = () => {
               >
                 <TableRow>
                   <TableCell className="p-0 w-full">
-                    <div className="grid grid-cols-[1fr,auto,auto,auto] items-center gap-4 p-4 w-full">
+                    <div className="grid grid-cols-[1fr,auto,auto] items-center gap-4 p-4 w-full">
                       <div className="min-w-[150px]">
                         <CollapsibleTrigger asChild>
                           <button className="font-medium hover:underline text-left w-full">
@@ -235,9 +235,6 @@ const ListarAlumnos = () => {
                       </div>
                       <div className="text-muted-foreground text-right whitespace-nowrap">
                         {calculateAge(student.birthdate)}
-                      </div>
-                      <div className="text-muted-foreground text-right hidden md:block whitespace-nowrap">
-                        {student.assigned_class || "Sin asignar"}
                       </div>
                       <div className="flex items-center justify-end gap-2 shrink-0">
                         <span className="text-muted-foreground text-right hidden md:block whitespace-nowrap">
