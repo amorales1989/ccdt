@@ -24,9 +24,9 @@ const dateRangeOptions = [
 ];
 
 const HistorialAsistencia = () => {
-  const [selectedRange, setSelectedRange] = useState("7days");
-  const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 7));
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [selectedRange, setSelectedRange] = useState("today");
+  const [startDate, setStartDate] = useState<Date>(startOfDay(new Date()));
+  const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()));
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const { profile } = useAuth();

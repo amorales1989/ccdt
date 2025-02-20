@@ -30,6 +30,7 @@ export interface Attendance {
   department?: DepartmentType;
   created_at: string;
   updated_at: string;
+  students?: Student;
 }
 
 export interface Department {
