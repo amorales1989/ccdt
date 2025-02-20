@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -45,6 +44,14 @@ const HistorialAsistencia = () => {
 
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
+
+  const { data: departmentData } = useQuery({
+    queryKey: ['department', selectedDepartment],
+    queryFn: () => selectedDepartment !== "all" ? getDepartmentByName(selectedDepartment as DepartmentType) : null,
+    enabled: selectedDepartment !== "all"
+  });
+
+  const availableClasses = departmentData?.classes || [];
 
   const handleDateRangeChange = (value: string) => {
     setSelectedRange(value);
@@ -108,12 +115,6 @@ const HistorialAsistencia = () => {
     absent: filteredAttendance.filter(record => !record.status).length
   };
 
-  // Obtener las clases únicas del departamento seleccionado
-  const availableClasses = [...new Set(attendance
-    .filter(record => record.students?.assigned_class)
-    .map(record => record.students?.assigned_class))
-  ].filter(Boolean) as string[];
-
   return (
     <div className="p-2 sm:p-4 md:p-6">
       <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-[300px_1fr]">
@@ -147,7 +148,11 @@ const HistorialAsistencia = () => {
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Clase</label>
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <Select 
+                  value={selectedClass} 
+                  onValueChange={setSelectedClass}
+                  disabled={selectedDepartment === "all" || !availableClasses.length}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar clase" />
                   </SelectTrigger>

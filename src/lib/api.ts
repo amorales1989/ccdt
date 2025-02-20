@@ -321,6 +321,22 @@ export const getDepartment = async (id: string) => {
   }
 };
 
+export const getDepartmentByName = async (name: DepartmentType) => {
+  try {
+    const { data, error } = await supabase
+      .from("departments")
+      .select("*")
+      .eq("name", name)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in getDepartmentByName:', error);
+    throw error;
+  }
+};
+
 export const updateDepartment = async (id: string, updates: { description?: string; classes?: string[] }) => {
   try {
     const { data, error } = await supabase
