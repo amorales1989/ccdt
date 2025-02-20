@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -9,6 +8,7 @@ import { getEvents, createEvent, updateEvent, deleteEvent, getStudents } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isBefore, startOfToday } from "date-fns";
+import { es } from "date-fns/locale";
 import type { Event, DepartmentType } from "@/types/database";
 
 const Index = () => {
@@ -185,7 +185,7 @@ const Index = () => {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(event.date), "PPP")}
+                      {format(new Date(event.date), "dd/MM/yyyy", { locale: es })}
                     </p>
                     {event.description && (
                       <p className="text-sm mt-2">{event.description}</p>
