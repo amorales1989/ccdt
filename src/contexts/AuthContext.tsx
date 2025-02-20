@@ -9,6 +9,7 @@ type Profile = {
   last_name: string | null;
   role: Database["public"]["Enums"]["app_role"];
   departments: Database["public"]["Enums"]["department_type"][] | null;
+  assigned_class: string | null;
 };
 
 type AuthContextType = {
@@ -22,6 +23,7 @@ type AuthContextType = {
     last_name: string; 
     role: Profile["role"];
     departments: Profile["departments"];
+    assigned_class: Profile["assigned_class"];
   }) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     last_name: string; 
     role: Profile["role"];
     departments: Profile["departments"];
+    assigned_class: Profile["assigned_class"];
   }) {
     console.log("Attempting sign up with data:", { email, ...userData });
     

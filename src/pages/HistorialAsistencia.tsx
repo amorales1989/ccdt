@@ -89,14 +89,17 @@ const HistorialAsistencia = () => {
   });
 
   const filteredAttendance = attendance.filter(record => {
+    if (!record.students) return false;
+
     const matchesSearch = searchQuery === "" || 
-      record.students?.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
+      record.students.name.toLowerCase().includes(searchQuery.toLowerCase());
+
     const matchesDepartment = selectedDepartment === "all" || 
-      record.students?.department === selectedDepartment;
-    
+      record.students.department === selectedDepartment;
+
     const matchesClass = selectedClass === "all" || 
-      record.students?.assigned_class === selectedClass;
+      (record.students.assigned_class === selectedClass && 
+       record.students.department === selectedDepartment);
 
     return matchesSearch && matchesDepartment && matchesClass;
   });
