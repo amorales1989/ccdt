@@ -24,31 +24,40 @@ const ListarAlumnos = () => {
   const isMobile = useIsMobile();
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
+  const userDepartment = profile?.departments?.[0];
+  const userClass = profile?.assigned_class;
 
   const { data: students = [], isLoading } = useQuery({
-    queryKey: ["students", selectedDepartment],
+    queryKey: ["students", selectedDepartment, userClass],
     queryFn: async () => {
-      console.log("Fetching students with department filter:", selectedDepartment);
+      console.log("Fetching students with filters:", { 
+        selectedDepartment, 
+        userDepartment,
+        userClass,
+        isAdminOrSecretaria 
+      });
+
       let query = supabase.from("students").select("*");
       
       if (isAdminOrSecretaria) {
+        // Admins y secretarias pueden filtrar por departamento
         if (selectedDepartment) {
           query = query.eq("department", selectedDepartment);
         }
       } else {
-        if (!profile?.departments?.length) {
+        // Verificar si el usuario tiene departamentos asignados
+        if (!userDepartment) {
           console.log("Usuario sin departamentos asignados");
           return [];
         }
 
-        // Si el usuario tiene una clase asignada, filtrar por departamento y clase
-        if (profile?.assigned_class) {
-          query = query
-            .eq("department", selectedDepartment || profile.departments[0])
-            .eq("assigned_class", profile.assigned_class);
-        } else {
-          // Si no tiene clase asignada, solo filtrar por departamento
-          query = query.eq("department", selectedDepartment || profile.departments[0]);
+        // Aplicar filtros de departamento y clase
+        query = query.eq("department", selectedDepartment || userDepartment);
+        
+        // Si el usuario tiene una clase asignada, filtrar por esa clase específica
+        if (userClass) {
+          console.log("Filtrando por clase específica:", userClass);
+          query = query.eq("assigned_class", userClass);
         }
       }
       
@@ -57,6 +66,7 @@ const ListarAlumnos = () => {
         console.error("Error fetching students:", error);
         throw error;
       }
+      
       console.log("Fetched students:", data);
       return (data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
