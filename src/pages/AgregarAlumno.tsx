@@ -1,12 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { DepartmentType, Student } from "@/types/database";
@@ -24,10 +24,42 @@ const AgregarAlumno = () => {
   const [birthdate, setBirthdate] = useState("");
   const { toast } = useToast();
 
+  // Consultar las clases disponibles para el departamento seleccionado
+  const { data: departmentClasses = [] } = useQuery({
+    queryKey: ['department-classes', selectedDepartment],
+    queryFn: async () => {
+      if (!selectedDepartment) return [];
+      
+      const { data, error } = await supabase
+        .from('departments')
+        .select('classes')
+        .eq('name', selectedDepartment)
+        .single();
+
+      if (error) {
+        console.error('Error fetching department classes:', error);
+        return [];
+      }
+
+      return data?.classes || [];
+    },
+    enabled: !!selectedDepartment,
+  });
+
+  // Resetear la clase seleccionada cuando cambie el departamento
+  useEffect(() => {
+    setSelectedClass(undefined);
+  }, [selectedDepartment]);
+
   const { mutate: createStudent, isPending } = useMutation({
     mutationFn: async () => {
       if (!selectedDepartment) {
         throw new Error("Debes seleccionar un departamento");
+      }
+
+      // Si el departamento tiene clases, requerir una clase seleccionada
+      if (departmentClasses.length > 0 && !selectedClass) {
+        throw new Error("Debes seleccionar una clase para este departamento");
       }
 
       const { data, error } = await supabase.from("students").insert([{
@@ -162,17 +194,28 @@ const AgregarAlumno = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Clase Asignada</Label>
-                <Input
-                  type="text"
-                  value={selectedClass || ''}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  placeholder="Ingrese la clase asignada"
-                />
+            {departmentClasses.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Clase Asignada</Label>
+                  <Select 
+                    value={selectedClass} 
+                    onValueChange={setSelectedClass}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione una clase" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departmentClasses.map((className) => (
+                        <SelectItem key={className} value={className}>
+                          {className}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
+            )}
             <Button disabled={isPending} type="submit">
               {isPending ? "Creando..." : "Crear Alumno"}
             </Button>
