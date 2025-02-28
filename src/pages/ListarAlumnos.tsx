@@ -182,7 +182,6 @@ const ListarAlumnos = () => {
           <MessageSquare className="h-4 w-4" />
           {isMobile && <span className="ml-2">WhatsApp</span>}
         </Button>
-        {/* Ahora todos los roles pueden editar y eliminar alumnos de su departamento */}
         <Button
           variant="ghost"
           size="icon"
@@ -215,7 +214,6 @@ const ListarAlumnos = () => {
               <MessageSquare className="h-4 w-4 mr-2" />
               WhatsApp
             </DropdownMenuItem>
-            {/* Menú actualizado para mostrar opciones de edición/eliminación para todos los roles */}
             <DropdownMenuItem>
               <Pencil className="h-4 w-4 mr-2" />
               Editar
