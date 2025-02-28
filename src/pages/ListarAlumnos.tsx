@@ -53,7 +53,7 @@ const ListarAlumnos = () => {
   const [phoneCode, setPhoneCode] = useState("54");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | "">("");
-  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
@@ -284,6 +284,8 @@ const ListarAlumnos = () => {
   };
 
   const handleExport = () => {
+    const fileName = `alumnos_${selectedDepartment || 'todos'}_${selectedClass || 'todas-clases'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
+    
     const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
       Nombre: student.name,
       Departamento: student.department?.replace(/_/g, ' ') || '',
@@ -296,8 +298,6 @@ const ListarAlumnos = () => {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
-
-    const fileName = `alumnos_${selectedDepartment || 'todos'}_${selectedClass || 'todas-clases'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -305,7 +305,7 @@ const ListarAlumnos = () => {
   const handleDepartmentChange = (value: string) => {
     setSelectedDepartment(value as DepartmentType);
     // Al cambiar el departamento, reiniciar la clase seleccionada
-    setSelectedClass("");
+    setSelectedClass(null);
   };
 
   // Manejar cambio de clase
@@ -610,14 +610,14 @@ const ListarAlumnos = () => {
             <div className="space-y-2">
               <Label htmlFor="class-filter">Clase</Label>
               <Select
-                value={selectedClass}
+                value={selectedClass || undefined}
                 onValueChange={handleClassChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todas las clases" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las clases</SelectItem>
+                  <SelectItem value="all">Todas las clases</SelectItem>
                   {availableClasses.map((className) => (
                     <SelectItem key={className} value={className}>
                       {className}
