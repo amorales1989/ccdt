@@ -134,25 +134,27 @@ const ListarAlumnos = () => {
     // Eliminar todos los caracteres que no sean dígitos
     let formattedPhone = phone.replace(/\D/g, "");
     
-    // Verificar si el número ya tiene el código de país
-    if (!formattedPhone.startsWith("54")) {
-      // Si el número comienza con 0, eliminar ese 0 inicial
-      if (formattedPhone.startsWith("0")) {
-        formattedPhone = formattedPhone.substring(1);
-      }
-      
-      // Si el número comienza con 15 (prefijo de celular argentino), reacomodarlo
-      if (formattedPhone.startsWith("15")) {
-        formattedPhone = formattedPhone.substring(2);
-        // Agregar el prefijo de Argentina y el 9 para celulares
-        formattedPhone = "549" + formattedPhone;
-      } else {
-        // Si no comienza con 15, agregar el código de país de Argentina
-        formattedPhone = "54" + formattedPhone;
-      }
+    // Manejar el formato específico para números argentinos
+    // Asegurarse de que el número tenga el formato internacional correcto
+    if (formattedPhone.startsWith("11") && formattedPhone.length === 10) {
+      // Es un número de Buenos Aires que comienza con 11 (código de área)
+      formattedPhone = "549" + formattedPhone;
+    } else if (formattedPhone.startsWith("15") && formattedPhone.length === 10) {
+      // Es un número celular que comienza con 15
+      formattedPhone = "549" + formattedPhone.substring(2);
+    } else if (formattedPhone.length === 10) {
+      // Otros números argentinos de 10 dígitos
+      formattedPhone = "54" + formattedPhone;
+    } else if (!formattedPhone.startsWith("54")) {
+      // Si no comienza con 54, agregar el prefijo de Argentina
+      formattedPhone = "54" + formattedPhone;
     }
     
-    // Imprimir el número formateado en la consola para depuración
+    // Asegurarse de que los números celulares tengan el 9 después del código de país
+    if (formattedPhone.startsWith("54") && !formattedPhone.startsWith("549") && formattedPhone.length >= 10) {
+      formattedPhone = "549" + formattedPhone.substring(2);
+    }
+    
     console.log("Número de WhatsApp formateado:", formattedPhone);
     
     window.open(`https://wa.me/${formattedPhone}`, "_blank");
