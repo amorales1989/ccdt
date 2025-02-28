@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
@@ -12,12 +12,53 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
-import { DepartmentType, Department } from "@/types/database";
+import { DepartmentType, Department, Student } from "@/types/database";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { deleteStudent, updateStudent } from "@/lib/api";
 
 const ListarAlumnos = () => {
   const { profile } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
+
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      phone: "",
+      address: "",
+      birthdate: "",
+      gender: "",
+      department: "",
+      assigned_class: "",
+    }
+  });
+
+  // Reset form when student to edit changes
+  useEffect(() => {
+    if (studentToEdit) {
+      form.reset({
+        name: studentToEdit.name,
+        phone: studentToEdit.phone || "",
+        address: studentToEdit.address || "",
+        birthdate: studentToEdit.birthdate || "",
+        gender: studentToEdit.gender,
+        department: studentToEdit.department || "",
+        assigned_class: studentToEdit.assigned_class || "",
+      });
+    }
+  }, [studentToEdit, form]);
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
@@ -39,7 +80,7 @@ const ListarAlumnos = () => {
   });
 
   // Obtener estudiantes filtrados por el departamento y clase del usuario
-  const { data: students = [], isLoading } = useQuery({
+  const { data: students = [], isLoading, refetch } = useQuery({
     queryKey: ["students", userDepartment, userClass],
     queryFn: async () => {
       let query = supabase.from("students").select("*");
@@ -60,7 +101,7 @@ const ListarAlumnos = () => {
       const { data, error } = await query;
       if (error) throw error;
       
-      return (data || []).sort((a, b) => a.name.localeCompare(b.name));
+      return (data || []).sort((a, b) => a.name.localeCompare(b.name)) as Student[];
     },
     enabled: Boolean(profile), // Solo hacer la consulta cuando tengamos el perfil
   });
@@ -116,6 +157,58 @@ const ListarAlumnos = () => {
 
     const fileName = `alumnos_${userDepartment || 'todos'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
     XLSX.writeFile(workbook, fileName);
+  };
+
+  const handleEditStudent = (student: Student) => {
+    setStudentToEdit(student);
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteStudent = (student: Student) => {
+    setStudentToDelete(student);
+    setIsAlertOpen(true);
+  };
+
+  const onSubmit = async (data: any) => {
+    if (!studentToEdit) return;
+    
+    try {
+      await updateStudent(studentToEdit.id, data);
+      toast({
+        title: "Alumno actualizado",
+        description: `Los datos de ${data.name} han sido actualizados con éxito.`,
+      });
+      setIsDialogOpen(false);
+      refetch();
+    } catch (error) {
+      console.error("Error al actualizar alumno:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el alumno. Intente nuevamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!studentToDelete) return;
+    
+    try {
+      await deleteStudent(studentToDelete.id);
+      toast({
+        title: "Alumno eliminado",
+        description: `${studentToDelete.name} ha sido eliminado con éxito.`,
+      });
+      setIsAlertOpen(false);
+      refetch();
+    } catch (error) {
+      console.error("Error al eliminar alumno:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el alumno. Intente nuevamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const renderStudentDetails = (student: any) => (
@@ -186,6 +279,7 @@ const ListarAlumnos = () => {
           variant="ghost"
           size="icon"
           title="Editar alumno"
+          onClick={() => handleEditStudent(student)}
         >
           <Pencil className="h-4 w-4" />
           {isMobile && <span className="ml-2">Editar</span>}
@@ -194,6 +288,7 @@ const ListarAlumnos = () => {
           variant="ghost"
           size="icon"
           title="Eliminar alumno"
+          onClick={() => handleDeleteStudent(student)}
         >
           <Trash2 className="h-4 w-4" />
           {isMobile && <span className="ml-2">Eliminar</span>}
@@ -214,11 +309,14 @@ const ListarAlumnos = () => {
               <MessageSquare className="h-4 w-4 mr-2" />
               WhatsApp
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEditStudent(student)}>
               <Pencil className="h-4 w-4 mr-2" />
               Editar
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem 
+              className="text-red-600"
+              onClick={() => handleDeleteStudent(student)}
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Eliminar
             </DropdownMenuItem>
@@ -325,6 +423,130 @@ const ListarAlumnos = () => {
           {renderStudentList(students.filter(student => student.gender === "femenino"), "Mujeres")}
         </>
       )}
+
+      {/* Modal de edición de alumno */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Editar Alumno</DialogTitle>
+            <DialogDescription>
+              Actualiza la información del alumno {studentToEdit?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nombre completo</Label>
+                <Input 
+                  id="name"
+                  {...form.register("name")}
+                  placeholder="Nombre completo"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Género</Label>
+                  <Select 
+                    defaultValue={form.getValues("gender")}
+                    onValueChange={(value) => form.setValue("gender", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="femenino">Femenino</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="birthdate">Fecha de nacimiento</Label>
+                  <Input 
+                    id="birthdate"
+                    type="date"
+                    {...form.register("birthdate")}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Teléfono</Label>
+                <Input 
+                  id="phone"
+                  {...form.register("phone")}
+                  placeholder="Teléfono"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="address">Dirección</Label>
+                <Input 
+                  id="address"
+                  {...form.register("address")}
+                  placeholder="Dirección"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="department">Departamento</Label>
+                  <Select 
+                    defaultValue={form.getValues("department")}
+                    onValueChange={(value) => form.setValue("department", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.name}>
+                          {dept.name.replace(/_/g, ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="assigned_class">Clase</Label>
+                  <Input 
+                    id="assigned_class"
+                    {...form.register("assigned_class")}
+                    placeholder="Clase"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Guardar cambios</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de confirmación para eliminar */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente a {studentToDelete?.name} y no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
