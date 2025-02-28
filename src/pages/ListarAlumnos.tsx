@@ -195,6 +195,22 @@ const ListarAlumnos = () => {
     return phoneCode + cleanNumber;
   };
 
+  // Función para formatear el número de teléfono para mostrar (sin prefijos)
+  const formatPhoneDisplay = (phone: string | null) => {
+    if (!phone) return "No especificado";
+    
+    // Si comienza con "549", quitar esos dígitos para mostrar
+    if (phone.startsWith("549")) {
+      return phone.substring(3);
+    }
+    // Si comienza con "54", quitar esos dígitos
+    else if (phone.startsWith("54")) {
+      return phone.substring(2);
+    }
+    
+    return phone;
+  };
+
   const handleWhatsAppClick = (phone: string) => {
     if (!phone) return;
     
@@ -253,7 +269,7 @@ const ListarAlumnos = () => {
       Nombre: student.name,
       Departamento: student.department?.replace(/_/g, ' ') || '',
       Clase: student.assigned_class || '',
-      Teléfono: student.phone || '',
+      Teléfono: formatPhoneDisplay(student.phone) || '',
       Dirección: student.address || '',
       Género: student.gender,
       'Fecha de Nacimiento': student.birthdate ? format(new Date(student.birthdate), "dd/MM/yyyy") : ''
@@ -359,7 +375,7 @@ const ListarAlumnos = () => {
         <div className="font-semibold">Contacto</div>
         <div>
           <span className="font-medium">Teléfono:</span>
-          <span className="ml-2">{student.phone || "No especificado"}</span>
+          <span className="ml-2">{formatPhoneDisplay(student.phone)}</span>
         </div>
         <div>
           <span className="font-medium">Dirección:</span>
@@ -504,7 +520,7 @@ const ListarAlumnos = () => {
                         </div>
                         <div className="flex items-center justify-end gap-2 shrink-0">
                           <span className="text-muted-foreground text-right hidden md:block whitespace-nowrap">
-                            {student.phone || "No especificado"}
+                            {formatPhoneDisplay(student.phone)}
                           </span>
                           {renderActions(student)}
                         </div>
