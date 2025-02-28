@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { getEvents } from "@/lib/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { format, isBefore, startOfDay, isSameMonth, isAfter } from "date-fns";
+import { format, isBefore, startOfDay, isSameMonth, isAfter, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { CalendarPlus } from "lucide-react";
@@ -29,12 +29,24 @@ export default function Calendario() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [currentMonthEvents, setCurrentMonthEvents] = useState<Event[]>([]);
   const { toast } = useToast();
 
   const { data: events = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
     queryFn: getEvents
   });
+
+  // Actualizar los eventos del mes cuando cambia el mes o la lista de eventos
+  useEffect(() => {
+    if (selectedDate && events.length > 0) {
+      const filtered = events
+        .filter(event => isSameMonth(new Date(event.date), selectedDate))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      setCurrentMonthEvents(filtered);
+    }
+  }, [selectedDate, events]);
 
   // Filtrar eventos y crear objeto de fechas
   const eventDates = events.reduce((acc: Record<string, any[]>, event) => {
@@ -45,11 +57,6 @@ export default function Calendario() {
     acc[dateStr].push(event);
     return acc;
   }, {});
-
-  // Obtener eventos del mes actual
-  const currentMonthEvents = events
-    .filter(event => selectedDate && isSameMonth(new Date(event.date), selectedDate))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const handleCreateEvent = async (eventData: any) => {
     try {
@@ -108,6 +115,13 @@ export default function Calendario() {
       : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20";
   };
 
+  // Handler para cambios de mes en el calendario
+  const handleMonthChange = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -158,6 +172,7 @@ export default function Calendario() {
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
+                onMonthChange={handleMonthChange}
                 className="rounded-md border w-full"
                 locale={es}
                 modifiers={modifiers}
