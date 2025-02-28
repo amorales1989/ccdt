@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MessageSquare, Pencil, Trash2, MoreVertical, Download } from "lucide-react";
+import { MessageSquare, Pencil, Trash2, MoreVertical, Download, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears } from "date-fns";
@@ -52,6 +52,8 @@ const ListarAlumnos = () => {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [phoneCode, setPhoneCode] = useState("54");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | "">("");
+  const [selectedClass, setSelectedClass] = useState<string>("");
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
@@ -130,6 +132,16 @@ const ListarAlumnos = () => {
   const userDepartment = profile?.departments?.[0] || null;
   const userClass = profile?.assigned_class || null;
 
+  // Si no es admin/secretaria, usar el departamento y clase del usuario automáticamente
+  useEffect(() => {
+    if (!isAdminOrSecretaria && userDepartment) {
+      setSelectedDepartment(userDepartment);
+      if (userClass) {
+        setSelectedClass(userClass);
+      }
+    }
+  }, [isAdminOrSecretaria, userDepartment, userClass]);
+
   const { data: departments = [] } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
@@ -143,22 +155,29 @@ const ListarAlumnos = () => {
     },
   });
 
-  // Obtener estudiantes filtrados por el departamento y clase del usuario
+  // Obtener las clases disponibles para el departamento seleccionado
+  const availableClasses = selectedDepartment 
+    ? departments.find(d => d.name === selectedDepartment)?.classes || []
+    : [];
+
+  // Obtener estudiantes filtrados
   const { data: students = [], isLoading, refetch } = useQuery({
-    queryKey: ["students", userDepartment, userClass],
+    queryKey: ["students", selectedDepartment, selectedClass],
     queryFn: async () => {
+      // Si es admin/secretaria y no ha seleccionado departamento, no cargar datos
+      if (isAdminOrSecretaria && !selectedDepartment) {
+        return [];
+      }
+
       let query = supabase.from("students").select("*");
       
-      // Si el usuario no es admin o secretaria, aplicar filtros
-      if (!isAdminOrSecretaria) {
-        // Filtrar por departamento del usuario
-        if (userDepartment) {
-          query = query.eq("department", userDepartment);
-          
-          // Si el usuario tiene una clase asignada, filtrar también por esa clase
-          if (userClass) {
-            query = query.eq("assigned_class", userClass);
-          }
+      // Aplicar filtro por departamento
+      if (selectedDepartment) {
+        query = query.eq("department", selectedDepartment);
+        
+        // Si hay una clase seleccionada, filtrar también por esa clase
+        if (selectedClass) {
+          query = query.eq("assigned_class", selectedClass);
         }
       }
       
@@ -167,7 +186,7 @@ const ListarAlumnos = () => {
       
       return (data || []).sort((a, b) => a.name.localeCompare(b.name)) as Student[];
     },
-    enabled: Boolean(profile), // Solo hacer la consulta cuando tengamos el perfil
+    enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(selectedDepartment)), // No cargar si es admin/secretaria sin departamento seleccionado
   });
 
   // Función para formatear el número de teléfono
@@ -278,8 +297,20 @@ const ListarAlumnos = () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
 
-    const fileName = `alumnos_${userDepartment || 'todos'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
+    const fileName = `alumnos_${selectedDepartment || 'todos'}_${selectedClass || 'todas-clases'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
     XLSX.writeFile(workbook, fileName);
+  };
+
+  // Manejar cambio de departamento
+  const handleDepartmentChange = (value: string) => {
+    setSelectedDepartment(value as DepartmentType);
+    // Al cambiar el departamento, reiniciar la clase seleccionada
+    setSelectedClass("");
+  };
+
+  // Manejar cambio de clase
+  const handleClassChange = (value: string) => {
+    setSelectedClass(value);
   };
 
   // Función para abrir modal de edición
@@ -549,12 +580,64 @@ const ListarAlumnos = () => {
     </Card>
   );
 
+  // Renderizar filtros solo para admin/secretaria
+  const renderFilters = () => {
+    if (!isAdminOrSecretaria) return null;
+
+    return (
+      <Card className="p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="department-filter">Departamento</Label>
+            <Select
+              value={selectedDepartment}
+              onValueChange={handleDepartmentChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.name}>
+                    {dept.name.replace(/_/g, ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedDepartment && availableClasses.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="class-filter">Clase</Label>
+              <Select
+                value={selectedClass}
+                onValueChange={handleClassChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas las clases" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas las clases</SelectItem>
+                  {availableClasses.map((className) => (
+                    <SelectItem key={className} value={className}>
+                      {className}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  };
+
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
         
-        {isAdminOrSecretaria && (
+        {isAdminOrSecretaria && students.length > 0 && (
           <Button
             variant="outline"
             onClick={handleExport}
@@ -566,23 +649,49 @@ const ListarAlumnos = () => {
         )}
       </div>
 
+      {/* Filtros para admin/secretaria */}
+      {renderFilters()}
+
       {isLoading ? (
         <div className="text-center py-4">Cargando...</div>
       ) : (
         <>
-          {userDepartment && !isAdminOrSecretaria && (
-            <div className="bg-muted/30 p-4 rounded-lg mb-6">
-              <p className="text-sm text-muted-foreground">
-                Mostrando alumnos de: <span className="font-medium capitalize">{userDepartment.replace(/_/g, ' ')}</span>
-                {userClass && (
-                  <> - Clase: <span className="font-medium">{userClass}</span></>
-                )}
+          {isAdminOrSecretaria && !selectedDepartment ? (
+            <Card className="p-6 text-center">
+              <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Selecciona un departamento</h3>
+              <p className="text-muted-foreground">
+                Por favor, selecciona un departamento para ver los alumnos.
               </p>
-            </div>
+            </Card>
+          ) : (
+            <>
+              {!isAdminOrSecretaria && userDepartment && (
+                <div className="bg-muted/30 p-4 rounded-lg mb-6">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando alumnos de: <span className="font-medium capitalize">{userDepartment.replace(/_/g, ' ')}</span>
+                    {userClass && (
+                      <> - Clase: <span className="font-medium">{userClass}</span></>
+                    )}
+                  </p>
+                </div>
+              )}
+              
+              {isAdminOrSecretaria && selectedDepartment && (
+                <div className="bg-muted/30 p-4 rounded-lg mb-6">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando alumnos de: <span className="font-medium capitalize">{selectedDepartment.replace(/_/g, ' ')}</span>
+                    {selectedClass && (
+                      <> - Clase: <span className="font-medium">{selectedClass}</span></>
+                    )}
+                  </p>
+                </div>
+              )}
+              
+              {renderStudentList(students.filter(student => student.gender === "masculino"), "Varones")}
+              {renderStudentList(students.filter(student => student.gender === "femenino"), "Mujeres")}
+            </>
           )}
-          
-          {renderStudentList(students.filter(student => student.gender === "masculino"), "Varones")}
-          {renderStudentList(students.filter(student => student.gender === "femenino"), "Mujeres")}
         </>
       )}
 
