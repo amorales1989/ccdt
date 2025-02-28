@@ -1,7 +1,7 @@
 
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Layout } from "@/components/Layout";
@@ -26,10 +26,11 @@ function App() {
         <RouterProvider
           router={createBrowserRouter([
             {
+              path: "/",
               element: <Layout />,
               children: [
                 {
-                  path: "/",
+                  index: true,
                   element: <Index />,
                 },
                 {
@@ -73,6 +74,10 @@ function App() {
             {
               path: "/auth",
               element: <Auth />,
+            },
+            {
+              path: "*",
+              element: <Navigate to="/auth" replace />,
             },
           ])}
         />
