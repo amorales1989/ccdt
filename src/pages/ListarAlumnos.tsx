@@ -21,7 +21,27 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
-import { deleteStudent, updateStudent } from "@/lib/api";
+
+// Definir funciones para actualizar y eliminar estudiantes si no existen en lib/api
+const updateStudent = async (id: string, data: any) => {
+  const { error } = await supabase
+    .from("students")
+    .update(data)
+    .eq("id", id);
+  
+  if (error) throw error;
+  return { success: true };
+};
+
+const deleteStudent = async (id: string) => {
+  const { error } = await supabase
+    .from("students")
+    .delete()
+    .eq("id", id);
+  
+  if (error) throw error;
+  return { success: true };
+};
 
 const ListarAlumnos = () => {
   const { profile } = useAuth();
@@ -33,6 +53,7 @@ const ListarAlumnos = () => {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
+  // Configurar formulario con react-hook-form
   const form = useForm({
     defaultValues: {
       name: "",
@@ -48,6 +69,7 @@ const ListarAlumnos = () => {
   // Reset form when student to edit changes
   useEffect(() => {
     if (studentToEdit) {
+      console.log("Setting form values for student:", studentToEdit);
       form.reset({
         name: studentToEdit.name,
         phone: studentToEdit.phone || "",
@@ -159,18 +181,25 @@ const ListarAlumnos = () => {
     XLSX.writeFile(workbook, fileName);
   };
 
+  // Función para abrir modal de edición
   const handleEditStudent = (student: Student) => {
+    console.log("Editando estudiante:", student);
     setStudentToEdit(student);
     setIsDialogOpen(true);
   };
 
+  // Función para abrir diálogo de confirmación de eliminación
   const handleDeleteStudent = (student: Student) => {
+    console.log("Eliminando estudiante:", student);
     setStudentToDelete(student);
     setIsAlertOpen(true);
   };
 
+  // Manejar el envío del formulario de edición
   const onSubmit = async (data: any) => {
     if (!studentToEdit) return;
+    
+    console.log("Datos a actualizar:", data);
     
     try {
       await updateStudent(studentToEdit.id, data);
@@ -179,6 +208,7 @@ const ListarAlumnos = () => {
         description: `Los datos de ${data.name} han sido actualizados con éxito.`,
       });
       setIsDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       refetch();
     } catch (error) {
       console.error("Error al actualizar alumno:", error);
@@ -190,6 +220,7 @@ const ListarAlumnos = () => {
     }
   };
 
+  // Confirmar eliminación de alumno
   const confirmDelete = async () => {
     if (!studentToDelete) return;
     
@@ -200,6 +231,7 @@ const ListarAlumnos = () => {
         description: `${studentToDelete.name} ha sido eliminado con éxito.`,
       });
       setIsAlertOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       refetch();
     } catch (error) {
       console.error("Error al eliminar alumno:", error);
@@ -264,12 +296,16 @@ const ListarAlumnos = () => {
   );
 
   const renderActions = (student: any) => {
+    // Acciones para la vista normal (no móvil)
     const actions = (
       <>
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => handleWhatsAppClick(student.phone)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleWhatsAppClick(student.phone);
+          }}
           title="Enviar mensaje de WhatsApp"
         >
           <MessageSquare className="h-4 w-4" />
@@ -279,7 +315,10 @@ const ListarAlumnos = () => {
           variant="ghost"
           size="icon"
           title="Editar alumno"
-          onClick={() => handleEditStudent(student)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEditStudent(student);
+          }}
         >
           <Pencil className="h-4 w-4" />
           {isMobile && <span className="ml-2">Editar</span>}
@@ -288,7 +327,10 @@ const ListarAlumnos = () => {
           variant="ghost"
           size="icon"
           title="Eliminar alumno"
-          onClick={() => handleDeleteStudent(student)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteStudent(student);
+          }}
         >
           <Trash2 className="h-4 w-4" />
           {isMobile && <span className="ml-2">Eliminar</span>}
@@ -296,26 +338,36 @@ const ListarAlumnos = () => {
       </>
     );
 
+    // Vista para dispositivos móviles
     if (isMobile) {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-white">
-            <DropdownMenuItem onClick={() => handleWhatsAppClick(student.phone)}>
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              handleWhatsAppClick(student.phone);
+            }}>
               <MessageSquare className="h-4 w-4 mr-2" />
               WhatsApp
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEditStudent(student)}>
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              handleEditStudent(student);
+            }}>
               <Pencil className="h-4 w-4 mr-2" />
               Editar
             </DropdownMenuItem>
             <DropdownMenuItem 
               className="text-red-600"
-              onClick={() => handleDeleteStudent(student)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteStudent(student);
+              }}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Eliminar
