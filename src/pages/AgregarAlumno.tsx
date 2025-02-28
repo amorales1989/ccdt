@@ -45,6 +45,9 @@ const AgregarAlumno = () => {
     ? departments.find(d => d.name === formData.department)?.classes || []
     : [];
 
+  // Verificar si el departamento seleccionado tiene clases
+  const departmentHasClasses = availableClasses.length > 0;
+
   // Actualizar formData cuando el perfil esté disponible
   useEffect(() => {
     if (profile?.departments?.[0]) {
@@ -92,7 +95,8 @@ const AgregarAlumno = () => {
       return;
     }
 
-    if (!formData.assigned_class) {
+    // Solo validar clase si el departamento tiene clases disponibles
+    if (departmentHasClasses && !formData.assigned_class) {
       toast({
         title: "Error",
         description: "Por favor seleccione una clase",
@@ -112,7 +116,7 @@ const AgregarAlumno = () => {
         gender: formData.gender,
         birthdate: formData.birthdate || null,
         department: formData.department,
-        assigned_class: formData.assigned_class,
+        assigned_class: formData.assigned_class || null,
       });
       
       toast({
@@ -220,7 +224,7 @@ const AgregarAlumno = () => {
                 </SelectContent>
               </Select>
             </div>
-            {formData.department && (
+            {formData.department && departmentHasClasses && (
               <div className="space-y-2">
                 <Label htmlFor="assigned_class">Clase</Label>
                 <Select
