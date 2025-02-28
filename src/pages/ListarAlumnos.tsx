@@ -1,238 +1,574 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useEffect, useState } from "react";
-import { deleteStudent, getStudents, getDepartments, updateStudent } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { DepartmentType, Student } from "@/types/database";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "El nombre debe tener al menos 2 caracteres.",
-  }),
-  gender: z.enum(["masculino", "femenino"]),
-  birthdate: z.string(),
-  address: z.string().optional(),
-  department: z.string(),
-  assigned_class: z.string(),
-});
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { MessageSquare, Pencil, Trash2, MoreVertical, Download } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { format, differenceInYears } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+import * as XLSX from 'xlsx';
+import { DepartmentType, Department, Student } from "@/types/database";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+
+// Definir funciones para actualizar y eliminar estudiantes si no existen en lib/api
+const updateStudent = async (id: string, data: any) => {
+  const { error } = await supabase
+    .from("students")
+    .update(data)
+    .eq("id", id);
+  
+  if (error) throw error;
+  return { success: true };
+};
+
+const deleteStudent = async (id: string) => {
+  const { error } = await supabase
+    .from("students")
+    .delete()
+    .eq("id", id);
+  
+  if (error) throw error;
+  return { success: true };
+};
 
 const ListarAlumnos = () => {
-  const { toast } = useToast();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { profile } = useAuth();
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [phoneCode, setPhoneCode] = useState("54");
   const [phoneNumber, setPhoneNumber] = useState("");
-	const navigate = useNavigate();
-  const { profile } = useAuth();
+  const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
+
+  // Configurar formulario con react-hook-form para usar tipos específicos
+  type StudentFormData = {
+    name: string;
+    phone: string;
+    address: string;
+    birthdate: string;
+    gender: "masculino" | "femenino"; // Especificar que solo puede ser estos valores
+    department: DepartmentType | ""; // Puede ser DepartmentType o string vacío
+    assigned_class: string;
+  };
+
+  const form = useForm<StudentFormData>({
+    defaultValues: {
+      name: "",
+      phone: "",
+      address: "",
+      birthdate: "",
+      gender: "masculino", // Valor predeterminado válido
+      department: "", // Inicialmente vacío
+      assigned_class: "",
+    }
+  });
+
+  // Reset form when student to edit changes
+  useEffect(() => {
+    if (studentToEdit) {
+      console.log("Setting form values for student:", studentToEdit);
+      
+      // Extraer código de país y número de teléfono
+      let extractedPhoneCode = "54"; // Valor por defecto
+      let extractedPhoneNumber = "";
+      
+      if (studentToEdit.phone) {
+        if (studentToEdit.phone.startsWith("54")) {
+          // Extraer código de país (primeros 2 dígitos)
+          extractedPhoneCode = studentToEdit.phone.substring(0, 2);
+          
+          // Si tiene el formato 549xxxxxxxxxx
+          if (studentToEdit.phone.startsWith("549") && studentToEdit.phone.length >= 12) {
+            extractedPhoneNumber = studentToEdit.phone.substring(3); // Omitir 549
+          } else {
+            extractedPhoneNumber = studentToEdit.phone.substring(2); // Omitir 54
+          }
+        } else {
+          extractedPhoneNumber = studentToEdit.phone;
+        }
+      }
+      
+      setPhoneCode(extractedPhoneCode);
+      setPhoneNumber(extractedPhoneNumber);
+      
+      // Aseguramos que gender sea uno de los valores permitidos
+      const validGender = studentToEdit.gender === "femenino" ? "femenino" : "masculino";
+      
+      // Aseguramos que department sea uno de los valores permitidos o string vacío
+      const departmentValue = studentToEdit.department || "" as DepartmentType | "";
+      
+      form.reset({
+        name: studentToEdit.name,
+        phone: "", // Lo manejamos con los estados separados
+        address: studentToEdit.address || "",
+        birthdate: studentToEdit.birthdate || "",
+        gender: validGender,
+        department: departmentValue,
+        assigned_class: studentToEdit.assigned_class || "",
+      });
+    }
+  }, [studentToEdit, form]);
+
+  const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
+
+  // Usar departamento y clase del perfil del usuario
+  const userDepartment = profile?.departments?.[0] || null;
+  const userClass = profile?.assigned_class || null;
 
   const { data: departments = [] } = useQuery({
     queryKey: ["departments"],
-    queryFn: getDepartments,
-  });
-
-  const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      gender: "masculino",
-      birthdate: "",
-      address: "",
-      department: "",
-      assigned_class: "",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("*")
+        .order('name');
+      
+      if (error) throw error;
+      return data as Department[];
     },
   });
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
+  // Obtener estudiantes filtrados por el departamento y clase del usuario
+  const { data: students = [], isLoading, refetch } = useQuery({
+    queryKey: ["students", userDepartment, userClass],
+    queryFn: async () => {
+      let query = supabase.from("students").select("*");
+      
+      // Si el usuario no es admin o secretaria, aplicar filtros
+      if (!isAdminOrSecretaria) {
+        // Filtrar por departamento del usuario
+        if (userDepartment) {
+          query = query.eq("department", userDepartment);
+          
+          // Si el usuario tiene una clase asignada, filtrar también por esa clase
+          if (userClass) {
+            query = query.eq("assigned_class", userClass);
+          }
+        }
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      return (data || []).sort((a, b) => a.name.localeCompare(b.name)) as Student[];
+    },
+    enabled: Boolean(profile), // Solo hacer la consulta cuando tengamos el perfil
+  });
 
-  const fetchStudents = async () => {
-    try {
-      const studentsData = await getStudents();
-      setStudents(studentsData);
-    } catch (error) {
-      console.error("Error al obtener los alumnos:", error);
-      toast({
-        title: "Error",
-        description: "Error al obtener los alumnos",
-        variant: "destructive",
-      });
+  // Función para formatear el número de teléfono
+  const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
+    if (!phoneNumber) return null;
+
+    // Eliminar todos los caracteres que no sean dígitos
+    let cleanNumber = phoneNumber.replace(/\D/g, "");
+    
+    // Si empieza con 0, quitarlo
+    if (cleanNumber.startsWith("0")) {
+      cleanNumber = cleanNumber.substring(1);
     }
+    
+    // Si empieza con 15 (prefijo de celular argentino), quitarlo
+    if (cleanNumber.startsWith("15")) {
+      cleanNumber = cleanNumber.substring(2);
+    }
+    
+    // Si el código de país es Argentina (54), asegurarnos de agregar el 9 para celulares
+    if (phoneCode === "54") {
+      return phoneCode + "9" + cleanNumber;
+    }
+    
+    return phoneCode + cleanNumber;
   };
 
-  const handleEdit = (student: Student) => {
+  const handleWhatsAppClick = (phone: string) => {
+    if (!phone) return;
+    
+    // Eliminar todos los caracteres que no sean dígitos
+    let cleanNumber = phone.replace(/\D/g, "");
+    
+    // Si empieza con el código de país, quitarlo temporalmente
+    let hasCountryCode = false;
+    if (cleanNumber.startsWith("54")) {
+      cleanNumber = cleanNumber.substring(2);
+      hasCountryCode = true;
+    }
+    
+    // Si empieza con 0, quitarlo
+    if (cleanNumber.startsWith("0")) {
+      cleanNumber = cleanNumber.substring(1);
+    }
+    
+    // Si empieza con 15 (prefijo de celular argentino), quitarlo
+    if (cleanNumber.startsWith("15")) {
+      cleanNumber = cleanNumber.substring(2);
+    }
+    
+    // Asegurarse de que sea un número válido para Argentina
+    // Los números argentinos tienen 10 dígitos: código de área (2 o 3 dígitos) + número (8 o 7 dígitos)
+    if (cleanNumber.length < 10) {
+      console.error("Número de teléfono incompleto:", phone);
+      toast({
+        title: "Error",
+        description: "El número de teléfono parece estar incompleto.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Si el número es más largo que 10 dígitos, tomar solo los últimos 10
+    if (cleanNumber.length > 10) {
+      cleanNumber = cleanNumber.substring(cleanNumber.length - 10);
+    }
+    
+    // Formato final: 54 9 + número de 10 dígitos
+    const formattedPhone = "549" + cleanNumber;
+    
+    console.log("Número de WhatsApp formateado:", formattedPhone);
+    
+    window.open(`https://wa.me/${formattedPhone}`, "_blank");
+  };
+
+  const calculateAge = (birthdate: string | null) => {
+    if (!birthdate) return "N/A";
+    return `${differenceInYears(new Date(), new Date(birthdate))} años`;
+  };
+
+  const handleExport = () => {
+    const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
+      Nombre: student.name,
+      Departamento: student.department?.replace(/_/g, ' ') || '',
+      Clase: student.assigned_class || '',
+      Teléfono: student.phone || '',
+      Dirección: student.address || '',
+      Género: student.gender,
+      'Fecha de Nacimiento': student.birthdate ? format(new Date(student.birthdate), "dd/MM/yyyy") : ''
+    })));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
+
+    const fileName = `alumnos_${userDepartment || 'todos'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  // Función para abrir modal de edición
+  const handleEditStudent = (student: Student) => {
+    console.log("Editando estudiante:", student);
     setStudentToEdit(student);
-    form.reset({
-      name: student.name,
-      gender: student.gender,
-      birthdate: student.birthdate || "",
-      address: student.address || "",
-      department: student.department,
-      assigned_class: student.assigned_class,
-    });
-    setPhoneCode(student.phone ? student.phone.substring(0, 2) : "54");
-    setPhoneNumber(student.phone ? student.phone.substring(2) : "");
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (studentId: string) => {
-    try {
-      await deleteStudent(studentId);
-      toast({
-        title: "Alumno eliminado",
-        description: "El alumno ha sido eliminado exitosamente",
-      });
-      fetchStudents(); // Refresh student list
-    } catch (error) {
-      console.error("Error al eliminar el alumno:", error);
-      toast({
-        title: "Error",
-        description: "Error al eliminar el alumno",
-        variant: "destructive",
-      });
-    }
+  // Función para abrir diálogo de confirmación de eliminación
+  const handleDeleteStudent = (student: Student) => {
+    console.log("Eliminando estudiante:", student);
+    setStudentToDelete(student);
+    setIsAlertOpen(true);
   };
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  // Manejar el envío del formulario de edición
+  const onSubmit = async (data: StudentFormData) => {
     if (!studentToEdit) return;
-
-    const formattedPhone = phoneCode + phoneNumber;
-
+    
+    // Formatear el número de teléfono
+    const formattedPhone = formatPhoneNumber(phoneCode, phoneNumber);
+    
+    const updatedData = {
+      ...data,
+      phone: formattedPhone,
+      department: data.department as DepartmentType // Asegurar que sea tratado como DepartmentType
+    };
+    
+    console.log("Datos a actualizar:", updatedData);
+    
     try {
-      await updateStudent(studentToEdit.id, {
-        name: data.name,
-        phone: formattedPhone,
-        address: data.address || null,
-        gender: data.gender,
-        birthdate: data.birthdate || null,
-        department: data.department,
-        assigned_class: data.assigned_class,
-      });
+      await updateStudent(studentToEdit.id, updatedData);
       toast({
         title: "Alumno actualizado",
-        description: "El alumno ha sido actualizado exitosamente",
+        description: `Los datos de ${data.name} han sido actualizados con éxito.`,
       });
-      fetchStudents(); // Refresh student list
-      setIsDialogOpen(false); // Close the dialog
+      setIsDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      refetch();
     } catch (error) {
-      console.error("Error al actualizar el alumno:", error);
+      console.error("Error al actualizar alumno:", error);
       toast({
         title: "Error",
-        description: "Error al actualizar el alumno",
+        description: "No se pudo actualizar el alumno. Intente nuevamente.",
         variant: "destructive",
       });
     }
   };
 
-  if (!isAdminOrSecretaria && (!profile?.departments?.length)) {
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              No tiene departamentos asignados. Contacte al administrador.
-            </p>
-          </CardContent>
-        </Card>
+  // Confirmar eliminación de alumno
+  const confirmDelete = async () => {
+    if (!studentToDelete) return;
+    
+    try {
+      await deleteStudent(studentToDelete.id);
+      toast({
+        title: "Alumno eliminado",
+        description: `${studentToDelete.name} ha sido eliminado con éxito.`,
+      });
+      setIsAlertOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      refetch();
+    } catch (error) {
+      console.error("Error al eliminar alumno:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el alumno. Intente nuevamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const renderStudentDetails = (student: any) => (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 px-4 bg-muted/30 rounded-lg">
+      <div className="space-y-2">
+        <div className="font-semibold">Información Personal</div>
+        <div>
+          <span className="font-medium">Nombre:</span>
+          <span className="ml-2">{student.name}</span>
+        </div>
+        <div>
+          <span className="font-medium">Género:</span>
+          <span className="ml-2 capitalize">{student.gender}</span>
+        </div>
+        <div>
+          <span className="font-medium">Edad:</span>
+          <span className="ml-2">{calculateAge(student.birthdate)}</span>
+        </div>
       </div>
+
+      <div className="space-y-2">
+        <div className="font-semibold">Contacto</div>
+        <div>
+          <span className="font-medium">Teléfono:</span>
+          <span className="ml-2">{student.phone || "No especificado"}</span>
+        </div>
+        <div>
+          <span className="font-medium">Dirección:</span>
+          <span className="ml-2">{student.address || "No especificada"}</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="font-semibold">Información Académica</div>
+        <div>
+          <span className="font-medium">Departamento:</span>
+          <span className="ml-2 capitalize">{student.department?.replace(/_/g, ' ') || "No especificado"}</span>
+        </div>
+        <div>
+          <span className="font-medium">Clase:</span>
+          <span className="ml-2">{student.assigned_class || "Sin asignar"}</span>
+        </div>
+        <div>
+          <span className="font-medium">Fecha de nacimiento:</span>
+          <span className="ml-2">
+            {student.birthdate 
+              ? format(new Date(student.birthdate), "dd/MM/yyyy") 
+              : "No especificada"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderActions = (student: any) => {
+    // Acciones para la vista normal (no móvil)
+    const actions = (
+      <>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleWhatsAppClick(student.phone);
+          }}
+          title="Enviar mensaje de WhatsApp"
+        >
+          <MessageSquare className="h-4 w-4" />
+          {isMobile && <span className="ml-2">WhatsApp</span>}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Editar alumno"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEditStudent(student);
+          }}
+        >
+          <Pencil className="h-4 w-4" />
+          {isMobile && <span className="ml-2">Editar</span>}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Eliminar alumno"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteStudent(student);
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+          {isMobile && <span className="ml-2">Eliminar</span>}
+        </Button>
+      </>
     );
-  }
+
+    // Vista para dispositivos móviles
+    if (isMobile) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white">
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              handleWhatsAppClick(student.phone);
+            }}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              handleEditStudent(student);
+            }}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteStudent(student);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
+    return <div className="flex gap-2">{actions}</div>;
+  };
+
+  const renderStudentList = (students: any[], title: string) => (
+    <Card className="p-4 md:p-6 mb-6 w-full">
+      <h3 className="text-lg font-semibold mb-4">{title}</h3>
+      <div className="overflow-x-auto w-full">
+        <Table className="w-full">
+          <TableBody>
+            {students.length > 0 ? (
+              students.map((student) => (
+                <Collapsible
+                  key={student.id}
+                  open={selectedStudent?.id === student.id}
+                  onOpenChange={() => {
+                    setSelectedStudent(selectedStudent?.id === student.id ? null : student);
+                  }}
+                >
+                  <TableRow>
+                    <TableCell className="p-0 w-full">
+                      <div className="grid grid-cols-[1fr,auto,auto] items-center gap-4 p-4 w-full">
+                        <div className="min-w-[150px]">
+                          <CollapsibleTrigger asChild>
+                            <button className="font-medium hover:underline text-left w-full">
+                              {student.name}
+                            </button>
+                          </CollapsibleTrigger>
+                        </div>
+                        <div className="text-muted-foreground text-right whitespace-nowrap">
+                          {calculateAge(student.birthdate)}
+                        </div>
+                        <div className="flex items-center justify-end gap-2 shrink-0">
+                          <span className="text-muted-foreground text-right hidden md:block whitespace-nowrap">
+                            {student.phone || "No especificado"}
+                          </span>
+                          {renderActions(student)}
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  <CollapsibleContent>
+                    <TableRow>
+                      <TableCell className="p-0 w-full">
+                        {renderStudentDetails(student)}
+                      </TableCell>
+                    </TableRow>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center py-6">
+                  No hay alumnos para mostrar en esta categoría
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </Card>
+  );
 
   return (
-    <div className="container max-w-7xl py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Alumnos</CardTitle>
-          <CardDescription>
-            Aquí puedes ver y gestionar todos los alumnos.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Género</TableHead>
-                <TableHead>Fecha de Nacimiento</TableHead>
-                <TableHead>Teléfono</TableHead>
-                <TableHead>Departamento</TableHead>
-                <TableHead>Clase</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>{student.name}</TableCell>
-                  <TableCell>{student.gender}</TableCell>
-                  <TableCell>{student.birthdate}</TableCell>
-                  <TableCell>{student.phone}</TableCell>
-                  <TableCell>{student.department.replace(/_/g, ' ')}</TableCell>
-                  <TableCell>{student.assigned_class}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleEdit(student)}
-                    >
-                      Editar
-                    </Button>{" "}
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(student.id)}
-                    >
-                      Eliminar
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+    <div className="container mx-auto py-6 px-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
+        
+        {isAdminOrSecretaria && (
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            className="w-full md:w-auto"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-4">Cargando...</div>
+      ) : (
+        <>
+          {userDepartment && !isAdminOrSecretaria && (
+            <div className="bg-muted/30 p-4 rounded-lg mb-6">
+              <p className="text-sm text-muted-foreground">
+                Mostrando alumnos de: <span className="font-medium capitalize">{userDepartment.replace(/_/g, ' ')}</span>
+                {userClass && (
+                  <> - Clase: <span className="font-medium">{userClass}</span></>
+                )}
+              </p>
+            </div>
+          )}
+          
+          {renderStudentList(students.filter(student => student.gender === "masculino"), "Varones")}
+          {renderStudentList(students.filter(student => student.gender === "femenino"), "Mujeres")}
+        </>
+      )}
 
       {/* Modal de edición de alumno */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -259,7 +595,7 @@ const ListarAlumnos = () => {
                   <Label htmlFor="gender">Género</Label>
                   <Select 
                     defaultValue={form.getValues("gender")}
-                    onValueChange={(value) => form.setValue("gender", value)}
+                    onValueChange={(value: "masculino" | "femenino") => form.setValue("gender", value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar" />
@@ -317,7 +653,10 @@ const ListarAlumnos = () => {
                   <Label htmlFor="department">Departamento</Label>
                   <Select 
                     defaultValue={form.getValues("department")}
-                    onValueChange={(value) => form.setValue("department", value)}
+                    onValueChange={(value) => {
+                      // Asegurar que el valor se trate como DepartmentType
+                      form.setValue("department", value as DepartmentType);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar" />
@@ -352,6 +691,24 @@ const ListarAlumnos = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de confirmación para eliminar */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente a {studentToDelete?.name} y no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
