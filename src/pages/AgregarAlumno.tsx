@@ -22,6 +22,7 @@ const AgregarAlumno = () => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    phoneCode: "54",
     address: "",
     gender: "masculino",
     birthdate: "",
@@ -55,6 +56,31 @@ const AgregarAlumno = () => {
     }
   }, [profile]);
 
+  // Función para formatear el número de teléfono
+  const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
+    if (!phoneNumber) return null;
+
+    // Eliminar todos los caracteres que no sean dígitos
+    let cleanNumber = phoneNumber.replace(/\D/g, "");
+    
+    // Si empieza con 0, quitarlo
+    if (cleanNumber.startsWith("0")) {
+      cleanNumber = cleanNumber.substring(1);
+    }
+    
+    // Si empieza con 15 (prefijo de celular argentino), quitarlo
+    if (cleanNumber.startsWith("15")) {
+      cleanNumber = cleanNumber.substring(2);
+    }
+    
+    // Si el código de país es Argentina (54), asegurarnos de agregar el 9 para celulares
+    if (phoneCode === "54") {
+      return phoneCode + "9" + cleanNumber;
+    }
+    
+    return phoneCode + cleanNumber;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.department) {
@@ -75,11 +101,13 @@ const AgregarAlumno = () => {
       return;
     }
 
+    const formattedPhone = formatPhoneNumber(formData.phoneCode, formData.phone);
+
     setIsLoading(true);
     try {
       await createStudent({
         name: formData.name,
-        phone: formData.phone || null,
+        phone: formattedPhone,
         address: formData.address || null,
         gender: formData.gender,
         birthdate: formData.birthdate || null,
@@ -218,13 +246,27 @@ const AgregarAlumno = () => {
             )}
             <div className="space-y-2">
               <Label htmlFor="phone">Teléfono</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
+              <div className="grid grid-cols-[100px_1fr] gap-2">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">+</span>
+                  <Input
+                    id="phoneCode"
+                    value={formData.phoneCode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phoneCode: e.target.value })
+                    }
+                    placeholder="54"
+                  />
+                </div>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
+                  placeholder="Ejemplo: 1159080306"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">Dirección</Label>

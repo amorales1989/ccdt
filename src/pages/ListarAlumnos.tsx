@@ -50,6 +50,8 @@ const ListarAlumnos = () => {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [phoneCode, setPhoneCode] = useState("54");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
@@ -70,9 +72,33 @@ const ListarAlumnos = () => {
   useEffect(() => {
     if (studentToEdit) {
       console.log("Setting form values for student:", studentToEdit);
+      
+      // Extraer código de país y número de teléfono
+      let extractedPhoneCode = "54"; // Valor por defecto
+      let extractedPhoneNumber = "";
+      
+      if (studentToEdit.phone) {
+        if (studentToEdit.phone.startsWith("54")) {
+          // Extraer código de país (primeros 2 dígitos)
+          extractedPhoneCode = studentToEdit.phone.substring(0, 2);
+          
+          // Si tiene el formato 549xxxxxxxxxx
+          if (studentToEdit.phone.startsWith("549") && studentToEdit.phone.length >= 12) {
+            extractedPhoneNumber = studentToEdit.phone.substring(3); // Omitir 549
+          } else {
+            extractedPhoneNumber = studentToEdit.phone.substring(2); // Omitir 54
+          }
+        } else {
+          extractedPhoneNumber = studentToEdit.phone;
+        }
+      }
+      
+      setPhoneCode(extractedPhoneCode);
+      setPhoneNumber(extractedPhoneNumber);
+      
       form.reset({
         name: studentToEdit.name,
-        phone: studentToEdit.phone || "",
+        phone: "", // Lo manejamos con los estados separados
         address: studentToEdit.address || "",
         birthdate: studentToEdit.birthdate || "",
         gender: studentToEdit.gender,
@@ -127,6 +153,31 @@ const ListarAlumnos = () => {
     },
     enabled: Boolean(profile), // Solo hacer la consulta cuando tengamos el perfil
   });
+
+  // Función para formatear el número de teléfono
+  const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
+    if (!phoneNumber) return null;
+
+    // Eliminar todos los caracteres que no sean dígitos
+    let cleanNumber = phoneNumber.replace(/\D/g, "");
+    
+    // Si empieza con 0, quitarlo
+    if (cleanNumber.startsWith("0")) {
+      cleanNumber = cleanNumber.substring(1);
+    }
+    
+    // Si empieza con 15 (prefijo de celular argentino), quitarlo
+    if (cleanNumber.startsWith("15")) {
+      cleanNumber = cleanNumber.substring(2);
+    }
+    
+    // Si el código de país es Argentina (54), asegurarnos de agregar el 9 para celulares
+    if (phoneCode === "54") {
+      return phoneCode + "9" + cleanNumber;
+    }
+    
+    return phoneCode + cleanNumber;
+  };
 
   const handleWhatsAppClick = (phone: string) => {
     if (!phone) return;
@@ -217,10 +268,18 @@ const ListarAlumnos = () => {
   const onSubmit = async (data: any) => {
     if (!studentToEdit) return;
     
-    console.log("Datos a actualizar:", data);
+    // Formatear el número de teléfono
+    const formattedPhone = formatPhoneNumber(phoneCode, phoneNumber);
+    
+    const updatedData = {
+      ...data,
+      phone: formattedPhone
+    };
+    
+    console.log("Datos a actualizar:", updatedData);
     
     try {
-      await updateStudent(studentToEdit.id, data);
+      await updateStudent(studentToEdit.id, updatedData);
       toast({
         title: "Alumno actualizado",
         description: `Los datos de ${data.name} han sido actualizados con éxito.`,
@@ -543,11 +602,23 @@ const ListarAlumnos = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="phone">Teléfono</Label>
-                <Input 
-                  id="phone"
-                  {...form.register("phone")}
-                  placeholder="Teléfono"
-                />
+                <div className="grid grid-cols-[100px_1fr] gap-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-500">+</span>
+                    <Input
+                      id="phoneCode"
+                      value={phoneCode}
+                      onChange={(e) => setPhoneCode(e.target.value)}
+                      placeholder="54"
+                    />
+                  </div>
+                  <Input
+                    id="phoneNumber"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="Ejemplo: 1159080306"
+                  />
+                </div>
               </div>
               
               <div className="space-y-2">
