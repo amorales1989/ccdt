@@ -167,13 +167,13 @@ export default function Calendario() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex justify-center items-start bg-white rounded-md border shadow-sm p-1">
+            <div className="bg-white rounded-md border shadow-sm p-4 flex justify-center">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
                 onMonthChange={handleMonthChange}
-                className="w-auto"
+                className="w-full"
                 locale={es}
                 modifiers={modifiers}
                 modifiersStyles={modifiersStyles}
