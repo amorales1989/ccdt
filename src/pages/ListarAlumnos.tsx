@@ -54,6 +54,7 @@ const ListarAlumnos = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | "">("");
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [editDepartment, setEditDepartment] = useState<DepartmentType | "">("");
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
@@ -114,6 +115,9 @@ const ListarAlumnos = () => {
       // Aseguramos que department sea uno de los valores permitidos o string vacío
       const departmentValue = studentToEdit.department || "" as DepartmentType | "";
       
+      // Establecer el departamento seleccionado para el formulario de edición
+      setEditDepartment(departmentValue);
+      
       form.reset({
         name: studentToEdit.name,
         phone: "", // Lo manejamos con los estados separados
@@ -159,6 +163,14 @@ const ListarAlumnos = () => {
   const availableClasses = selectedDepartment 
     ? departments.find(d => d.name === selectedDepartment)?.classes || []
     : [];
+
+  // Obtener las clases disponibles para el departamento en edición
+  const editAvailableClasses = editDepartment 
+    ? departments.find(d => d.name === editDepartment)?.classes || []
+    : [];
+
+  // Verificar si el departamento en edición tiene clases
+  const editDepartmentHasClasses = editAvailableClasses.length > 0;
 
   // Obtener estudiantes filtrados
   const { data: students = [], isLoading, refetch } = useQuery({
@@ -313,6 +325,13 @@ const ListarAlumnos = () => {
     setSelectedClass(value);
   };
 
+  // Manejar cambio de departamento en edición
+  const handleEditDepartmentChange = (value: string) => {
+    setEditDepartment(value as DepartmentType);
+    // Al cambiar el departamento, reiniciar la clase
+    form.setValue("assigned_class", "");
+  };
+
   // Función para abrir modal de edición
   const handleEditStudent = (student: Student) => {
     console.log("Editando estudiante:", student);
@@ -337,7 +356,8 @@ const ListarAlumnos = () => {
     const updatedData = {
       ...data,
       phone: formattedPhone,
-      department: data.department as DepartmentType // Asegurar que sea tratado como DepartmentType
+      department: data.department as DepartmentType, // Asegurar que sea tratado como DepartmentType
+      assigned_class: data.assigned_class || null // Si no hay clase, establecer como null
     };
     
     console.log("Datos a actualizar:", updatedData);
@@ -773,14 +793,15 @@ const ListarAlumnos = () => {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="department">Departamento</Label>
                   <Select 
-                    defaultValue={form.getValues("department")}
+                    value={form.getValues("department")}
                     onValueChange={(value) => {
-                      // Asegurar que el valor se trate como DepartmentType
+                      // Actualizar el departamento en el formulario y el estado local
                       form.setValue("department", value as DepartmentType);
+                      handleEditDepartmentChange(value);
                     }}
                   >
                     <SelectTrigger>
@@ -796,14 +817,28 @@ const ListarAlumnos = () => {
                   </Select>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="assigned_class">Clase</Label>
-                  <Input 
-                    id="assigned_class"
-                    {...form.register("assigned_class")}
-                    placeholder="Clase"
-                  />
-                </div>
+                {editDepartmentHasClasses && (
+                  <div className="space-y-2">
+                    <Label htmlFor="assigned_class">Clase</Label>
+                    <Select
+                      value={form.getValues("assigned_class") || undefined}
+                      onValueChange={(value) => {
+                        form.setValue("assigned_class", value);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar clase" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {editAvailableClasses.map((className) => (
+                          <SelectItem key={className} value={className}>
+                            {className}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </div>
             
