@@ -568,11 +568,6 @@ const ListarAlumnos = () => {
                           </CollapsibleTrigger>
                         </div>
   
-                        {/* Edad */}
-                        <div className="flex items-center justify-center">
-                          {calculateAge(student.birthdate)} años
-                        </div>
-  
                         {/* Teléfono */}
                         <div className="flex items-center justify-center">
                           {formatPhoneDisplay(student.phone)}
