@@ -558,26 +558,34 @@ const ListarAlumnos = () => {
                 >
                   <TableRow>
                     <TableCell className="p-0 w-full">
-                      <div className="grid grid-cols-[1fr,auto,auto] items-center gap-4 p-4 w-full">
-                        <div className="min-w-[150px]">
+                      <div className="grid grid-cols-[200px_1fr_1fr_1fr] gap-4 p-4 w-full">
+                        {/* Nombre del alumno con ancho fijo */}
+                        <div className="flex items-center">
                           <CollapsibleTrigger asChild>
-                            <button className="font-medium hover:underline text-left w-full">
+                            <button className="font-medium hover:underline text-left w-full truncate">
                               {student.name}
                             </button>
                           </CollapsibleTrigger>
                         </div>
-                        <div className="text-muted-foreground text-right whitespace-nowrap">
-                          {calculateAge(student.birthdate)}
+  
+                        {/* Edad */}
+                        <div className="flex items-center justify-center">
+                          {calculateAge(student.birthdate)} años
                         </div>
-                        <div className="flex items-center justify-end gap-2 shrink-0">
-                          <span className="text-muted-foreground text-right hidden md:block whitespace-nowrap">
-                            {formatPhoneDisplay(student.phone)}
-                          </span>
+  
+                        {/* Teléfono */}
+                        <div className="flex items-center justify-center">
+                          {formatPhoneDisplay(student.phone)}
+                        </div>
+  
+                        {/* Acciones */}
+                        <div className="flex items-center justify-end">
                           {renderActions(student)}
                         </div>
                       </div>
                     </TableCell>
                   </TableRow>
+  
                   <CollapsibleContent>
                     <TableRow>
                       <TableCell className="p-0 w-full">
@@ -589,7 +597,7 @@ const ListarAlumnos = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-6">
+                <TableCell colSpan={4} className="text-center py-6">
                   No hay alumnos para mostrar en esta categoría
                 </TableCell>
               </TableRow>
@@ -599,7 +607,8 @@ const ListarAlumnos = () => {
       </div>
     </Card>
   );
-
+  
+  
   // Renderizar filtros solo para admin/secretaria
   const renderFilters = () => {
     if (!isAdminOrSecretaria) return null;
