@@ -67,7 +67,31 @@ const ListarAlumnos = () => {
 
   const handleWhatsAppClick = (phone: string) => {
     if (!phone) return;
-    const formattedPhone = phone.replace(/\D/g, "");
+    
+    // Eliminar todos los caracteres que no sean dígitos
+    let formattedPhone = phone.replace(/\D/g, "");
+    
+    // Verificar si el número ya tiene el código de país
+    if (!formattedPhone.startsWith("54")) {
+      // Si el número comienza con 0, eliminar ese 0 inicial
+      if (formattedPhone.startsWith("0")) {
+        formattedPhone = formattedPhone.substring(1);
+      }
+      
+      // Si el número comienza con 15 (prefijo de celular argentino), reacomodarlo
+      if (formattedPhone.startsWith("15")) {
+        formattedPhone = formattedPhone.substring(2);
+        // Agregar el prefijo de Argentina y el 9 para celulares
+        formattedPhone = "549" + formattedPhone;
+      } else {
+        // Si no comienza con 15, agregar el código de país de Argentina
+        formattedPhone = "54" + formattedPhone;
+      }
+    }
+    
+    // Imprimir el número formateado en la consola para depuración
+    console.log("Número de WhatsApp formateado:", formattedPhone);
+    
     window.open(`https://wa.me/${formattedPhone}`, "_blank");
   };
 
