@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { getEvents } from "@/lib/api";
+import { getEvents, deleteEvent } from "@/lib/api";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -10,16 +10,27 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format, isBefore, startOfDay, isSameMonth, isAfter, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, Trash2 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { useToast } from "@/components/ui/use-toast";
 import { createEvent, updateEvent } from "@/lib/api";
@@ -30,6 +41,8 @@ export default function Calendario() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [currentMonthEvents, setCurrentMonthEvents] = useState<Event[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const { toast } = useToast();
 
   const { data: events = [], isLoading, refetch } = useQuery({
@@ -90,6 +103,34 @@ export default function Calendario() {
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
     setDialogOpen(true);
+  };
+
+  const handleDeleteClick = (event: Event, e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar que se abra el diálogo de edición
+    setEventToDelete(event);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!eventToDelete) return;
+    
+    try {
+      await deleteEvent(eventToDelete.id);
+      await refetch();
+      toast({
+        title: "Evento eliminado",
+        description: "El evento se ha eliminado exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el evento.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setEventToDelete(null);
+    }
   };
 
   const modifiers = {
@@ -162,6 +203,19 @@ export default function Calendario() {
                 onSubmit={handleCreateEvent} 
                 initialData={selectedEvent || undefined}
               />
+              {selectedEvent && (
+                <DialogFooter className="mt-4 flex justify-between">
+                  <Button 
+                    variant="destructive" 
+                    type="button"
+                    onClick={(e) => handleDeleteClick(selectedEvent, e)}
+                    className="flex items-center"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar Evento
+                  </Button>
+                </DialogFooter>
+              )}
             </DialogContent>
           </Dialog>
         </CardHeader>
@@ -216,7 +270,17 @@ export default function Calendario() {
                                   }`}
                                   onClick={() => handleEventClick(event)}
                                 >
-                                  <h4 className="font-semibold">{event.title}</h4>
+                                  <div className="flex justify-between items-center">
+                                    <h4 className="font-semibold">{event.title}</h4>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      className="h-7 w-7 p-0" 
+                                      onClick={(e) => handleDeleteClick(event, e)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
+                                    </Button>
+                                  </div>
                                   <p className="text-sm text-muted-foreground">{event.description}</p>
                                 </div>
                               );
@@ -238,13 +302,23 @@ export default function Calendario() {
                   currentMonthEvents.map((event) => (
                     <div 
                       key={event.id} 
-                      className={`flex items-center gap-2 p-2 rounded-md cursor-pointer ${getEventCardStyle(event.date)}`}
+                      className={`flex items-center justify-between p-2 rounded-md cursor-pointer ${getEventCardStyle(event.date)}`}
                       onClick={() => handleEventClick(event)}
                     >
-                      <span className="font-medium">
-                        {format(new Date(event.date), 'dd/MM')}
-                      </span>
-                      <span>{event.title}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {format(new Date(event.date), 'dd/MM')}
+                        </span>
+                        <span>{event.title}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-7 w-7 p-0" 
+                        onClick={(e) => handleDeleteClick(event, e)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
+                      </Button>
                     </div>
                   ))
                 ) : (
@@ -255,6 +329,27 @@ export default function Calendario() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Diálogo de confirmación para eliminar */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar eliminación</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
