@@ -182,26 +182,23 @@ const ListarAlumnos = () => {
           <MessageSquare className="h-4 w-4" />
           {isMobile && <span className="ml-2">WhatsApp</span>}
         </Button>
-        {isAdminOrSecretaria && (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              title="Editar alumno"
-            >
-              <Pencil className="h-4 w-4" />
-              {isMobile && <span className="ml-2">Editar</span>}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              title="Eliminar alumno"
-            >
-              <Trash2 className="h-4 w-4" />
-              {isMobile && <span className="ml-2">Eliminar</span>}
-            </Button>
-          </>
-        )}
+        {/* Ahora todos los roles pueden editar y eliminar alumnos de su departamento */}
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Editar alumno"
+        >
+          <Pencil className="h-4 w-4" />
+          {isMobile && <span className="ml-2">Editar</span>}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Eliminar alumno"
+        >
+          <Trash2 className="h-4 w-4" />
+          {isMobile && <span className="ml-2">Eliminar</span>}
+        </Button>
       </>
     );
 
@@ -218,18 +215,15 @@ const ListarAlumnos = () => {
               <MessageSquare className="h-4 w-4 mr-2" />
               WhatsApp
             </DropdownMenuItem>
-            {isAdminOrSecretaria && (
-              <>
-                <DropdownMenuItem>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Editar
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Eliminar
-                </DropdownMenuItem>
-              </>
-            )}
+            {/* Menú actualizado para mostrar opciones de edición/eliminación para todos los roles */}
+            <DropdownMenuItem>
+              <Pencil className="h-4 w-4 mr-2" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
