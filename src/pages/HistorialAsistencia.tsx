@@ -5,17 +5,17 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
-import { getAttendance, getDepartmentByName } from "@/lib/api";
-import { Download, Search, UserCheck, UserX } from "lucide-react";
+import { getAttendance, getDepartmentByName, markAttendance } from "@/lib/api";
+import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { useAuth } from "@/contexts/AuthContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { DepartmentType } from "@/types/database";
+import { DepartmentType, Attendance } from "@/types/database";
+import { useToast } from "@/hooks/use-toast";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -42,9 +42,16 @@ const HistorialAsistencia = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { profile } = useAuth();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editDate, setEditDate] = useState<Date>(new Date());
+  const [editDateOpen, setEditDateOpen] = useState(false);
+  const [editRecords, setEditRecords] = useState<Attendance[]>([]);
+  const [savingAttendance, setSavingAttendance] = useState(false);
   
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
@@ -122,6 +129,76 @@ const HistorialAsistencia = () => {
     },
   });
 
+  const { data: dateAttendance = [], isLoading: dateAttendanceLoading, refetch: refetchDateAttendance } = useQuery({
+    queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", selectedDepartment],
+    queryFn: async () => {
+      if (!editDate) return [];
+      
+      const formattedDate = format(editDate, "yyyy-MM-dd");
+      console.log("Fetching attendance for edit mode:", { formattedDate, selectedDepartment });
+      const departmentToUse = isAdminOrSecretaria ? (selectedDepartment === "all" ? "" : selectedDepartment) : userDepartment || "";
+      return getAttendance(formattedDate, formattedDate, departmentToUse);
+    },
+    enabled: isEditMode && !!editDate
+  });
+
+  useEffect(() => {
+    if (isEditMode && dateAttendance.length > 0) {
+      setEditRecords([...dateAttendance]);
+    }
+  }, [dateAttendance, isEditMode]);
+
+  const handleEditDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setEditDate(date);
+      setEditDateOpen(false);
+      refetchDateAttendance();
+    }
+  };
+
+  const toggleAttendanceStatus = (id: string) => {
+    setEditRecords(prev => 
+      prev.map(record => 
+        record.id === id 
+          ? { ...record, status: !record.status } 
+          : record
+      )
+    );
+  };
+
+  const saveAttendanceChanges = async () => {
+    setSavingAttendance(true);
+    try {
+      const promises = editRecords.map(record => 
+        markAttendance({
+          student_id: record.student_id,
+          date: record.date,
+          status: record.status,
+          ...(record.event_id && { event_id: record.event_id })
+        })
+      );
+      
+      await Promise.all(promises);
+      
+      toast({
+        title: "Asistencia actualizada",
+        description: "Los cambios han sido guardados exitosamente.",
+      });
+      
+      setIsEditMode(false);
+      refetchDateAttendance();
+    } catch (error) {
+      console.error("Error saving attendance changes:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron guardar los cambios. Por favor, inténtelo nuevamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setSavingAttendance(false);
+    }
+  };
+
   const filteredAttendance = attendance.filter(record => {
     if (!record.students) return false;
 
@@ -163,158 +240,221 @@ const HistorialAsistencia = () => {
     return format(date, "dd/MM/yyyy");
   };
 
+  const enterEditMode = () => {
+    setIsEditMode(true);
+    setEditDate(new Date());
+    setEditDateOpen(true);
+  };
+
+  const exitEditMode = () => {
+    setIsEditMode(false);
+    setEditRecords([]);
+  };
+
   return (
     <div className="p-2 sm:p-4 md:p-6">
       <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-[300px_1fr]">
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Filtros</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                {isAdminOrSecretaria && (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Departamento</label>
-                      <Select value={selectedDepartment} onValueChange={(value) => {
-                        setSelectedDepartment(value);
-                        setSelectedClass("all");
-                      }}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Seleccionar departamento" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos</SelectItem>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept.value} value={dept.value}>
-                              {dept.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Clase</label>
-                      <Select 
-                        value={selectedClass} 
-                        onValueChange={setSelectedClass}
-                        disabled={selectedDepartment === "all"}
+          {isEditMode ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl">Editar Asistencia</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Seleccionar Fecha</label>
+                  <Popover open={editDateOpen} onOpenChange={setEditDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !editDate && "text-muted-foreground"
+                        )}
                       >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Seleccionar clase" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas</SelectItem>
-                          {availableClasses.map((className) => (
-                            <SelectItem key={className} value={className}>
-                              {className}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Período</label>
-                  <Select value={selectedRange} onValueChange={handleDateRangeChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleccionar período" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dateRangeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editDate ? format(editDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={editDate}
+                        onSelect={handleEditDateSelect}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
+                
+                <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={exitEditMode}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    className="w-full"
+                    onClick={saveAttendanceChanges}
+                    disabled={savingAttendance || editRecords.length === 0}
+                  >
+                    {savingAttendance ? "Guardando..." : "Guardar Cambios"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl">Filtros</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  {isAdminOrSecretaria && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Departamento</label>
+                        <Select value={selectedDepartment} onValueChange={(value) => {
+                          setSelectedDepartment(value);
+                          setSelectedClass("all");
+                        }}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Seleccionar departamento" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            {departments.map((dept) => (
+                              <SelectItem key={dept.value} value={dept.value}>
+                                {dept.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                {selectedRange === "custom" && (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Fecha Inicio</label>
-                      <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !startDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {startDate ? format(startDate, "dd/MM/yyyy") : "Seleccionar fecha"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={startDate}
-                            onSelect={handleStartDateSelect}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Fecha Fin</label>
-                      <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !endDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {endDate ? format(endDate, "dd/MM/yyyy") : "Seleccionar fecha"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={endDate}
-                            onSelect={handleEndDateSelect}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </>
-                )}
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Clase</label>
+                        <Select 
+                          value={selectedClass} 
+                          onValueChange={setSelectedClass}
+                          disabled={selectedDepartment === "all"}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Seleccionar clase" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas</SelectItem>
+                            {availableClasses.map((className) => (
+                              <SelectItem key={className} value={className}>
+                                {className}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
 
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Buscar por nombre</label>
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Nombre del alumno"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-8"
-                      disabled={attendance.length === 0}
-                    />
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Período</label>
+                    <Select value={selectedRange} onValueChange={handleDateRangeChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccionar período" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dateRangeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedRange === "custom" && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Fecha Inicio</label>
+                        <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !startDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {startDate ? format(startDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={startDate}
+                              onSelect={handleStartDateSelect}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Fecha Fin</label>
+                        <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !endDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {endDate ? format(endDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={endDate}
+                              onSelect={handleEndDateSelect}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Buscar por nombre</label>
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Nombre del alumno"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-8"
+                        disabled={attendance.length === 0}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="p-4">
             <div className="flex justify-between items-center gap-4">
               <div className="flex items-center gap-2">
                 <UserCheck className="h-5 w-5 text-green-500" />
-                <span>Presentes: {attendanceStats.present}</span>
+                <span>Presentes: {isEditMode ? editRecords.filter(r => r.status).length : attendanceStats.present}</span>
               </div>
               <div className="flex items-center gap-2">
                 <UserX className="h-5 w-5 text-red-500" />
-                <span>Ausentes: {attendanceStats.absent}</span>
+                <span>Ausentes: {isEditMode ? editRecords.filter(r => !r.status).length : attendanceStats.absent}</span>
               </div>
             </div>
           </Card>
@@ -323,57 +463,121 @@ const HistorialAsistencia = () => {
         <Card>
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle className="text-lg md:text-xl">
-              Asistencia del {format(startDate, "dd/MM/yyyy")} al {format(endDate, "dd/MM/yyyy")}
+              {isEditMode 
+                ? `Editar Asistencia del ${format(editDate, "dd/MM/yyyy")}` 
+                : `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`}
             </CardTitle>
-            {isAdminOrSecretaria && (
-              <Button onClick={handleExportToExcel} disabled={!filteredAttendance.length} className="w-full sm:w-auto">
-                <Download className="mr-2 h-4 w-4" />
-                Exportar Excel
-              </Button>
-            )}
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
+              {isAdminOrSecretaria && !isEditMode && (
+                <Button onClick={enterEditMode} className="w-full sm:w-auto">
+                  <PenSquare className="mr-2 h-4 w-4" />
+                  Editar Asistencia
+                </Button>
+              )}
+              {isAdminOrSecretaria && !isEditMode && (
+                <Button onClick={handleExportToExcel} disabled={!filteredAttendance.length} className="w-full sm:w-auto">
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar Excel
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            {attendanceLoading ? (
-              <p className="text-muted-foreground">Cargando...</p>
-            ) : !filteredAttendance?.length ? (
-              <p className="text-muted-foreground">No hay registros de asistencia para este período.</p>
+            {isEditMode ? (
+              dateAttendanceLoading ? (
+                <p className="text-muted-foreground">Cargando...</p>
+              ) : !editRecords?.length ? (
+                <p className="text-muted-foreground">No hay registros de asistencia para esta fecha.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {editRecords.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-medium">{record.students?.name}</TableCell>
+                          <TableCell>
+                            <span className={`flex items-center gap-2 ${record.status ? "text-green-500" : "text-red-500"}`}>
+                              {record.status ? (
+                                <UserCheck className="h-4 w-4" />
+                              ) : (
+                                <UserX className="h-4 w-4" />
+                              )}
+                              {record.status ? "Presente" : "Ausente"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant={record.status ? "destructive" : "default"}
+                              size="sm"
+                              onClick={() => toggleAttendanceStatus(record.id)}
+                            >
+                              {record.status ? (
+                                <>
+                                  <X className="h-3 w-3 mr-1" /> Marcar Ausente
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="h-3 w-3 mr-1" /> Marcar Presente
+                                </>
+                              )}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      {!isMobile && (
-                        <>
-                          <TableHead>Departamento</TableHead>
-                          <TableHead>Clase</TableHead>
-                        </>
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAttendance.map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-medium">{record.students?.name}</TableCell>
-                        <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
-                        <TableCell>{adjustDateForDisplay(record.date)}</TableCell>
+              attendanceLoading ? (
+                <p className="text-muted-foreground">Cargando...</p>
+              ) : !filteredAttendance?.length ? (
+                <p className="text-muted-foreground">No hay registros de asistencia para este período.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Fecha</TableHead>
                         {!isMobile && (
                           <>
-                            <TableCell className="capitalize">
-                              {record.department?.replace(/_/g, ' ')}
-                            </TableCell>
-                            <TableCell>
-                              {record.assigned_class || 'Sin asignar'}
-                            </TableCell>
+                            <TableHead>Departamento</TableHead>
+                            <TableHead>Clase</TableHead>
                           </>
                         )}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAttendance.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-medium">{record.students?.name}</TableCell>
+                          <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
+                          <TableCell>{adjustDateForDisplay(record.date)}</TableCell>
+                          {!isMobile && (
+                            <>
+                              <TableCell className="capitalize">
+                                {record.department?.replace(/_/g, ' ')}
+                              </TableCell>
+                              <TableCell>
+                                {record.assigned_class || 'Sin asignar'}
+                              </TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )
             )}
           </CardContent>
         </Card>
