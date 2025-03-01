@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { getAttendance, getDepartmentByName } from "@/lib/api";
@@ -72,15 +72,33 @@ const HistorialAsistencia = () => {
         setEndDate(today);
         break;
       case "custom":
-        // Mantener las fechas actuales para el rango personalizado
         break;
+    }
+  };
+
+  const handleStartDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setStartDate(date);
+      
+      if (date > endDate) {
+        setEndDate(date);
+      }
+    }
+  };
+
+  const handleEndDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setEndDate(date);
+      
+      if (date < startDate) {
+        setStartDate(date);
+      }
     }
   };
 
   const { data: attendance = [], isLoading: attendanceLoading } = useQuery({
     queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment],
     queryFn: async () => {
-      // Asegurarnos de que la fecha de inicio no sea posterior a la fecha de fin
       const actualStartDate = startDate > endDate ? endDate : startDate;
       const actualEndDate = endDate < startDate ? startDate : endDate;
 
@@ -226,7 +244,7 @@ const HistorialAsistencia = () => {
                           <Calendar
                             mode="single"
                             selected={startDate}
-                            onSelect={(date) => date && setStartDate(date)}
+                            onSelect={handleStartDateSelect}
                             initialFocus
                           />
                         </PopoverContent>
@@ -251,7 +269,7 @@ const HistorialAsistencia = () => {
                           <Calendar
                             mode="single"
                             selected={endDate}
-                            onSelect={(date) => date && setEndDate(date)}
+                            onSelect={handleEndDateSelect}
                             initialFocus
                           />
                         </PopoverContent>
