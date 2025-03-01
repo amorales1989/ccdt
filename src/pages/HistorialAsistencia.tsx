@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { getAttendance, getDepartmentByName } from "@/lib/api";
@@ -42,7 +42,10 @@ const HistorialAsistencia = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { profile } = useAuth();
   const isMobile = useIsMobile();
-
+  
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
+  
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
 
@@ -83,6 +86,12 @@ const HistorialAsistencia = () => {
       if (date > endDate) {
         setEndDate(date);
       }
+      
+      setStartDateOpen(false);
+      
+      setTimeout(() => {
+        setEndDateOpen(true);
+      }, 100);
     }
   };
 
@@ -93,6 +102,8 @@ const HistorialAsistencia = () => {
       if (date < startDate) {
         setStartDate(date);
       }
+      
+      setEndDateOpen(false);
     }
   };
 
@@ -227,7 +238,7 @@ const HistorialAsistencia = () => {
                   <>
                     <div>
                       <label className="text-sm font-medium mb-2 block">Fecha Inicio</label>
-                      <Popover>
+                      <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant={"outline"}
@@ -252,7 +263,7 @@ const HistorialAsistencia = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-2 block">Fecha Fin</label>
-                      <Popover>
+                      <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant={"outline"}
