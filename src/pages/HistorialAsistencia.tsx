@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DepartmentType, Attendance } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -55,6 +57,7 @@ const HistorialAsistencia = () => {
   
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
+  const userClass = profile?.assigned_class;
 
   const { data: departmentData } = useQuery({
     queryKey: ['department', selectedDepartment],
@@ -129,15 +132,58 @@ const HistorialAsistencia = () => {
     },
   });
 
+  // Modified to fetch attendance for edit mode based on user role
   const { data: dateAttendance = [], isLoading: dateAttendanceLoading, refetch: refetchDateAttendance } = useQuery({
-    queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", selectedDepartment],
+    queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", selectedDepartment, userDepartment, userClass],
     queryFn: async () => {
       if (!editDate) return [];
       
       const formattedDate = format(editDate, "yyyy-MM-dd");
-      console.log("Fetching attendance for edit mode:", { formattedDate, selectedDepartment });
-      const departmentToUse = isAdminOrSecretaria ? (selectedDepartment === "all" ? "" : selectedDepartment) : userDepartment || "";
-      return getAttendance(formattedDate, formattedDate, departmentToUse);
+      console.log("Fetching attendance for edit mode:", { formattedDate, selectedDepartment, userDepartment, userClass });
+      
+      let query = supabase
+        .from("attendance")
+        .select(`
+          *,
+          students (
+            id,
+            name,
+            department,
+            assigned_class
+          )
+        `)
+        .eq('date', formattedDate);
+      
+      if (isAdminOrSecretaria) {
+        // Admins and secretarias can filter by the selected department
+        if (selectedDepartment !== "all") {
+          query = query.eq('students.department', selectedDepartment);
+          
+          if (selectedClass !== "all") {
+            query = query.eq('students.assigned_class', selectedClass);
+          }
+        }
+      } else {
+        // Regular users can only see their assigned department and class
+        if (!userDepartment) {
+          return [];
+        }
+        
+        query = query.eq('students.department', userDepartment);
+        
+        if (userClass) {
+          query = query.eq('students.assigned_class', userClass);
+        }
+      }
+      
+      const { data, error } = await query.order('students.name');
+      
+      if (error) {
+        console.error('Error fetching attendance for edit:', error);
+        throw error;
+      }
+      
+      return data || [];
     },
     enabled: isEditMode && !!editDate
   });
@@ -468,7 +514,7 @@ const HistorialAsistencia = () => {
                 : `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`}
             </CardTitle>
             <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
-              {isAdminOrSecretaria && !isEditMode && (
+              {!isEditMode && (
                 <Button onClick={enterEditMode} className="w-full sm:w-auto">
                   <PenSquare className="mr-2 h-4 w-4" />
                   Editar Asistencia
@@ -487,7 +533,7 @@ const HistorialAsistencia = () => {
               dateAttendanceLoading ? (
                 <p className="text-muted-foreground">Cargando...</p>
               ) : !editRecords?.length ? (
-                <p className="text-muted-foreground">No hay registros de asistencia para esta fecha.</p>
+                <p className="text-muted-foreground">No hay registros de asistencia para esta fecha o no tienes acceso a ellos.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
