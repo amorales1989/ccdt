@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
 import { Department, DepartmentType } from "@/types/database";
@@ -210,12 +209,12 @@ const Departamentos = () => {
                     {classes.map((className, index) => (
                       <div
                         key={index}
-                        className="flex items-center gap-1 bg-secondary px-2 py-1 rounded"
+                        className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-white"
                       >
                         <span>{className}</span>
                         <button
                           onClick={() => handleRemoveClass(className)}
-                          className="text-muted-foreground hover:text-destructive"
+                          className="text-white/80 hover:text-destructive"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -255,7 +254,7 @@ const Departamentos = () => {
                         {department.classes.map((className, index) => (
                           <span
                             key={index}
-                            className="bg-secondary px-2 py-1 rounded text-sm"
+                            className="bg-secondary px-2 py-1 rounded text-sm text-white"
                           >
                             {className}
                           </span>
@@ -336,12 +335,12 @@ const Departamentos = () => {
                               {classes.map((className, index) => (
                                 <div
                                   key={index}
-                                  className="flex items-center gap-1 bg-secondary px-2 py-1 rounded"
+                                  className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-white"
                                 >
                                   <span>{className}</span>
                                   <button
                                     onClick={() => handleRemoveClass(className)}
-                                    className="text-muted-foreground hover:text-destructive"
+                                    className="text-white/80 hover:text-destructive"
                                   >
                                     <X className="h-3 w-3" />
                                   </button>
