@@ -239,15 +239,14 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
     }
 
     // Check if there's an existing attendance record for this student and date
-    const { data: existingRecord, error: existingError } = await supabase
+    const { data: existingRecords, error: existingError } = await supabase
       .from('attendance')
       .select('id')
       .eq('student_id', attendance.student_id)
-      .eq('date', attendance.date)
-      .maybeSingle();
+      .eq('date', attendance.date);
 
     if (existingError) {
-      console.error('Error checking for existing attendance record:', existingError);
+      console.error('Error checking for existing attendance records:', existingError);
       throw existingError;
     }
 
@@ -262,15 +261,34 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
 
     let result;
     
-    if (existingRecord) {
-      console.log('Found existing attendance record, updating:', existingRecord.id);
-      // Update the existing record
+    if (existingRecords && existingRecords.length > 0) {
+      console.log(`Found ${existingRecords.length} existing attendance record(s), updating:`, existingRecords[0].id);
+      // Update the first existing record and delete any others
+      
+      // First, delete any duplicate records except the first one
+      if (existingRecords.length > 1) {
+        const recordsToDelete = existingRecords.slice(1).map(r => r.id);
+        
+        const { error: deleteError } = await supabase
+          .from('attendance')
+          .delete()
+          .in('id', recordsToDelete);
+          
+        if (deleteError) {
+          console.error('Error deleting duplicate attendance records:', deleteError);
+          // Continue with the update even if deletion fails
+        } else {
+          console.log(`Deleted ${recordsToDelete.length} duplicate attendance records`);
+        }
+      }
+      
+      // Update the first record
       const { data, error } = await supabase
         .from('attendance')
         .update(attendanceData)
-        .eq('id', existingRecord.id)
+        .eq('id', existingRecords[0].id)
         .select()
-        .single();
+        .maybeSingle();
         
       if (error) {
         console.error('Error updating attendance:', error);
@@ -285,7 +303,7 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
         .from('attendance')
         .insert([attendanceData])
         .select()
-        .single();
+        .maybeSingle();
         
       if (error) {
         console.error('Error inserting attendance:', error);
