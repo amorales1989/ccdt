@@ -238,6 +238,19 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       throw error;
     }
 
+    // Check if there's an existing attendance record for this student and date
+    const { data: existingRecord, error: existingError } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('student_id', attendance.student_id)
+      .eq('date', attendance.date)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error('Error checking for existing attendance record:', existingError);
+      throw existingError;
+    }
+
     const attendanceData = {
       student_id: attendance.student_id,
       date: attendance.date,
@@ -247,21 +260,43 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       ...(attendance.event_id && { event_id: attendance.event_id })
     };
 
-    console.log('Upserting attendance record:', attendanceData);
-
-    const { data, error } = await supabase
-      .from("attendance")
-      .upsert([attendanceData])
-      .select()
-      .maybeSingle();
+    let result;
     
-    if (error) {
-      console.error('Error marking attendance:', error);
-      throw error;
+    if (existingRecord) {
+      console.log('Found existing attendance record, updating:', existingRecord.id);
+      // Update the existing record
+      const { data, error } = await supabase
+        .from('attendance')
+        .update(attendanceData)
+        .eq('id', existingRecord.id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error updating attendance:', error);
+        throw error;
+      }
+      
+      result = data;
+    } else {
+      console.log('No existing record found, creating new attendance record');
+      // Create a new record
+      const { data, error } = await supabase
+        .from('attendance')
+        .insert([attendanceData])
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error inserting attendance:', error);
+        throw error;
+      }
+      
+      result = data;
     }
     
-    console.log('Successfully marked attendance:', data);
-    return data;
+    console.log('Successfully marked attendance:', result);
+    return result;
   } catch (error) {
     console.error('Error in markAttendance:', error);
     throw error;

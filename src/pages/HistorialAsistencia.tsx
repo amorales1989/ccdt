@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,7 +65,6 @@ const HistorialAsistencia = () => {
 
   const availableClasses = departmentData?.classes || [];
 
-  // Set department and class filters based on user role when component mounts
   useEffect(() => {
     if (!isAdminOrSecretaria && userDepartment) {
       setSelectedDepartment(userDepartment);
@@ -149,19 +147,16 @@ const HistorialAsistencia = () => {
       const formattedDate = format(editDate, "yyyy-MM-dd");
       console.log("Fetching attendance for edit mode:", { formattedDate, department: isAdminOrSecretaria ? selectedDepartment : userDepartment, class: isAdminOrSecretaria ? selectedClass : userClass });
       
-      // For non-admin/secretaria users, always use their department and class
       const departmentToUse = isAdminOrSecretaria 
         ? (selectedDepartment === "all" ? "" : selectedDepartment) 
         : userDepartment || "";
       
       const attendanceData = await getAttendance(formattedDate, formattedDate, departmentToUse);
       
-      // If user has a specific class assigned and is not admin/secretaria, filter for that class
       if (!isAdminOrSecretaria && userClass && attendanceData) {
         return attendanceData.filter(record => record.assigned_class === userClass);
       }
       
-      // If admin/secretaria selected a specific class, filter for that class
       if (isAdminOrSecretaria && selectedClass !== "all" && attendanceData) {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
       }
@@ -203,6 +198,8 @@ const HistorialAsistencia = () => {
           student_id: record.student_id,
           date: record.date,
           status: record.status,
+          department: record.department,
+          assigned_class: record.assigned_class,
           ...(record.event_id && { event_id: record.event_id })
         })
       );
