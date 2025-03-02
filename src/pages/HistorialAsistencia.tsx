@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -55,6 +56,7 @@ const HistorialAsistencia = () => {
   
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
+  const userClass = profile?.assigned_class;
 
   const { data: departmentData } = useQuery({
     queryKey: ['department', selectedDepartment],
@@ -63,6 +65,16 @@ const HistorialAsistencia = () => {
   });
 
   const availableClasses = departmentData?.classes || [];
+
+  // Set department and class filters based on user role when component mounts
+  useEffect(() => {
+    if (!isAdminOrSecretaria && userDepartment) {
+      setSelectedDepartment(userDepartment);
+      if (userClass) {
+        setSelectedClass(userClass);
+      }
+    }
+  }, [isAdminOrSecretaria, userDepartment, userClass]);
 
   const handleDateRangeChange = (value: string) => {
     setSelectedRange(value);
@@ -115,7 +127,7 @@ const HistorialAsistencia = () => {
   };
 
   const { data: attendance = [], isLoading: attendanceLoading } = useQuery({
-    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment],
+    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment, selectedClass],
     queryFn: async () => {
       const actualStartDate = startDate > endDate ? endDate : startDate;
       const actualEndDate = endDate < startDate ? startDate : endDate;
@@ -123,21 +135,38 @@ const HistorialAsistencia = () => {
       const formattedStartDate = format(actualStartDate, "yyyy-MM-dd");
       const formattedEndDate = format(actualEndDate, "yyyy-MM-dd");
       
-      console.log("Fetching attendance with params:", { formattedStartDate, formattedEndDate, selectedDepartment });
-      const departmentToUse = isAdminOrSecretaria ? (selectedDepartment === "all" ? "" : selectedDepartment) : userDepartment || "";
+      console.log("Fetching attendance with params:", { formattedStartDate, formattedEndDate, selectedDepartment, selectedClass });
+      const departmentToUse = selectedDepartment === "all" ? "" : selectedDepartment;
       return getAttendance(formattedStartDate, formattedEndDate, departmentToUse);
     },
   });
 
   const { data: dateAttendance = [], isLoading: dateAttendanceLoading, refetch: refetchDateAttendance } = useQuery({
-    queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", selectedDepartment],
+    queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", isAdminOrSecretaria ? selectedDepartment : userDepartment, isAdminOrSecretaria ? selectedClass : userClass],
     queryFn: async () => {
       if (!editDate) return [];
       
       const formattedDate = format(editDate, "yyyy-MM-dd");
-      console.log("Fetching attendance for edit mode:", { formattedDate, selectedDepartment });
-      const departmentToUse = isAdminOrSecretaria ? (selectedDepartment === "all" ? "" : selectedDepartment) : userDepartment || "";
-      return getAttendance(formattedDate, formattedDate, departmentToUse);
+      console.log("Fetching attendance for edit mode:", { formattedDate, department: isAdminOrSecretaria ? selectedDepartment : userDepartment, class: isAdminOrSecretaria ? selectedClass : userClass });
+      
+      // For non-admin/secretaria users, always use their department and class
+      const departmentToUse = isAdminOrSecretaria 
+        ? (selectedDepartment === "all" ? "" : selectedDepartment) 
+        : userDepartment || "";
+      
+      const attendanceData = await getAttendance(formattedDate, formattedDate, departmentToUse);
+      
+      // If user has a specific class assigned and is not admin/secretaria, filter for that class
+      if (!isAdminOrSecretaria && userClass && attendanceData) {
+        return attendanceData.filter(record => record.assigned_class === userClass);
+      }
+      
+      // If admin/secretaria selected a specific class, filter for that class
+      if (isAdminOrSecretaria && selectedClass !== "all" && attendanceData) {
+        return attendanceData.filter(record => record.assigned_class === selectedClass);
+      }
+      
+      return attendanceData;
     },
     enabled: isEditMode && !!editDate
   });
@@ -468,7 +497,7 @@ const HistorialAsistencia = () => {
                 : `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`}
             </CardTitle>
             <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
-              {isAdminOrSecretaria && !isEditMode && (
+              {!isEditMode && (
                 <Button onClick={enterEditMode} className="w-full sm:w-auto">
                   <PenSquare className="mr-2 h-4 w-4" />
                   Editar Asistencia
@@ -517,14 +546,15 @@ const HistorialAsistencia = () => {
                               variant={record.status ? "destructive" : "default"}
                               size="sm"
                               onClick={() => toggleAttendanceStatus(record.id)}
+                              className="whitespace-nowrap"
                             >
                               {record.status ? (
                                 <>
-                                  <X className="h-3 w-3 mr-1" /> Marcar Ausente
+                                  <X className="h-3 w-3 mr-1" /> {isMobile ? "Ausente" : "Marcar Ausente"}
                                 </>
                               ) : (
                                 <>
-                                  <Check className="h-3 w-3 mr-1" /> Marcar Presente
+                                  <Check className="h-3 w-3 mr-1" /> {isMobile ? "Presente" : "Marcar Presente"}
                                 </>
                               )}
                             </Button>
