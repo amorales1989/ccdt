@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -10,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, isBefore, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Event, DepartmentType } from "@/types/database";
+import { StudentSearch } from "@/components/StudentSearch";
 
 const Index = () => {
   const { toast } = useToast();
@@ -144,11 +146,15 @@ const Index = () => {
     deleteEventMutate(id);
   };
 
-  // Filtrar eventos futuros
+  // Filter future events
   const futureEvents = events.filter(event => !isBefore(new Date(event.date), startOfToday()));
 
   return (
     <div>
+      {isAdminOrSecretary && !studentsLoading && (
+        <StudentSearch students={students} />
+      )}
+      
       {renderStudentStats()}
 
       <Card>
