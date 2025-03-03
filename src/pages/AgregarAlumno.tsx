@@ -122,6 +122,7 @@ const AgregarAlumno = () => {
       toast({
         title: "Alumno agregado",
         description: "El alumno ha sido agregado exitosamente",
+        variant: "success",
       });
       navigate("/");
     } catch (error) {

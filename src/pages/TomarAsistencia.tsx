@@ -112,6 +112,7 @@ const TomarAsistencia = () => {
       toast({
         title: "Asistencia guardada",
         description: "La asistencia ha sido registrada exitosamente",
+        variant: "success",
       });
 
       setAsistencias({});
