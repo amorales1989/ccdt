@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +19,6 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // useEffect para verificar cuando el perfil se haya cargado completamente
   useEffect(() => {
     if (profile) {
       console.log("Perfil cargado correctamente:", profile);
@@ -86,7 +84,6 @@ export default function Auth() {
     return labels[dept] || dept;
   };
 
-  // Mostrar la vista del selector de departamento si el usuario tiene más de uno
   if (showDepartmentSelect) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4 -mt-16">
@@ -120,7 +117,6 @@ export default function Auth() {
     );
   }
 
-  // Vista de inicio de sesión cuando no hay que seleccionar departamento
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4 -mt-16">
       <Card className="w-full max-w-md">
