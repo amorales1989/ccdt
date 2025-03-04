@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +25,7 @@ const AgregarAlumno = () => {
     address: "",
     gender: "masculino",
     birthdate: "",
-    department: profile?.departments?.[0] || "" as DepartmentType,
+    department: profile?.departments?.[0] || "",
     assigned_class: profile?.assigned_class || "",
   });
 
@@ -206,7 +205,7 @@ const AgregarAlumno = () => {
                 onValueChange={(value) => {
                   setFormData({ 
                     ...formData, 
-                    department: value as DepartmentType,
+                    department: value,
                     assigned_class: "" // Reset class when department changes
                   });
                 }}

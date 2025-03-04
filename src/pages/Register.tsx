@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Department } from "@/types/database";
+import { Department, AppRole } from "@/types/database";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 

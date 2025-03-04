@@ -1,3 +1,4 @@
+
 export interface Student {
   id: string;
   name: string;
@@ -42,6 +43,7 @@ export interface Department {
   updated_at: string;
 }
 
+// Changed from enum to string type
 export type DepartmentType = string;
 
 export interface Profile {
