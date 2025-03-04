@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,7 @@ import { useState, useEffect } from "react";
 import { createStudent, getDepartments } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Student, Department, DepartmentType } from "@/types/database";
+import { Student, Department } from "@/types/database";
 import { useQuery } from "@tanstack/react-query";
 
 const AgregarAlumno = () => {
@@ -17,7 +18,7 @@ const AgregarAlumno = () => {
   const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Inicializar formData con los valores del perfil del usuario
+  // Inicializar formData con valores vacíos
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -25,8 +26,8 @@ const AgregarAlumno = () => {
     address: "",
     gender: "masculino",
     birthdate: "",
-    department: profile?.departments?.[0] || "",
-    assigned_class: profile?.assigned_class || "",
+    department: "",
+    assigned_class: "",
   });
 
   const { data: departments = [] } = useQuery({
@@ -40,23 +41,43 @@ const AgregarAlumno = () => {
     ? departments 
     : departments.filter(dept => profile?.departments?.includes(dept.name));
 
-  const availableClasses = formData.department
-    ? departments.find(d => d.name === formData.department)?.classes || []
-    : [];
+  // Find the department object that matches the selected department name
+  const selectedDepartment = departments.find(d => d.name === formData.department);
+  const availableClasses = selectedDepartment?.classes || [];
 
   // Verificar si el departamento seleccionado tiene clases
   const departmentHasClasses = availableClasses.length > 0;
 
   // Actualizar formData cuando el perfil esté disponible
   useEffect(() => {
-    if (profile?.departments?.[0]) {
-      setFormData(prev => ({
-        ...prev,
-        department: profile.departments[0],
-        assigned_class: profile.assigned_class || ""
-      }));
+    if (profile?.departments?.length) {
+      // Find the first department from the user's departments that exists in available departments
+      const userDepartment = profile.departments[0];
+      const matchingDept = departments.find(d => d.name === userDepartment);
+      
+      if (matchingDept) {
+        console.log("Setting department from profile:", userDepartment);
+        
+        setFormData(prev => {
+          const newFormData = {
+            ...prev,
+            department: userDepartment
+          };
+          
+          // If the user has an assigned class and it exists in the department classes
+          if (profile.assigned_class && matchingDept.classes.includes(profile.assigned_class)) {
+            console.log("Setting assigned class from profile:", profile.assigned_class);
+            newFormData.assigned_class = profile.assigned_class;
+          } else {
+            // Reset the assigned class if it's not valid for the selected department
+            newFormData.assigned_class = "";
+          }
+          
+          return newFormData;
+        });
+      }
     }
-  }, [profile]);
+  }, [profile, departments]);
 
   // Función para formatear el número de teléfono
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
@@ -150,6 +171,13 @@ const AgregarAlumno = () => {
     );
   }
 
+  // Debugging
+  console.log("Profile departments:", profile?.departments);
+  console.log("All departments:", departments);
+  console.log("Available departments:", availableDepartments);
+  console.log("Selected department:", formData.department);
+  console.log("Available classes:", availableClasses);
+
   return (
     <div className="p-6">
       <Card>
@@ -210,14 +238,14 @@ const AgregarAlumno = () => {
                   });
                 }}
                 required
-                disabled={!isAdminOrSecretaria}
+                disabled={!isAdminOrSecretaria && profile?.departments?.length === 1}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar departamento" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableDepartments.map((dept) => (
-                    <SelectItem key={dept.name} value={dept.name}>
+                    <SelectItem key={dept.id} value={dept.name}>
                       {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, " ")}
                     </SelectItem>
                   ))}
@@ -233,7 +261,7 @@ const AgregarAlumno = () => {
                     setFormData({ ...formData, assigned_class: value })
                   }
                   required
-                  disabled={!isAdminOrSecretaria}
+                  disabled={!isAdminOrSecretaria && profile?.assigned_class}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar clase" />

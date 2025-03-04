@@ -6,6 +6,8 @@ import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 // Students API
 export const getStudents = async () => {
   try {
+    console.log('Fetching all students');
+    
     const { data, error } = await supabase
       .from("students")
       .select("*");

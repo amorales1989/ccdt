@@ -11,6 +11,8 @@ interface StudentDetailsProps {
 
 export const StudentDetails = ({ student }: StudentDetailsProps) => {
   const formatDepartment = (dept: string) => {
+    if (!dept) return "No asignado";
+    // Convert department name to title case and replace underscores with spaces
     return dept.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
@@ -24,7 +26,7 @@ export const StudentDetails = ({ student }: StudentDetailsProps) => {
             <div className="space-y-3">
               <div>
                 <span className="font-medium">Departamento:</span>{" "}
-                {student.department ? formatDepartment(student.department) : "No asignado"}
+                {formatDepartment(student.department || "")}
               </div>
               
               {student.assigned_class && (
