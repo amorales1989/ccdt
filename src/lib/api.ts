@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance, Department, DepartmentType } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
@@ -375,7 +376,7 @@ export const getDepartment = async (id: string) => {
   }
 };
 
-export const getDepartmentByName = async (name: DepartmentType) => {
+export const getDepartmentByName = async (name: string) => {
   try {
     const { data, error } = await supabase
       .from("departments")
@@ -408,15 +409,20 @@ export const updateDepartment = async (id: string, updates: { description?: stri
   }
 };
 
-export const createDepartment = async (department: { name: DepartmentType; description?: string; classes: string[] }) => {
+export const createDepartment = async (department: { name: string; description?: string; classes: string[] }) => {
   try {
+    console.log('Creating department with data:', department);
     const { data, error } = await supabase
       .from("departments")
       .insert([department])
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating department:', error);
+      throw error;
+    }
+    console.log('Department created successfully:', data);
     return data;
   } catch (error) {
     console.error('Error in createDepartment:', error);

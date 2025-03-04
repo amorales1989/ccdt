@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Department, DepartmentType } from "@/types/database";
+import { Department } from "@/types/database";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -21,7 +20,7 @@ export default function Register() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<AppRole>("maestro");
-  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const { signUp } = useAuth();
@@ -169,7 +168,7 @@ export default function Register() {
               <Label htmlFor="department">Departamento</Label>
               <Select 
                 value={selectedDepartment || undefined}
-                onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
+                onValueChange={(value: string) => setSelectedDepartment(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un departamento" />

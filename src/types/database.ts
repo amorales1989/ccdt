@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   name: string;
@@ -6,7 +5,7 @@ export interface Student {
   address?: string;
   gender: string;
   birthdate?: string;
-  department?: DepartmentType;
+  department?: string;
   assigned_class?: string;
   created_at: string;
   updated_at: string;
@@ -27,7 +26,7 @@ export interface Attendance {
   event_id?: string;
   date: string;
   status: boolean;
-  department?: DepartmentType;
+  department?: string;
   assigned_class?: string;
   created_at: string;
   updated_at: string;
@@ -36,21 +35,21 @@ export interface Attendance {
 
 export interface Department {
   id: string;
-  name: DepartmentType;
+  name: string;
   description?: string;
   classes: string[];
   created_at: string;
   updated_at: string;
 }
 
-export type DepartmentType = "escuelita_central" | "pre_adolescentes" | "adolescentes" | "jovenes" | "jovenes_adultos" | "adultos";
+export type DepartmentType = string;
 
 export interface Profile {
   id: string;
   first_name: string;
   last_name: string;
   role: AppRole;
-  departments: DepartmentType[];
+  departments: string[];
   email?: string;
   assigned_class?: string;
 }
