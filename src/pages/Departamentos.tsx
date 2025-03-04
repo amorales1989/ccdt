@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
-import { Department, DepartmentType } from "@/types/database";
+import { Department } from "@/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash, Plus, X } from "lucide-react";
@@ -40,7 +40,7 @@ const Departamentos = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [name, setName] = useState<DepartmentType>("escuelita_central");
+  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
@@ -61,10 +61,11 @@ const Departamentos = () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
       toast({
         title: "Departamento creado",
-        description: "El departamento ha sido creado exitosamente"
+        description: "El departamento ha sido creado exitosamente",
+        variant: "success"
       });
       setIsCreating(false);
-      setName("escuelita_central");
+      setName("");
       setDescription("");
       setClasses([]);
     },
@@ -158,19 +159,13 @@ const Departamentos = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">Nombre</Label>
-                  <select
+                  <Input
                     id="name"
                     value={name}
-                    onChange={(e) => setName(e.target.value as DepartmentType)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    <option value="escuelita_central">Escuelita Central</option>
-                    <option value="pre_adolescentes">Pre Adolescentes</option>
-                    <option value="adolescentes">Adolescentes</option>
-                    <option value="jovenes">Jóvenes</option>
-                    <option value="jovenes_adultos">Jóvenes Adultos</option>
-                    <option value="adultos">Adultos</option>
-                  </select>
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nombre del departamento"
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="description">Descripción</Label>
@@ -225,15 +220,15 @@ const Departamentos = () => {
                 <Button
                   className="w-full"
                   onClick={() => {
-                    if (name) {
+                    if (name.trim()) {
                       createDepartmentMutation.mutate({
-                        name,
+                        name: name.trim(),
                         description: description.trim() || undefined,
                         classes
                       });
                     }
                   }}
-                  disabled={!name}
+                  disabled={!name.trim()}
                 >
                   Crear Departamento
                 </Button>
@@ -247,7 +242,7 @@ const Departamentos = () => {
               <Card key={department.id} className="p-4">
                 <div className="flex justify-between items-start">
                   <div className="space-y-2">
-                    <h3 className="font-semibold capitalize">{department.name}</h3>
+                    <h3 className="font-semibold">{department.name}</h3>
                     <p className="text-sm text-muted-foreground">{department.description || "Sin descripción"}</p>
                     {department.classes && department.classes.length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -276,11 +271,7 @@ const Departamentos = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            const departmentToEdit: Department = {
-                              ...department,
-                              name: department.name as DepartmentType
-                            };
-                            setSelectedDepartment(departmentToEdit);
+                            setSelectedDepartment(department);
                             setIsEditing(true);
                             setDescription(department.description || "");
                             setClasses(department.classes || []);
@@ -296,7 +287,7 @@ const Departamentos = () => {
                         <div className="space-y-4">
                           <div>
                             <Label htmlFor="name">Nombre</Label>
-                            <p className="text-sm text-muted-foreground capitalize">{department.name}</p>
+                            <p className="text-sm text-muted-foreground">{department.name}</p>
                           </div>
                           <div>
                             <Label htmlFor="description">Descripción</Label>
