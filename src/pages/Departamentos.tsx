@@ -1,6 +1,7 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
-import { Department } from "@/types/database";
+import { Department, DepartmentType } from "@/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash, Plus, X } from "lucide-react";
@@ -29,6 +30,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Departamentos = () => {
   const { toast } = useToast();
@@ -40,7 +48,7 @@ const Departamentos = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [name, setName] = useState("");
+  const [name, setName] = useState<DepartmentType>("escuelita_central");
   const [description, setDescription] = useState("");
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
@@ -65,7 +73,7 @@ const Departamentos = () => {
         variant: "success"
       });
       setIsCreating(false);
-      setName("");
+      setName("escuelita_central");
       setDescription("");
       setClasses([]);
     },
@@ -159,13 +167,22 @@ const Departamentos = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">Nombre</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Nombre del departamento"
-                    className="w-full"
-                  />
+                  <Select 
+                    value={name} 
+                    onValueChange={(value) => setName(value as DepartmentType)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccione un departamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="escuelita_central">Escuelita Central</SelectItem>
+                      <SelectItem value="pre_adolescentes">Pre Adolescentes</SelectItem>
+                      <SelectItem value="adolescentes">Adolescentes</SelectItem>
+                      <SelectItem value="jovenes">Jóvenes</SelectItem>
+                      <SelectItem value="jovenes_adultos">Jóvenes Adultos</SelectItem>
+                      <SelectItem value="adultos">Adultos</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="description">Descripción</Label>
@@ -220,15 +237,15 @@ const Departamentos = () => {
                 <Button
                   className="w-full"
                   onClick={() => {
-                    if (name.trim()) {
+                    if (name) {
                       createDepartmentMutation.mutate({
-                        name: name.trim(),
+                        name: name,
                         description: description.trim() || undefined,
                         classes
                       });
                     }
                   }}
-                  disabled={!name.trim()}
+                  disabled={!name}
                 >
                   Crear Departamento
                 </Button>
