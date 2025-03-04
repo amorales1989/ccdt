@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,9 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Department, AppRole } from "@/types/database";
+import { Department } from "@/types/database";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+// Use the AppRole from types/database.ts instead of creating a local type
+import { AppRole } from "@/types/database";
 
 export default function Register() {
   const [email, setEmail] = useState("");
