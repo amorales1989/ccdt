@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,7 +129,8 @@ const AgregarAlumno = () => {
       toast({
         title: "Alumno agregado",
         description: "El alumno ha sido agregado exitosamente",
-        variant: "success",
+        // Fix here: changing from string "success" to the correct type for variant
+        variant: "default",
       });
       navigate("/");
     } catch (error) {
