@@ -11,10 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Department } from "@/types/database";
+import { Department, DepartmentType } from "@/types/database";
 
-// Use the AppRole from types/database.ts instead of creating a local type
-import { AppRole } from "@/types/database";
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -22,7 +21,7 @@ export default function Register() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<AppRole>("maestro");
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const { signUp } = useAuth();
@@ -170,7 +169,7 @@ export default function Register() {
               <Label htmlFor="department">Departamento</Label>
               <Select 
                 value={selectedDepartment || undefined}
-                onValueChange={(value: string) => setSelectedDepartment(value)}
+                onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un departamento" />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,8 +13,8 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showDepartmentSelect, setShowDepartmentSelect] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
-  const [userDepartments, setUserDepartments] = useState<string[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<Database["public"]["Enums"]["department_type"] | null>(null);
+  const [userDepartments, setUserDepartments] = useState<Database["public"]["Enums"]["department_type"][]>([]);
   const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -69,7 +68,7 @@ export default function Auth() {
 
   const handleDepartmentSelect = (value: string) => {
     console.log("Departamento seleccionado:", value);
-    setSelectedDepartment(value);
+    setSelectedDepartment(value as Database["public"]["Enums"]["department_type"]);
     // Guardamos el departamento seleccionado en el almacenamiento local
     localStorage.setItem('selectedDepartment', value);
     navigate("/"); // Procedemos al login después de seleccionar el departamento

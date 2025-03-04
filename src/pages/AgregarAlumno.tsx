@@ -9,7 +9,7 @@ import { useState, useEffect } from "react";
 import { createStudent, getDepartments } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Student, Department } from "@/types/database";
+import { Student, Department, DepartmentType } from "@/types/database";
 import { useQuery } from "@tanstack/react-query";
 
 const AgregarAlumno = () => {
@@ -18,6 +18,7 @@ const AgregarAlumno = () => {
   const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
+  // Inicializar formData con los valores del perfil del usuario
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -25,8 +26,8 @@ const AgregarAlumno = () => {
     address: "",
     gender: "masculino",
     birthdate: "",
-    department: "",
-    assigned_class: "",
+    department: profile?.departments?.[0] || "" as DepartmentType,
+    assigned_class: profile?.assigned_class || "",
   });
 
   const { data: departments = [] } = useQuery({
@@ -40,51 +41,42 @@ const AgregarAlumno = () => {
     ? departments 
     : departments.filter(dept => profile?.departments?.includes(dept.name));
 
-  const selectedDepartment = departments.find(d => d.name === formData.department);
-  const availableClasses = selectedDepartment?.classes || [];
+  const availableClasses = formData.department
+    ? departments.find(d => d.name === formData.department)?.classes || []
+    : [];
 
+  // Verificar si el departamento seleccionado tiene clases
   const departmentHasClasses = availableClasses.length > 0;
 
+  // Actualizar formData cuando el perfil esté disponible
   useEffect(() => {
-    if (availableDepartments.length > 0 && !isAdminOrSecretaria && profile?.departments?.length) {
-      // For non-admin/secretaria users, set their department automatically
-      const userDepartment = profile.departments[0];
-      const matchingDept = departments.find(d => d.name === userDepartment);
-      
-      if (matchingDept) {
-        console.log("Setting department from profile:", userDepartment);
-        
-        setFormData(prev => {
-          const newFormData = {
-            ...prev,
-            department: userDepartment
-          };
-          
-          // If user has an assigned class that belongs to their department, set it
-          if (profile.assigned_class && matchingDept.classes.includes(profile.assigned_class)) {
-            console.log("Setting assigned class from profile:", profile.assigned_class);
-            newFormData.assigned_class = profile.assigned_class;
-          }
-          
-          return newFormData;
-        });
-      }
+    if (profile?.departments?.[0]) {
+      setFormData(prev => ({
+        ...prev,
+        department: profile.departments[0],
+        assigned_class: profile.assigned_class || ""
+      }));
     }
-  }, [profile, departments, isAdminOrSecretaria, availableDepartments]);
+  }, [profile]);
 
+  // Función para formatear el número de teléfono
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneNumber) return null;
 
+    // Eliminar todos los caracteres que no sean dígitos
     let cleanNumber = phoneNumber.replace(/\D/g, "");
     
+    // Si empieza con 0, quitarlo
     if (cleanNumber.startsWith("0")) {
       cleanNumber = cleanNumber.substring(1);
     }
     
+    // Si empieza con 15 (prefijo de celular argentino), quitarlo
     if (cleanNumber.startsWith("15")) {
       cleanNumber = cleanNumber.substring(2);
     }
     
+    // Si el código de país es Argentina (54), asegurarnos de agregar el 9 para celulares
     if (phoneCode === "54") {
       return phoneCode + "9" + cleanNumber;
     }
@@ -103,6 +95,7 @@ const AgregarAlumno = () => {
       return;
     }
 
+    // Solo validar clase si el departamento tiene clases disponibles
     if (departmentHasClasses && !formData.assigned_class) {
       toast({
         title: "Error",
@@ -129,8 +122,7 @@ const AgregarAlumno = () => {
       toast({
         title: "Alumno agregado",
         description: "El alumno ha sido agregado exitosamente",
-        // Fix type error: variant should be "default" not "success" (string)
-        variant: "default",
+        variant: "success",
       });
       navigate("/");
     } catch (error) {
@@ -158,12 +150,6 @@ const AgregarAlumno = () => {
       </div>
     );
   }
-
-  console.log("Profile departments:", profile?.departments);
-  console.log("All departments:", departments);
-  console.log("Available departments:", availableDepartments);
-  console.log("Selected department:", formData.department);
-  console.log("Available classes:", availableClasses);
 
   return (
     <div className="p-6">
@@ -220,19 +206,19 @@ const AgregarAlumno = () => {
                 onValueChange={(value) => {
                   setFormData({ 
                     ...formData, 
-                    department: value,
+                    department: value as DepartmentType,
                     assigned_class: "" // Reset class when department changes
                   });
                 }}
                 required
-                disabled={!isAdminOrSecretaria && profile?.departments?.length === 1}
+                disabled={!isAdminOrSecretaria}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar departamento" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableDepartments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.name}>
+                    <SelectItem key={dept.name} value={dept.name}>
                       {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, " ")}
                     </SelectItem>
                   ))}
@@ -248,7 +234,7 @@ const AgregarAlumno = () => {
                     setFormData({ ...formData, assigned_class: value })
                   }
                   required
-                  disabled={!isAdminOrSecretaria && profile?.assigned_class}
+                  disabled={!isAdminOrSecretaria}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar clase" />

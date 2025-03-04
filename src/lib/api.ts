@@ -1,29 +1,15 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance, Department, DepartmentType } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 // Students API
-export const getStudents = async (department?: string) => {
+export const getStudents = async () => {
   try {
-    console.log('Fetching students with params:', { department });
+    const { data, error } = await supabase
+      .from("students")
+      .select("*");
     
-    let query = supabase.from("students").select("*");
-    
-    // If department is specified, filter by it
-    if (department) {
-      console.log('Filtering students by department:', department);
-      query = query.eq('department', department);
-    }
-    
-    const { data, error } = await query;
-    
-    console.log('Fetching students result:', { 
-      count: data?.length, 
-      error, 
-      firstFew: data?.slice(0, 3) 
-    });
-    
+    console.log('Fetching students result:', { data, error });
     if (error) throw error;
     return data;
   } catch (error) {
@@ -389,7 +375,7 @@ export const getDepartment = async (id: string) => {
   }
 };
 
-export const getDepartmentByName = async (name: string) => {
+export const getDepartmentByName = async (name: DepartmentType) => {
   try {
     const { data, error } = await supabase
       .from("departments")
@@ -422,20 +408,15 @@ export const updateDepartment = async (id: string, updates: { description?: stri
   }
 };
 
-export const createDepartment = async (department: { name: string; description?: string; classes: string[] }) => {
+export const createDepartment = async (department: { name: DepartmentType; description?: string; classes: string[] }) => {
   try {
-    console.log('Creating department with data:', department);
     const { data, error } = await supabase
       .from("departments")
       .insert([department])
       .select()
       .single();
     
-    if (error) {
-      console.error('Error creating department:', error);
-      throw error;
-    }
-    console.log('Department created successfully:', data);
+    if (error) throw error;
     return data;
   } catch (error) {
     console.error('Error in createDepartment:', error);

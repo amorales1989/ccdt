@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,12 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
-import { Department, AppRole } from "@/types/database";
+import { Department } from "@/types/database";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2, Eye, EyeOff, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-type DepartmentType = string;
+type DepartmentType = Database["public"]["Enums"]["department_type"];
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 type Profile = {
   id: string;
@@ -41,11 +43,13 @@ const GestionUsuarios = () => {
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
+  // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
     return null;
   }
 
+  // Fetch departments
   const { data: departments = [] } = useQuery({
     queryKey: ['departments'],
     queryFn: async () => {
@@ -72,6 +76,7 @@ const GestionUsuarios = () => {
         throw error;
       }
 
+      // Get user data using admin API
       const { data: { users: adminUsersData }, error: adminError } = await supabase.functions.invoke('manage-users', {
         body: { action: 'list' }
       });
@@ -81,6 +86,7 @@ const GestionUsuarios = () => {
         throw adminError;
       }
 
+      // Map profiles with admin data
       const usersData = profiles.map(profile => {
         const adminData = adminUsersData.find((user: any) => user.id === profile.id);
         return {
@@ -94,24 +100,28 @@ const GestionUsuarios = () => {
     }
   });
 
+  // Update available classes when department changes
   useEffect(() => {
     if (selectedDepartment) {
       const department = departments.find(d => d.name === selectedDepartment);
       setAvailableClasses(department?.classes || []);
-      setSelectedClass("");
+      setSelectedClass(""); // Reset selected class when department changes
     } else {
       setAvailableClasses([]);
       setSelectedClass("");
     }
   }, [selectedDepartment, departments]);
 
+  // Actualizar la mutación updateUserMutation
   const updateUserMutation = useMutation({
     mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
+      // Encontrar el departamento seleccionado para obtener su tipo enum
       const selectedDepartmentObject = departments.find(d => d.name === selectedDepartment);
       if (!selectedDepartmentObject) {
         throw new Error("Departamento no válido");
       }
 
+      // Mapear el nombre del departamento al tipo enum correcto
       const departmentType = selectedDepartmentObject.name.toLowerCase() as DepartmentType;
 
       const updateData: any = {
@@ -134,12 +144,14 @@ const GestionUsuarios = () => {
         updateData.userData.password = updatedUser.newPassword;
       }
 
+      // Update user data using the edge function
       const { error: adminError } = await supabase.functions.invoke('manage-users', {
         body: updateData
       });
 
       if (adminError) throw adminError;
 
+      // Update profile data
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -199,6 +211,7 @@ const GestionUsuarios = () => {
     }
   });
 
+  // Filter users based on search term
   const filteredUsers = users.filter(user => {
     if (!searchTerm.trim()) return true;
     
