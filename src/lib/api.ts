@@ -4,15 +4,26 @@ import { Student, Event, Attendance, Department, DepartmentType } from "@/types/
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 // Students API
-export const getStudents = async () => {
+export const getStudents = async (department?: string) => {
   try {
-    console.log('Fetching all students');
+    console.log('Fetching students with params:', { department });
     
-    const { data, error } = await supabase
-      .from("students")
-      .select("*");
+    let query = supabase.from("students").select("*");
     
-    console.log('Fetching students result:', { data, error });
+    // If department is specified, filter by it
+    if (department) {
+      console.log('Filtering students by department:', department);
+      query = query.eq('department', department);
+    }
+    
+    const { data, error } = await query;
+    
+    console.log('Fetching students result:', { 
+      count: data?.length, 
+      error, 
+      firstFew: data?.slice(0, 3) 
+    });
+    
     if (error) throw error;
     return data;
   } catch (error) {

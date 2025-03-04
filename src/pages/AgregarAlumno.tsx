@@ -46,7 +46,8 @@ const AgregarAlumno = () => {
   const departmentHasClasses = availableClasses.length > 0;
 
   useEffect(() => {
-    if (profile?.departments?.length) {
+    if (availableDepartments.length > 0 && !isAdminOrSecretaria && profile?.departments?.length) {
+      // For non-admin/secretaria users, set their department automatically
       const userDepartment = profile.departments[0];
       const matchingDept = departments.find(d => d.name === userDepartment);
       
@@ -59,18 +60,17 @@ const AgregarAlumno = () => {
             department: userDepartment
           };
           
+          // If user has an assigned class that belongs to their department, set it
           if (profile.assigned_class && matchingDept.classes.includes(profile.assigned_class)) {
             console.log("Setting assigned class from profile:", profile.assigned_class);
             newFormData.assigned_class = profile.assigned_class;
-          } else {
-            newFormData.assigned_class = "";
           }
           
           return newFormData;
         });
       }
     }
-  }, [profile, departments]);
+  }, [profile, departments, isAdminOrSecretaria, availableDepartments]);
 
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneNumber) return null;
@@ -129,7 +129,7 @@ const AgregarAlumno = () => {
       toast({
         title: "Alumno agregado",
         description: "El alumno ha sido agregado exitosamente",
-        // Fix here: changing from string "success" to the correct type for variant
+        // Fix type error: variant should be "default" not "success" (string)
         variant: "default",
       });
       navigate("/");
