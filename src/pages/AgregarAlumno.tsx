@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +17,6 @@ const AgregarAlumno = () => {
   const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Inicializar formData con valores vacíos
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -41,17 +39,13 @@ const AgregarAlumno = () => {
     ? departments 
     : departments.filter(dept => profile?.departments?.includes(dept.name));
 
-  // Find the department object that matches the selected department name
   const selectedDepartment = departments.find(d => d.name === formData.department);
   const availableClasses = selectedDepartment?.classes || [];
 
-  // Verificar si el departamento seleccionado tiene clases
   const departmentHasClasses = availableClasses.length > 0;
 
-  // Actualizar formData cuando el perfil esté disponible
   useEffect(() => {
     if (profile?.departments?.length) {
-      // Find the first department from the user's departments that exists in available departments
       const userDepartment = profile.departments[0];
       const matchingDept = departments.find(d => d.name === userDepartment);
       
@@ -64,12 +58,10 @@ const AgregarAlumno = () => {
             department: userDepartment
           };
           
-          // If the user has an assigned class and it exists in the department classes
           if (profile.assigned_class && matchingDept.classes.includes(profile.assigned_class)) {
             console.log("Setting assigned class from profile:", profile.assigned_class);
             newFormData.assigned_class = profile.assigned_class;
           } else {
-            // Reset the assigned class if it's not valid for the selected department
             newFormData.assigned_class = "";
           }
           
@@ -79,24 +71,19 @@ const AgregarAlumno = () => {
     }
   }, [profile, departments]);
 
-  // Función para formatear el número de teléfono
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneNumber) return null;
 
-    // Eliminar todos los caracteres que no sean dígitos
     let cleanNumber = phoneNumber.replace(/\D/g, "");
     
-    // Si empieza con 0, quitarlo
     if (cleanNumber.startsWith("0")) {
       cleanNumber = cleanNumber.substring(1);
     }
     
-    // Si empieza con 15 (prefijo de celular argentino), quitarlo
     if (cleanNumber.startsWith("15")) {
       cleanNumber = cleanNumber.substring(2);
     }
     
-    // Si el código de país es Argentina (54), asegurarnos de agregar el 9 para celulares
     if (phoneCode === "54") {
       return phoneCode + "9" + cleanNumber;
     }
@@ -115,7 +102,6 @@ const AgregarAlumno = () => {
       return;
     }
 
-    // Solo validar clase si el departamento tiene clases disponibles
     if (departmentHasClasses && !formData.assigned_class) {
       toast({
         title: "Error",
@@ -171,7 +157,6 @@ const AgregarAlumno = () => {
     );
   }
 
-  // Debugging
   console.log("Profile departments:", profile?.departments);
   console.log("All departments:", departments);
   console.log("Available departments:", availableDepartments);
