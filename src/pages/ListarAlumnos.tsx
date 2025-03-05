@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -632,7 +633,7 @@ const ListarAlumnos = () => {
         </Table>
       </div>
     </Card>
-  };
+  );
 
   const renderFilters = () => {
     if (!isAdminOrSecretaria) return null;
