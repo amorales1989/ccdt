@@ -1,14 +1,14 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import type { DepartmentType, AppRole } from "@/types/database";
 
 type Profile = {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  role: Database["public"]["Enums"]["app_role"];
-  departments: Database["public"]["Enums"]["department_type"][] | null;
+  role: AppRole;
+  departments: DepartmentType[] | null;
   assigned_class: string | null;
 };
 
@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("Attempting sign up with data:", { email, ...userData });
     
     const formattedDepartments = userData.departments?.map(dept => 
-      dept as Database["public"]["Enums"]["department_type"]
+      dept as DepartmentType
     ) || [];
 
     const { error } = await supabase.auth.signUp({

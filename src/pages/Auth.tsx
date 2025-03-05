@@ -7,14 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
+import type { DepartmentType } from "@/types/database";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showDepartmentSelect, setShowDepartmentSelect] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<Database["public"]["Enums"]["department_type"] | null>(null);
-  const [userDepartments, setUserDepartments] = useState<Database["public"]["Enums"]["department_type"][]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
+  const [userDepartments, setUserDepartments] = useState<DepartmentType[]>([]);
   const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -68,7 +68,7 @@ export default function Auth() {
 
   const handleDepartmentSelect = (value: string) => {
     console.log("Departamento seleccionado:", value);
-    setSelectedDepartment(value as Database["public"]["Enums"]["department_type"]);
+    setSelectedDepartment(value as DepartmentType);
     // Guardamos el departamento seleccionado en el almacenamiento local
     localStorage.setItem('selectedDepartment', value);
     navigate("/"); // Procedemos al login después de seleccionar el departamento

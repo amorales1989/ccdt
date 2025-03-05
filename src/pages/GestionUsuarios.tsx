@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +13,14 @@ import { Department } from "@/types/database";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2, Eye, EyeOff, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+
+/* 
+Please add this line to the imports of GestionUsuarios.tsx:
+import { DepartmentType } from "@/types/database";
+
+And replace any reference to Database["public"]["Enums"]["department_type"] 
+with DepartmentType
+*/
 
 type DepartmentType = Database["public"]["Enums"]["department_type"];
 type AppRole = Database["public"]["Enums"]["app_role"];

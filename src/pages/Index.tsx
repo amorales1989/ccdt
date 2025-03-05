@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -41,7 +40,13 @@ const Index = () => {
         return acc;
       }
 
-      const deptStudents = students.filter(s => s.department === dept);
+      const deptStudents = students.filter(s => {
+        if (s.departments && s.departments.name) {
+          return s.departments.name === dept;
+        }
+        return s.department === dept;
+      });
+
       acc[dept] = {
         male: deptStudents.filter(s => s.gender === "masculino").length,
         female: deptStudents.filter(s => s.gender === "femenino").length,
@@ -146,7 +151,6 @@ const Index = () => {
     deleteEventMutate(id);
   };
 
-  // Filter future events
   const futureEvents = events.filter(event => !isBefore(new Date(event.date), startOfToday()));
 
   return (

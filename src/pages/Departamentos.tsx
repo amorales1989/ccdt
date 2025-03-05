@@ -276,11 +276,10 @@ const Departamentos = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            const departmentToEdit: Department = {
+                            setSelectedDepartment({
                               ...department,
                               name: department.name as DepartmentType
-                            };
-                            setSelectedDepartment(departmentToEdit);
+                            });
                             setIsEditing(true);
                             setDescription(department.description || "");
                             setClasses(department.classes || []);

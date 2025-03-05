@@ -11,6 +11,10 @@ export interface Student {
   assigned_class?: string;
   created_at: string;
   updated_at: string;
+  departments?: { 
+    name?: DepartmentType;
+    id?: string;
+  };
 }
 
 export interface Event {
@@ -34,6 +38,10 @@ export interface Attendance {
   created_at: string;
   updated_at: string;
   students?: Student;
+  departments?: {
+    name?: DepartmentType;
+    id?: string;
+  };
 }
 
 export interface Department {
