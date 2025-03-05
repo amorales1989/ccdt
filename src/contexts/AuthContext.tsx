@@ -10,6 +10,7 @@ type Profile = {
   last_name: string | null;
   role: AppRole;
   departments: DepartmentType[] | null;
+  department_id: string | null;
   assigned_class: string | null;
 };
 
@@ -24,6 +25,7 @@ type AuthContextType = {
     last_name: string; 
     role: Profile["role"];
     departments: Profile["departments"];
+    department_id: Profile["department_id"];
     assigned_class: Profile["assigned_class"];
   }) => Promise<void>;
   signOut: () => Promise<void>;
@@ -106,7 +108,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data) {
         const typedProfile: Profile = {
           ...data,
-          departments: data.departments as DepartmentType[] || []
+          departments: data.departments as DepartmentType[] || [],
+          department_id: data.department_id || null
         };
         setProfile(typedProfile);
       }
@@ -132,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     last_name: string; 
     role: Profile["role"];
     departments: Profile["departments"];
+    department_id: Profile["department_id"];
     assigned_class: Profile["assigned_class"];
   }) {
     console.log("Attempting sign up with data:", { email, ...userData });
@@ -146,7 +150,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: {
         data: {
           ...userData,
-          departments: formattedDepartments
+          departments: formattedDepartments,
+          department_id: userData.department_id
         },
       },
     });

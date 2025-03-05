@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Student, Department, DepartmentType } from "@/types/database";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const AgregarAlumno = () => {
   const { toast } = useToast();
@@ -25,7 +26,7 @@ const AgregarAlumno = () => {
     gender: "masculino",
     birthdate: "",
     department: profile?.departments?.[0] || null as DepartmentType | null,
-    department_id: "",
+    department_id: profile?.department_id || "",
     assigned_class: profile?.assigned_class || "",
   });
 
@@ -52,34 +53,37 @@ const AgregarAlumno = () => {
       setFormData(prev => ({
         ...prev,
         department,
+        department_id: profile.department_id || "",
         assigned_class: profile.assigned_class || ""
       }));
       
-      const fetchDepartmentId = async () => {
-        if (department) {
-          try {
-            const { data, error } = await supabase
-              .from("departments")
-              .select("id")
-              .eq("name", department)
-              .single();
-            
-            if (error) {
-              console.error("Error fetching department ID:", error);
-              return;
+      if (!profile.department_id) {
+        const fetchDepartmentId = async () => {
+          if (department) {
+            try {
+              const { data, error } = await supabase
+                .from("departments")
+                .select("id")
+                .eq("name", department)
+                .single();
+              
+              if (error) {
+                console.error("Error fetching department ID:", error);
+                return;
+              }
+              
+              if (data) {
+                console.log("Found department ID:", data.id, "for department:", department);
+                setFormData(prev => ({ ...prev, department_id: data.id }));
+              }
+            } catch (error) {
+              console.error("Error in fetchDepartmentId:", error);
             }
-            
-            if (data) {
-              console.log("Found department ID:", data.id, "for department:", department);
-              setFormData(prev => ({ ...prev, department_id: data.id }));
-            }
-          } catch (error) {
-            console.error("Error in fetchDepartmentId:", error);
           }
-        }
-      };
-      
-      fetchDepartmentId();
+        };
+        
+        fetchDepartmentId();
+      }
     }
   }, [profile]);
 

@@ -14,14 +14,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2, Eye, EyeOff, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-/* 
-Please add this line to the imports of GestionUsuarios.tsx:
-import { DepartmentType } from "@/types/database";
-
-And replace any reference to Database["public"]["Enums"]["department_type"] 
-with DepartmentType
-*/
-
 type DepartmentType = Database["public"]["Enums"]["department_type"];
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -50,13 +42,11 @@ const GestionUsuarios = () => {
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
-  // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
     return null;
   }
 
-  // Fetch departments
   const { data: departments = [] } = useQuery({
     queryKey: ['departments'],
     queryFn: async () => {
@@ -83,7 +73,6 @@ const GestionUsuarios = () => {
         throw error;
       }
 
-      // Get user data using admin API
       const { data: { users: adminUsersData }, error: adminError } = await supabase.functions.invoke('manage-users', {
         body: { action: 'list' }
       });
@@ -93,7 +82,6 @@ const GestionUsuarios = () => {
         throw adminError;
       }
 
-      // Map profiles with admin data
       const usersData = profiles.map(profile => {
         const adminData = adminUsersData.find((user: any) => user.id === profile.id);
         return {
@@ -107,29 +95,26 @@ const GestionUsuarios = () => {
     }
   });
 
-  // Update available classes when department changes
   useEffect(() => {
     if (selectedDepartment) {
       const department = departments.find(d => d.name === selectedDepartment);
       setAvailableClasses(department?.classes || []);
-      setSelectedClass(""); // Reset selected class when department changes
+      setSelectedClass("");
     } else {
       setAvailableClasses([]);
       setSelectedClass("");
     }
   }, [selectedDepartment, departments]);
 
-  // Actualizar la mutación updateUserMutation
   const updateUserMutation = useMutation({
     mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
-      // Encontrar el departamento seleccionado para obtener su tipo enum
       const selectedDepartmentObject = departments.find(d => d.name === selectedDepartment);
       if (!selectedDepartmentObject) {
         throw new Error("Departamento no válido");
       }
 
-      // Mapear el nombre del departamento al tipo enum correcto
-      const departmentType = selectedDepartmentObject.name.toLowerCase() as DepartmentType;
+      const departmentType = selectedDepartmentObject.name as DepartmentType;
+      const departmentId = selectedDepartmentObject.id;
 
       const updateData: any = {
         action: 'update',
@@ -139,6 +124,7 @@ const GestionUsuarios = () => {
           last_name: updatedUser.last_name,
           role: updatedUser.role,
           departments: [departmentType],
+          department_id: departmentId,
           assigned_class: selectedClass
         }
       };
@@ -151,14 +137,12 @@ const GestionUsuarios = () => {
         updateData.userData.password = updatedUser.newPassword;
       }
 
-      // Update user data using the edge function
       const { error: adminError } = await supabase.functions.invoke('manage-users', {
         body: updateData
       });
 
       if (adminError) throw adminError;
 
-      // Update profile data
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -166,6 +150,7 @@ const GestionUsuarios = () => {
           last_name: updatedUser.last_name,
           role: updatedUser.role,
           departments: [departmentType],
+          department_id: departmentId,
           assigned_class: selectedClass
         })
         .eq('id', updatedUser.id);
@@ -218,7 +203,6 @@ const GestionUsuarios = () => {
     }
   });
 
-  // Filter users based on search term
   const filteredUsers = users.filter(user => {
     if (!searchTerm.trim()) return true;
     

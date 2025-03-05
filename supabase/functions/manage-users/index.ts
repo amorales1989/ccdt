@@ -36,6 +36,22 @@ serve(async (req) => {
         })
 
       case 'create':
+        // Get department_id from the department name if provided
+        let departmentId = null;
+        if (userData.departments && userData.departments.length > 0) {
+          const { data: departmentData, error: departmentError } = await supabaseClient
+            .from('departments')
+            .select('id')
+            .eq('name', userData.departments[0])
+            .single();
+          
+          if (departmentError) {
+            console.error('Error fetching department ID:', departmentError);
+          } else if (departmentData) {
+            departmentId = departmentData.id;
+          }
+        }
+
         const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
           email: userData.email,
           password: userData.password,
@@ -45,6 +61,7 @@ serve(async (req) => {
             last_name: userData.last_name,
             role: userData.role,
             departments: userData.departments,
+            department_id: departmentId,
             assigned_class: userData.assigned_class
           }
         })
@@ -54,12 +71,29 @@ serve(async (req) => {
         })
 
       case 'update':
+        // Get department_id from the department name if provided
+        let updatedDepartmentId = null;
+        if (userData.departments && userData.departments.length > 0) {
+          const { data: departmentData, error: departmentError } = await supabaseClient
+            .from('departments')
+            .select('id')
+            .eq('name', userData.departments[0])
+            .single();
+          
+          if (departmentError) {
+            console.error('Error fetching department ID:', departmentError);
+          } else if (departmentData) {
+            updatedDepartmentId = departmentData.id;
+          }
+        }
+
         const updates: any = {
           user_metadata: {
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
             departments: userData.departments,
+            department_id: updatedDepartmentId,
             assigned_class: userData.assigned_class
           }
         }
@@ -89,6 +123,61 @@ serve(async (req) => {
         return new Response(JSON.stringify(deleteData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
+
+      case 'updateDepartmentIds':
+        // This action will update department_ids for all users
+        const { data: allUsers, error: allUsersError } = await supabaseClient.auth.admin.listUsers()
+        if (allUsersError) throw allUsersError
+
+        const results = [];
+        
+        for (const user of allUsers.users) {
+          const departments = user.user_metadata?.departments;
+          
+          if (departments && departments.length > 0) {
+            const { data: departmentData, error: departmentError } = await supabaseClient
+              .from('departments')
+              .select('id')
+              .eq('name', departments[0])
+              .single();
+            
+            if (departmentError) {
+              console.error(`Error fetching department ID for user ${user.id}:`, departmentError);
+              results.push({ userId: user.id, success: false, error: departmentError.message });
+              continue;
+            }
+            
+            if (departmentData) {
+              const metadata = { ...user.user_metadata, department_id: departmentData.id };
+              
+              const { data: updatedUser, error: updateError } = await supabaseClient.auth.admin.updateUserById(
+                user.id,
+                { user_metadata: metadata }
+              );
+              
+              if (updateError) {
+                console.error(`Error updating user ${user.id}:`, updateError);
+                results.push({ userId: user.id, success: false, error: updateError.message });
+              } else {
+                results.push({ userId: user.id, success: true });
+                
+                // Update the profile table too
+                const { error: profileError } = await supabaseClient
+                  .from('profiles')
+                  .update({ department_id: departmentData.id })
+                  .eq('id', user.id);
+                
+                if (profileError) {
+                  console.error(`Error updating profile for user ${user.id}:`, profileError);
+                }
+              }
+            }
+          }
+        }
+        
+        return new Response(JSON.stringify({ results }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
 
       default:
         throw new Error(`Unsupported action: ${action}`)

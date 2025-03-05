@@ -61,6 +61,7 @@ export interface Profile {
   last_name: string;
   role: AppRole;
   departments: DepartmentType[];
+  department_id?: string;
   email?: string;
   assigned_class?: string;
 }
