@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +17,6 @@ const AgregarAlumno = () => {
   const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Inicializar formData con los valores del perfil del usuario
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -45,10 +43,8 @@ const AgregarAlumno = () => {
     ? departments.find(d => d.name === formData.department)?.classes || []
     : [];
 
-  // Verificar si el departamento seleccionado tiene clases
   const departmentHasClasses = availableClasses.length > 0;
 
-  // Actualizar formData cuando el perfil esté disponible
   useEffect(() => {
     if (profile?.departments?.[0]) {
       setFormData(prev => ({
@@ -59,24 +55,19 @@ const AgregarAlumno = () => {
     }
   }, [profile]);
 
-  // Función para formatear el número de teléfono
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneNumber) return null;
 
-    // Eliminar todos los caracteres que no sean dígitos
     let cleanNumber = phoneNumber.replace(/\D/g, "");
     
-    // Si empieza con 0, quitarlo
     if (cleanNumber.startsWith("0")) {
       cleanNumber = cleanNumber.substring(1);
     }
     
-    // Si empieza con 15 (prefijo de celular argentino), quitarlo
     if (cleanNumber.startsWith("15")) {
       cleanNumber = cleanNumber.substring(2);
     }
     
-    // Si el código de país es Argentina (54), asegurarnos de agregar el 9 para celulares
     if (phoneCode === "54") {
       return phoneCode + "9" + cleanNumber;
     }
@@ -95,7 +86,6 @@ const AgregarAlumno = () => {
       return;
     }
 
-    // Solo validar clase si el departamento tiene clases disponibles
     if (departmentHasClasses && !formData.assigned_class) {
       toast({
         title: "Error",

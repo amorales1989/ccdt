@@ -37,7 +37,9 @@ const TomarAsistencia = () => {
     queryKey: ["students-attendance", currentDepartment, userClass],
     queryFn: async () => {
       console.log("Fetching students for attendance...", { currentDepartment, userClass });
-      let query = supabase.from("students").select("*");
+      let query = supabase
+        .from("students")
+        .select("*, departments:department_id(name)");
 
       if (!isAdminOrSecretaria) {
         if (!currentDepartment) {
@@ -45,7 +47,19 @@ const TomarAsistencia = () => {
           return [];
         }
         
-        query = query.eq("department", currentDepartment);
+        // Get department ID first
+        const { data: deptData, error: deptError } = await supabase
+          .from("departments")
+          .select("id")
+          .eq("name", currentDepartment)
+          .single();
+        
+        if (deptError || !deptData) {
+          console.error("Error fetching department ID:", deptError);
+          return [];
+        }
+        
+        query = query.eq("department_id", deptData.id);
         
         if (userClass) {
           console.log("Filtering by class:", userClass);
@@ -58,8 +72,15 @@ const TomarAsistencia = () => {
         console.error("Error fetching students for attendance:", error);
         throw error;
       }
-      console.log("Fetched students for attendance:", data);
-      return data;
+      
+      // Map department name from the related departments table
+      const studentsWithDept = data.map(student => ({
+        ...student,
+        department: student.departments?.name
+      }));
+      
+      console.log("Fetched students for attendance:", studentsWithDept);
+      return studentsWithDept;
     },
   });
 

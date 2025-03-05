@@ -7,6 +7,7 @@ export interface Student {
   gender: string;
   birthdate?: string;
   department?: DepartmentType;
+  department_id?: string;
   assigned_class?: string;
   created_at: string;
   updated_at: string;
@@ -28,6 +29,7 @@ export interface Attendance {
   date: string;
   status: boolean;
   department?: DepartmentType;
+  department_id?: string;
   assigned_class?: string;
   created_at: string;
   updated_at: string;
