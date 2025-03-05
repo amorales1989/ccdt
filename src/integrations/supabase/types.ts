@@ -120,6 +120,7 @@ export type Database = {
       profiles: {
         Row: {
           assigned_class: string | null
+          department_id: string | null
           departments: string[] | null
           first_name: string | null
           id: string
@@ -128,6 +129,7 @@ export type Database = {
         }
         Insert: {
           assigned_class?: string | null
+          department_id?: string | null
           departments?: string[] | null
           first_name?: string | null
           id: string
@@ -136,13 +138,22 @@ export type Database = {
         }
         Update: {
           assigned_class?: string | null
+          department_id?: string | null
           departments?: string[] | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           role?: Database["public"]["Enums"]["app_role"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       students: {
         Row: {
@@ -199,7 +210,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_department_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "lider" | "director" | "maestro" | "secretaria"
