@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -100,7 +101,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       console.log("Profile data:", data);
-      setProfile(data);
+      
+      // Ensure departments is correctly typed as DepartmentType[]
+      if (data) {
+        const typedProfile: Profile = {
+          ...data,
+          departments: data.departments as DepartmentType[] || []
+        };
+        setProfile(typedProfile);
+      }
     } catch (error) {
       console.error("Error loading user profile:", error);
     } finally {

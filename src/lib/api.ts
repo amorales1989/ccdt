@@ -130,7 +130,6 @@ export const updateStudent = async (id: string, student: Partial<Omit<Student, "
     };
   } catch (error) {
     console.error('Error in updateStudent:', error);
-    throw error;
   }
 };
 
@@ -229,9 +228,9 @@ export const deleteEvent = async (id: string) => {
 };
 
 // Attendance API
-export const getAttendance = async (startDate?: string, endDate?: string, department?: string) => {
+export const getAttendance = async (startDate?: string, endDate?: string, department?: string, departmentId?: string | null) => {
   try {
-    console.log('Starting attendance fetch with params:', { startDate, endDate, department });
+    console.log('Starting attendance fetch with params:', { startDate, endDate, department, departmentId });
     
     if (!startDate || !endDate) {
       console.error('Missing required date parameters');
@@ -252,8 +251,14 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
       .lte('date', endDate)
       .order('date', { ascending: false }) as PostgrestFilterBuilder<any, any, any>;
 
-    if (department) {
-      console.log('Filtering by department:', department);
+    // Filter by department ID if provided
+    if (departmentId) {
+      console.log('Filtering by department ID:', departmentId);
+      query = query.eq('department_id', departmentId);
+    }
+    // Fall back to department name if ID is not provided
+    else if (department) {
+      console.log('Filtering by department name:', department);
       // Get department id first
       const { data: deptData } = await supabase
         .from("departments")
@@ -296,7 +301,8 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
   }
 };
 
-export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at" | "updated_at">) => {
+// Update markAttendance to use department_id
+export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at" | "updated_at"> & { department_id?: string }) => {
   try {
     console.log('Starting attendance marking with data:', attendance);
     
@@ -306,22 +312,28 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       throw error;
     }
 
-    // First, get the student's department_id and class
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('department_id, assigned_class')
-      .eq('id', attendance.student_id)
-      .maybeSingle();
+    // Get the student's department_id if not provided
+    let departmentId = attendance.department_id;
+    if (!departmentId) {
+      // First, get the student's department_id and class
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('department_id, assigned_class')
+        .eq('id', attendance.student_id)
+        .maybeSingle();
 
-    if (studentError) {
-      console.error('Error fetching student department:', studentError);
-      throw studentError;
-    }
+      if (studentError) {
+        console.error('Error fetching student department:', studentError);
+        throw studentError;
+      }
 
-    if (!student) {
-      const error = new Error(`No student found with ID: ${attendance.student_id}`);
-      console.error(error);
-      throw error;
+      if (!student) {
+        const error = new Error(`No student found with ID: ${attendance.student_id}`);
+        console.error(error);
+        throw error;
+      }
+      
+      departmentId = student.department_id;
     }
 
     // Check if there's an existing attendance record for this student and date
@@ -336,12 +348,26 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       throw existingError;
     }
 
+    // Get the student's class if not already provided
+    let assignedClass = attendance.assigned_class;
+    if (!assignedClass) {
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('assigned_class')
+        .eq('id', attendance.student_id)
+        .maybeSingle();
+      
+      if (!studentError && student) {
+        assignedClass = student.assigned_class;
+      }
+    }
+
     const attendanceData = {
       student_id: attendance.student_id,
       date: attendance.date,
       status: attendance.status,
-      department_id: student.department_id,
-      assigned_class: student.assigned_class,
+      department_id: departmentId,
+      assigned_class: assignedClass,
       ...(attendance.event_id && { event_id: attendance.event_id })
     };
 

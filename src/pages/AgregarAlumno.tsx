@@ -24,7 +24,8 @@ const AgregarAlumno = () => {
     address: "",
     gender: "masculino",
     birthdate: "",
-    department: profile?.departments?.[0] || "" as DepartmentType,
+    department: profile?.departments?.[0] || null as DepartmentType | null,
+    department_id: "",
     assigned_class: profile?.assigned_class || "",
   });
 
@@ -47,11 +48,38 @@ const AgregarAlumno = () => {
 
   useEffect(() => {
     if (profile?.departments?.[0]) {
+      const department = profile.departments[0] as DepartmentType;
       setFormData(prev => ({
         ...prev,
-        department: profile.departments[0],
+        department,
         assigned_class: profile.assigned_class || ""
       }));
+      
+      const fetchDepartmentId = async () => {
+        if (department) {
+          try {
+            const { data, error } = await supabase
+              .from("departments")
+              .select("id")
+              .eq("name", department)
+              .single();
+            
+            if (error) {
+              console.error("Error fetching department ID:", error);
+              return;
+            }
+            
+            if (data) {
+              console.log("Found department ID:", data.id, "for department:", department);
+              setFormData(prev => ({ ...prev, department_id: data.id }));
+            }
+          } catch (error) {
+            console.error("Error in fetchDepartmentId:", error);
+          }
+        }
+      };
+      
+      fetchDepartmentId();
     }
   }, [profile]);
 
@@ -106,6 +134,7 @@ const AgregarAlumno = () => {
         gender: formData.gender,
         birthdate: formData.birthdate || null,
         department: formData.department,
+        department_id: formData.department_id || undefined,
         assigned_class: formData.assigned_class || null,
       });
       
@@ -192,11 +221,13 @@ const AgregarAlumno = () => {
             <div className="space-y-2">
               <Label htmlFor="department">Departamento</Label>
               <Select
-                value={formData.department}
+                value={formData.department || undefined}
                 onValueChange={(value) => {
+                  const selectedDept = departments.find(d => d.name === value);
                   setFormData({ 
                     ...formData, 
                     department: value as DepartmentType,
+                    department_id: selectedDept?.id || "",
                     assigned_class: "" // Reset class when department changes
                   });
                 }}
