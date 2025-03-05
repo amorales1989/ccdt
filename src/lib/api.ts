@@ -251,7 +251,7 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
       .lte('date', endDate)
       .order('date', { ascending: false }) as PostgrestFilterBuilder<any, any, any>;
 
-    // Filter by department ID if provided
+    // Filter by department ID if provided (higher priority)
     if (departmentId) {
       console.log('Filtering by department ID:', departmentId);
       query = query.eq('department_id', departmentId);
