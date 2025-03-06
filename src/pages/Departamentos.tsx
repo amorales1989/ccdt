@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
 import { Department, DepartmentType } from "@/types/database";
@@ -139,14 +138,11 @@ const Departamentos = () => {
   };
 
   const handleEditDepartment = (department: Department) => {
-    // Here we make sure to cast the department.name as DepartmentType
     setEditingDepartment({
-      id: department.id,
-      name: department.name,
+      ...department,
+      name: department.name as DepartmentType,
       description: department.description || "",
       classes: [...(department.classes || [])],
-      created_at: department.created_at,
-      updated_at: department.updated_at
     });
     setIsEditModalOpen(true);
   };

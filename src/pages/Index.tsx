@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -9,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isBefore, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Event, DepartmentType } from "@/types/database";
+import type { Event, DepartmentType, Student } from "@/types/database";
 import { StudentSearch } from "@/components/StudentSearch";
 
 const Index = () => {
@@ -24,7 +25,13 @@ const Index = () => {
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students'],
-    queryFn: getStudents
+    queryFn: () => getStudents().then(data => {
+      // Ensure all students have a properly typed department
+      return data.map(student => ({
+        ...student,
+        department: student.department as DepartmentType
+      })) as Student[];
+    })
   });
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";

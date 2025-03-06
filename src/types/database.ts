@@ -60,7 +60,8 @@ export type DepartmentType =
   | "jovenes" 
   | "jovenes_adultos" 
   | "adultos"
-  | "Examen Físico_Rev1"; // Added this to handle the existing data
+  | "Examen Físico_Rev1" 
+  | string; // Added string to allow for any department name from database
 
 export interface Profile {
   id: string;

@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +40,7 @@ const AgregarAlumno = () => {
 
   const availableDepartments = isAdminOrSecretaria 
     ? departments 
-    : departments.filter(dept => profile?.departments?.includes(dept.name));
+    : departments.filter(dept => profile?.departments?.includes(dept.name as DepartmentType));
 
   const availableClasses = formData.department
     ? departments.find(d => d.name === formData.department)?.classes || []
@@ -49,7 +50,7 @@ const AgregarAlumno = () => {
 
   useEffect(() => {
     if (profile?.departments?.[0]) {
-      const department = profile.departments[0];
+      const department = profile.departments[0] as DepartmentType;
       setFormData(prev => ({
         ...prev,
         department,
