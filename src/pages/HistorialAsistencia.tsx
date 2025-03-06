@@ -2,10 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
-import { getAttendance, getDepartmentByName } from "@/lib/api";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { getAttendance, getDepartmentByName, markAttendance } from "@/lib/api";
 import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DepartmentType, Attendance } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
-import { markAttendance } from "@/lib/api";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -56,7 +55,6 @@ const HistorialAsistencia = () => {
   
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
-  const userDepartmentId = profile?.department_id;
   const userClass = profile?.assigned_class;
 
   const { data: departmentData } = useQuery({
@@ -127,7 +125,7 @@ const HistorialAsistencia = () => {
   };
 
   const { data: attendance = [], isLoading: attendanceLoading } = useQuery({
-    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment, selectedClass, userDepartmentId],
+    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment, selectedClass],
     queryFn: async () => {
       const actualStartDate = startDate > endDate ? endDate : startDate;
       const actualEndDate = endDate < startDate ? startDate : endDate;
@@ -135,49 +133,25 @@ const HistorialAsistencia = () => {
       const formattedStartDate = format(actualStartDate, "yyyy-MM-dd");
       const formattedEndDate = format(actualEndDate, "yyyy-MM-dd");
       
-      console.log("Fetching attendance with params:", { 
-        formattedStartDate, 
-        formattedEndDate, 
-        selectedDepartment, 
-        selectedClass,
-        userDepartmentId 
-      });
-      
-      let departmentToUse = "";
-      let departmentIdToUse = null;
-      
-      if (isAdminOrSecretaria) {
-        departmentToUse = selectedDepartment === "all" ? "" : selectedDepartment;
-      } else if (userDepartmentId) {
-        departmentIdToUse = userDepartmentId;
-      }
-      
-      return getAttendance(formattedStartDate, formattedEndDate, departmentToUse, departmentIdToUse);
+      console.log("Fetching attendance with params:", { formattedStartDate, formattedEndDate, selectedDepartment, selectedClass });
+      const departmentToUse = selectedDepartment === "all" ? "" : selectedDepartment;
+      return getAttendance(formattedStartDate, formattedEndDate, departmentToUse);
     },
   });
 
   const { data: dateAttendance = [], isLoading: dateAttendanceLoading, refetch: refetchDateAttendance } = useQuery({
-    queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", userDepartmentId, userClass],
+    queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", isAdminOrSecretaria ? selectedDepartment : userDepartment, isAdminOrSecretaria ? selectedClass : userClass],
     queryFn: async () => {
       if (!editDate) return [];
       
       const formattedDate = format(editDate, "yyyy-MM-dd");
-      console.log("Fetching attendance for edit mode:", { 
-        formattedDate, 
-        departmentId: userDepartmentId, 
-        class: userClass 
-      });
+      console.log("Fetching attendance for edit mode:", { formattedDate, department: isAdminOrSecretaria ? selectedDepartment : userDepartment, class: isAdminOrSecretaria ? selectedClass : userClass });
       
-      let departmentIdToUse = null;
-      let departmentNameToUse = "";
+      const departmentToUse = isAdminOrSecretaria 
+        ? (selectedDepartment === "all" ? "" : selectedDepartment) 
+        : userDepartment || "";
       
-      if (isAdminOrSecretaria) {
-        departmentNameToUse = selectedDepartment === "all" ? "" : selectedDepartment;
-      } else if (userDepartmentId) {
-        departmentIdToUse = userDepartmentId;
-      }
-      
-      const attendanceData = await getAttendance(formattedDate, formattedDate, departmentNameToUse, departmentIdToUse);
+      const attendanceData = await getAttendance(formattedDate, formattedDate, departmentToUse);
       
       if (!isAdminOrSecretaria && userClass && attendanceData) {
         return attendanceData.filter(record => record.assigned_class === userClass);
@@ -224,7 +198,7 @@ const HistorialAsistencia = () => {
           student_id: record.student_id,
           date: record.date,
           status: record.status,
-          department_id: userDepartmentId || undefined,
+          department: record.department,
           assigned_class: record.assigned_class,
           ...(record.event_id && { event_id: record.event_id })
         })
@@ -256,10 +230,6 @@ const HistorialAsistencia = () => {
 
     const matchesSearch = searchQuery === "" || 
       record.students.name.toLowerCase().includes(searchQuery.toLowerCase());
-
-    if (!isAdminOrSecretaria) {
-      return matchesSearch;
-    }
 
     const matchesDepartment = selectedDepartment === "all" || 
       record.department === selectedDepartment;

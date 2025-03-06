@@ -67,16 +67,11 @@ export default function Register() {
     }
 
     try {
-      // Find the department ID based on the selected department name
-      const departmentObj = departments.find(d => d.name === selectedDepartment);
-      const department_id = departmentObj?.id || "";
-      
       const profileData = {
         first_name: firstName,
         last_name: lastName,
         role,
         departments: [selectedDepartment],
-        department_id,
         assigned_class: selectedClass || undefined
       };
 

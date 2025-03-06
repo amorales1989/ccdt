@@ -14,8 +14,7 @@ export type Database = {
           assigned_class: string | null
           created_at: string
           date: string | null
-          department: string | null
-          department_id: string | null
+          department: Database["public"]["Enums"]["department_type"] | null
           event_id: string | null
           id: string
           status: boolean
@@ -26,8 +25,7 @@ export type Database = {
           assigned_class?: string | null
           created_at?: string
           date?: string | null
-          department?: string | null
-          department_id?: string | null
+          department?: Database["public"]["Enums"]["department_type"] | null
           event_id?: string | null
           id?: string
           status?: boolean
@@ -38,8 +36,7 @@ export type Database = {
           assigned_class?: string | null
           created_at?: string
           date?: string | null
-          department?: string | null
-          department_id?: string | null
+          department?: Database["public"]["Enums"]["department_type"] | null
           event_id?: string | null
           id?: string
           status?: boolean
@@ -47,13 +44,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "attendance_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "attendance_student_id_fkey"
             columns: ["student_id"]
@@ -69,7 +59,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
-          name: string | null
+          name: Database["public"]["Enums"]["department_type"]
           updated_at: string
         }
         Insert: {
@@ -77,7 +67,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          name?: string | null
+          name: Database["public"]["Enums"]["department_type"]
           updated_at?: string
         }
         Update: {
@@ -85,7 +75,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          name?: string | null
+          name?: Database["public"]["Enums"]["department_type"]
           updated_at?: string
         }
         Relationships: []
@@ -120,8 +110,7 @@ export type Database = {
       profiles: {
         Row: {
           assigned_class: string | null
-          department_id: string | null
-          departments: string[] | null
+          departments: Database["public"]["Enums"]["department_type"][] | null
           first_name: string | null
           id: string
           last_name: string | null
@@ -129,8 +118,7 @@ export type Database = {
         }
         Insert: {
           assigned_class?: string | null
-          department_id?: string | null
-          departments?: string[] | null
+          departments?: Database["public"]["Enums"]["department_type"][] | null
           first_name?: string | null
           id: string
           last_name?: string | null
@@ -138,22 +126,13 @@ export type Database = {
         }
         Update: {
           assigned_class?: string | null
-          department_id?: string | null
-          departments?: string[] | null
+          departments?: Database["public"]["Enums"]["department_type"][] | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           role?: Database["public"]["Enums"]["app_role"]
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       students: {
         Row: {
@@ -161,8 +140,7 @@ export type Database = {
           assigned_class: string | null
           birthdate: string | null
           created_at: string
-          department: string | null
-          department_id: string | null
+          department: Database["public"]["Enums"]["department_type"] | null
           gender: string
           id: string
           name: string
@@ -174,8 +152,7 @@ export type Database = {
           assigned_class?: string | null
           birthdate?: string | null
           created_at?: string
-          department?: string | null
-          department_id?: string | null
+          department?: Database["public"]["Enums"]["department_type"] | null
           gender?: string
           id?: string
           name: string
@@ -187,36 +164,31 @@ export type Database = {
           assigned_class?: string | null
           birthdate?: string | null
           created_at?: string
-          department?: string | null
-          department_id?: string | null
+          department?: Database["public"]["Enums"]["department_type"] | null
           gender?: string
           id?: string
           name?: string
           phone?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "students_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      update_department_ids: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      [_ in never]: never
     }
     Enums: {
       app_role: "admin" | "lider" | "director" | "maestro" | "secretaria"
+      department_type:
+        | "escuelita_central"
+        | "pre_adolescentes"
+        | "adolescentes"
+        | "jovenes"
+        | "jovenes_adultos"
+        | "adultos"
     }
     CompositeTypes: {
       [_ in never]: never
