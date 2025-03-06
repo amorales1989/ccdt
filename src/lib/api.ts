@@ -7,16 +7,11 @@ export const getStudents = async () => {
   try {
     const { data, error } = await supabase
       .from("students")
-      .select("*, departments:department_id(name)");
+      .select("*");
     
     console.log('Fetching students result:', { data, error });
     if (error) throw error;
-    
-    // Map department name from the joined department table
-    return data.map(student => ({
-      ...student,
-      department: student.departments?.name
-    }));
+    return data;
   } catch (error) {
     console.error('Error in getStudents:', error);
     throw error;
@@ -27,17 +22,12 @@ export const getStudent = async (id: string) => {
   try {
     const { data, error } = await supabase
       .from("students")
-      .select("*, departments:department_id(name)")
+      .select("*")
       .eq("id", id)
       .single();
     
     if (error) throw error;
-    
-    // Map department name from the joined department table
-    return {
-      ...data,
-      department: data.departments?.name
-    };
+    return data;
   } catch (error) {
     console.error('Error in getStudent:', error);
     throw error;
@@ -46,42 +36,14 @@ export const getStudent = async (id: string) => {
 
 export const createStudent = async (student: Omit<Student, "id" | "created_at" | "updated_at">) => {
   try {
-    // If we have a department name, we need to get its ID
-    let departmentId = null;
-    if (student.department) {
-      const { data: deptData } = await supabase
-        .from("departments")
-        .select("id")
-        .eq("name", student.department)
-        .single();
-      
-      if (deptData) {
-        departmentId = deptData.id;
-      }
-    }
-    
-    // Create student with department_id instead of department
-    const studentData = {
-      ...student,
-      department_id: departmentId
-    };
-    
-    // Remove the department field as we're using department_id
-    delete studentData.department;
-    
     const { data, error } = await supabase
       .from("students")
-      .insert([studentData])
-      .select("*, departments:department_id(name)")
+      .insert([student])
+      .select()
       .single();
     
     if (error) throw error;
-    
-    // Map department name for the returned student
-    return {
-      ...data,
-      department: data.departments?.name
-    };
+    return data;
   } catch (error) {
     console.error('Error in createStudent:', error);
     throw error;
@@ -90,46 +52,18 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
 
 export const updateStudent = async (id: string, student: Partial<Omit<Student, "id" | "created_at" | "updated_at">>) => {
   try {
-    // If department is provided, we need to get its ID
-    let departmentId = undefined;
-    if (student.department) {
-      const { data: deptData } = await supabase
-        .from("departments")
-        .select("id")
-        .eq("name", student.department)
-        .single();
-      
-      if (deptData) {
-        departmentId = deptData.id;
-      }
-    }
-    
-    // Prepare update data with department_id
-    const updateData = { ...student };
-    
-    // Update department_id if we found one
-    if (departmentId !== undefined) {
-      updateData.department_id = departmentId;
-      // Remove department field as we're using department_id
-      delete updateData.department;
-    }
-    
     const { data, error } = await supabase
       .from("students")
-      .update(updateData)
+      .update(student)
       .eq("id", id)
-      .select("*, departments:department_id(name)")
+      .select()
       .single();
     
     if (error) throw error;
-    
-    // Map department name for the returned student
-    return {
-      ...data,
-      department: data.departments?.name
-    };
+    return data;
   } catch (error) {
     console.error('Error in updateStudent:', error);
+    throw error;
   }
 };
 
@@ -228,9 +162,9 @@ export const deleteEvent = async (id: string) => {
 };
 
 // Attendance API
-export const getAttendance = async (startDate?: string, endDate?: string, department?: string, departmentId?: string | null) => {
+export const getAttendance = async (startDate?: string, endDate?: string, department?: string) => {
   try {
-    console.log('Starting attendance fetch with params:', { startDate, endDate, department, departmentId });
+    console.log('Starting attendance fetch with params:', { startDate, endDate, department });
     
     if (!startDate || !endDate) {
       console.error('Missing required date parameters');
@@ -244,31 +178,16 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
         students (
           id,
           name,
-          departments:department_id(name)
+          department
         )
       `)
       .gte('date', startDate)
       .lte('date', endDate)
       .order('date', { ascending: false }) as PostgrestFilterBuilder<any, any, any>;
 
-    // Filter by department ID if provided (higher priority)
-    if (departmentId) {
-      console.log('Filtering by department ID:', departmentId);
-      query = query.eq('department_id', departmentId);
-    }
-    // Fall back to department name if ID is not provided
-    else if (department) {
-      console.log('Filtering by department name:', department);
-      // Get department id first
-      const { data: deptData } = await supabase
-        .from("departments")
-        .select("id")
-        .eq("name", department)
-        .single();
-      
-      if (deptData) {
-        query = query.eq('department_id', deptData.id);
-      }
+    if (department) {
+      console.log('Filtering by department:', department);
+      query = query.eq('students.department', department);
     }
 
     const { data, error } = await query;
@@ -282,27 +201,16 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
       console.log('No attendance records found for the given criteria');
       return [];
     }
-    
-    // Map the department name from the nested departments object
-    const mappedData = data.map(record => ({
-      ...record,
-      students: record.students ? {
-        ...record.students,
-        department: record.students.departments?.name
-      } : null,
-      department: record.departments?.name
-    }));
 
-    console.log(`Successfully fetched ${mappedData.length} attendance records`);
-    return mappedData;
+    console.log(`Successfully fetched ${data.length} attendance records`);
+    return data;
   } catch (error) {
     console.error('Error in getAttendance:', error);
     throw error;
   }
 };
 
-// Update markAttendance to use department_id
-export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at" | "updated_at"> & { department_id?: string }) => {
+export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at" | "updated_at">) => {
   try {
     console.log('Starting attendance marking with data:', attendance);
     
@@ -312,28 +220,22 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       throw error;
     }
 
-    // Get the student's department_id if not provided
-    let departmentId = attendance.department_id;
-    if (!departmentId) {
-      // First, get the student's department_id and class
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('department_id, assigned_class')
-        .eq('id', attendance.student_id)
-        .maybeSingle();
+    // First, get the student's department and class
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('department, assigned_class')
+      .eq('id', attendance.student_id)
+      .maybeSingle();
 
-      if (studentError) {
-        console.error('Error fetching student department:', studentError);
-        throw studentError;
-      }
+    if (studentError) {
+      console.error('Error fetching student department:', studentError);
+      throw studentError;
+    }
 
-      if (!student) {
-        const error = new Error(`No student found with ID: ${attendance.student_id}`);
-        console.error(error);
-        throw error;
-      }
-      
-      departmentId = student.department_id;
+    if (!student) {
+      const error = new Error(`No student found with ID: ${attendance.student_id}`);
+      console.error(error);
+      throw error;
     }
 
     // Check if there's an existing attendance record for this student and date
@@ -348,26 +250,12 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       throw existingError;
     }
 
-    // Get the student's class if not already provided
-    let assignedClass = attendance.assigned_class;
-    if (!assignedClass) {
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('assigned_class')
-        .eq('id', attendance.student_id)
-        .maybeSingle();
-      
-      if (!studentError && student) {
-        assignedClass = student.assigned_class;
-      }
-    }
-
     const attendanceData = {
       student_id: attendance.student_id,
       date: attendance.date,
       status: attendance.status,
-      department_id: departmentId,
-      assigned_class: assignedClass,
+      department: student.department,
+      assigned_class: student.assigned_class,
       ...(attendance.event_id && { event_id: attendance.event_id })
     };
 

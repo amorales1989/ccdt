@@ -11,7 +11,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Student, Department, DepartmentType } from "@/types/database";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 const AgregarAlumno = () => {
   const { toast } = useToast();
@@ -19,6 +18,7 @@ const AgregarAlumno = () => {
   const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
+  // Inicializar formData con los valores del perfil del usuario
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -26,8 +26,7 @@ const AgregarAlumno = () => {
     address: "",
     gender: "masculino",
     birthdate: "",
-    department: profile?.departments?.[0] || null as DepartmentType | null,
-    department_id: profile?.department_id || "",
+    department: profile?.departments?.[0] || "" as DepartmentType,
     assigned_class: profile?.assigned_class || "",
   });
 
@@ -40,67 +39,44 @@ const AgregarAlumno = () => {
 
   const availableDepartments = isAdminOrSecretaria 
     ? departments 
-    : departments.filter(dept => profile?.departments?.includes(dept.name as DepartmentType));
+    : departments.filter(dept => profile?.departments?.includes(dept.name));
 
   const availableClasses = formData.department
     ? departments.find(d => d.name === formData.department)?.classes || []
     : [];
 
+  // Verificar si el departamento seleccionado tiene clases
   const departmentHasClasses = availableClasses.length > 0;
 
+  // Actualizar formData cuando el perfil esté disponible
   useEffect(() => {
     if (profile?.departments?.[0]) {
-      const department = profile.departments[0] as DepartmentType;
       setFormData(prev => ({
         ...prev,
-        department,
-        department_id: profile.department_id || "",
+        department: profile.departments[0],
         assigned_class: profile.assigned_class || ""
       }));
-      
-      if (!profile.department_id) {
-        const fetchDepartmentId = async () => {
-          if (department) {
-            try {
-              const { data, error } = await supabase
-                .from("departments")
-                .select("id")
-                .eq("name", department)
-                .single();
-              
-              if (error) {
-                console.error("Error fetching department ID:", error);
-                return;
-              }
-              
-              if (data) {
-                console.log("Found department ID:", data.id, "for department:", department);
-                setFormData(prev => ({ ...prev, department_id: data.id }));
-              }
-            } catch (error) {
-              console.error("Error in fetchDepartmentId:", error);
-            }
-          }
-        };
-        
-        fetchDepartmentId();
-      }
     }
   }, [profile]);
 
+  // Función para formatear el número de teléfono
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneNumber) return null;
 
+    // Eliminar todos los caracteres que no sean dígitos
     let cleanNumber = phoneNumber.replace(/\D/g, "");
     
+    // Si empieza con 0, quitarlo
     if (cleanNumber.startsWith("0")) {
       cleanNumber = cleanNumber.substring(1);
     }
     
+    // Si empieza con 15 (prefijo de celular argentino), quitarlo
     if (cleanNumber.startsWith("15")) {
       cleanNumber = cleanNumber.substring(2);
     }
     
+    // Si el código de país es Argentina (54), asegurarnos de agregar el 9 para celulares
     if (phoneCode === "54") {
       return phoneCode + "9" + cleanNumber;
     }
@@ -119,6 +95,7 @@ const AgregarAlumno = () => {
       return;
     }
 
+    // Solo validar clase si el departamento tiene clases disponibles
     if (departmentHasClasses && !formData.assigned_class) {
       toast({
         title: "Error",
@@ -139,7 +116,6 @@ const AgregarAlumno = () => {
         gender: formData.gender,
         birthdate: formData.birthdate || null,
         department: formData.department,
-        department_id: formData.department_id || undefined,
         assigned_class: formData.assigned_class || null,
       });
       
@@ -226,13 +202,11 @@ const AgregarAlumno = () => {
             <div className="space-y-2">
               <Label htmlFor="department">Departamento</Label>
               <Select
-                value={formData.department || undefined}
+                value={formData.department}
                 onValueChange={(value) => {
-                  const selectedDept = departments.find(d => d.name === value);
                   setFormData({ 
                     ...formData, 
                     department: value as DepartmentType,
-                    department_id: selectedDept?.id || "",
                     assigned_class: "" // Reset class when department changes
                   });
                 }}
