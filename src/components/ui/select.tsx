@@ -73,10 +73,10 @@ const SelectContent = React.forwardRef<
 >(({ className, children, position = "popper", ...props }, ref) => {
   const isMobile = useIsMobile();
   
-  // Always use "item-aligned" on mobile
+  // Always use "item-aligned" on mobile which is more reliable
   const safePosition = isMobile ? "item-aligned" : position;
   
-  // Common content props and classes
+  // Shared content props and styles for both mobile and desktop
   const contentProps = {
     ref,
     className: cn(
@@ -89,7 +89,7 @@ const SelectContent = React.forwardRef<
     ...props
   };
   
-  // Viewport props
+  // Shared viewport props
   const viewportProps = {
     className: cn(
       "p-1",
@@ -97,8 +97,8 @@ const SelectContent = React.forwardRef<
         "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
     )
   };
-  
-  // Avoid using Portal on mobile to prevent the removeChild error
+
+  // Mobile implementation - Completely avoid Portal to prevent DOM issues
   if (isMobile) {
     return (
       <SelectPrimitive.Content {...contentProps}>
@@ -111,7 +111,7 @@ const SelectContent = React.forwardRef<
     );
   }
   
-  // Use Portal on desktop
+  // Desktop implementation with Portal
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content {...contentProps}>
