@@ -44,6 +44,8 @@ const Departamentos = () => {
   const [description, setDescription] = useState("");
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
@@ -133,6 +135,16 @@ const Departamentos = () => {
 
   const handleRemoveClass = (classToRemove: string) => {
     setClasses(classes.filter(c => c !== classToRemove));
+  };
+
+  const handleEditDepartment = (department: Department) => {
+    setEditingDepartment({
+      ...department,
+      name: department.name as DepartmentType,
+      description: department.description || "",
+      classes: [...(department.classes || [])],
+    });
+    setIsEditModalOpen(true);
   };
 
   if (isLoading) {
@@ -276,11 +288,10 @@ const Departamentos = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            const departmentToEdit: Department = {
+                            setSelectedDepartment({
                               ...department,
                               name: department.name as DepartmentType
-                            };
-                            setSelectedDepartment(departmentToEdit);
+                            });
                             setIsEditing(true);
                             setDescription(department.description || "");
                             setClasses(department.classes || []);

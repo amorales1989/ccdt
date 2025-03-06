@@ -1,14 +1,15 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import type { DepartmentType, AppRole } from "@/types/database";
 
 type Profile = {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  role: Database["public"]["Enums"]["app_role"];
-  departments: Database["public"]["Enums"]["department_type"][] | null;
+  role: AppRole;
+  departments: DepartmentType[] | null;
+  department_id: string | null;
   assigned_class: string | null;
 };
 
@@ -23,6 +24,7 @@ type AuthContextType = {
     last_name: string; 
     role: Profile["role"];
     departments: Profile["departments"];
+    department_id: Profile["department_id"];
     assigned_class: Profile["assigned_class"];
   }) => Promise<void>;
   signOut: () => Promise<void>;
@@ -100,7 +102,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       console.log("Profile data:", data);
-      setProfile(data);
+      
+      // Ensure departments is correctly typed as DepartmentType[]
+      if (data) {
+        const typedProfile: Profile = {
+          ...data,
+          departments: data.departments as DepartmentType[] || [],
+          department_id: data.department_id || null
+        };
+        setProfile(typedProfile);
+      }
     } catch (error) {
       console.error("Error loading user profile:", error);
     } finally {
@@ -123,12 +134,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     last_name: string; 
     role: Profile["role"];
     departments: Profile["departments"];
+    department_id: Profile["department_id"];
     assigned_class: Profile["assigned_class"];
   }) {
     console.log("Attempting sign up with data:", { email, ...userData });
     
     const formattedDepartments = userData.departments?.map(dept => 
-      dept as Database["public"]["Enums"]["department_type"]
+      dept as DepartmentType
     ) || [];
 
     const { error } = await supabase.auth.signUp({
@@ -137,7 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: {
         data: {
           ...userData,
-          departments: formattedDepartments
+          departments: formattedDepartments,
+          department_id: userData.department_id
         },
       },
     });
