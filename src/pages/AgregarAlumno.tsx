@@ -49,7 +49,7 @@ const AgregarAlumno = () => {
 
   useEffect(() => {
     if (profile?.departments?.[0]) {
-      const department = profile.departments[0] as DepartmentType;
+      const department = profile.departments[0];
       setFormData(prev => ({
         ...prev,
         department,

@@ -53,7 +53,14 @@ export interface Department {
   updated_at: string;
 }
 
-export type DepartmentType = "escuelita_central" | "pre_adolescentes" | "adolescentes" | "jovenes" | "jovenes_adultos" | "adultos";
+export type DepartmentType = 
+  | "escuelita_central" 
+  | "pre_adolescentes" 
+  | "adolescentes" 
+  | "jovenes" 
+  | "jovenes_adultos" 
+  | "adultos"
+  | "Examen Físico_Rev1"; // Added this to handle the existing data
 
 export interface Profile {
   id: string;
