@@ -73,8 +73,8 @@ const SelectContent = React.forwardRef<
 >(({ className, children, position = "popper", ...props }, ref) => {
   const isMobile = useIsMobile();
   
-  // En móviles, usamos "item" como posición para evitar problemas de portabilidad
-  const safePosition = isMobile ? "item" : position;
+  // En móviles, usamos "item-aligned" como posición para evitar problemas de portabilidad
+  const safePosition = isMobile ? "item-aligned" : position;
   
   // Si es móvil, no usamos Portal para evitar el error de removeChild
   return isMobile ? (
