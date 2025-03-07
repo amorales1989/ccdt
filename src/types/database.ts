@@ -7,9 +7,14 @@ export interface Student {
   gender: string;
   birthdate?: string;
   department?: DepartmentType;
+  department_id?: string;
   assigned_class?: string;
   created_at: string;
   updated_at: string;
+  departments?: { 
+    name?: DepartmentType;
+    id?: string;
+  };
 }
 
 export interface Event {
@@ -28,10 +33,15 @@ export interface Attendance {
   date: string;
   status: boolean;
   department?: DepartmentType;
+  department_id?: string;
   assigned_class?: string;
   created_at: string;
   updated_at: string;
   students?: Student;
+  departments?: {
+    name?: DepartmentType;
+    id?: string;
+  };
 }
 
 export interface Department {
@@ -43,7 +53,15 @@ export interface Department {
   updated_at: string;
 }
 
-export type DepartmentType = "escuelita_central" | "pre_adolescentes" | "adolescentes" | "jovenes" | "jovenes_adultos" | "adultos";
+export type DepartmentType = 
+  | "escuelita_central" 
+  | "pre_adolescentes" 
+  | "adolescentes" 
+  | "jovenes" 
+  | "jovenes_adultos" 
+  | "adultos"
+  | "Examen Físico_Rev1" 
+  | string; // Added string to allow for any department name from database
 
 export interface Profile {
   id: string;
@@ -51,6 +69,7 @@ export interface Profile {
   last_name: string;
   role: AppRole;
   departments: DepartmentType[];
+  department_id?: string;
   email?: string;
   assigned_class?: string;
 }

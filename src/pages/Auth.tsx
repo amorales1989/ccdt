@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,14 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
+import type { DepartmentType } from "@/types/database";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showDepartmentSelect, setShowDepartmentSelect] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<Database["public"]["Enums"]["department_type"] | null>(null);
-  const [userDepartments, setUserDepartments] = useState<Database["public"]["Enums"]["department_type"][]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
+  const [userDepartments, setUserDepartments] = useState<DepartmentType[]>([]);
   const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,6 +30,12 @@ export default function Auth() {
       } else if (profile.departments && profile.departments.length === 1) {
         const dept = profile.departments[0];
         localStorage.setItem('selectedDepartment', dept);
+        
+        // Set department_id in localStorage if available
+        if (profile.department_id) {
+          localStorage.setItem('selectedDepartmentId', profile.department_id);
+        }
+        
         navigate("/"); // Si solo tiene un departamento, proceder al login automáticamente
       } else {
         navigate("/"); // Si no tiene departamentos, también procede al login
@@ -66,9 +74,28 @@ export default function Auth() {
     }
   };
 
-  const handleDepartmentSelect = (value: string) => {
+  const handleDepartmentSelect = async (value: string) => {
     console.log("Departamento seleccionado:", value);
-    setSelectedDepartment(value as Database["public"]["Enums"]["department_type"]);
+    setSelectedDepartment(value as DepartmentType);
+    
+    // Get department_id for the selected department
+    try {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id")
+        .eq("name", value)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching department ID:", error);
+      } else if (data) {
+        // Store department_id in localStorage
+        localStorage.setItem('selectedDepartmentId', data.id);
+      }
+    } catch (err) {
+      console.error("Error in department select:", err);
+    }
+    
     // Guardamos el departamento seleccionado en el almacenamiento local
     localStorage.setItem('selectedDepartment', value);
     navigate("/"); // Procedemos al login después de seleccionar el departamento

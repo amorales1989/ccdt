@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isBefore, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Event, DepartmentType } from "@/types/database";
+import type { Event, DepartmentType, Student } from "@/types/database";
 import { StudentSearch } from "@/components/StudentSearch";
 
 const Index = () => {
@@ -25,7 +25,13 @@ const Index = () => {
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students'],
-    queryFn: getStudents
+    queryFn: () => getStudents().then(data => {
+      // Ensure all students have a properly typed department
+      return data.map(student => ({
+        ...student,
+        department: student.department as DepartmentType
+      })) as Student[];
+    })
   });
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
@@ -41,7 +47,13 @@ const Index = () => {
         return acc;
       }
 
-      const deptStudents = students.filter(s => s.department === dept);
+      const deptStudents = students.filter(s => {
+        if (s.departments && s.departments.name) {
+          return s.departments.name === dept;
+        }
+        return s.department === dept;
+      });
+
       acc[dept] = {
         male: deptStudents.filter(s => s.gender === "masculino").length,
         female: deptStudents.filter(s => s.gender === "femenino").length,
@@ -146,7 +158,6 @@ const Index = () => {
     deleteEventMutate(id);
   };
 
-  // Filter future events
   const futureEvents = events.filter(event => !isBefore(new Date(event.date), startOfToday()));
 
   return (

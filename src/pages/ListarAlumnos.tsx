@@ -22,7 +22,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 
-// Definir funciones para actualizar y eliminar estudiantes si no existen en lib/api
 const updateStudent = async (id: string, data: any) => {
   const { error } = await supabase
     .from("students")
@@ -53,19 +52,20 @@ const ListarAlumnos = () => {
   const [phoneCode, setPhoneCode] = useState("54");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | "">("");
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [editDepartment, setEditDepartment] = useState<DepartmentType | "">("");
+  const [editDepartmentId, setEditDepartmentId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
-  // Configurar formulario con react-hook-form para usar tipos específicos
   type StudentFormData = {
     name: string;
     phone: string;
     address: string;
     birthdate: string;
-    gender: "masculino" | "femenino"; // Especificar que solo puede ser estos valores
-    department: DepartmentType | ""; // Puede ser DepartmentType o string vacío
+    gender: "masculino" | "femenino";
+    department: DepartmentType | "";
     assigned_class: string;
   };
 
@@ -75,31 +75,27 @@ const ListarAlumnos = () => {
       phone: "",
       address: "",
       birthdate: "",
-      gender: "masculino", // Valor predeterminado válido
-      department: "", // Inicialmente vacío
+      gender: "masculino",
+      department: "",
       assigned_class: "",
     }
   });
 
-  // Reset form when student to edit changes
   useEffect(() => {
     if (studentToEdit) {
       console.log("Setting form values for student:", studentToEdit);
       
-      // Extraer código de país y número de teléfono
-      let extractedPhoneCode = "54"; // Valor por defecto
+      let extractedPhoneCode = "54";
       let extractedPhoneNumber = "";
       
       if (studentToEdit.phone) {
         if (studentToEdit.phone.startsWith("54")) {
-          // Extraer código de país (primeros 2 dígitos)
           extractedPhoneCode = studentToEdit.phone.substring(0, 2);
           
-          // Si tiene el formato 549xxxxxxxxxx
           if (studentToEdit.phone.startsWith("549") && studentToEdit.phone.length >= 12) {
-            extractedPhoneNumber = studentToEdit.phone.substring(3); // Omitir 549
+            extractedPhoneNumber = studentToEdit.phone.substring(3);
           } else {
-            extractedPhoneNumber = studentToEdit.phone.substring(2); // Omitir 54
+            extractedPhoneNumber = studentToEdit.phone.substring(2);
           }
         } else {
           extractedPhoneNumber = studentToEdit.phone;
@@ -109,18 +105,15 @@ const ListarAlumnos = () => {
       setPhoneCode(extractedPhoneCode);
       setPhoneNumber(extractedPhoneNumber);
       
-      // Aseguramos que gender sea uno de los valores permitidos
       const validGender = studentToEdit.gender === "femenino" ? "femenino" : "masculino";
       
-      // Aseguramos que department sea uno de los valores permitidos o string vacío
       const departmentValue = studentToEdit.department || "" as DepartmentType | "";
       
-      // Establecer el departamento seleccionado para el formulario de edición
       setEditDepartment(departmentValue);
       
       form.reset({
         name: studentToEdit.name,
-        phone: "", // Lo manejamos con los estados separados
+        phone: "",
         address: studentToEdit.address || "",
         birthdate: studentToEdit.birthdate || "",
         gender: validGender,
@@ -132,14 +125,37 @@ const ListarAlumnos = () => {
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
-  // Usar departamento y clase del perfil del usuario
   const userDepartment = profile?.departments?.[0] || null;
   const userClass = profile?.assigned_class || null;
 
-  // Si no es admin/secretaria, usar el departamento y clase del usuario automáticamente
   useEffect(() => {
     if (!isAdminOrSecretaria && userDepartment) {
       setSelectedDepartment(userDepartment);
+      
+      const fetchDepartmentId = async () => {
+        try {
+          const { data, error } = await supabase
+            .from("departments")
+            .select("id")
+            .eq("name", userDepartment)
+            .single();
+          
+          if (error) {
+            console.error("Error fetching department ID:", error);
+            return;
+          }
+          
+          if (data) {
+            console.log("Found department ID:", data.id, "for department:", userDepartment);
+            setSelectedDepartmentId(data.id);
+          }
+        } catch (error) {
+          console.error("Error in fetchDepartmentId:", error);
+        }
+      };
+      
+      fetchDepartmentId();
+      
       if (userClass) {
         setSelectedClass(userClass);
       }
@@ -159,35 +175,28 @@ const ListarAlumnos = () => {
     },
   });
 
-  // Obtener las clases disponibles para el departamento seleccionado
   const availableClasses = selectedDepartment 
     ? departments.find(d => d.name === selectedDepartment)?.classes || []
     : [];
 
-  // Obtener las clases disponibles para el departamento en edición
   const editAvailableClasses = editDepartment 
     ? departments.find(d => d.name === editDepartment)?.classes || []
     : [];
 
-  // Verificar si el departamento en edición tiene clases
   const editDepartmentHasClasses = editAvailableClasses.length > 0;
 
-  // Obtener estudiantes filtrados
   const { data: students = [], isLoading, refetch } = useQuery({
-    queryKey: ["students", selectedDepartment, selectedClass],
+    queryKey: ["students", selectedDepartmentId, selectedClass],
     queryFn: async () => {
-      // Si es admin/secretaria y no ha seleccionado departamento, no cargar datos
-      if (isAdminOrSecretaria && !selectedDepartment) {
+      if (isAdminOrSecretaria && !selectedDepartmentId) {
         return [];
       }
 
-      let query = supabase.from("students").select("*");
+      let query = supabase.from("students").select("*, departments:department_id(name, id)");
       
-      // Aplicar filtro por departamento
-      if (selectedDepartment) {
-        query = query.eq("department", selectedDepartment);
+      if (selectedDepartmentId) {
+        query = query.eq("department_id", selectedDepartmentId);
         
-        // Si hay una clase seleccionada, filtrar también por esa clase
         if (selectedClass) {
           query = query.eq("assigned_class", selectedClass);
         }
@@ -196,29 +205,33 @@ const ListarAlumnos = () => {
       const { data, error } = await query;
       if (error) throw error;
       
-      return (data || []).sort((a, b) => a.name.localeCompare(b.name)) as Student[];
+      console.log("Fetched students:", data);
+      
+      const processedData = (data || [])
+        .map(student => ({
+          ...student,
+          department: student.departments?.name
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)) as Student[];
+      
+      return processedData;
     },
-    enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(selectedDepartment)), // No cargar si es admin/secretaria sin departamento seleccionado
+    enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(selectedDepartmentId)),
   });
 
-  // Función para formatear el número de teléfono
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneNumber) return null;
 
-    // Eliminar todos los caracteres que no sean dígitos
     let cleanNumber = phoneNumber.replace(/\D/g, "");
     
-    // Si empieza con 0, quitarlo
     if (cleanNumber.startsWith("0")) {
       cleanNumber = cleanNumber.substring(1);
     }
     
-    // Si empieza con 15 (prefijo de celular argentino), quitarlo
     if (cleanNumber.startsWith("15")) {
       cleanNumber = cleanNumber.substring(2);
     }
     
-    // Si el código de país es Argentina (54), asegurarnos de agregar el 9 para celulares
     if (phoneCode === "54") {
       return phoneCode + "9" + cleanNumber;
     }
@@ -226,15 +239,12 @@ const ListarAlumnos = () => {
     return phoneCode + cleanNumber;
   };
 
-  // Función para formatear el número de teléfono para mostrar (sin prefijos)
   const formatPhoneDisplay = (phone: string | null) => {
     if (!phone) return "No especificado";
     
-    // Si comienza con "549", quitar esos dígitos para mostrar
     if (phone.startsWith("549")) {
       return phone.substring(3);
     }
-    // Si comienza con "54", quitar esos dígitos
     else if (phone.startsWith("54")) {
       return phone.substring(2);
     }
@@ -245,28 +255,22 @@ const ListarAlumnos = () => {
   const handleWhatsAppClick = (phone: string) => {
     if (!phone) return;
     
-    // Eliminar todos los caracteres que no sean dígitos
     let cleanNumber = phone.replace(/\D/g, "");
     
-    // Si empieza con el código de país, quitarlo temporalmente
     let hasCountryCode = false;
     if (cleanNumber.startsWith("54")) {
       cleanNumber = cleanNumber.substring(2);
       hasCountryCode = true;
     }
     
-    // Si empieza con 0, quitarlo
     if (cleanNumber.startsWith("0")) {
       cleanNumber = cleanNumber.substring(1);
     }
     
-    // Si empieza con 15 (prefijo de celular argentino), quitarlo
     if (cleanNumber.startsWith("15")) {
       cleanNumber = cleanNumber.substring(2);
     }
     
-    // Asegurarse de que sea un número válido para Argentina
-    // Los números argentinos tienen 10 dígitos: código de área (2 o 3 dígitos) + número (8 o 7 dígitos)
     if (cleanNumber.length < 10) {
       console.error("Número de teléfono incompleto:", phone);
       toast({
@@ -277,12 +281,10 @@ const ListarAlumnos = () => {
       return;
     }
     
-    // Si el número es más largo que 10 dígitos, tomar solo los últimos 10
     if (cleanNumber.length > 10) {
       cleanNumber = cleanNumber.substring(cleanNumber.length - 10);
     }
     
-    // Formato final: 54 9 + número de 10 dígitos
     const formattedPhone = "549" + cleanNumber;
     
     console.log("Número de WhatsApp formateado:", formattedPhone);
@@ -313,51 +315,87 @@ const ListarAlumnos = () => {
     XLSX.writeFile(workbook, fileName);
   };
 
-  // Manejar cambio de departamento
-  const handleDepartmentChange = (value: string) => {
-    setSelectedDepartment(value as DepartmentType);
-    // Al cambiar el departamento, reiniciar la clase seleccionada
+  const handleDepartmentChange = async (value: string) => {
+    const departmentName = value as DepartmentType;
+    setSelectedDepartment(departmentName);
+    
+    try {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id")
+        .eq("name", departmentName)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching department ID:", error);
+        return;
+      }
+      
+      if (data) {
+        console.log("Found department ID:", data.id, "for department:", departmentName);
+        setSelectedDepartmentId(data.id);
+      }
+    } catch (error) {
+      console.error("Error in handleDepartmentChange:", error);
+    }
+    
     setSelectedClass(null);
   };
 
-  // Manejar cambio de clase
   const handleClassChange = (value: string) => {
     setSelectedClass(value);
   };
 
-  // Manejar cambio de departamento en edición
-  const handleEditDepartmentChange = (value: string) => {
-    setEditDepartment(value as DepartmentType);
-    // Al cambiar el departamento, reiniciar la clase
+  const handleEditDepartmentChange = async (value: string) => {
+    const departmentName = value as DepartmentType;
+    setEditDepartment(departmentName);
+    
+    try {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id")
+        .eq("name", departmentName)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching department ID for edit:", error);
+        return;
+      }
+      
+      if (data) {
+        console.log("Found department ID for edit:", data.id, "for department:", departmentName);
+        setEditDepartmentId(data.id);
+      }
+    } catch (error) {
+      console.error("Error in handleEditDepartmentChange:", error);
+    }
+    
     form.setValue("assigned_class", "");
   };
 
-  // Función para abrir modal de edición
   const handleEditStudent = (student: Student) => {
     console.log("Editando estudiante:", student);
     setStudentToEdit(student);
     setIsDialogOpen(true);
   };
 
-  // Función para abrir diálogo de confirmación de eliminación
   const handleDeleteStudent = (student: Student) => {
     console.log("Eliminando estudiante:", student);
     setStudentToDelete(student);
     setIsAlertOpen(true);
   };
 
-  // Manejar el envío del formulario de edición
   const onSubmit = async (data: StudentFormData) => {
     if (!studentToEdit) return;
     
-    // Formatear el número de teléfono
     const formattedPhone = formatPhoneNumber(phoneCode, phoneNumber);
     
     const updatedData = {
       ...data,
       phone: formattedPhone,
-      department: data.department as DepartmentType, // Asegurar que sea tratado como DepartmentType
-      assigned_class: data.assigned_class || null // Si no hay clase, establecer como null
+      department: data.department as DepartmentType,
+      department_id: editDepartmentId,
+      assigned_class: data.assigned_class || null
     };
     
     console.log("Datos a actualizar:", updatedData);
@@ -381,7 +419,6 @@ const ListarAlumnos = () => {
     }
   };
 
-  // Confirmar eliminación de alumno
   const confirmDelete = async () => {
     if (!studentToDelete) return;
     
@@ -457,7 +494,6 @@ const ListarAlumnos = () => {
   );
 
   const renderActions = (student: any) => {
-    // Acciones para la vista normal (no móvil)
     const actions = (
       <>
         <Button
@@ -499,7 +535,6 @@ const ListarAlumnos = () => {
       </>
     );
 
-    // Vista para dispositivos móviles
     if (isMobile) {
       return (
         <DropdownMenu>
@@ -559,7 +594,6 @@ const ListarAlumnos = () => {
                   <TableRow>
                     <TableCell className="p-0 w-full">
                       <div className="grid grid-cols-[200px_1fr_1fr_1fr] gap-4 p-4 w-full">
-                        {/* Nombre del alumno con ancho fijo */}
                         <div className="flex items-center">
                           <CollapsibleTrigger asChild>
                             <button className="font-medium hover:underline text-left w-full truncate">
@@ -568,12 +602,10 @@ const ListarAlumnos = () => {
                           </CollapsibleTrigger>
                         </div>
   
-                        {/* Edad */}
                         <div className="flex items-center justify-center">
                           {calculateAge(student.birthdate)}
                         </div>
   
-                        {/* Acciones */}
                         <div className="flex items-center justify-end">
                           {renderActions(student)}
                         </div>
@@ -602,9 +634,7 @@ const ListarAlumnos = () => {
       </div>
     </Card>
   );
-  
-  
-  // Renderizar filtros solo para admin/secretaria
+
   const renderFilters = () => {
     if (!isAdminOrSecretaria) return null;
 
@@ -673,7 +703,6 @@ const ListarAlumnos = () => {
         )}
       </div>
 
-      {/* Filtros para admin/secretaria */}
       {renderFilters()}
 
       {isLoading ? (
@@ -719,7 +748,6 @@ const ListarAlumnos = () => {
         </>
       )}
 
-      {/* Modal de edición de alumno */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -803,7 +831,6 @@ const ListarAlumnos = () => {
                   <Select 
                     value={form.getValues("department")}
                     onValueChange={(value) => {
-                      // Actualizar el departamento en el formulario y el estado local
                       form.setValue("department", value as DepartmentType);
                       handleEditDepartmentChange(value);
                     }}
@@ -856,7 +883,6 @@ const ListarAlumnos = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de confirmación para eliminar */}
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -28,24 +28,57 @@ const TomarAsistencia = () => {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isLoading, setIsLoading] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
+  const [departmentId, setDepartmentId] = useState<string | null>(null);
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
   const currentDepartment = profile?.departments?.[0];
   const userClass = profile?.assigned_class;
 
+  // Fetch department ID when component loads or profile changes
+  useEffect(() => {
+    const fetchDepartmentId = async () => {
+      if (currentDepartment) {
+        try {
+          const { data, error } = await supabase
+            .from("departments")
+            .select("id")
+            .eq("name", currentDepartment)
+            .single();
+          
+          if (error) {
+            console.error("Error fetching department ID:", error);
+            return;
+          }
+          
+          if (data) {
+            console.log("Found department ID:", data.id, "for department:", currentDepartment);
+            setDepartmentId(data.id);
+          }
+        } catch (error) {
+          console.error("Error in fetchDepartmentId:", error);
+        }
+      }
+    };
+    
+    fetchDepartmentId();
+  }, [currentDepartment]);
+
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
-    queryKey: ["students-attendance", currentDepartment, userClass],
+    queryKey: ["students-attendance", departmentId, userClass],
     queryFn: async () => {
-      console.log("Fetching students for attendance...", { currentDepartment, userClass });
-      let query = supabase.from("students").select("*");
+      console.log("Fetching students for attendance...", { departmentId, userClass });
+      let query = supabase
+        .from("students")
+        .select("*, departments:department_id(name, id)");
 
       if (!isAdminOrSecretaria) {
-        if (!currentDepartment) {
-          console.log("No department assigned to user");
+        if (!departmentId) {
+          console.log("No department ID available");
           return [];
         }
         
-        query = query.eq("department", currentDepartment);
+        // Filter by department_id
+        query = query.eq("department_id", departmentId);
         
         if (userClass) {
           console.log("Filtering by class:", userClass);
@@ -58,16 +91,19 @@ const TomarAsistencia = () => {
         console.error("Error fetching students for attendance:", error);
         throw error;
       }
+      
       console.log("Fetched students for attendance:", data);
       return data;
     },
+    enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(departmentId)),
   });
 
   const checkExistingAttendance = async (date: string) => {
     try {
-      const attendanceData = await getAttendance(date, date, currentDepartment);
+      // Use department ID instead of department name
+      const attendanceData = await getAttendance(date, date, undefined, departmentId);
       const hasAttendance = attendanceData && attendanceData.length > 0;
-      console.log("Checking attendance for date:", date, "department:", currentDepartment, "exists:", hasAttendance);
+      console.log("Checking attendance for date:", date, "departmentId:", departmentId, "exists:", hasAttendance);
       return hasAttendance;
     } catch (error) {
       console.error("Error checking existing attendance:", error);
@@ -104,7 +140,7 @@ const TomarAsistencia = () => {
             student_id: studentId,
             date: adjustedDate,
             status,
-            department: currentDepartment,
+            department_id: departmentId || undefined,
           })
         )
       );
