@@ -13,13 +13,13 @@ export function useIsMobile() {
     // Safety check for SSR
     if (typeof window === 'undefined') return
     
-    // Set initial value
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    
     // Function to update state on window resize
     const handleResize = () => {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
+    
+    // Set initial value
+    handleResize()
     
     // Add event listener
     window.addEventListener("resize", handleResize)

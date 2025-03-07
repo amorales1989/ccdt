@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -59,6 +60,7 @@ const HistorialAsistencia = () => {
   const userDepartmentId = profile?.department_id;
   const userClass = profile?.assigned_class;
 
+  // Get department data based on selected department
   const { data: departmentData } = useQuery({
     queryKey: ['department', selectedDepartment],
     queryFn: () => selectedDepartment !== "all" ? getDepartmentByName(selectedDepartment as DepartmentType) : null,
@@ -143,21 +145,43 @@ const HistorialAsistencia = () => {
         userDepartmentId 
       });
       
+      // For admin/secretaria: use the selected department
+      // For others: use their assigned department ID
       let departmentToUse = "";
       let departmentIdToUse = null;
       
       if (isAdminOrSecretaria) {
-        departmentToUse = selectedDepartment === "all" ? "" : selectedDepartment;
+        // Only pass department name if "all" is not selected
+        if (selectedDepartment !== "all") {
+          // Instead of passing the name, get the department ID
+          const { data: deptData } = await getDepartmentByName(selectedDepartment as DepartmentType);
+          if (deptData && deptData.id) {
+            departmentIdToUse = deptData.id;
+          }
+        }
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
       }
       
-      return getAttendance(formattedStartDate, formattedEndDate, departmentToUse, departmentIdToUse);
+      // Get attendance with department ID
+      const attendanceData = await getAttendance(
+        formattedStartDate, 
+        formattedEndDate, 
+        "", // Empty string for department name since we're using ID
+        departmentIdToUse
+      );
+      
+      // If a class is selected (and not "all"), filter by class
+      if (selectedClass !== "all") {
+        return attendanceData.filter(record => record.assigned_class === selectedClass);
+      }
+      
+      return attendanceData;
     },
   });
 
   const { data: dateAttendance = [], isLoading: dateAttendanceLoading, refetch: refetchDateAttendance } = useQuery({
-    queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", userDepartmentId, userClass],
+    queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", userDepartmentId, userClass, selectedDepartment, selectedClass],
     queryFn: async () => {
       if (!editDate) return [];
       
@@ -165,26 +189,29 @@ const HistorialAsistencia = () => {
       console.log("Fetching attendance for edit mode:", { 
         formattedDate, 
         departmentId: userDepartmentId, 
-        class: userClass 
+        class: userClass,
+        selectedDepartment 
       });
       
       let departmentIdToUse = null;
-      let departmentNameToUse = "";
       
-      if (isAdminOrSecretaria) {
-        departmentNameToUse = selectedDepartment === "all" ? "" : selectedDepartment;
+      if (isAdminOrSecretaria && selectedDepartment !== "all") {
+        // Get department ID from the selected department name
+        const { data: deptData } = await getDepartmentByName(selectedDepartment as DepartmentType);
+        if (deptData && deptData.id) {
+          departmentIdToUse = deptData.id;
+        }
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
       }
       
-      const attendanceData = await getAttendance(formattedDate, formattedDate, departmentNameToUse, departmentIdToUse);
+      const attendanceData = await getAttendance(formattedDate, formattedDate, "", departmentIdToUse);
       
-      if (!isAdminOrSecretaria && userClass && attendanceData) {
-        return attendanceData.filter(record => record.assigned_class === userClass);
-      }
-      
-      if (isAdminOrSecretaria && selectedClass !== "all" && attendanceData) {
+      // Additional filtering for classes
+      if (isAdminOrSecretaria && selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
+      } else if (!isAdminOrSecretaria && userClass) {
+        return attendanceData.filter(record => record.assigned_class === userClass);
       }
       
       return attendanceData;
@@ -224,7 +251,7 @@ const HistorialAsistencia = () => {
           student_id: record.student_id,
           date: record.date,
           status: record.status,
-          department_id: userDepartmentId || undefined,
+          department_id: record.department_id || userDepartmentId,
           assigned_class: record.assigned_class,
           ...(record.event_id && { event_id: record.event_id })
         })
@@ -257,17 +284,7 @@ const HistorialAsistencia = () => {
     const matchesSearch = searchQuery === "" || 
       record.students.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (!isAdminOrSecretaria) {
-      return matchesSearch;
-    }
-
-    const matchesDepartment = selectedDepartment === "all" || 
-      record.department === selectedDepartment;
-
-    const matchesClass = selectedClass === "all" || 
-      record.assigned_class === selectedClass;
-
-    return matchesSearch && matchesDepartment && matchesClass;
+    return matchesSearch;
   });
 
   const attendanceStats = {
@@ -280,7 +297,7 @@ const HistorialAsistencia = () => {
       Nombre: record.students?.name,
       Estado: record.status ? "Presente" : "Ausente",
       Fecha: adjustDateForDisplay(record.date),
-      Departamento: record.department,
+      Departamento: record.students?.departments?.name || 'Sin departamento',
       Clase: record.assigned_class || 'Sin asignar'
     }));
 
@@ -622,7 +639,7 @@ const HistorialAsistencia = () => {
                           {!isMobile && (
                             <>
                               <TableCell className="capitalize">
-                                {record.department?.replace(/_/g, ' ')}
+                                {record.students?.departments?.name?.replace(/_/g, ' ') || 'Sin departamento'}
                               </TableCell>
                               <TableCell>
                                 {record.assigned_class || 'Sin asignar'}
