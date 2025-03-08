@@ -163,6 +163,7 @@ export type Database = {
           created_at: string
           department: string | null
           department_id: string | null
+          document_number: string | null
           gender: string
           id: string
           name: string
@@ -176,6 +177,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           department_id?: string | null
+          document_number?: string | null
           gender?: string
           id?: string
           name: string
@@ -189,6 +191,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           department_id?: string | null
+          document_number?: string | null
           gender?: string
           id?: string
           name?: string

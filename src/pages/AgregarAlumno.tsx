@@ -26,6 +26,7 @@ const AgregarAlumno = () => {
     address: "",
     gender: "masculino",
     birthdate: "",
+    document_number: "",
     department: profile?.departments?.[0] || null as DepartmentType | null,
     department_id: profile?.department_id || "",
     assigned_class: profile?.assigned_class || "",
@@ -128,6 +129,15 @@ const AgregarAlumno = () => {
       return;
     }
 
+    if (!formData.document_number) {
+      toast({
+        title: "Error",
+        description: "Por favor ingrese el DNI del alumno",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const formattedPhone = formatPhoneNumber(formData.phoneCode, formData.phone);
 
     setIsLoading(true);
@@ -138,6 +148,7 @@ const AgregarAlumno = () => {
         address: formData.address || null,
         gender: formData.gender,
         birthdate: formData.birthdate || null,
+        document_number: formData.document_number,
         department: formData.department,
         department_id: formData.department_id || undefined,
         assigned_class: formData.assigned_class || null,
@@ -149,11 +160,11 @@ const AgregarAlumno = () => {
         variant: "success",
       });
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al crear alumno:", error);
       toast({
         title: "Error",
-        description: "Hubo un error al agregar el alumno",
+        description: error.message || "Hubo un error al agregar el alumno",
         variant: "destructive",
       });
     } finally {
@@ -191,6 +202,18 @@ const AgregarAlumno = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="document_number">DNI</Label>
+              <Input
+                id="document_number"
+                value={formData.document_number}
+                onChange={(e) =>
+                  setFormData({ ...formData, document_number: e.target.value })
+                }
+                placeholder="Ingrese el DNI sin puntos"
                 required
               />
             </div>

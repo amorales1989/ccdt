@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -67,6 +66,7 @@ const ListarAlumnos = () => {
     gender: "masculino" | "femenino";
     department: DepartmentType | "";
     assigned_class: string;
+    document_number: string;
   };
 
   const form = useForm<StudentFormData>({
@@ -78,6 +78,7 @@ const ListarAlumnos = () => {
       gender: "masculino",
       department: "",
       assigned_class: "",
+      document_number: "",
     }
   });
 
@@ -119,6 +120,7 @@ const ListarAlumnos = () => {
         gender: validGender,
         department: departmentValue,
         assigned_class: studentToEdit.assigned_class || "",
+        document_number: studentToEdit.document_number || "",
       });
     }
   }, [studentToEdit, form]);
@@ -409,11 +411,11 @@ const ListarAlumnos = () => {
       setIsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["students"] });
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al actualizar alumno:", error);
       toast({
         title: "Error",
-        description: "No se pudo actualizar el alumno. Intente nuevamente.",
+        description: error.message || "No se pudo actualizar el alumno. Intente nuevamente.",
         variant: "destructive",
       });
     }
@@ -449,6 +451,12 @@ const ListarAlumnos = () => {
           <span className="font-medium">Nombre:</span>
           <span className="ml-2">{student.name}</span>
         </div>
+        {student.document_number && (
+          <div>
+            <span className="font-medium">DNI:</span>
+            <span className="ml-2">{student.document_number}</span>
+          </div>
+        )}
         <div>
           <span className="font-medium">Género:</span>
           <span className="ml-2 capitalize">{student.gender}</span>
@@ -764,6 +772,16 @@ const ListarAlumnos = () => {
                   id="name"
                   {...form.register("name")}
                   placeholder="Nombre completo"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="document_number">DNI</Label>
+                <Input 
+                  id="document_number"
+                  {...form.register("document_number")}
+                  placeholder="Ingrese el DNI sin puntos"
+                  required
                 />
               </div>
               

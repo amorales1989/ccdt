@@ -35,7 +35,8 @@ export const StudentSearch = ({ students }: StudentSearchProps) => {
     const searchLower = searchTerm.toLowerCase();
     return (
       student.name.toLowerCase().includes(searchLower) ||
-      (student.phone && student.phone.includes(searchTerm))
+      (student.phone && student.phone.includes(searchTerm)) ||
+      (student.document_number && student.document_number.includes(searchTerm))
     );
   });
 
@@ -47,7 +48,7 @@ export const StudentSearch = ({ students }: StudentSearchProps) => {
       <CardContent>
         <div className="relative mb-6">
           <Input
-            placeholder="Buscar alumno por nombre o teléfono..."
+            placeholder="Buscar alumno por nombre, DNI o teléfono..."
             value={searchTerm}
             onChange={handleSearch}
             className="pr-10"
@@ -64,11 +65,14 @@ export const StudentSearch = ({ students }: StudentSearchProps) => {
                     onClick={() => handleSelectStudent(student)}
                   >
                     <div className="font-medium">{student.name}</div>
-                    {student.phone && (
-                      <div className="text-sm text-muted-foreground">
-                        Tel: {student.phone}
-                      </div>
-                    )}
+                    <div className="text-sm text-muted-foreground">
+                      {student.document_number && (
+                        <span className="mr-3">DNI: {student.document_number}</span>
+                      )}
+                      {student.phone && (
+                        <span>Tel: {student.phone}</span>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -9,6 +9,7 @@ export interface Student {
   department?: DepartmentType;
   department_id?: string;
   assigned_class?: string;
+  document_number?: string;
   created_at: string;
   updated_at: string;
   departments?: { 

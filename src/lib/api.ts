@@ -44,8 +44,38 @@ export const getStudent = async (id: string) => {
   }
 };
 
+export const checkDniExists = async (dni: string, excludeStudentId?: string) => {
+  try {
+    let query = supabase
+      .from("students")
+      .select("id")
+      .eq("document_number", dni);
+    
+    if (excludeStudentId) {
+      query = query.neq("id", excludeStudentId);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    return data && data.length > 0;
+  } catch (error) {
+    console.error('Error in checkDniExists:', error);
+    throw error;
+  }
+};
+
 export const createStudent = async (student: Omit<Student, "id" | "created_at" | "updated_at">) => {
   try {
+    // Check if the DNI already exists
+    if (student.document_number) {
+      const exists = await checkDniExists(student.document_number);
+      if (exists) {
+        throw new Error(`El DNI ${student.document_number} ya está registrado en el sistema`);
+      }
+    }
+    
     // If we have a department name, we need to get its ID
     let departmentId = null;
     if (student.department) {
@@ -90,6 +120,14 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
 
 export const updateStudent = async (id: string, student: Partial<Omit<Student, "id" | "created_at" | "updated_at">>) => {
   try {
+    // Check if the DNI already exists (excluding the current student)
+    if (student.document_number) {
+      const exists = await checkDniExists(student.document_number, id);
+      if (exists) {
+        throw new Error(`El DNI ${student.document_number} ya está registrado en el sistema`);
+      }
+    }
+    
     // If department is provided, we need to get its ID
     let departmentId = undefined;
     if (student.department) {
@@ -130,6 +168,7 @@ export const updateStudent = async (id: string, student: Partial<Omit<Student, "
     };
   } catch (error) {
     console.error('Error in updateStudent:', error);
+    throw error;
   }
 };
 

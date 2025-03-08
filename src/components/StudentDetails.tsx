@@ -22,6 +22,12 @@ export const StudentDetails = ({ student }: StudentDetailsProps) => {
             <h3 className="text-lg font-semibold mb-4">{student.name}</h3>
             
             <div className="space-y-3">
+              {student.document_number && (
+                <div>
+                  <span className="font-medium">DNI:</span> {student.document_number}
+                </div>
+              )}
+              
               <div>
                 <span className="font-medium">Departamento:</span>{" "}
                 {student.department ? formatDepartment(student.department) : "No asignado"}
