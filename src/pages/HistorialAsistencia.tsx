@@ -63,7 +63,13 @@ const HistorialAsistencia = () => {
   // Get department data based on selected department
   const { data: departmentData } = useQuery({
     queryKey: ['department', selectedDepartment],
-    queryFn: () => selectedDepartment !== "all" ? getDepartmentByName(selectedDepartment as DepartmentType) : null,
+    queryFn: async () => {
+      if (selectedDepartment !== "all") {
+        const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
+        return departmentData;
+      }
+      return null;
+    },
     enabled: selectedDepartment !== "all"
   });
 
@@ -128,7 +134,7 @@ const HistorialAsistencia = () => {
     }
   };
 
-  const { data: attendance = [], isLoading: attendanceLoading } = useQuery({
+  const { data: attendance = [], isLoading: attendanceLoading, refetch: refetchAttendance } = useQuery({
     queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment, selectedClass, userDepartmentId],
     queryFn: async () => {
       const actualStartDate = startDate > endDate ? endDate : startDate;
@@ -154,9 +160,9 @@ const HistorialAsistencia = () => {
         // Only pass department name if "all" is not selected
         if (selectedDepartment !== "all") {
           // Instead of passing the name, get the department ID
-          const { data: deptData } = await getDepartmentByName(selectedDepartment as DepartmentType);
-          if (deptData && deptData.id) {
-            departmentIdToUse = deptData.id;
+          const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
+          if (departmentData && departmentData.id) {
+            departmentIdToUse = departmentData.id;
           }
         }
       } else if (userDepartmentId) {
@@ -197,9 +203,9 @@ const HistorialAsistencia = () => {
       
       if (isAdminOrSecretaria && selectedDepartment !== "all") {
         // Get department ID from the selected department name
-        const { data: deptData } = await getDepartmentByName(selectedDepartment as DepartmentType);
-        if (deptData && deptData.id) {
-          departmentIdToUse = deptData.id;
+        const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
+        if (departmentData && departmentData.id) {
+          departmentIdToUse = departmentData.id;
         }
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
@@ -265,7 +271,10 @@ const HistorialAsistencia = () => {
       });
       
       setIsEditMode(false);
-      refetchDateAttendance();
+      
+      // Refetch both attendance data sources to update the UI
+      await refetchDateAttendance();
+      await refetchAttendance();
     } catch (error) {
       console.error("Error saving attendance changes:", error);
       toast({
