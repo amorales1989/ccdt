@@ -5,7 +5,7 @@
  
 @layer base {
   :root {
-    --background: 195 53% 79%;
+    --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -56,4 +56,3 @@
     @apply hover:bg-sidebar-accent/10 transition-colors;
   }
 }
-
