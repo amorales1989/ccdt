@@ -55,6 +55,9 @@ const HistorialAsistencia = () => {
   const [editRecords, setEditRecords] = useState<Attendance[]>([]);
   const [savingAttendance, setSavingAttendance] = useState(false);
   
+  // Add refresh trigger state to force refetch after editing
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
   const userDepartmentId = profile?.department_id;
@@ -65,8 +68,7 @@ const HistorialAsistencia = () => {
     queryKey: ['department', selectedDepartment],
     queryFn: async () => {
       if (selectedDepartment !== "all") {
-        const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
-        return departmentData;
+        return await getDepartmentByName(selectedDepartment as DepartmentType);
       }
       return null;
     },
@@ -135,7 +137,7 @@ const HistorialAsistencia = () => {
   };
 
   const { data: attendance = [], isLoading: attendanceLoading, refetch: refetchAttendance } = useQuery({
-    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment, selectedClass, userDepartmentId],
+    queryKey: ["attendance", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), selectedDepartment, selectedClass, userDepartmentId, refreshTrigger],
     queryFn: async () => {
       const actualStartDate = startDate > endDate ? endDate : startDate;
       const actualEndDate = endDate < startDate ? startDate : endDate;
@@ -271,6 +273,9 @@ const HistorialAsistencia = () => {
       });
       
       setIsEditMode(false);
+      
+      // Increment the refresh trigger to force a refetch of the attendance data
+      setRefreshTrigger(prev => prev + 1);
       
       // Refetch both attendance data sources to update the UI
       await refetchDateAttendance();
@@ -643,7 +648,16 @@ const HistorialAsistencia = () => {
                       {filteredAttendance.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="font-medium">{record.students?.name}</TableCell>
-                          <TableCell>{record.status ? "Presente" : "Ausente"}</TableCell>
+                          <TableCell>
+                            <span className={`flex items-center gap-2 ${record.status ? "text-green-500" : "text-red-500"}`}>
+                              {record.status ? (
+                                <UserCheck className="h-4 w-4" />
+                              ) : (
+                                <UserX className="h-4 w-4" />
+                              )}
+                              {record.status ? "Presente" : "Ausente"}
+                            </span>
+                          </TableCell>
                           <TableCell>{adjustDateForDisplay(record.date)}</TableCell>
                           {!isMobile && (
                             <>
