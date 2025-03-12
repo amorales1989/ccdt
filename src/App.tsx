@@ -17,6 +17,7 @@ import GestionUsuarios from "@/pages/GestionUsuarios";
 import Calendario from "@/pages/Calendario";
 import Departamentos from "@/pages/Departamentos";
 import PromoverAlumnos from "@/pages/PromoverAlumnos";
+import Configuration from "@/pages/Configuration";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,10 @@ function App() {
                 {
                   path: "/promover",
                   element: <PromoverAlumnos />,
+                },
+                {
+                  path: "/configuracion",
+                  element: <Configuration />,
                 },
                 {
                   path: "*",
