@@ -17,11 +17,18 @@ export default function Auth() {
   const [showDepartmentSelect, setShowDepartmentSelect] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [userDepartments, setUserDepartments] = useState<DepartmentType[]>([]);
+  const [logoPath, setLogoPath] = useState("/fire.png"); // Default logo
   const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
+    // Load custom logo if available
+    const storedLogoPath = localStorage.getItem('logoPath');
+    if (storedLogoPath) {
+      setLogoPath(storedLogoPath);
+    }
+
     if (profile) {
       console.log("Perfil cargado correctamente:", profile);
       if (profile.departments && profile.departments.length > 1) {
@@ -116,7 +123,7 @@ export default function Auth() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <img src="/fire.png" alt="Fire Logo" className="w-16 h-16 mb-2 mx-auto" />
+            <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto" />
             <CardTitle>Seleccionar Departamento</CardTitle>
             <CardDescription>
               Selecciona el departamento con el que deseas trabajar
@@ -148,7 +155,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src="/fire.png" alt="Fire Logo" className="w-16 h-16 mb-2 mx-auto" />
+          <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto" />
           <CardTitle>Iniciar Sesión</CardTitle>
           <CardDescription>
             Ingresa tus credenciales para acceder

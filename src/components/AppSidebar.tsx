@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -37,7 +36,6 @@ const getItems = (role: string | undefined) => {
     }
   ];
 
-  // Solo agregar "Tomar Asistencia" si el rol NO es secretaria
   if (role !== "secretaria") {
     baseItems.push({
       title: "Tomar Asistencia",
@@ -46,14 +44,12 @@ const getItems = (role: string | undefined) => {
     });
   }
 
-  // Agregar "Promover Alumnos" para todos los roles
   baseItems.push({
     title: "Promover Alumnos",
     url: "/promover",
     icon: FolderUp,
   });
 
-  // Agregar el resto de los items comunes
   baseItems.push({
     title: "Historial",
     url: "/historial",
@@ -218,6 +214,14 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const [isOpen, setIsOpen] = React.useState(false);
+  const [congregationName, setCongregationName] = useState("Comunidad Cristiana Don Torcuato");
+
+  useEffect(() => {
+    const storedName = localStorage.getItem('congregationName');
+    if (storedName) {
+      setCongregationName(storedName);
+    }
+  }, []);
 
   if (!user) {
     return null;
@@ -236,7 +240,7 @@ export function AppSidebar() {
           <SheetContent side="left" className="w-[280px] p-0">
             <div className="h-full bg-background">
               <div className="p-4 border-b">
-                <h2 className="text-lg font-semibold">Menú</h2>
+                <h2 className="text-lg font-semibold">{congregationName}</h2>
               </div>
               <nav className="p-2">
                 <NavigationMenu onItemClick={() => setIsOpen(false)} />
@@ -252,7 +256,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent className="w-64">
         <SidebarGroup>
-          <SidebarGroupLabel>Comunidad Cristiana Don Torcuato</SidebarGroupLabel>
+          <SidebarGroupLabel>{congregationName}</SidebarGroupLabel>
           <SidebarGroupContent>
             <NavigationMenu />
           </SidebarGroupContent>
