@@ -111,6 +111,7 @@ const ListarAlumnos = () => {
       const departmentValue = studentToEdit.department || "" as DepartmentType | "";
       
       setEditDepartment(departmentValue);
+      setEditDepartmentId(studentToEdit.department_id || null);
       
       form.reset({
         name: studentToEdit.name,
@@ -392,15 +393,53 @@ const ListarAlumnos = () => {
     
     const formattedPhone = formatPhoneNumber(phoneCode, phoneNumber);
     
-    const updatedData = {
-      ...data,
-      phone: formattedPhone,
-      department: data.department as DepartmentType,
-      department_id: editDepartmentId,
-      assigned_class: data.assigned_class || null
-    };
+    const updatedData: any = {};
     
-    console.log("Datos a actualizar:", updatedData);
+    updatedData.name = data.name;
+    
+    if (phoneNumber) {
+      updatedData.phone = formattedPhone;
+    } else {
+      updatedData.phone = studentToEdit.phone;
+    }
+    
+    if (data.address !== undefined) {
+      updatedData.address = data.address;
+    } else {
+      updatedData.address = studentToEdit.address;
+    }
+    
+    if (data.birthdate !== undefined) {
+      updatedData.birthdate = data.birthdate;
+    } else {
+      updatedData.birthdate = studentToEdit.birthdate;
+    }
+    
+    updatedData.gender = data.gender;
+    
+    if (data.document_number !== undefined) {
+      updatedData.document_number = data.document_number;
+    } else {
+      updatedData.document_number = studentToEdit.document_number;
+    }
+    
+    if (data.department) {
+      updatedData.department = data.department;
+      updatedData.department_id = editDepartmentId;
+    } else {
+      updatedData.department = studentToEdit.department;
+      updatedData.department_id = studentToEdit.department_id;
+    }
+    
+    if (data.assigned_class !== undefined) {
+      updatedData.assigned_class = data.assigned_class || null;
+    } else {
+      updatedData.assigned_class = studentToEdit.assigned_class;
+    }
+    
+    console.log("Original student data:", studentToEdit);
+    console.log("Form data to update:", data);
+    console.log("Final data to send to API:", updatedData);
     
     try {
       await updateStudent(studentToEdit.id, updatedData);
@@ -922,3 +961,4 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
+
