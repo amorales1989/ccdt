@@ -81,11 +81,6 @@ const getItems = (role: string | undefined) => {
         title: "Departamentos",
         url: "/departamentos",
         icon: FolderIcon,
-      },
-      {
-        title: "Configuración",
-        url: "/configuracion",
-        icon: Settings,
       }
     );
   }
@@ -195,6 +190,18 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
         ))}
       </SidebarMenu>
       <div className="mt-auto pt-4 border-t border-border/50">
+        {(profile?.role === "admin" || profile?.role === "secretaria") && (
+          <SidebarMenuButton
+            asChild
+            className={location.pathname === "/configuracion" ? "bg-accent mb-2" : "mb-2"}
+            onClick={handleItemClick}
+          >
+            <Link to="/configuracion" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/50">
+              <Settings className="h-5 w-5" />
+              <span className="font-medium">Configuración</span>
+            </Link>
+          </SidebarMenuButton>
+        )}
         <SidebarMenuButton
           onClick={handleSignOut}
           className="flex items-center gap-2 p-2 rounded-md hover:bg-destructive/10 text-destructive w-full"
