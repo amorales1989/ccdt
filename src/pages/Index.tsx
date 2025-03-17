@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Users, CheckCircle2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -86,11 +86,11 @@ const Index = () => {
                 </div>
                 <div className="space-y-2 mt-4">
                   <div className="flex items-center text-gray-600">
-                    <CheckCircle2 className="h-4 w-4 text-[#3A5282] mr-2" />
+                    <PersonStanding className="h-5 w-5 text-[#3A82AF] mr-2" />
                     <p>Varones: {stats.male}</p>
                   </div>
                   <div className="flex items-center text-gray-600">
-                    <CheckCircle2 className="h-4 w-4 text-[#3A5282] mr-2" />
+                    <PersonStanding className="h-5 w-5 text-[#E83E8C] mr-2" />
                     <p>Mujeres: {stats.female}</p>
                   </div>
                   {profile?.role === "maestro" && profile?.assigned_class && (
