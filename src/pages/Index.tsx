@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -62,33 +62,49 @@ const Index = () => {
       return acc;
     }, {} as Record<DepartmentType, { male: number; female: number; total: number }>);
 
+    const formatDepartmentName = (name: string) => {
+      return name.replace(/_/g, ' ').split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+    };
+
     return (
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Estadísticas de Alumnos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {Object.entries(studentsByDepartment).map(([dept, stats]) => (
-              <Card key={dept} className="p-4">
-                <h3 className="font-semibold text-lg capitalize mb-2">
-                  {dept.replace(/_/g, ' ')}
-                  {profile?.role === "maestro" && profile?.assigned_class && (
-                    <span className="block text-sm text-muted-foreground">
-                      Clase: {profile.assigned_class}
-                    </span>
-                  )}
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold mb-4">Estadísticas de Alumnos</h2>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Object.entries(studentsByDepartment).map(([dept, stats]) => (
+            <div key={dept} className="overflow-hidden rounded-lg shadow-md transition-all hover:shadow-lg">
+              <div className="bg-[#CFD6E3] p-4 text-center">
+                <h3 className="font-semibold text-gray-600">
+                  {formatDepartmentName(dept)}
                 </h3>
-                <div className="space-y-2">
-                  <p>Varones: {stats.male}</p>
-                  <p>Mujeres: {stats.female}</p>
-                  <p className="font-semibold">Total: {stats.total}</p>
+              </div>
+              <div className="bg-white p-6 text-center">
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500">Total</p>
+                  <p className="text-[#3A5282] text-5xl font-semibold">{stats.total}</p>
                 </div>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                <div className="space-y-2 mt-4">
+                  <div className="flex items-center text-gray-600">
+                    <CheckCircle2 className="h-4 w-4 text-[#3A5282] mr-2" />
+                    <p>Varones: {stats.male}</p>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <CheckCircle2 className="h-4 w-4 text-[#3A5282] mr-2" />
+                    <p>Mujeres: {stats.female}</p>
+                  </div>
+                  {profile?.role === "maestro" && profile?.assigned_class && (
+                    <div className="flex items-center text-gray-600">
+                      <CheckCircle2 className="h-4 w-4 text-[#3A5282] mr-2" />
+                      <p>Clase: {profile.assigned_class}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   };
 
