@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Sidebar,
@@ -19,6 +18,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { STORAGE_URL } from "@/integrations/supabase/client";
 
 const getItems = (role: string | undefined) => {
   const baseItems = [
@@ -219,6 +220,7 @@ export function AppSidebar() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [congregationName, setCongregationName] = useState("");
   const [showCongregationName, setShowCongregationName] = useState(false);
+  const [logoPath, setLogoPath] = useState("/fire.png");
 
   const { data: company } = useQuery({
     queryKey: ['company'],
@@ -234,6 +236,19 @@ export function AppSidebar() {
         setShowCongregationName(true);
       } else {
         setShowCongregationName(false);
+      }
+      
+      // Set logo path if available
+      if (company.logo_url) {
+        // Check if the logo URL is a Supabase storage URL
+        if (company.logo_url.startsWith('logos/')) {
+          // Correct format for Supabase storage URLs
+          setLogoPath(`${STORAGE_URL}/${company.logo_url}`);
+        } else {
+          setLogoPath(company.logo_url);
+        }
+      } else {
+        setLogoPath("/fire.png"); // Default logo
       }
     }
   }, [company]);
@@ -254,7 +269,13 @@ export function AppSidebar() {
           </SheetTrigger>
           <SheetContent side="left" className="w-[280px] p-0">
             <div className="h-full bg-background">
-              <div className="p-4 border-b">
+              <div className="p-4 border-b flex items-center">
+                <Avatar className="h-8 w-8 mr-2">
+                  <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                  <AvatarFallback>
+                    <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
+                  </AvatarFallback>
+                </Avatar>
                 {showCongregationName && congregationName && (
                   <h2 className="text-lg font-semibold">{congregationName}</h2>
                 )}
@@ -274,7 +295,15 @@ export function AppSidebar() {
       <SidebarContent className="w-64">
         <SidebarGroup>
           {showCongregationName && congregationName && (
-            <SidebarGroupLabel>{congregationName}</SidebarGroupLabel>
+            <SidebarGroupLabel className="flex items-center">
+              <Avatar className="h-6 w-6 mr-2">
+                <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                <AvatarFallback>
+                  <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
+                </AvatarFallback>
+              </Avatar>
+              {congregationName}
+            </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
             <NavigationMenu />

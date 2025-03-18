@@ -12,6 +12,7 @@ import type { DepartmentType } from "@/types/database";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -45,7 +46,8 @@ export default function Auth() {
       if (company.logo_url) {
         // Check if the logo URL is a Supabase storage URL
         if (company.logo_url.startsWith('logos/')) {
-          setLogoPath(`${STORAGE_URL}/logos/${company.logo_url.split('logos/')[1]}`);
+          // Correct format for Supabase storage URLs
+          setLogoPath(`${STORAGE_URL}/${company.logo_url}`);
         } else {
           setLogoPath(company.logo_url);
         }
@@ -148,7 +150,14 @@ export default function Auth() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto object-contain" />
+            <div className="flex justify-center mb-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                <AvatarFallback>
+                  <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
+                </AvatarFallback>
+              </Avatar>
+            </div>
             {showCompanyName && companyName && (
               <h2 className="text-xl font-semibold text-center mb-2">{companyName}</h2>
             )}
@@ -183,7 +192,14 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto object-contain" />
+          <div className="flex justify-center mb-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+              <AvatarFallback>
+                <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
+              </AvatarFallback>
+            </Avatar>
+          </div>
           {showCompanyName && companyName && (
             <h2 className="text-xl font-semibold mb-2">{companyName}</h2>
           )}
