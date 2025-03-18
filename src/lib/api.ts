@@ -631,5 +631,3 @@ export const updateCompany = async (id: number, updates: Partial<Company>) => {
   }
 };
 
-// Note: The company_configurations related functions are no longer needed
-// since we moved the configuration directly to the company table

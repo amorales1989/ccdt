@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { DepartmentType } from "@/types/database";
-import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,13 +43,8 @@ export default function Auth() {
 
       // Set logo path if available
       if (company.logo_url) {
-        // Check if the logo URL is a Supabase storage URL
-        if (company.logo_url.startsWith('logos/')) {
-          // Correct format for Supabase storage URLs
-          setLogoPath(`${STORAGE_URL}/${company.logo_url}`);
-        } else {
-          setLogoPath(company.logo_url);
-        }
+        // Since we're now storing the complete URL, we can use it directly
+        setLogoPath(company.logo_url);
       } else {
         setLogoPath("/fire.png"); // Default logo
       }

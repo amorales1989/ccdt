@@ -24,7 +24,6 @@ export default function Configuration() {
   const [previewImage, setPreviewImage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   
-  // Initialize settings with defaults
   const [generalSettings, setGeneralSettings] = useState({
     darkMode: false,
     autoSave: true,
@@ -38,13 +37,11 @@ export default function Configuration() {
     showProfileImages: true,
   });
 
-  // Get company data (assuming company id is 1)
   const { data: company, isLoading: isCompanyLoading } = useQuery({
     queryKey: ['company'],
     queryFn: () => getCompany(1)
   });
 
-  // Update company mutation
   const { mutate: updateCompanyMutate } = useMutation({
     mutationFn: (updates: Partial<typeof company>) => updateCompany(1, updates),
     onSuccess: () => {
@@ -64,38 +61,32 @@ export default function Configuration() {
     }
   });
 
-  // Load existing settings on component mount
   useEffect(() => {
     if (!company) return;
 
-    // Set congregation name
     setCongregationName(company.congregation_name || company.name || '');
     
-    // Set logo path
     if (company.logo_url) {
-      // Check if the logo URL is a Supabase storage URL
       if (company.logo_url.startsWith('logos/')) {
         setLogoPreview(`${STORAGE_URL}/logos/${company.logo_url.split('logos/')[1]}`);
       } else {
         setLogoPreview(company.logo_url);
       }
     } else {
-      setLogoPreview('/fire.png'); // Default logo
+      setLogoPreview('/fire.png');
     }
 
-    // Set general settings
     setGeneralSettings({
       darkMode: company.dark_mode || false,
-      autoSave: company.auto_save !== false, // default to true
-      notifications: company.notifications !== false, // default to true
-      showName: company.show_name !== false, // default to true
+      autoSave: company.auto_save !== false,
+      notifications: company.notifications !== false,
+      showName: company.show_name !== false
     });
 
-    // Set display settings
     setDisplaySettings({
-      showAttendanceHistory: company.show_attendance_history !== false, // default to true
+      showAttendanceHistory: company.show_attendance_history !== false,
       compactView: company.compact_view || false,
-      showProfileImages: company.show_profile_images !== false, // default to true
+      showProfileImages: company.show_profile_images !== false
     });
   }, [company]);
 
@@ -107,7 +98,6 @@ export default function Configuration() {
       [setting]: newValue
     }));
 
-    // Map to database field names
     const settingMap: Record<string, string> = {
       darkMode: 'dark_mode',
       autoSave: 'auto_save',
@@ -115,7 +105,6 @@ export default function Configuration() {
       showName: 'show_name'
     };
 
-    // Update in database
     updateCompanyMutate({ 
       [settingMap[setting]]: newValue 
     });
@@ -129,14 +118,12 @@ export default function Configuration() {
       [setting]: newValue
     }));
 
-    // Map to database field names
     const settingMap: Record<string, string> = {
       showAttendanceHistory: 'show_attendance_history',
       compactView: 'compact_view',
       showProfileImages: 'show_profile_images'
     };
 
-    // Update in database
     updateCompanyMutate({ 
       [settingMap[setting]]: newValue 
     });
@@ -147,7 +134,6 @@ export default function Configuration() {
       const file = e.target.files[0];
       setLogoFile(file);
       
-      // Create preview URL
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target && event.target.result) {
@@ -169,12 +155,10 @@ export default function Configuration() {
     try {
       setIsUploading(true);
       
-      // Generate a unique file name with timestamp to avoid conflicts
       const fileExt = logoFile.name.split('.').pop();
       const fileName = `logo_${Date.now()}.${fileExt}`;
       const filePath = `logos/${fileName}`;
       
-      // Upload the file to Supabase Storage
       const { data, error } = await supabase.storage
         .from('logos')
         .upload(filePath, logoFile, {
@@ -184,14 +168,14 @@ export default function Configuration() {
       
       if (error) throw error;
       
-      // Get the public URL for the uploaded file
       const { data: publicUrlData } = supabase.storage
         .from('logos')
         .getPublicUrl(filePath);
       
-      // Update the company with the new logo URL
+      const publicUrl = publicUrlData.publicUrl;
+      
       await updateCompanyMutate({ 
-        logo_url: filePath 
+        logo_url: publicUrl 
       });
       
       toast({
@@ -213,7 +197,6 @@ export default function Configuration() {
 
   const handleClearLogo = async () => {
     try {
-      // Update the company to use the default logo
       await updateCompanyMutate({ 
         logo_url: null 
       });
@@ -241,7 +224,6 @@ export default function Configuration() {
         congregation_name: congregationName
       };
       
-      // Update company in database
       updateCompanyMutate(updates);
       
       toast({
@@ -564,26 +546,5 @@ export default function Configuration() {
         <Button onClick={handleSaveSettings}>Guardar Configuración</Button>
       </div>
 
-      {/* Image Preview Dialog */}
-      <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Vista previa del logo</DialogTitle>
-            <DialogDescription>
-              Así se verá el logo en la página de inicio de sesión.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center py-4">
-            {previewImage && (
-              <img 
-                src={previewImage} 
-                alt="Logo Preview" 
-                className="max-h-[300px] max-w-full object-contain"
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+      <
+
