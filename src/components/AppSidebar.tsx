@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Sidebar,
@@ -216,8 +217,8 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [congregationName, setCongregationName] = useState("Comunidad Cristiana Don Torcuato");
-  const [showCongregationName, setShowCongregationName] = useState(true);
+  const [congregationName, setCongregationName] = useState("");
+  const [showCongregationName, setShowCongregationName] = useState(false);
 
   const { data: company } = useQuery({
     queryKey: ['company'],
@@ -227,8 +228,13 @@ export function AppSidebar() {
 
   useEffect(() => {
     if (company) {
-      setCongregationName(company.congregation_name || company.name || '');
-      setShowCongregationName(company.show_name !== false);
+      // Only set the congregation name if company has a name and show_name is true
+      if (company.name && company.show_name) {
+        setCongregationName(company.congregation_name || company.name || '');
+        setShowCongregationName(true);
+      } else {
+        setShowCongregationName(false);
+      }
     }
   }, [company]);
 
@@ -249,7 +255,7 @@ export function AppSidebar() {
           <SheetContent side="left" className="w-[280px] p-0">
             <div className="h-full bg-background">
               <div className="p-4 border-b">
-                {showCongregationName && (
+                {showCongregationName && congregationName && (
                   <h2 className="text-lg font-semibold">{congregationName}</h2>
                 )}
               </div>
@@ -267,7 +273,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent className="w-64">
         <SidebarGroup>
-          {showCongregationName && (
+          {showCongregationName && congregationName && (
             <SidebarGroupLabel>{congregationName}</SidebarGroupLabel>
           )}
           <SidebarGroupContent>

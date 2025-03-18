@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import type { DepartmentType } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { getCompany } from "@/lib/api";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -18,15 +19,32 @@ export default function Auth() {
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [userDepartments, setUserDepartments] = useState<DepartmentType[]>([]);
   const [logoPath, setLogoPath] = useState("/fire.png"); // Default logo
+  const [companyName, setCompanyName] = useState("");
+  const [showCompanyName, setShowCompanyName] = useState(false);
   const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const { data: company } = useQuery({
+    queryKey: ['company'],
+    queryFn: () => getCompany(1)
+  });
 
   useEffect(() => {
     // Load custom logo if available
     const storedLogoPath = localStorage.getItem('logoPath');
     if (storedLogoPath) {
       setLogoPath(storedLogoPath);
+    }
+
+    // Set company name if available and show_name is true
+    if (company) {
+      if (company.name && company.show_name) {
+        setCompanyName(company.congregation_name || company.name);
+        setShowCompanyName(true);
+      } else {
+        setShowCompanyName(false);
+      }
     }
 
     if (profile) {
@@ -48,7 +66,7 @@ export default function Auth() {
         navigate("/"); // Si no tiene departamentos, también procede al login
       }
     }
-  }, [profile, navigate]);
+  }, [profile, navigate, company]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,6 +142,9 @@ export default function Auth() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto" />
+            {showCompanyName && companyName && (
+              <h2 className="text-xl font-semibold text-center mb-2">{companyName}</h2>
+            )}
             <CardTitle>Seleccionar Departamento</CardTitle>
             <CardDescription>
               Selecciona el departamento con el que deseas trabajar
@@ -156,6 +177,9 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto" />
+          {showCompanyName && companyName && (
+            <h2 className="text-xl font-semibold mb-2">{companyName}</h2>
+          )}
           <CardTitle>Iniciar Sesión</CardTitle>
           <CardDescription>
             Ingresa tus credenciales para acceder

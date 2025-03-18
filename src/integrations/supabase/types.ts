@@ -67,7 +67,6 @@ export type Database = {
         Row: {
           auto_save: boolean | null
           compact_view: boolean | null
-          congregation_name: string | null
           created_at: string
           dark_mode: boolean | null
           id: number
@@ -82,7 +81,6 @@ export type Database = {
         Insert: {
           auto_save?: boolean | null
           compact_view?: boolean | null
-          congregation_name?: string | null
           created_at?: string
           dark_mode?: boolean | null
           id?: number
@@ -97,7 +95,6 @@ export type Database = {
         Update: {
           auto_save?: boolean | null
           compact_view?: boolean | null
-          congregation_name?: string | null
           created_at?: string
           dark_mode?: boolean | null
           id?: number
@@ -110,44 +107,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      company_configurations: {
-        Row: {
-          company_id: number
-          created_at: string
-          id: string
-          is_active: boolean | null
-          name: string
-          updated_at: string
-          value: string | null
-        }
-        Insert: {
-          company_id: number
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          name: string
-          updated_at?: string
-          value?: string | null
-        }
-        Update: {
-          company_id?: number
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          updated_at?: string
-          value?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_configurations_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       departments: {
         Row: {
