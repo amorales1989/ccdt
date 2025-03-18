@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { DepartmentType } from "@/types/database";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 
@@ -32,12 +32,6 @@ export default function Auth() {
   });
 
   useEffect(() => {
-    // Load custom logo if available
-    const storedLogoPath = localStorage.getItem('logoPath');
-    if (storedLogoPath) {
-      setLogoPath(storedLogoPath);
-    }
-
     // Set company name if available and show_name is true
     if (company) {
       if (company.name && company.show_name) {
@@ -45,6 +39,18 @@ export default function Auth() {
         setShowCompanyName(true);
       } else {
         setShowCompanyName(false);
+      }
+
+      // Set logo path if available
+      if (company.logo_url) {
+        // Check if the logo URL is a Supabase storage URL
+        if (company.logo_url.startsWith('logos/')) {
+          setLogoPath(`${STORAGE_URL}/logos/${company.logo_url.split('logos/')[1]}`);
+        } else {
+          setLogoPath(company.logo_url);
+        }
+      } else {
+        setLogoPath("/fire.png"); // Default logo
       }
     }
 
@@ -142,7 +148,7 @@ export default function Auth() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto" />
+            <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto object-contain" />
             {showCompanyName && companyName && (
               <h2 className="text-xl font-semibold text-center mb-2">{companyName}</h2>
             )}
@@ -177,7 +183,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto" />
+          <img src={logoPath} alt="Logo" className="w-16 h-16 mb-2 mx-auto object-contain" />
           {showCompanyName && companyName && (
             <h2 className="text-xl font-semibold mb-2">{companyName}</h2>
           )}

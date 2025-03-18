@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany } from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
+import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 
 export default function Configuration() {
   const { profile } = useAuth();
@@ -22,6 +22,7 @@ export default function Configuration() {
   const [congregationName, setCongregationName] = useState("");
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   
   // Initialize settings with defaults
   const [generalSettings, setGeneralSettings] = useState({
@@ -71,7 +72,16 @@ export default function Configuration() {
     setCongregationName(company.congregation_name || company.name || '');
     
     // Set logo path
-    setLogoPreview(company.logo_url || '/fire.png');
+    if (company.logo_url) {
+      // Check if the logo URL is a Supabase storage URL
+      if (company.logo_url.startsWith('logos/')) {
+        setLogoPreview(`${STORAGE_URL}/logos/${company.logo_url.split('logos/')[1]}`);
+      } else {
+        setLogoPreview(company.logo_url);
+      }
+    } else {
+      setLogoPreview('/fire.png'); // Default logo
+    }
 
     // Set general settings
     setGeneralSettings({
@@ -132,7 +142,7 @@ export default function Configuration() {
     });
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setLogoFile(file);
@@ -153,16 +163,83 @@ export default function Configuration() {
     setShowImagePreview(true);
   };
 
+  const handleUploadLogo = async () => {
+    if (!logoFile) return;
+    
+    try {
+      setIsUploading(true);
+      
+      // Generate a unique file name with timestamp to avoid conflicts
+      const fileExt = logoFile.name.split('.').pop();
+      const fileName = `logo_${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+      
+      // Upload the file to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('logos')
+        .upload(filePath, logoFile, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) throw error;
+      
+      // Get the public URL for the uploaded file
+      const { data: publicUrlData } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+      
+      // Update the company with the new logo URL
+      await updateCompanyMutate({ 
+        logo_url: filePath 
+      });
+      
+      toast({
+        title: "Logo subido",
+        description: "El logo ha sido subido y guardado correctamente",
+      });
+      
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo subir el logo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleClearLogo = async () => {
+    try {
+      // Update the company to use the default logo
+      await updateCompanyMutate({ 
+        logo_url: null 
+      });
+      
+      setLogoPreview('/fire.png');
+      setLogoFile(null);
+      
+      toast({
+        title: "Logo eliminado",
+        description: "Se ha restaurado el logo por defecto",
+      });
+    } catch (error) {
+      console.error("Error clearing logo:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el logo",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSaveSettings = () => {
     try {
       const updates: any = {
         congregation_name: congregationName
       };
-      
-      // Add logo if changed
-      if (logoFile) {
-        updates.logo_url = logoPreview;
-      }
       
       // Update company in database
       updateCompanyMutate(updates);
@@ -280,28 +357,67 @@ export default function Configuration() {
                     />
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-2 border p-4 rounded-md">
                     <Label htmlFor="logo-upload">Logo</Label>
-                    <div className="flex items-center gap-4">
-                      <Input
-                        id="logo-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoChange}
-                        className="max-w-md"
-                      />
-                      {logoPreview && (
-                        <Button
-                          variant="outline"
-                          type="button"
-                          onClick={() => handleShowImagePreview(logoPreview)}
-                        >
-                          Ver Logo
-                        </Button>
-                      )}
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="flex-1">
+                        <Input
+                          id="logo-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoChange}
+                          className="max-w-md mb-2"
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            variant="outline"
+                            type="button"
+                            onClick={handleUploadLogo}
+                            disabled={!logoFile || isUploading}
+                            className="flex items-center"
+                          >
+                            {isUploading ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Upload className="h-4 w-4 mr-2" />
+                            )}
+                            Subir Logo
+                          </Button>
+                          <Button
+                            variant="outline"
+                            type="button"
+                            onClick={handleClearLogo}
+                            className="flex items-center"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Restaurar Logo por Defecto
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        {logoPreview && (
+                          <div className="relative">
+                            <img
+                              src={logoPreview}
+                              alt="Logo Preview"
+                              className="h-24 w-auto object-contain border rounded p-2"
+                              onClick={() => handleShowImagePreview(logoPreview)}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                              onClick={() => handleShowImagePreview(logoPreview)}
+                            >
+                              <span className="sr-only">Ver Logo</span>
+                              🔍
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Este logo se mostrará en la página de inicio de sesión.
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Este logo se mostrará en la página de inicio de sesión. Recomendamos usar una imagen cuadrada de al menos 200x200 píxeles.
                     </p>
                   </div>
                 </div>

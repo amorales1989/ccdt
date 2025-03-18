@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance, Department, DepartmentType, Company } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
@@ -609,6 +608,8 @@ export const getCompany = async (id: number = 1) => {
 
 export const updateCompany = async (id: number, updates: Partial<Company>) => {
   try {
+    console.log('Updating company with:', updates);
+    
     const { data, error } = await supabase
       .from("companies")
       .update(updates)
@@ -617,6 +618,12 @@ export const updateCompany = async (id: number, updates: Partial<Company>) => {
       .maybeSingle();
     
     if (error) throw error;
+    
+    // If we've updated the logo_url, update it in localStorage for immediate effect
+    if (updates.logo_url !== undefined) {
+      console.log('Updated logo_url:', updates.logo_url);
+    }
+    
     return data;
   } catch (error) {
     console.error('Error in updateCompany:', error);
