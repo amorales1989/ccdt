@@ -74,15 +74,15 @@ const Index = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Object.entries(studentsByDepartment).map(([dept, stats]) => (
             <div key={dept} className="overflow-hidden rounded-lg shadow-md transition-all hover:shadow-lg">
-              <div className="bg-[#CFD6E3] p-4 text-center">
-                <h3 className="font-semibold text-gray-600">
+              <div className="bg-[#9b87f5] p-4 text-center">
+                <h3 className="font-semibold text-white">
                   {formatDepartmentName(dept)}
                 </h3>
               </div>
               <div className="bg-white p-6 text-center">
                 <div className="mb-4">
                   <p className="text-sm text-gray-500">Total</p>
-                  <p className="text-[#3A5282] text-5xl font-semibold">{stats.total}</p>
+                  <p className="text-[#7E69AB] text-5xl font-semibold">{stats.total}</p>
                 </div>
                 <div className="space-y-2 mt-4">
                   <div className="flex items-center text-gray-600">
@@ -95,7 +95,7 @@ const Index = () => {
                   </div>
                   {profile?.role === "maestro" && profile?.assigned_class && (
                     <div className="flex items-center text-gray-600">
-                      <CheckCircle2 className="h-4 w-4 text-[#3A5282] mr-2" />
+                      <CheckCircle2 className="h-4 w-4 text-[#7E69AB] mr-2" />
                       <p>Clase: {profile.assigned_class}</p>
                     </div>
                   )}
@@ -209,6 +209,13 @@ const Index = () => {
           )}
           {eventsLoading ? (
             <p>Cargando eventos...</p>
+          ) : futureEvents.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-lg text-muted-foreground">No hay eventos próximos programados</p>
+              {isAdminOrSecretary && (
+                <p className="text-sm text-muted-foreground mt-2">Haga clic en "Agregar Evento" para crear uno nuevo</p>
+              )}
+            </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {futureEvents.map((event) => (
