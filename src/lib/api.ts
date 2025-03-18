@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Student, Event, Attendance, Department, DepartmentType, Company, CompanyConfiguration } from "@/types/database";
+import { Student, Event, Attendance, Department, DepartmentType, Company } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 // Students API

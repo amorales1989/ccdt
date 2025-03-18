@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -182,9 +183,16 @@ export default function Configuration() {
 
   const handleCongregationNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCongregationName(e.target.value);
+  };
+
+  const handleClearCongregationName = () => {
+    setCongregationName('');
+    updateCompanyMutate({ congregation_name: '' });
     
-    // Update congregation name in AppSidebar
-    localStorage.setItem('congregationName', e.target.value);
+    toast({
+      title: "Nombre eliminado",
+      description: "El nombre de la congregación ha sido eliminado",
+    });
   };
 
   if (!profile || (profile.role !== "admin" && profile.role !== "secretaria")) {
@@ -237,14 +245,24 @@ export default function Configuration() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="congregation-name">Nombre de la Congregación</Label>
-                    <Input
-                      id="congregation-name"
-                      placeholder="Ej. Comunidad Cristiana Don Torcuato"
-                      value={congregationName}
-                      onChange={handleCongregationNameChange}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="congregation-name"
+                        placeholder="Ej. Comunidad Cristiana Don Torcuato"
+                        value={congregationName}
+                        onChange={handleCongregationNameChange}
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="outline" 
+                        type="button" 
+                        onClick={handleClearCongregationName}
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                      Este nombre se mostrará en la parte superior del menú lateral.
+                      Este nombre se mostrará en la parte superior del menú lateral y en la página de inicio de sesión.
                     </p>
                   </div>
                   
@@ -252,7 +270,7 @@ export default function Configuration() {
                     <Label htmlFor="show-name" className="flex flex-col">
                       <span>Mostrar Nombre de Congregación</span>
                       <span className="text-sm text-muted-foreground">
-                        Determina si se muestra el nombre de la congregación en el menú lateral.
+                        Determina si se muestra el nombre de la congregación en el menú lateral y en la página de inicio.
                       </span>
                     </Label>
                     <Switch 
