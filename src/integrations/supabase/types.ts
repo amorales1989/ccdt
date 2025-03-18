@@ -67,6 +67,7 @@ export type Database = {
         Row: {
           auto_save: boolean | null
           compact_view: boolean | null
+          congregation_name: string | null
           created_at: string
           dark_mode: boolean | null
           id: number
@@ -81,6 +82,7 @@ export type Database = {
         Insert: {
           auto_save?: boolean | null
           compact_view?: boolean | null
+          congregation_name?: string | null
           created_at?: string
           dark_mode?: boolean | null
           id?: number
@@ -95,6 +97,7 @@ export type Database = {
         Update: {
           auto_save?: boolean | null
           compact_view?: boolean | null
+          congregation_name?: string | null
           created_at?: string
           dark_mode?: boolean | null
           id?: number
