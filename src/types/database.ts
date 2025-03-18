@@ -60,17 +60,13 @@ export interface Company {
   logo_url?: string;
   created_at: string;
   updated_at: string;
-  configurations?: CompanyConfiguration[];
-}
-
-export interface CompanyConfiguration {
-  id: string;
-  company_id: number;
-  name: string;
-  value?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  dark_mode?: boolean;
+  auto_save?: boolean;
+  notifications?: boolean;
+  show_attendance_history?: boolean;
+  compact_view?: boolean;
+  show_profile_images?: boolean;
+  congregation_name?: string;
 }
 
 export type DepartmentType = 

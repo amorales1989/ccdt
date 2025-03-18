@@ -10,8 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCompany, updateCompany, getCompanyConfigurations, updateCompanyConfiguration } from "@/lib/api";
-import { CompanyConfiguration } from "@/types/database";
+import { getCompany, updateCompany } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
 export default function Configuration() {
@@ -24,6 +23,7 @@ export default function Configuration() {
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   
+  // Initialize settings with defaults
   const [generalSettings, setGeneralSettings] = useState({
     darkMode: false,
     autoSave: true,
@@ -42,20 +42,14 @@ export default function Configuration() {
     queryFn: () => getCompany(1)
   });
 
-  // Get company configurations
-  const { data: configurations, isLoading: isConfigLoading } = useQuery({
-    queryKey: ['company-configurations'],
-    queryFn: () => getCompanyConfigurations(1)
-  });
-
   // Update company mutation
   const { mutate: updateCompanyMutate } = useMutation({
-    mutationFn: (updates: { name?: string; logo_url?: string }) => updateCompany(1, updates),
+    mutationFn: (updates: Partial<typeof company>) => updateCompany(1, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
       toast({
         title: "Información actualizada",
-        description: "La información de la empresa ha sido actualizada",
+        description: "La configuración ha sido actualizada con éxito",
       });
     },
     onError: (error) => {
@@ -68,106 +62,71 @@ export default function Configuration() {
     }
   });
 
-  // Update configuration mutation
-  const { mutate: updateConfigMutate } = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { value?: string; is_active?: boolean } }) => 
-      updateCompanyConfiguration(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-configurations'] });
-      toast({
-        title: "Configuración actualizada",
-        description: "La configuración ha sido actualizada con éxito",
-      });
-    },
-    onError: (error) => {
-      console.error("Error updating configuration:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la configuración",
-        variant: "destructive",
-      });
-    }
-  });
-
   // Load existing settings on component mount
   useEffect(() => {
-    if (!company || !configurations) return;
+    if (!company) return;
 
     // Set congregation name
-    const congregationConfig = configurations.find(c => c.name === 'congregation_name');
-    if (congregationConfig && congregationConfig.value) {
-      setCongregationName(congregationConfig.value);
-    } else {
-      setCongregationName(company.name || '');
-    }
+    setCongregationName(company.congregation_name || company.name || '');
     
     // Set logo path
-    const logoConfig = configurations.find(c => c.name === 'logo_path');
-    if (logoConfig && logoConfig.value) {
-      setLogoPreview(logoConfig.value);
-    } else {
-      setLogoPreview(company.logo_url || '/fire.png');
-    }
+    setLogoPreview(company.logo_url || '/fire.png');
 
     // Set general settings
-    const darkModeConfig = configurations.find(c => c.name === 'dark_mode');
-    const autoSaveConfig = configurations.find(c => c.name === 'auto_save');
-    const notificationsConfig = configurations.find(c => c.name === 'notifications');
-    
     setGeneralSettings({
-      darkMode: darkModeConfig ? darkModeConfig.is_active : false,
-      autoSave: autoSaveConfig ? autoSaveConfig.is_active : true,
-      notifications: notificationsConfig ? notificationsConfig.is_active : true,
+      darkMode: company.dark_mode || false,
+      autoSave: company.auto_save !== false, // default to true
+      notifications: company.notifications !== false, // default to true
     });
 
     // Set display settings
-    const showAttendanceHistoryConfig = configurations.find(c => c.name === 'show_attendance_history');
-    const compactViewConfig = configurations.find(c => c.name === 'compact_view');
-    const showProfileImagesConfig = configurations.find(c => c.name === 'show_profile_images');
-    
     setDisplaySettings({
-      showAttendanceHistory: showAttendanceHistoryConfig ? showAttendanceHistoryConfig.is_active : true,
-      compactView: compactViewConfig ? compactViewConfig.is_active : false,
-      showProfileImages: showProfileImagesConfig ? showProfileImagesConfig.is_active : true,
+      showAttendanceHistory: company.show_attendance_history !== false, // default to true
+      compactView: company.compact_view || false,
+      showProfileImages: company.show_profile_images !== false, // default to true
     });
-  }, [company, configurations]);
+  }, [company]);
 
   const handleGeneralSettingChange = (setting: keyof typeof generalSettings) => {
+    const newValue = !generalSettings[setting];
+    
     setGeneralSettings(prev => ({
       ...prev,
-      [setting]: !prev[setting]
+      [setting]: newValue
     }));
 
-    // Find configuration id
-    const configName = setting === 'darkMode' ? 'dark_mode' : 
-                       setting === 'autoSave' ? 'auto_save' : 'notifications';
-    
-    const config = configurations?.find(c => c.name === configName);
-    if (config) {
-      updateConfigMutate({ 
-        id: config.id, 
-        updates: { is_active: !generalSettings[setting] } 
-      });
-    }
+    // Map to database field names
+    const settingMap: Record<string, string> = {
+      darkMode: 'dark_mode',
+      autoSave: 'auto_save',
+      notifications: 'notifications'
+    };
+
+    // Update in database
+    updateCompanyMutate({ 
+      [settingMap[setting]]: newValue 
+    });
   };
 
   const handleDisplaySettingChange = (setting: keyof typeof displaySettings) => {
+    const newValue = !displaySettings[setting];
+    
     setDisplaySettings(prev => ({
       ...prev,
-      [setting]: !prev[setting]
+      [setting]: newValue
     }));
 
-    // Find configuration id
-    const configName = setting === 'showAttendanceHistory' ? 'show_attendance_history' : 
-                       setting === 'compactView' ? 'compact_view' : 'show_profile_images';
-    
-    const config = configurations?.find(c => c.name === configName);
-    if (config) {
-      updateConfigMutate({ 
-        id: config.id, 
-        updates: { is_active: !displaySettings[setting] } 
-      });
-    }
+    // Map to database field names
+    const settingMap: Record<string, string> = {
+      showAttendanceHistory: 'show_attendance_history',
+      compactView: 'compact_view',
+      showProfileImages: 'show_profile_images'
+    };
+
+    // Update in database
+    updateCompanyMutate({ 
+      [settingMap[setting]]: newValue 
+    });
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,29 +152,17 @@ export default function Configuration() {
 
   const handleSaveSettings = () => {
     try {
-      // Save congregation name
-      const congregationConfig = configurations?.find(c => c.name === 'congregation_name');
-      if (congregationConfig) {
-        updateConfigMutate({ 
-          id: congregationConfig.id, 
-          updates: { value: congregationName } 
-        });
-      }
+      const updates: any = {
+        congregation_name: congregationName
+      };
       
-      // Save logo if selected
+      // Add logo if changed
       if (logoFile) {
-        const logoPath = logoPreview || '/fire.png';
-        const logoConfig = configurations?.find(c => c.name === 'logo_path');
-        if (logoConfig) {
-          updateConfigMutate({ 
-            id: logoConfig.id, 
-            updates: { value: logoPath } 
-          });
-        }
+        updates.logo_url = logoPreview;
       }
       
-      // Update company name in companies table
-      updateCompanyMutate({ name: congregationName });
+      // Update company in database
+      updateCompanyMutate(updates);
       
       toast({
         title: "Configuración guardada",
@@ -229,6 +176,13 @@ export default function Configuration() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCongregationNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCongregationName(e.target.value);
+    
+    // Update congregation name in AppSidebar
+    localStorage.setItem('congregationName', e.target.value);
   };
 
   if (!profile || (profile.role !== "admin" && profile.role !== "secretaria")) {
@@ -246,7 +200,7 @@ export default function Configuration() {
     );
   }
 
-  if (isCompanyLoading || isConfigLoading) {
+  if (isCompanyLoading) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -285,7 +239,7 @@ export default function Configuration() {
                       id="congregation-name"
                       placeholder="Ej. Comunidad Cristiana Don Torcuato"
                       value={congregationName}
-                      onChange={(e) => setCongregationName(e.target.value)}
+                      onChange={handleCongregationNameChange}
                     />
                     <p className="text-sm text-muted-foreground">
                       Este nombre se mostrará en la parte superior del menú lateral.

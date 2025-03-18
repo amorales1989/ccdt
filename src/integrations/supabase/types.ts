@@ -65,24 +65,45 @@ export type Database = {
       }
       companies: {
         Row: {
+          auto_save: boolean | null
+          compact_view: boolean | null
+          congregation_name: string | null
           created_at: string
+          dark_mode: boolean | null
           id: number
           logo_url: string | null
           name: string
+          notifications: boolean | null
+          show_attendance_history: boolean | null
+          show_profile_images: boolean | null
           updated_at: string
         }
         Insert: {
+          auto_save?: boolean | null
+          compact_view?: boolean | null
+          congregation_name?: string | null
           created_at?: string
+          dark_mode?: boolean | null
           id?: number
           logo_url?: string | null
           name: string
+          notifications?: boolean | null
+          show_attendance_history?: boolean | null
+          show_profile_images?: boolean | null
           updated_at?: string
         }
         Update: {
+          auto_save?: boolean | null
+          compact_view?: boolean | null
+          congregation_name?: string | null
           created_at?: string
+          dark_mode?: boolean | null
           id?: number
           logo_url?: string | null
           name?: string
+          notifications?: boolean | null
+          show_attendance_history?: boolean | null
+          show_profile_images?: boolean | null
           updated_at?: string
         }
         Relationships: []

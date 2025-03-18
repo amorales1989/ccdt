@@ -606,7 +606,7 @@ export const getCompany = async (id: number = 1) => {
   }
 };
 
-export const updateCompany = async (id: number, updates: { name?: string; logo_url?: string }) => {
+export const updateCompany = async (id: number, updates: Partial<Company>) => {
   try {
     const { data, error } = await supabase
       .from("companies")
@@ -623,56 +623,5 @@ export const updateCompany = async (id: number, updates: { name?: string; logo_u
   }
 };
 
-// Company Configuration API
-export const getCompanyConfigurations = async (companyId: number = 1) => {
-  try {
-    const { data, error } = await supabase
-      .from("company_configurations")
-      .select("*")
-      .eq("company_id", companyId);
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in getCompanyConfigurations:', error);
-    throw error;
-  }
-};
-
-export const updateCompanyConfiguration = async (
-  id: string, 
-  updates: { value?: string; is_active?: boolean }
-) => {
-  try {
-    const { data, error } = await supabase
-      .from("company_configurations")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in updateCompanyConfiguration:', error);
-    throw error;
-  }
-};
-
-export const createCompanyConfiguration = async (
-  configuration: Omit<CompanyConfiguration, "id" | "created_at" | "updated_at">
-) => {
-  try {
-    const { data, error } = await supabase
-      .from("company_configurations")
-      .insert([configuration])
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in createCompanyConfiguration:', error);
-    throw error;
-  }
-};
+// Note: The company_configurations related functions are no longer needed
+// since we moved the configuration directly to the company table

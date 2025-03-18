@@ -16,6 +16,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { getCompany } from "@/lib/api";
 
 const getItems = (role: string | undefined) => {
   const baseItems = [
@@ -216,12 +218,17 @@ export function AppSidebar() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [congregationName, setCongregationName] = useState("Comunidad Cristiana Don Torcuato");
 
+  const { data: company } = useQuery({
+    queryKey: ['company'],
+    queryFn: () => getCompany(1),
+    enabled: !!user
+  });
+
   useEffect(() => {
-    const storedName = localStorage.getItem('congregationName');
-    if (storedName) {
-      setCongregationName(storedName);
+    if (company?.congregation_name) {
+      setCongregationName(company.congregation_name);
     }
-  }, []);
+  }, [company]);
 
   if (!user) {
     return null;
