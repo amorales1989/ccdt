@@ -75,6 +75,7 @@ export type Database = {
           name: string
           notifications: boolean | null
           show_attendance_history: boolean | null
+          show_name: boolean | null
           show_profile_images: boolean | null
           updated_at: string
         }
@@ -89,6 +90,7 @@ export type Database = {
           name: string
           notifications?: boolean | null
           show_attendance_history?: boolean | null
+          show_name?: boolean | null
           show_profile_images?: boolean | null
           updated_at?: string
         }
@@ -103,6 +105,7 @@ export type Database = {
           name?: string
           notifications?: boolean | null
           show_attendance_history?: boolean | null
+          show_name?: boolean | null
           show_profile_images?: boolean | null
           updated_at?: string
         }

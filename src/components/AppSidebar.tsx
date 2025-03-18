@@ -217,6 +217,7 @@ export function AppSidebar() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = React.useState(false);
   const [congregationName, setCongregationName] = useState("Comunidad Cristiana Don Torcuato");
+  const [showCongregationName, setShowCongregationName] = useState(true);
 
   const { data: company } = useQuery({
     queryKey: ['company'],
@@ -225,8 +226,9 @@ export function AppSidebar() {
   });
 
   useEffect(() => {
-    if (company?.congregation_name) {
-      setCongregationName(company.congregation_name);
+    if (company) {
+      setCongregationName(company.congregation_name || company.name || '');
+      setShowCongregationName(company.show_name !== false);
     }
   }, [company]);
 
@@ -247,7 +249,9 @@ export function AppSidebar() {
           <SheetContent side="left" className="w-[280px] p-0">
             <div className="h-full bg-background">
               <div className="p-4 border-b">
-                <h2 className="text-lg font-semibold">{congregationName}</h2>
+                {showCongregationName && (
+                  <h2 className="text-lg font-semibold">{congregationName}</h2>
+                )}
               </div>
               <nav className="p-2">
                 <NavigationMenu onItemClick={() => setIsOpen(false)} />
@@ -263,7 +267,9 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent className="w-64">
         <SidebarGroup>
-          <SidebarGroupLabel>{congregationName}</SidebarGroupLabel>
+          {showCongregationName && (
+            <SidebarGroupLabel>{congregationName}</SidebarGroupLabel>
+          )}
           <SidebarGroupContent>
             <NavigationMenu />
           </SidebarGroupContent>

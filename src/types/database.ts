@@ -67,6 +67,7 @@ export interface Company {
   compact_view?: boolean;
   show_profile_images?: boolean;
   congregation_name?: string;
+  show_name?: boolean; // New field to control congregation name display
 }
 
 export type DepartmentType = 

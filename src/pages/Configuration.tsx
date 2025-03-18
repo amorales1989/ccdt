@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +27,7 @@ export default function Configuration() {
     darkMode: false,
     autoSave: true,
     notifications: true,
+    showName: true,
   });
   
   const [displaySettings, setDisplaySettings] = useState({
@@ -77,6 +77,7 @@ export default function Configuration() {
       darkMode: company.dark_mode || false,
       autoSave: company.auto_save !== false, // default to true
       notifications: company.notifications !== false, // default to true
+      showName: company.show_name !== false, // default to true
     });
 
     // Set display settings
@@ -99,7 +100,8 @@ export default function Configuration() {
     const settingMap: Record<string, string> = {
       darkMode: 'dark_mode',
       autoSave: 'auto_save',
-      notifications: 'notifications'
+      notifications: 'notifications',
+      showName: 'show_name'
     };
 
     // Update in database
@@ -244,6 +246,20 @@ export default function Configuration() {
                     <p className="text-sm text-muted-foreground">
                       Este nombre se mostrará en la parte superior del menú lateral.
                     </p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-2">
+                    <Label htmlFor="show-name" className="flex flex-col">
+                      <span>Mostrar Nombre de Congregación</span>
+                      <span className="text-sm text-muted-foreground">
+                        Determina si se muestra el nombre de la congregación en el menú lateral.
+                      </span>
+                    </Label>
+                    <Switch 
+                      id="show-name" 
+                      checked={generalSettings.showName}
+                      onCheckedChange={() => handleGeneralSettingChange('showName')}
+                    />
                   </div>
                   
                   <div className="space-y-2">
