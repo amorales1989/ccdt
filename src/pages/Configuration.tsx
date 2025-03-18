@@ -8,12 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCompany, updateCompany, getCompanyConfigurations, updateCompanyConfiguration } from "@/lib/api";
+import { CompanyConfiguration } from "@/types/database";
+import { Loader2 } from "lucide-react";
 
 export default function Configuration() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [congregationName, setCongregationName] = useState("");
@@ -32,34 +36,119 @@ export default function Configuration() {
     showProfileImages: true,
   });
 
+  // Get company data (assuming company id is 1)
+  const { data: company, isLoading: isCompanyLoading } = useQuery({
+    queryKey: ['company'],
+    queryFn: () => getCompany(1)
+  });
+
+  // Get company configurations
+  const { data: configurations, isLoading: isConfigLoading } = useQuery({
+    queryKey: ['company-configurations'],
+    queryFn: () => getCompanyConfigurations(1)
+  });
+
+  // Update company mutation
+  const { mutate: updateCompanyMutate } = useMutation({
+    mutationFn: (updates: { name?: string; logo_url?: string }) => updateCompany(1, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+      toast({
+        title: "Información actualizada",
+        description: "La información de la empresa ha sido actualizada",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating company:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la información de la empresa",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Update configuration mutation
+  const { mutate: updateConfigMutate } = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: { value?: string; is_active?: boolean } }) => 
+      updateCompanyConfiguration(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-configurations'] });
+      toast({
+        title: "Configuración actualizada",
+        description: "La configuración ha sido actualizada con éxito",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating configuration:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la configuración",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Load existing settings on component mount
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        // Load congregation name from localStorage or database
-        const storedName = localStorage.getItem('congregationName');
-        if (storedName) {
-          setCongregationName(storedName);
-        }
-        
-        // Load logo path from localStorage
-        const storedLogoPath = localStorage.getItem('logoPath');
-        if (storedLogoPath) {
-          setLogoPreview(storedLogoPath);
-        }
-      } catch (error) {
-        console.error("Error loading settings:", error);
-      }
-    };
+    if (!company || !configurations) return;
+
+    // Set congregation name
+    const congregationConfig = configurations.find(c => c.name === 'congregation_name');
+    if (congregationConfig && congregationConfig.value) {
+      setCongregationName(congregationConfig.value);
+    } else {
+      setCongregationName(company.name || '');
+    }
     
-    loadSettings();
-  }, []);
+    // Set logo path
+    const logoConfig = configurations.find(c => c.name === 'logo_path');
+    if (logoConfig && logoConfig.value) {
+      setLogoPreview(logoConfig.value);
+    } else {
+      setLogoPreview(company.logo_url || '/fire.png');
+    }
+
+    // Set general settings
+    const darkModeConfig = configurations.find(c => c.name === 'dark_mode');
+    const autoSaveConfig = configurations.find(c => c.name === 'auto_save');
+    const notificationsConfig = configurations.find(c => c.name === 'notifications');
+    
+    setGeneralSettings({
+      darkMode: darkModeConfig ? darkModeConfig.is_active : false,
+      autoSave: autoSaveConfig ? autoSaveConfig.is_active : true,
+      notifications: notificationsConfig ? notificationsConfig.is_active : true,
+    });
+
+    // Set display settings
+    const showAttendanceHistoryConfig = configurations.find(c => c.name === 'show_attendance_history');
+    const compactViewConfig = configurations.find(c => c.name === 'compact_view');
+    const showProfileImagesConfig = configurations.find(c => c.name === 'show_profile_images');
+    
+    setDisplaySettings({
+      showAttendanceHistory: showAttendanceHistoryConfig ? showAttendanceHistoryConfig.is_active : true,
+      compactView: compactViewConfig ? compactViewConfig.is_active : false,
+      showProfileImages: showProfileImagesConfig ? showProfileImagesConfig.is_active : true,
+    });
+  }, [company, configurations]);
 
   const handleGeneralSettingChange = (setting: keyof typeof generalSettings) => {
     setGeneralSettings(prev => ({
       ...prev,
       [setting]: !prev[setting]
     }));
+
+    // Find configuration id
+    const configName = setting === 'darkMode' ? 'dark_mode' : 
+                       setting === 'autoSave' ? 'auto_save' : 'notifications';
+    
+    const config = configurations?.find(c => c.name === configName);
+    if (config) {
+      updateConfigMutate({ 
+        id: config.id, 
+        updates: { is_active: !generalSettings[setting] } 
+      });
+    }
   };
 
   const handleDisplaySettingChange = (setting: keyof typeof displaySettings) => {
@@ -67,6 +156,18 @@ export default function Configuration() {
       ...prev,
       [setting]: !prev[setting]
     }));
+
+    // Find configuration id
+    const configName = setting === 'showAttendanceHistory' ? 'show_attendance_history' : 
+                       setting === 'compactView' ? 'compact_view' : 'show_profile_images';
+    
+    const config = configurations?.find(c => c.name === configName);
+    if (config) {
+      updateConfigMutate({ 
+        id: config.id, 
+        updates: { is_active: !displaySettings[setting] } 
+      });
+    }
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,16 +193,29 @@ export default function Configuration() {
 
   const handleSaveSettings = () => {
     try {
-      // Save congregation name to localStorage
-      if (congregationName) {
-        localStorage.setItem('congregationName', congregationName);
+      // Save congregation name
+      const congregationConfig = configurations?.find(c => c.name === 'congregation_name');
+      if (congregationConfig) {
+        updateConfigMutate({ 
+          id: congregationConfig.id, 
+          updates: { value: congregationName } 
+        });
       }
       
       // Save logo if selected
       if (logoFile) {
         const logoPath = logoPreview || '/fire.png';
-        localStorage.setItem('logoPath', logoPath);
+        const logoConfig = configurations?.find(c => c.name === 'logo_path');
+        if (logoConfig) {
+          updateConfigMutate({ 
+            id: logoConfig.id, 
+            updates: { value: logoPath } 
+          });
+        }
       }
+      
+      // Update company name in companies table
+      updateCompanyMutate({ name: congregationName });
       
       toast({
         title: "Configuración guardada",
@@ -128,6 +242,15 @@ export default function Configuration() {
             </CardDescription>
           </CardHeader>
         </Card>
+      </div>
+    );
+  }
+
+  if (isCompanyLoading || isConfigLoading) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <span className="ml-2">Cargando configuración...</span>
       </div>
     );
   }

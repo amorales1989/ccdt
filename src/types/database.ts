@@ -1,3 +1,4 @@
+
 export interface Student {
   id: string;
   name: string;
@@ -49,6 +50,25 @@ export interface Department {
   name: DepartmentType;
   description?: string;
   classes: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Company {
+  id: number;
+  name: string;
+  logo_url?: string;
+  created_at: string;
+  updated_at: string;
+  configurations?: CompanyConfiguration[];
+}
+
+export interface CompanyConfiguration {
+  id: string;
+  company_id: number;
+  name: string;
+  value?: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

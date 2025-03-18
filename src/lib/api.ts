@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Student, Event, Attendance, Department, DepartmentType } from "@/types/database";
+import { Student, Event, Attendance, Department, DepartmentType, Company, CompanyConfiguration } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 // Students API
@@ -585,6 +585,94 @@ export const deleteDepartment = async (id: string) => {
     if (error) throw error;
   } catch (error) {
     console.error('Error in deleteDepartment:', error);
+    throw error;
+  }
+};
+
+// Company API
+export const getCompany = async (id: number = 1) => {
+  try {
+    const { data, error } = await supabase
+      .from("companies")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in getCompany:', error);
+    throw error;
+  }
+};
+
+export const updateCompany = async (id: number, updates: { name?: string; logo_url?: string }) => {
+  try {
+    const { data, error } = await supabase
+      .from("companies")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in updateCompany:', error);
+    throw error;
+  }
+};
+
+// Company Configuration API
+export const getCompanyConfigurations = async (companyId: number = 1) => {
+  try {
+    const { data, error } = await supabase
+      .from("company_configurations")
+      .select("*")
+      .eq("company_id", companyId);
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in getCompanyConfigurations:', error);
+    throw error;
+  }
+};
+
+export const updateCompanyConfiguration = async (
+  id: string, 
+  updates: { value?: string; is_active?: boolean }
+) => {
+  try {
+    const { data, error } = await supabase
+      .from("company_configurations")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in updateCompanyConfiguration:', error);
+    throw error;
+  }
+};
+
+export const createCompanyConfiguration = async (
+  configuration: Omit<CompanyConfiguration, "id" | "created_at" | "updated_at">
+) => {
+  try {
+    const { data, error } = await supabase
+      .from("company_configurations")
+      .insert([configuration])
+      .select()
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error in createCompanyConfiguration:', error);
     throw error;
   }
 };
