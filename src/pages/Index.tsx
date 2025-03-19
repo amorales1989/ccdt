@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical, MapPin } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical, MapPin, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,12 +21,14 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem 
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 
 const Index = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
   const isMobile = useIsMobile();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
@@ -85,8 +87,8 @@ const Index = () => {
         <h2 className="text-2xl font-semibold mb-4">Estadísticas de Alumnos</h2>
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
           {Object.entries(studentsByDepartment).map(([dept, stats]) => (
-            <div key={dept} className="bg-white rounded-xl overflow-hidden shadow">
-              <div className="bg-[#9b87f5] p-3 text-center">
+            <div key={dept} className="bg-gradient-to-br from-white to-accent/30 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border border-accent/20">
+              <div className="bg-primary p-3 text-center">
                 <h3 className="font-semibold text-white text-sm sm:text-base">
                   {formatDepartmentName(dept)}
                 </h3>
@@ -94,7 +96,7 @@ const Index = () => {
               <div className="p-4 flex flex-col items-center">
                 <div className="text-center mb-2">
                   <p className="text-gray-500 text-xs">Total</p>
-                  <p className="text-[#7E69AB] text-4xl font-semibold">{stats.total}</p>
+                  <p className="text-secondary text-4xl font-semibold">{stats.total}</p>
                 </div>
                 <div className="w-full space-y-1 mt-2">
                   <div className="flex items-center text-gray-600 text-sm">
@@ -203,7 +205,13 @@ const Index = () => {
     setEventDialogOpen(true);
   };
 
-  const futureEvents = events.filter(event => !isBefore(new Date(event.date), startOfToday()));
+  const futureEvents = events
+    .filter(event => !isBefore(new Date(event.date), startOfToday()))
+    .filter(event => 
+      !searchTerm || 
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
   const renderActionButtons = (event: Event) => {
     if (!isAdminOrSecretary) return null;
@@ -260,13 +268,16 @@ const Index = () => {
       
       {renderStudentStats()}
 
-      <Card>
+      <Card className="bg-gradient-to-br from-white to-accent/10 border-accent/20 hover:shadow-xl animate-fade-in">
         <CardHeader className="flex-row justify-between items-center pb-2">
           <CardTitle>Calendario de Eventos</CardTitle>
           {isAdminOrSecretary && (
             <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => setSelectedEventForEdit(null)}>
+                <Button 
+                  className="bg-primary hover:bg-primary/90 transition-colors duration-300" 
+                  onClick={() => setSelectedEventForEdit(null)}
+                >
                   {isMobile ? (
                     <Plus className="h-4 w-4" />
                   ) : (
@@ -296,30 +307,63 @@ const Index = () => {
           )}
         </CardHeader>
         <CardContent>
+          <div className="relative mb-6">
+            <div className="relative rounded-lg overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 border border-accent">
+              <Input
+                placeholder="Buscar eventos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border-0 bg-white/50 backdrop-blur-sm pr-10 focus-visible:ring-0 pl-10 py-6 text-base"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              {searchTerm && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <span className="sr-only">Clear search</span>
+                  ×
+                </Button>
+              )}
+            </div>
+          </div>
+
           {eventsLoading ? (
-            <p>Cargando eventos...</p>
+            <div className="flex justify-center py-12">
+              <div className="animate-pulse flex space-x-4">
+                <div className="flex-1 space-y-4 py-1">
+                  <div className="h-4 bg-accent/50 rounded w-3/4"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-accent/30 rounded"></div>
+                    <div className="h-4 bg-accent/30 rounded w-5/6"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : futureEvents.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-12 bg-white/50 backdrop-blur-sm rounded-lg">
               <p className="text-lg text-muted-foreground">No hay eventos próximos programados</p>
               {isAdminOrSecretary && (
                 <p className="text-sm text-muted-foreground mt-2">Haga clic en "Agregar Evento" para crear uno nuevo</p>
               )}
             </div>
           ) : (
-            <div className="overflow-hidden rounded-md border">
+            <div className="overflow-hidden rounded-md border animate-fade-in">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-primary/10">
                   <TableRow>
-                    <TableHead className="font-semibold">Título</TableHead>
-                    <TableHead className="font-semibold">Fecha</TableHead>
-                    <TableHead className="font-semibold">Hora</TableHead>
-                    <TableHead className="font-semibold">Descripción</TableHead>
-                    {isAdminOrSecretary && <TableHead className="text-right">Acciones</TableHead>}
+                    <TableHead className="font-semibold text-primary">Título</TableHead>
+                    <TableHead className="font-semibold text-primary">Fecha</TableHead>
+                    <TableHead className="font-semibold text-primary">Hora</TableHead>
+                    <TableHead className="font-semibold text-primary">Descripción</TableHead>
+                    {isAdminOrSecretary && <TableHead className="text-right text-primary">Acciones</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {futureEvents.map((event) => (
-                    <TableRow key={event.id} className="hover:bg-accent/20">
+                    <TableRow key={event.id} className="hover:bg-accent/20 transition-colors duration-200">
                       <TableCell className="font-medium">{event.title}</TableCell>
                       <TableCell>
                         {format(new Date(event.date), "dd/MM", { locale: es })}
