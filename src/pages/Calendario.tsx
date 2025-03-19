@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -50,7 +49,6 @@ export default function Calendario() {
     queryFn: getEvents
   });
 
-  // Actualizar los eventos del mes cuando cambia el mes o la lista de eventos
   useEffect(() => {
     if (selectedDate && events.length > 0) {
       const filtered = events
@@ -61,7 +59,6 @@ export default function Calendario() {
     }
   }, [selectedDate, events]);
 
-  // Filtrar eventos y crear objeto de fechas
   const eventDates = events.reduce((acc: Record<string, any[]>, event) => {
     const dateStr = format(new Date(event.date), 'yyyy-MM-dd');
     if (!acc[dateStr]) {
@@ -106,7 +103,7 @@ export default function Calendario() {
   };
 
   const handleDeleteClick = (event: Event, e: React.MouseEvent) => {
-    e.stopPropagation(); // Evitar que se abra el diálogo de edición
+    e.stopPropagation();
     setEventToDelete(event);
     setDeleteDialogOpen(true);
   };
@@ -142,7 +139,7 @@ export default function Calendario() {
 
   const modifiersStyles = {
     hasEvent: {
-      backgroundColor: '#F2FCE2', // Color verde por defecto
+      backgroundColor: '#F2FCE2',
       color: '#064e3b',
       fontWeight: 'bold'
     }
@@ -156,7 +153,6 @@ export default function Calendario() {
       : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20";
   };
 
-  // Handler para cambios de mes en el calendario
   const handleMonthChange = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
@@ -202,6 +198,10 @@ export default function Calendario() {
               <EventForm 
                 onSubmit={handleCreateEvent} 
                 initialData={selectedEvent || undefined}
+                onSuccess={() => {
+                  setDialogOpen(false);
+                  setSelectedEvent(null);
+                }}
               />
               {selectedEvent && (
                 <DialogFooter className="mt-4 flex justify-between">
@@ -240,7 +240,6 @@ export default function Calendario() {
                       return <span>{date.getDate()}</span>;
                     }
 
-                    // Determinar si todos los eventos del día son pasados
                     const allPastEvents = dayEvents.every(event => 
                       isBefore(new Date(event.date), new Date())
                     );
@@ -281,7 +280,7 @@ export default function Calendario() {
                                       <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
                                     </Button>
                                   </div>
-                                  <p className="text-sm text-muted-foreground">{event.description}</p>
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line">{event.description}</p>
                                 </div>
                               );
                             })}
@@ -330,7 +329,6 @@ export default function Calendario() {
         </CardContent>
       </Card>
 
-      {/* Diálogo de confirmación para eliminar */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

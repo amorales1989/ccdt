@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding } from "lucide-react";
@@ -26,7 +25,6 @@ const Index = () => {
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students'],
     queryFn: () => getStudents().then(data => {
-      // Ensure all students have a properly typed department
       return data.map(student => ({
         ...student,
         department: student.department as DepartmentType
@@ -35,6 +33,9 @@ const Index = () => {
   });
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
+
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null);
 
   const renderStudentStats = () => {
     if (!profile) return null;
@@ -116,6 +117,7 @@ const Index = () => {
         title: "Evento creado",
         description: "El evento ha sido creado exitosamente",
       });
+      setEventDialogOpen(false);
     },
     onError: () => {
       toast({
@@ -134,6 +136,8 @@ const Index = () => {
         title: "Evento actualizado",
         description: "El evento ha sido actualizado exitosamente",
       });
+      setEventDialogOpen(false);
+      setSelectedEventForEdit(null);
     },
     onError: () => {
       toast({
@@ -174,6 +178,11 @@ const Index = () => {
     deleteEventMutate(id);
   };
 
+  const handleEditEvent = (event: Event) => {
+    setSelectedEventForEdit(event);
+    setEventDialogOpen(true);
+  };
+
   const futureEvents = events.filter(event => !isBefore(new Date(event.date), startOfToday()));
 
   return (
@@ -191,18 +200,27 @@ const Index = () => {
         <CardContent>
           {isAdminOrSecretary && (
             <div className="mb-4">
-              <Dialog>
+              <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button onClick={() => setSelectedEventForEdit(null)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Agregar Evento
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Agregar Evento</DialogTitle>
+                    <DialogTitle>
+                      {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
+                    </DialogTitle>
                   </DialogHeader>
-                  <EventForm onSubmit={handleCreateEvent} />
+                  <EventForm 
+                    onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent} 
+                    initialData={selectedEventForEdit || undefined}
+                    onSuccess={() => {
+                      setEventDialogOpen(false);
+                      setSelectedEventForEdit(null);
+                    }}
+                  />
                 </DialogContent>
               </Dialog>
             </div>
@@ -228,27 +246,18 @@ const Index = () => {
                       {format(new Date(event.date), "dd/MM/yyyy", { locale: es })}
                     </p>
                     {event.description && (
-                      <p className="text-sm mt-2">{event.description}</p>
+                      <p className="text-sm mt-2 whitespace-pre-line">{event.description}</p>
                     )}
                     {isAdminOrSecretary && (
                       <div className="flex justify-end mt-4 space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="secondary" size="sm">
-                              <Edit2 className="mr-2 h-4 w-4" />
-                              Editar
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Editar Evento</DialogTitle>
-                            </DialogHeader>
-                            <EventForm
-                              initialData={event}
-                              onSubmit={handleUpdateEvent}
-                            />
-                          </DialogContent>
-                        </Dialog>
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          onClick={() => handleEditEvent(event)}
+                        >
+                          <Edit2 className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
                         <Button
                           variant="destructive"
                           size="sm"
