@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock } from "lucide-react";
@@ -131,7 +130,12 @@ const Index = () => {
   });
 
   const { mutate: updateEventMutate } = useMutation({
-    mutationFn: (event: Event) => updateEvent(event.id, event),
+    mutationFn: (event: Event) => {
+      if (!event.id) {
+        throw new Error("Event ID is required for update operations");
+      }
+      return updateEvent(event.id, event);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       toast({
@@ -141,7 +145,8 @@ const Index = () => {
       setEventDialogOpen(false);
       setSelectedEventForEdit(null);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Error updating event:", error);
       toast({
         title: "Error",
         description: "Hubo un error al actualizar el evento",
@@ -172,8 +177,11 @@ const Index = () => {
     createEventMutate(event);
   };
 
-  const handleUpdateEvent = (event: Event) => {
-    updateEventMutate(event);
+  const handleUpdateEvent = (event: any) => {
+    if (!event.id && selectedEventForEdit) {
+      event.id = selectedEventForEdit.id;
+    }
+    updateEventMutate(event as Event);
   };
 
   const handleDeleteEvent = (id: string) => {

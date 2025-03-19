@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -71,7 +72,11 @@ export default function Calendario() {
   const handleCreateEvent = async (eventData: any) => {
     try {
       if (selectedEvent) {
-        await updateEvent(selectedEvent.id, eventData);
+        // Make sure the ID is included when updating
+        await updateEvent(selectedEvent.id, {
+          ...eventData,
+          id: selectedEvent.id
+        });
         toast({
           title: "Evento actualizado",
           description: "El evento se ha actualizado exitosamente.",
@@ -87,6 +92,7 @@ export default function Calendario() {
       setDialogOpen(false);
       setSelectedEvent(null);
     } catch (error) {
+      console.error("Error creating/updating event:", error);
       toast({
         title: "Error",
         description: selectedEvent 

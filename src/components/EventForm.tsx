@@ -78,7 +78,17 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
         date: format(utcDate, 'yyyy-MM-dd')
       };
       
-      await onSubmit(formattedData);
+      if (initialData) {
+        // For update operations, include the ID
+        await onSubmit({
+          ...formattedData,
+          id: initialData.id
+        } as any); // Using 'as any' to bypass TypeScript's type check for this special case
+      } else {
+        // For create operations
+        await onSubmit(formattedData);
+      }
+      
       if (!initialData) {
         form.reset();
       }
