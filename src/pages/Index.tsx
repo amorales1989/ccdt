@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -219,7 +219,7 @@ const Index = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-white">
             <DropdownMenuItem onClick={() => handleEditEvent(event)}>
-              <Edit2 className="mr-2 h-4 w-4" />
+              <Edit2 className="mr-2 h-4 w-4 text-white" />
               Editar
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)}>
@@ -238,7 +238,7 @@ const Index = () => {
           size="sm" 
           onClick={() => handleEditEvent(event)}
         >
-          <Edit2 className="h-4 w-4" />
+          <Edit2 className="h-4 w-4 text-white" />
           <span className="sr-only">Editar</span>
         </Button>
         <Button
@@ -271,8 +271,14 @@ const Index = () => {
               <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => setSelectedEventForEdit(null)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Agregar Evento
+                    {isMobile ? (
+                      <Plus className="h-4 w-4" />
+                    ) : (
+                      <>
+                        <MapPin className="mr-2 h-4 w-4" />
+                        Agregar Evento
+                      </>
+                    )}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
