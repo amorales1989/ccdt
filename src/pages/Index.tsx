@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical, MapPin } from "lucide-react";
@@ -262,43 +261,41 @@ const Index = () => {
       {renderStudentStats()}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row justify-between items-center pb-2">
           <CardTitle>Calendario de Eventos</CardTitle>
+          {isAdminOrSecretary && (
+            <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setSelectedEventForEdit(null)}>
+                  {isMobile ? (
+                    <Plus className="h-4 w-4" />
+                  ) : (
+                    <>
+                      <MapPin className="mr-2 h-4 w-4" />
+                      Agregar Evento
+                    </>
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
+                  </DialogTitle>
+                </DialogHeader>
+                <EventForm 
+                  onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent} 
+                  initialData={selectedEventForEdit || undefined}
+                  onSuccess={() => {
+                    setEventDialogOpen(false);
+                    setSelectedEventForEdit(null);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
         </CardHeader>
         <CardContent>
-          {isAdminOrSecretary && (
-            <div className="mb-4">
-              <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => setSelectedEventForEdit(null)}>
-                    {isMobile ? (
-                      <Plus className="h-4 w-4" />
-                    ) : (
-                      <>
-                        <MapPin className="mr-2 h-4 w-4" />
-                        Agregar Evento
-                      </>
-                    )}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <EventForm 
-                    onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent} 
-                    initialData={selectedEventForEdit || undefined}
-                    onSuccess={() => {
-                      setEventDialogOpen(false);
-                      setSelectedEventForEdit(null);
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
           {eventsLoading ? (
             <p>Cargando eventos...</p>
           ) : futureEvents.length === 0 ? (
