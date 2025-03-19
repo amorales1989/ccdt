@@ -41,7 +41,7 @@
 
 @layer components {
   .card {
-    @apply bg-white shadow-lg rounded-2xl border border-gray-100 transition-all duration-200 hover:shadow-xl;
+    @apply bg-gradient-to-br from-white to-accent/10 shadow-lg rounded-2xl border border-accent/20 transition-all duration-300 hover:shadow-xl;
   }
   
   .table-header {
@@ -49,10 +49,90 @@
   }
   
   .table-row {
-    @apply hover:bg-muted/50 transition-colors;
+    @apply hover:bg-accent/20 transition-colors duration-200;
   }
   
   .sidebar-item {
     @apply hover:bg-sidebar-accent/10 transition-colors;
   }
+  
+  .input-search {
+    @apply relative rounded-lg overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 border border-accent;
+  }
+  
+  .button-gradient {
+    @apply bg-gradient-to-r from-primary to-secondary text-white hover:opacity-90 transition-all;
+  }
+  
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-sm border border-white/20 shadow-md rounded-xl;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce 2s infinite;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+.delay-300 {
+  animation-delay: 0.3s;
 }
