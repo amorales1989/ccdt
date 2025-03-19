@@ -84,31 +84,31 @@ const Index = () => {
     return (
       <div className="mb-6">
         <h2 className="text-2xl font-semibold mb-4">Estadísticas de Alumnos</h2>
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
           {Object.entries(studentsByDepartment).map(([dept, stats]) => (
-            <div key={dept} className="overflow-hidden rounded-lg shadow-md transition-all hover:shadow-lg">
-              <div className="bg-[#9b87f5] p-4 text-center">
-                <h3 className="font-semibold text-white">
+            <div key={dept} className="bg-white rounded-xl overflow-hidden shadow">
+              <div className="bg-[#9b87f5] p-3 text-center">
+                <h3 className="font-semibold text-white text-sm sm:text-base">
                   {formatDepartmentName(dept)}
                 </h3>
               </div>
-              <div className="bg-white p-6 text-center">
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500">Total</p>
-                  <p className="text-[#7E69AB] text-5xl font-semibold">{stats.total}</p>
+              <div className="p-4 flex flex-col items-center">
+                <div className="text-center mb-2">
+                  <p className="text-gray-500 text-xs">Total</p>
+                  <p className="text-[#7E69AB] text-4xl font-semibold">{stats.total}</p>
                 </div>
-                <div className="space-y-2 mt-4">
-                  <div className="flex items-center text-gray-600">
-                    <PersonStanding className="h-5 w-5 text-[#3A82AF] mr-2" />
+                <div className="w-full space-y-1 mt-2">
+                  <div className="flex items-center text-gray-600 text-sm">
+                    <PersonStanding className="h-4 w-4 text-[#3A82AF] mr-1" />
                     <p>Varones: {stats.male}</p>
                   </div>
-                  <div className="flex items-center text-gray-600">
-                    <PersonStanding className="h-5 w-5 text-[#E83E8C] mr-2" />
+                  <div className="flex items-center text-gray-600 text-sm">
+                    <PersonStanding className="h-4 w-4 text-[#E83E8C] mr-1" />
                     <p>Mujeres: {stats.female}</p>
                   </div>
                   {profile?.role === "maestro" && profile?.assigned_class && (
-                    <div className="flex items-center text-gray-600">
-                      <CheckCircle2 className="h-4 w-4 text-[#7E69AB] mr-2" />
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <CheckCircle2 className="h-3 w-3 text-[#7E69AB] mr-1" />
                       <p>Clase: {profile.assigned_class}</p>
                     </div>
                   )}
