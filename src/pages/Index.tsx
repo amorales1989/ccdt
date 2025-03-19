@@ -1,6 +1,7 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,11 +15,19 @@ import type { Event, DepartmentType, Student } from "@/types/database";
 import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  DropdownMenu, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
+  DropdownMenuItem 
+} from "@/components/ui/dropdown-menu";
 
 const Index = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
+  const isMobile = useIsMobile();
 
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
@@ -197,6 +206,53 @@ const Index = () => {
 
   const futureEvents = events.filter(event => !isBefore(new Date(event.date), startOfToday()));
 
+  const renderActionButtons = (event: Event) => {
+    if (!isAdminOrSecretary) return null;
+    
+    if (isMobile) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white">
+            <DropdownMenuItem onClick={() => handleEditEvent(event)}>
+              <Edit2 className="mr-2 h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+    
+    return (
+      <div className="flex justify-end space-x-2">
+        <Button 
+          variant="secondary" 
+          size="sm" 
+          onClick={() => handleEditEvent(event)}
+        >
+          <Edit2 className="h-4 w-4" />
+          <span className="sr-only">Editar</span>
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => handleDeleteEvent(event.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="sr-only">Eliminar</span>
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <div>
       {isAdminOrSecretary && !studentsLoading && (
@@ -263,7 +319,7 @@ const Index = () => {
                     <TableRow key={event.id} className="hover:bg-accent/20">
                       <TableCell className="font-medium">{event.title}</TableCell>
                       <TableCell>
-                        {format(new Date(event.date), "dd/MM/yyyy", { locale: es })}
+                        {format(new Date(event.date), "dd/MM", { locale: es })}
                       </TableCell>
                       <TableCell>
                         {event.time && (
@@ -280,24 +336,7 @@ const Index = () => {
                       </TableCell>
                       {isAdminOrSecretary && (
                         <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button 
-                              variant="secondary" 
-                              size="sm" 
-                              onClick={() => handleEditEvent(event)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                              <span className="sr-only">Editar</span>
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteEvent(event.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Eliminar</span>
-                            </Button>
-                          </div>
+                          {renderActionButtons(event)}
                         </TableCell>
                       )}
                     </TableRow>
