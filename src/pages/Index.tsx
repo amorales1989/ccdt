@@ -84,7 +84,7 @@ const Index = () => {
     return (
       <div className="mb-6">
         <h2 className="text-2xl font-semibold mb-4">Estadísticas de Alumnos</h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {Object.entries(studentsByDepartment).map(([dept, stats]) => (
             <div key={dept} className="overflow-hidden rounded-lg shadow-md transition-all hover:shadow-lg">
               <div className="bg-[#9b87f5] p-4 text-center">
