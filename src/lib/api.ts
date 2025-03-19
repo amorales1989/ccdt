@@ -630,4 +630,3 @@ export const updateCompany = async (id: number, updates: Partial<Company>) => {
     throw error;
   }
 };
-

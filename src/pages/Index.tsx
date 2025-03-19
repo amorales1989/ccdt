@@ -1,11 +1,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react"; // Added the missing useState import
+import { useState } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent, getStudents } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -247,6 +247,12 @@ const Index = () => {
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(event.date), "dd/MM/yyyy", { locale: es })}
                     </p>
+                    {event.time && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>{event.time}</span>
+                      </div>
+                    )}
                     {event.description && (
                       <p className="text-sm mt-2 whitespace-pre-line">{event.description}</p>
                     )}

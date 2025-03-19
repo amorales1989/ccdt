@@ -10,9 +10,7 @@ import type { Event } from "@/types/database";
 import { format, parseISO, addDays } from "date-fns";
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 
-type EventFormData = Omit<Event, "id" | "created_at" | "updated_at"> & {
-  time?: string;
-};
+type EventFormData = Omit<Event, "id" | "created_at" | "updated_at">;
 
 interface EventFormProps {
   onSubmit: (data: EventFormData) => void;
@@ -37,15 +35,12 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
     }
   }
 
-  // Extract time from initialData if available
-  const initialTime = initialData?.description?.match(/Hora: (\d{2}:\d{2})/)?.[1] || "09:00";
-
   const form = useForm<EventFormData>({
     defaultValues: {
       title: initialData?.title || "",
       date: initialData?.date ? format(toZonedTime(parseISO(initialData.date), timeZone), 'yyyy-MM-dd') : "",
-      description: initialData?.description?.replace(/Hora: \d{2}:\d{2}\s*/, "") || "",
-      time: initialTime
+      time: initialData?.time || "09:00",
+      description: initialData?.description || ""
     }
   });
 
@@ -57,15 +52,9 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
       const dateWithAddedDay = addDays(localDate, 1);
       const utcDate = fromZonedTime(dateWithAddedDay, timeZone);
       
-      // Add time to description
-      const descriptionWithTime = data.time 
-        ? `${data.description || ""}\nHora: ${data.time}`
-        : data.description;
-      
       const formattedData = {
         ...data,
-        date: format(utcDate, 'yyyy-MM-dd'),
-        description: descriptionWithTime,
+        date: format(utcDate, 'yyyy-MM-dd')
       };
       
       await onSubmit(formattedData);
