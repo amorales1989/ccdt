@@ -155,8 +155,8 @@ export default function Calendario() {
     const now = new Date();
     const date = new Date(eventDate);
     return isAfter(date, now) 
-      ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80" 
-      : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20";
+      ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70" 
+      : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70";
   };
 
   const handleMonthChange = (date: Date | undefined) => {
@@ -227,7 +227,7 @@ export default function Calendario() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-md border shadow-sm p-4 flex justify-center">
+            <div className="bg-white rounded-md border shadow-sm p-4 flex justify-center dark:bg-gray-800 dark:border-gray-700">
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -255,13 +255,15 @@ export default function Calendario() {
                         <HoverCardTrigger asChild>
                           <span 
                             className={`cursor-pointer w-full h-full flex items-center justify-center ${
-                              allPastEvents ? 'bg-[#ea384c]/10' : 'bg-[#F2FCE2]'
+                              allPastEvents 
+                                ? 'bg-[#ea384c]/10 dark:bg-[#4e2a2a]/70' 
+                                : 'bg-[#F2FCE2] dark:bg-[#2a4e27]/70'
                             }`}
                           >
                             {date.getDate()}
                           </span>
                         </HoverCardTrigger>
-                        <HoverCardContent className="w-80">
+                        <HoverCardContent className="w-80 dark:bg-gray-800 dark:border-gray-700">
                           <div className="space-y-2">
                             {dayEvents.map((event) => {
                               const isPastEvent = isBefore(new Date(event.date), new Date());
@@ -270,13 +272,13 @@ export default function Calendario() {
                                   key={event.id} 
                                   className={`p-2 rounded-md cursor-pointer ${
                                     isPastEvent 
-                                      ? "bg-[#ea384c]/10 hover:bg-[#ea384c]/20" 
-                                      : "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80"
+                                      ? "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70" 
+                                      : "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70"
                                   }`}
                                   onClick={() => handleEventClick(event)}
                                 >
                                   <div className="flex justify-between items-center">
-                                    <h4 className="font-semibold">{event.title}</h4>
+                                    <h4 className="font-semibold dark:text-white">{event.title}</h4>
                                     <Button 
                                       variant="ghost" 
                                       size="sm"
@@ -286,7 +288,7 @@ export default function Calendario() {
                                       <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
                                     </Button>
                                   </div>
-                                  <p className="text-sm text-muted-foreground whitespace-pre-line">{event.description}</p>
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line dark:text-gray-300">{event.description}</p>
                                 </div>
                               );
                             })}
@@ -299,7 +301,7 @@ export default function Calendario() {
               />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold mb-4">
+              <h3 className="text-lg font-semibold mb-4 dark:text-white">
                 Eventos del mes {format(selectedDate || new Date(), 'MMMM yyyy', { locale: es })}
               </h3>
               <div className="space-y-2">
@@ -311,10 +313,10 @@ export default function Calendario() {
                       onClick={() => handleEventClick(event)}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">
+                        <span className="font-medium dark:text-white">
                           {format(new Date(event.date), 'dd/MM')}
                         </span>
-                        <span>{event.title}</span>
+                        <span className="dark:text-gray-200">{event.title}</span>
                       </div>
                       <Button 
                         variant="ghost" 
@@ -327,7 +329,7 @@ export default function Calendario() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground">No hay eventos este mes</p>
+                  <p className="text-muted-foreground dark:text-gray-400">No hay eventos este mes</p>
                 )}
               </div>
             </div>
@@ -336,15 +338,15 @@ export default function Calendario() {
       </Card>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar eliminación</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="dark:text-white">Confirmar eliminación</AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-gray-300">
               ¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
