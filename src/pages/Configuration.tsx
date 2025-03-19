@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,15 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany } from "@/lib/api";
-import { Loader2, Upload, X } from "lucide-react";
+import { Loader2, Moon, Sun, Upload, X } from "lucide-react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 
 export default function Configuration() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -105,9 +108,14 @@ export default function Configuration() {
       showName: 'show_name'
     };
 
-    updateCompanyMutate({ 
-      [settingMap[setting]]: newValue 
-    });
+    // Special handling for dark mode to use the theme context
+    if (setting === 'darkMode') {
+      toggleTheme();
+    } else {
+      updateCompanyMutate({ 
+        [settingMap[setting]]: newValue 
+      });
+    }
   };
 
   const handleDisplaySettingChange = (setting: keyof typeof displaySettings) => {
@@ -414,11 +422,18 @@ export default function Configuration() {
                       Cambia la apariencia de la aplicación a un tema oscuro.
                     </span>
                   </Label>
-                  <Switch 
-                    id="dark-mode" 
-                    checked={generalSettings.darkMode}
-                    onCheckedChange={() => handleGeneralSettingChange('darkMode')}
-                  />
+                  <div className="flex items-center gap-2">
+                    {theme === "light" ? (
+                      <Sun className="h-5 w-5 text-amber-500" />
+                    ) : (
+                      <Moon className="h-5 w-5 text-indigo-300" />
+                    )}
+                    <Switch 
+                      id="dark-mode" 
+                      checked={generalSettings.darkMode}
+                      onCheckedChange={() => handleGeneralSettingChange('darkMode')}
+                    />
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between mt-4">

@@ -28,6 +28,30 @@
     --ring: 262 88% 74%;
     --radius: 1rem;
   }
+  
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 262 88% 74%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 262 88% 30%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 262 88% 74%;
+  }
 }
  
 @layer base {
@@ -41,15 +65,15 @@
 
 @layer components {
   .card {
-    @apply bg-gradient-to-br from-white to-accent/10 shadow-lg rounded-2xl border border-accent/20 transition-all duration-300 hover:shadow-xl;
+    @apply bg-gradient-to-br from-white to-accent/10 shadow-lg rounded-2xl border border-accent/20 transition-all duration-300 hover:shadow-xl dark:from-gray-800 dark:to-gray-900 dark:border-gray-700;
   }
   
   .table-header {
-    @apply bg-primary/10 text-primary font-semibold;
+    @apply bg-primary/10 text-primary font-semibold dark:bg-primary/20;
   }
   
   .table-row {
-    @apply hover:bg-accent/20 transition-colors duration-200;
+    @apply hover:bg-accent/20 transition-colors duration-200 dark:hover:bg-accent/10;
   }
   
   .sidebar-item {
@@ -57,7 +81,7 @@
   }
   
   .input-search {
-    @apply relative rounded-lg overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 border border-accent;
+    @apply relative rounded-lg overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 border border-accent dark:border-gray-700 dark:bg-gray-800;
   }
   
   .button-gradient {
@@ -65,7 +89,7 @@
   }
   
   .glass-card {
-    @apply bg-white/70 backdrop-blur-sm border border-white/20 shadow-md rounded-xl;
+    @apply bg-white/70 backdrop-blur-sm border border-white/20 shadow-md rounded-xl dark:bg-black/40 dark:border-white/10;
   }
 }
 
