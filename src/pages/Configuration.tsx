@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -546,5 +547,25 @@ export default function Configuration() {
         <Button onClick={handleSaveSettings}>Guardar Configuración</Button>
       </div>
 
-      <
-
+      {showImagePreview && (
+        <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Vista Previa</DialogTitle>
+              <DialogDescription>
+                Vista ampliada del logo seleccionado.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center p-6">
+              <img
+                src={previewImage}
+                alt="Logo Preview"
+                className="max-h-96 max-w-full object-contain"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
