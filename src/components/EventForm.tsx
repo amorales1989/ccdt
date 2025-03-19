@@ -27,24 +27,18 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
   const initialTimeValue = initialData?.time || "09:00";
   const [timeValue, setTimeValue] = useState(initialTimeValue);
   
-  // Parse hour, minute, and period from the time string
+  // Parse hour and minute from the time string
   const parseTime = (timeString: string) => {
     const [hourStr, minuteStr] = timeString.split(':');
-    let hour = parseInt(hourStr, 10);
+    const hour = parseInt(hourStr, 10);
     const minute = parseInt(minuteStr, 10);
-    const period = hour >= 12 ? 'PM' : 'AM';
     
-    // Convert 24-hour format to 12-hour format for display
-    if (hour > 12) hour -= 12;
-    if (hour === 0) hour = 12;
-    
-    return { hour, minute, period };
+    return { hour, minute };
   };
   
   const initialTimeParts = parseTime(initialTimeValue);
   const [hour, setHour] = useState(initialTimeParts.hour);
   const [minute, setMinute] = useState(initialTimeParts.minute);
-  const [period, setPeriod] = useState(initialTimeParts.period);
   
   // Obtener la fecha actual en formato YYYY-MM-DD en la zona horaria de Argentina
   const today = format(toZonedTime(new Date(), timeZone), 'yyyy-MM-dd');
@@ -60,16 +54,10 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
 
   // Function to format the time in 24-hour format for form submission
   const formatTimeFor24Hour = () => {
-    let hour24 = hour;
-    
-    // Convert from 12-hour to 24-hour format
-    if (period === 'PM' && hour < 12) hour24 += 12;
-    if (period === 'AM' && hour === 12) hour24 = 0;
-    
-    return `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
   };
 
-  // Update the form's time value when hour, minute, or period changes
+  // Update the form's time value when hour or minute changes
   const updateFormTime = () => {
     const formattedTime = formatTimeFor24Hour();
     form.setValue('time', formattedTime);
@@ -104,35 +92,12 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
     }
   };
 
-  // Generate clock numbers for the visual clock
-  const clockNumbers = Array.from({ length: 12 }, (_, i) => i + 1);
-
-  // Calculate position for clock numbers and the hand
-  const getNumberPosition = (number: number) => {
-    const angle = (number * 30 - 90) * (Math.PI / 180);
-    const radius = 70;
-    const x = radius * Math.cos(angle);
-    const y = radius * Math.sin(angle);
-    return { x, y };
-  };
-
-  const getHandPosition = () => {
-    // For hour hand
-    const hourAngle = ((hour % 12) * 30 - 90) * (Math.PI / 180);
-    const radius = 40;
-    const x = radius * Math.cos(hourAngle);
-    const y = radius * Math.sin(hourAngle);
-    return { x, y };
-  };
-
-  const handPosition = getHandPosition();
-
   // Handle hour increment/decrement
   const adjustHour = (increment: boolean) => {
     setHour(prevHour => {
       let newHour = increment ? prevHour + 1 : prevHour - 1;
-      if (newHour > 12) newHour = 1;
-      if (newHour < 1) newHour = 12;
+      if (newHour > 23) newHour = 0;
+      if (newHour < 0) newHour = 23;
       return newHour;
     });
   };
@@ -201,15 +166,15 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
                     onClick={() => setShowTimePicker(!showTimePicker)}
                   >
                     <Clock className="h-4 w-4 mr-2 text-[#9b87f5]" />
-                    <span>{displayTime} {period}</span>
+                    <span>{displayTime}</span>
                   </div>
 
                   {showTimePicker && (
                     <div className="absolute z-50 mt-2 p-4 bg-white rounded-lg shadow-lg border border-gray-200 w-[300px]">
-                      <p className="text-sm text-center mb-2 text-gray-500">Select time</p>
+                      <p className="text-sm text-center mb-2 text-gray-500">Seleccionar hora</p>
                       
                       {/* Time display and controls */}
-                      <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center justify-center mb-6 gap-4">
                         {/* Hour selector */}
                         <div className="relative flex flex-col items-center">
                           <button 
@@ -254,58 +219,6 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
                             ▼
                           </button>
                         </div>
-                        
-                        {/* AM/PM selector */}
-                        <div className="flex flex-col">
-                          <button
-                            type="button"
-                            className={`px-4 py-2 rounded-t-md ${period === 'AM' ? 'bg-[#f897fb] text-white' : 'bg-gray-100'}`}
-                            onClick={() => setPeriod('AM')}
-                          >
-                            AM
-                          </button>
-                          <button
-                            type="button"
-                            className={`px-4 py-2 rounded-b-md ${period === 'PM' ? 'bg-[#f897fb] text-white' : 'bg-gray-100'}`}
-                            onClick={() => setPeriod('PM')}
-                          >
-                            PM
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {/* Visual clock */}
-                      <div className="relative w-40 h-40 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                        {/* Clock center */}
-                        <div className="absolute w-2 h-2 bg-[#6E59A5] rounded-full"></div>
-                        
-                        {/* Hour hand */}
-                        <div 
-                          className="absolute w-[3px] h-20 bg-[#6E59A5] rounded-full origin-bottom"
-                          style={{ 
-                            transform: `translate(${handPosition.x}px, ${handPosition.y}px) rotate(${((hour % 12) * 30)}deg)`,
-                            transformOrigin: '50% 100%'
-                          }}
-                        ></div>
-                        
-                        {/* Hour numbers */}
-                        {clockNumbers.map(number => {
-                          const position = getNumberPosition(number);
-                          const isSelected = hour === number;
-                          return (
-                            <div 
-                              key={number}
-                              className={`absolute flex items-center justify-center text-sm
-                                ${isSelected ? 'w-8 h-8 bg-[#6E59A5] text-white rounded-full' : ''}
-                              `}
-                              style={{ 
-                                transform: `translate(${position.x}px, ${position.y}px)` 
-                              }}
-                            >
-                              {number}
-                            </div>
-                          );
-                        })}
                       </div>
                       
                       {/* Action buttons */}
@@ -315,14 +228,14 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
                           variant="outline"
                           onClick={() => setShowTimePicker(false)}
                         >
-                          Cancel
+                          Cancelar
                         </Button>
                         <Button 
                           type="button"
                           onClick={updateFormTime}
                           className="bg-[#9b87f5] hover:bg-[#7E69AB]"
                         >
-                          OK
+                          Aceptar
                         </Button>
                       </div>
                     </div>
