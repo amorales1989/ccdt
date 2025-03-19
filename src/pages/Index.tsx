@@ -12,6 +12,8 @@ import { format, isBefore, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Event, DepartmentType, Student } from "@/types/database";
 import { StudentSearch } from "@/components/StudentSearch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 
 const Index = () => {
   const { toast } = useToast();
@@ -245,48 +247,63 @@ const Index = () => {
               )}
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {futureEvents.map((event) => (
-                <Card key={event.id}>
-                  <CardHeader>
-                    <CardTitle>{event.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(event.date), "dd/MM/yyyy", { locale: es })}
-                    </p>
-                    {event.time && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>{event.time}</span>
-                      </div>
-                    )}
-                    {event.description && (
-                      <p className="text-sm mt-2 whitespace-pre-line">{event.description}</p>
-                    )}
-                    {isAdminOrSecretary && (
-                      <div className="flex justify-end mt-4 space-x-2">
-                        <Button 
-                          variant="secondary" 
-                          size="sm" 
-                          onClick={() => handleEditEvent(event)}
-                        >
-                          <Edit2 className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteEvent(event.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-semibold">Título</TableHead>
+                    <TableHead className="font-semibold">Fecha</TableHead>
+                    <TableHead className="font-semibold">Hora</TableHead>
+                    <TableHead className="font-semibold">Descripción</TableHead>
+                    {isAdminOrSecretary && <TableHead className="text-right">Acciones</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {futureEvents.map((event) => (
+                    <TableRow key={event.id} className="hover:bg-accent/20">
+                      <TableCell className="font-medium">{event.title}</TableCell>
+                      <TableCell>
+                        {format(new Date(event.date), "dd/MM/yyyy", { locale: es })}
+                      </TableCell>
+                      <TableCell>
+                        {event.time && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{event.time}</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <div className="max-h-16 overflow-y-auto">
+                          {event.description || <span className="text-muted-foreground text-sm italic">Sin descripción</span>}
+                        </div>
+                      </TableCell>
+                      {isAdminOrSecretary && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button 
+                              variant="secondary" 
+                              size="sm" 
+                              onClick={() => handleEditEvent(event)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                              <span className="sr-only">Editar</span>
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteEvent(event.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Eliminar</span>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
