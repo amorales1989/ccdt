@@ -630,3 +630,54 @@ export const updateCompany = async (id: number, updates: Partial<Company>) => {
     throw error;
   }
 };
+
+// Add this function to send push notifications
+export const sendPushNotification = async (eventTitle: string, eventDate: string) => {
+  try {
+    // Get all active subscriptions
+    const { data: subscriptions, error } = await supabase
+      .from("push_subscriptions")
+      .select("subscription");
+    
+    if (error) {
+      console.error('Error fetching push subscriptions:', error);
+      throw error;
+    }
+
+    if (!subscriptions || subscriptions.length === 0) {
+      console.log('No subscriptions found to send notifications to');
+      return;
+    }
+
+    // Format date to a more readable format
+    const formattedDate = new Date(eventDate).toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+    const notifications = subscriptions.map(async (sub) => {
+      try {
+        const payload = {
+          title: "Nuevo Evento Creado",
+          body: `${eventTitle} - ${formattedDate}`,
+          url: "/calendario"
+        };
+
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            subscription: sub.subscription,
+            payload
+          }
+        });
+      } catch (err) {
+        console.error('Error sending notification to subscription:', err);
+      }
+    });
+
+    await Promise.allSettled(notifications);
+    console.log(`Sent push notifications for new event: ${eventTitle}`);
+  } catch (error) {
+    console.error('Error sending push notifications:', error);
+  }
+};

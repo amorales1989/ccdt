@@ -124,12 +124,22 @@ const Index = () => {
 
   const { mutate: createEventMutate } = useMutation({
     mutationFn: (newEvent: Omit<Event, "id" | "created_at" | "updated_at">) => createEvent(newEvent),
-    onSuccess: () => {
+    onSuccess: async (createdEvent) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       toast({
         title: "Evento creado",
         description: "El evento ha sido creado exitosamente",
       });
+      
+      // Send push notification for the new event
+      try {
+        if (createdEvent) {
+          await sendPushNotification(createdEvent.title, createdEvent.date);
+        }
+      } catch (error) {
+        console.error("Error sending push notification:", error);
+      }
+      
       setEventDialogOpen(false);
     },
     onError: () => {

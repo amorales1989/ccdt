@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -82,11 +81,19 @@ export default function Calendario() {
           description: "El evento se ha actualizado exitosamente.",
         });
       } else {
-        await createEvent(eventData);
+        // Create new event and then send push notification
+        const createdEvent = await createEvent(eventData);
         toast({
           title: "Evento creado",
           description: "El evento se ha creado exitosamente.",
         });
+        
+        // Send push notification for the new event
+        try {
+          await sendPushNotification(eventData.title, eventData.date);
+        } catch (error) {
+          console.error("Error sending push notification:", error);
+        }
       }
       await refetch();
       setDialogOpen(false);
