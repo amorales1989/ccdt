@@ -1,7 +1,8 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { getEvents, deleteEvent, createEvent, updateEvent, sendPushNotification } from "@/lib/api";
+import { getEvents, deleteEvent } from "@/lib/api";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -32,7 +33,8 @@ import { Button } from "@/components/ui/button";
 import { CalendarPlus, Trash2 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { useToast } from "@/components/ui/use-toast";
-import { Event } from "@/types/database";
+import { createEvent, updateEvent } from "@/lib/api";
+import type { Event } from "@/types/database";
 
 export default function Calendario() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -70,6 +72,7 @@ export default function Calendario() {
   const handleCreateEvent = async (eventData: any) => {
     try {
       if (selectedEvent) {
+        // Make sure the ID is included when updating
         await updateEvent(selectedEvent.id, {
           ...eventData,
           id: selectedEvent.id
@@ -79,17 +82,11 @@ export default function Calendario() {
           description: "El evento se ha actualizado exitosamente.",
         });
       } else {
-        const createdEvent = await createEvent(eventData);
+        await createEvent(eventData);
         toast({
           title: "Evento creado",
           description: "El evento se ha creado exitosamente.",
         });
-        
-        try {
-          await sendPushNotification(eventData.title, eventData.date);
-        } catch (error) {
-          console.error("Error sending push notification:", error);
-        }
       }
       await refetch();
       setDialogOpen(false);

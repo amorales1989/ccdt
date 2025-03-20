@@ -13,7 +13,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany } from "@/lib/api";
 import { Loader2, Moon, Sun, Upload, X } from "lucide-react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
-import { NotificationSubscription } from "@/components/NotificationSubscription";
 
 export default function Configuration() {
   const { profile } = useAuth();
@@ -296,7 +295,7 @@ export default function Configuration() {
           <TabsTrigger value="system">Sistema</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="general" className="space-y-6">
+        <TabsContent value="general">
           <Card>
             <CardHeader>
               <CardTitle>Configuración General</CardTitle>
@@ -359,7 +358,7 @@ export default function Configuration() {
                         />
                         <div className="flex flex-wrap gap-2 mt-2">
                           <Button
-                            variant={logoFile ? "default" : "outline"}
+                            variant={logoFile ? "success" : "outline"}
                             type="button"
                             onClick={handleUploadLogo}
                             disabled={!logoFile || isUploading}
@@ -464,18 +463,6 @@ export default function Configuration() {
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Notificaciones Push</CardTitle>
-              <CardDescription>
-                Configura las notificaciones push para recibir alertas sobre nuevos eventos
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <NotificationSubscription />
             </CardContent>
           </Card>
         </TabsContent>
@@ -595,3 +582,4 @@ export default function Configuration() {
     </div>
   );
 }
+
