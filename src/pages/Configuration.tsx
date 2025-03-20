@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -108,7 +107,6 @@ export default function Configuration() {
       showName: 'show_name'
     };
 
-    // Special handling for dark mode to use the theme context
     if (setting === 'darkMode') {
       toggleTheme();
     } else {
@@ -358,13 +356,13 @@ export default function Configuration() {
                           onChange={handleLogoChange}
                           className="max-w-md mb-2"
                         />
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-wrap gap-2 mt-2">
                           <Button
-                            variant="outline"
+                            variant={logoFile ? "success" : "outline"}
                             type="button"
                             onClick={handleUploadLogo}
                             disabled={!logoFile || isUploading}
-                            className="flex items-center"
+                            className={`flex items-center ${logoFile ? "bg-green-500 hover:bg-green-600 text-white" : ""}`}
                           >
                             {isUploading ? (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -377,10 +375,11 @@ export default function Configuration() {
                             variant="outline"
                             type="button"
                             onClick={handleClearLogo}
-                            className="flex items-center"
+                            className="flex items-center text-xs"
+                            size="sm"
                           >
-                            <X className="h-4 w-4 mr-2" />
-                            Restaurar Logo por Defecto
+                            <X className="h-4 w-4 mr-1" />
+                            Restaurar
                           </Button>
                         </div>
                       </div>
@@ -583,3 +582,4 @@ export default function Configuration() {
     </div>
   );
 }
+
