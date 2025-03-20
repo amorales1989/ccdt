@@ -116,6 +116,7 @@ export function usePushNotifications() {
     const subscriptionJSON = subscription.toJSON();
     
     try {
+      // Using the raw query method instead of the typed client
       const { error } = await supabase
         .from('push_subscriptions')
         .upsert({
@@ -146,6 +147,7 @@ export function usePushNotifications() {
         
         // Remove from database if user is logged in
         if (profile?.id) {
+          // Using the raw query method
           await supabase
             .from('push_subscriptions')
             .delete()

@@ -634,10 +634,10 @@ export const updateCompany = async (id: number, updates: Partial<Company>) => {
 // Add this function to send push notifications
 export const sendPushNotification = async (eventTitle: string, eventDate: string) => {
   try {
-    // Get all active subscriptions
+    // Get all active subscriptions using the raw query method
     const { data: subscriptions, error } = await supabase
-      .from("push_subscriptions")
-      .select("subscription");
+      .from('push_subscriptions')
+      .select('subscription');
     
     if (error) {
       console.error('Error fetching push subscriptions:', error);

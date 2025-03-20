@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { getEvents, createEvent, updateEvent, deleteEvent, getStudents } from "@/lib/api";
+import { getEvents, createEvent, updateEvent, deleteEvent, sendPushNotification } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isBefore, startOfToday } from "date-fns";
@@ -29,6 +29,9 @@ const Index = () => {
   const { profile } = useAuth();
   const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
+  const [quickEventTitle, setQuickEventTitle] = useState("");
+  const [quickEventDate, setQuickEventDate] = useState(new Date());
+  const [isCreatingQuickEvent, setIsCreatingQuickEvent] = useState(false);
 
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
@@ -268,6 +271,57 @@ const Index = () => {
         </Button>
       </div>
     );
+  };
+
+  const handleQuickEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!quickEventTitle || !quickEventDate) {
+      toast({
+        title: "Error",
+        description: "El título y la fecha son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setIsCreatingQuickEvent(true);
+      
+      const formattedDate = format(quickEventDate, 'yyyy-MM-dd');
+      
+      const data = await createEvent({
+        title: quickEventTitle,
+        date: formattedDate,
+        time: null,
+        description: "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      
+      // Send push notification for new event
+      await sendPushNotification(quickEventTitle, formattedDate);
+      
+      toast({
+        title: "Evento creado",
+        description: "El evento ha sido creado correctamente",
+      });
+      
+      setQuickEventTitle("");
+      setQuickEventDate(new Date());
+      
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['upcoming-events'] });
+    } catch (error) {
+      console.error("Error creating quick event:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear el evento",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingQuickEvent(false);
+    }
   };
 
   return (

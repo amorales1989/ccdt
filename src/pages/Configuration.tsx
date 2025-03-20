@@ -359,7 +359,7 @@ export default function Configuration() {
                         />
                         <div className="flex flex-wrap gap-2 mt-2">
                           <Button
-                            variant={logoFile ? "success" : "outline"}
+                            variant={logoFile ? "default" : "outline"}
                             type="button"
                             onClick={handleUploadLogo}
                             disabled={!logoFile || isUploading}
@@ -595,4 +595,3 @@ export default function Configuration() {
     </div>
   );
 }
-

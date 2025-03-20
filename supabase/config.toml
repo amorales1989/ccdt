@@ -52,4 +52,5 @@ secret = ""
 redirect_uri = ""
 
 [functions]
+enabled = true
 port = 54321
