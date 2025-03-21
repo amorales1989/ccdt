@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -55,7 +54,6 @@ const HistorialAsistencia = () => {
   const [editRecords, setEditRecords] = useState<Attendance[]>([]);
   const [savingAttendance, setSavingAttendance] = useState(false);
   
-  // Add refresh trigger state to force refetch after editing
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
@@ -63,7 +61,6 @@ const HistorialAsistencia = () => {
   const userDepartmentId = profile?.department_id;
   const userClass = profile?.assigned_class;
 
-  // Get department data based on selected department
   const { data: departmentData } = useQuery({
     queryKey: ['department', selectedDepartment],
     queryFn: async () => {
@@ -153,15 +150,11 @@ const HistorialAsistencia = () => {
         userDepartmentId 
       });
       
-      // For admin/secretaria: use the selected department
-      // For others: use their assigned department ID
       let departmentToUse = "";
       let departmentIdToUse = null;
       
       if (isAdminOrSecretaria) {
-        // Only pass department name if "all" is not selected
         if (selectedDepartment !== "all") {
-          // Instead of passing the name, get the department ID
           const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
           if (departmentData && departmentData.id) {
             departmentIdToUse = departmentData.id;
@@ -171,15 +164,13 @@ const HistorialAsistencia = () => {
         departmentIdToUse = userDepartmentId;
       }
       
-      // Get attendance with department ID
       const attendanceData = await getAttendance(
         formattedStartDate, 
         formattedEndDate, 
-        "", // Empty string for department name since we're using ID
+        "", 
         departmentIdToUse
       );
       
-      // If a class is selected (and not "all"), filter by class
       if (selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
       }
@@ -204,7 +195,6 @@ const HistorialAsistencia = () => {
       let departmentIdToUse = null;
       
       if (isAdminOrSecretaria && selectedDepartment !== "all") {
-        // Get department ID from the selected department name
         const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
         if (departmentData && departmentData.id) {
           departmentIdToUse = departmentData.id;
@@ -215,7 +205,6 @@ const HistorialAsistencia = () => {
       
       const attendanceData = await getAttendance(formattedDate, formattedDate, "", departmentIdToUse);
       
-      // Additional filtering for classes
       if (isAdminOrSecretaria && selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
       } else if (!isAdminOrSecretaria && userClass) {
@@ -274,10 +263,8 @@ const HistorialAsistencia = () => {
       
       setIsEditMode(false);
       
-      // Increment the refresh trigger to force a refetch of the attendance data
       setRefreshTrigger(prev => prev + 1);
       
-      // Refetch both attendance data sources to update the UI
       await refetchDateAttendance();
       await refetchAttendance();
     } catch (error) {
@@ -596,7 +583,7 @@ const HistorialAsistencia = () => {
                               ) : (
                                 <UserX className="h-4 w-4" />
                               )}
-                              {record.status ? "Presente" : "Ausente"}
+                              {!isMobile && (record.status ? "Presente" : "Ausente")}
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
@@ -608,11 +595,13 @@ const HistorialAsistencia = () => {
                             >
                               {record.status ? (
                                 <>
-                                  <X className="h-3 w-3 mr-1" /> {isMobile ? "Ausente" : "Marcar Ausente"}
+                                  <X className="h-4 w-4" />
+                                  {!isMobile && <span className="ml-1">Marcar Ausente</span>}
                                 </>
                               ) : (
                                 <>
-                                  <Check className="h-3 w-3 mr-1" /> {isMobile ? "Presente" : "Marcar Presente"}
+                                  <Check className="h-4 w-4" />
+                                  {!isMobile && <span className="ml-1">Marcar Presente</span>}
                                 </>
                               )}
                             </Button>
@@ -655,7 +644,7 @@ const HistorialAsistencia = () => {
                               ) : (
                                 <UserX className="h-4 w-4" />
                               )}
-                              {record.status ? "Presente" : "Ausente"}
+                              {!isMobile && (record.status ? "Presente" : "Ausente")}
                             </span>
                           </TableCell>
                           <TableCell>{adjustDateForDisplay(record.date)}</TableCell>
