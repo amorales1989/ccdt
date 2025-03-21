@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { createStudent, getDepartments } from "@/lib/api";
+import { createStudent, getDepartments, checkDniExists } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Student, Department, DepartmentType } from "@/types/database";
@@ -18,6 +17,8 @@ const AgregarAlumno = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [dniError, setDniError] = useState<string | null>(null);
+  const [isValidatingDni, setIsValidatingDni] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -104,6 +105,36 @@ const AgregarAlumno = () => {
     }
   }, [profile, departments]);
 
+  const validateDni = async (dni: string) => {
+    if (!dni) {
+      setDniError(null);
+      return true;
+    }
+    
+    setIsValidatingDni(true);
+    try {
+      const exists = await checkDniExists(dni);
+      if (exists) {
+        setDniError(`El DNI ${dni} ya está registrado en el sistema`);
+        return false;
+      } else {
+        setDniError(null);
+        return true;
+      }
+    } catch (error) {
+      console.error("Error validating DNI:", error);
+      return true; // Don't block submission for validation errors
+    } finally {
+      setIsValidatingDni(false);
+    }
+  };
+
+  const handleDniBlur = async () => {
+    if (formData.document_number) {
+      await validateDni(formData.document_number);
+    }
+  };
+
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneNumber) return null;
 
@@ -126,6 +157,20 @@ const AgregarAlumno = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate DNI before submission
+    if (formData.document_number) {
+      const isValid = await validateDni(formData.document_number);
+      if (!isValid) {
+        toast({
+          title: "Error",
+          description: dniError || "El DNI ya existe en el sistema",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     if (!formData.department) {
       toast({
         title: "Error",
@@ -221,16 +266,21 @@ const AgregarAlumno = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="document_number">DNI</Label>
+              <Label htmlFor="document_number" error={!!dniError}>DNI</Label>
               <Input
                 id="document_number"
                 value={formData.document_number}
                 onChange={(e) =>
                   setFormData({ ...formData, document_number: e.target.value })
                 }
+                onBlur={handleDniBlur}
                 placeholder="Ingrese el DNI sin puntos"
                 required
+                error={!!dniError}
               />
+              {dniError && (
+                <p className="text-sm font-medium text-destructive mt-1">{dniError}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
