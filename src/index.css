@@ -64,7 +64,7 @@
 
 @layer components {
   .card {
-    @apply bg-gradient-to-br from-white to-accent/30 shadow-lg rounded-2xl border border-accent/30 transition-all duration-300 hover:shadow-xl dark:from-gray-800 dark:to-purple-900/40 dark:border-purple-800/30;
+    @apply bg-gradient-to-br from-white to-accent/50 shadow-lg rounded-2xl border border-accent/40 transition-all duration-300 hover:shadow-xl dark:from-gray-800 dark:to-purple-800/60 dark:border-purple-700/40;
   }
   
   .table-header {

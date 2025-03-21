@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -110,8 +109,8 @@ export default {
 			backgroundImage: {
 				'gradient-soft': 'linear-gradient(102.3deg, rgba(147,39,143,1) 5.9%, rgba(234,172,232,1) 64%, rgba(246,219,245,1) 89%)',
 				'gradient-purple': 'linear-gradient(90deg, #9b87f5 0%, #7E69AB 100%)',
-				'gradient-card': 'linear-gradient(to right, #f8f9fa 0%, #e9e0ff 100%)',
-				'dark-gradient-card': 'linear-gradient(to right, #1a1a1a 0%, #2a2438 100%)'
+				'gradient-card': 'linear-gradient(to right, #f8f9fa 0%, #e0d0ff 100%)',
+				'dark-gradient-card': 'linear-gradient(to right, #1a1a1a 0%, #2d2045 100%)'
 			}
 		}
 	},
