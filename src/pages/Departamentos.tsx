@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
 import { Department, DepartmentType } from "@/types/database";
@@ -111,7 +112,7 @@ const Departamentos = () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
       toast({
         title: "Departamento eliminado",
-        description: "El departamento ha sido eliminado exitosamente"
+        description: "El departamento ha sido eliminado exitosamente y los estudiantes asociados han sido desvinculados"
       });
       setIsDeleting(false);
       setSelectedDepartment(null);
@@ -398,6 +399,9 @@ const Departamentos = () => {
                           <AlertDialogDescription>
                             Esta acción no se puede deshacer. Se eliminará permanentemente el departamento
                             <span className="font-semibold"> {department.name}</span>.
+                            <br /><br />
+                            <span className="text-amber-500 font-medium">Nota:</span> Si hay estudiantes asignados a este departamento, 
+                            serán desvinculados del mismo pero no serán eliminados.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

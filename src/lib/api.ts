@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance, Department, DepartmentType, Company } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
@@ -577,12 +578,33 @@ export const createDepartment = async (department: { name: DepartmentType; descr
 
 export const deleteDepartment = async (id: string) => {
   try {
+    console.log('Attempting to delete department:', id);
+    
+    // First, update all students that reference this department to set their department_id to null
+    const { error: updateStudentsError } = await supabase
+      .from("students")
+      .update({ department_id: null, department: null })
+      .eq("department_id", id);
+    
+    if (updateStudentsError) {
+      console.error('Error updating students before deleting department:', updateStudentsError);
+      throw updateStudentsError;
+    }
+    
+    console.log('Successfully removed department references from students');
+    
+    // Now delete the department
     const { error } = await supabase
       .from("departments")
       .delete()
       .eq("id", id);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error deleting department after updating students:', error);
+      throw error;
+    }
+    
+    console.log('Successfully deleted department');
   } catch (error) {
     console.error('Error in deleteDepartment:', error);
     throw error;
