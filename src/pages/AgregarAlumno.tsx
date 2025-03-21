@@ -27,9 +27,9 @@ const AgregarAlumno = () => {
     gender: "masculino",
     birthdate: "",
     document_number: "",
-    department: profile?.departments?.[0] || null as DepartmentType | null,
-    department_id: profile?.department_id || "",
-    assigned_class: profile?.assigned_class || "",
+    department: null as DepartmentType | null,
+    department_id: "",
+    assigned_class: "",
   });
 
   const { data: departments = [] } = useQuery({
@@ -38,6 +38,7 @@ const AgregarAlumno = () => {
   });
 
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
+  const isMaestro = profile?.role === 'maestro';
 
   const availableDepartments = isAdminOrSecretaria 
     ? departments 
@@ -50,44 +51,58 @@ const AgregarAlumno = () => {
   const departmentHasClasses = availableClasses.length > 0;
 
   useEffect(() => {
-    if (profile?.departments?.[0]) {
-      const department = profile.departments[0] as DepartmentType;
+    // Initialize with teacher's department and class if available
+    if (profile) {
+      let department = null;
+      let departmentId = "";
+      let assignedClass = "";
+      
+      // If teacher has a department, use it
+      if (profile.departments?.[0]) {
+        department = profile.departments[0] as DepartmentType;
+        departmentId = profile.department_id || "";
+      }
+      
+      // If teacher has a class, use it
+      if (profile.assigned_class) {
+        assignedClass = profile.assigned_class;
+      }
+      
       setFormData(prev => ({
         ...prev,
         department,
-        department_id: profile.department_id || "",
-        assigned_class: profile.assigned_class || ""
+        department_id: departmentId,
+        assigned_class: assignedClass
       }));
       
-      if (!profile.department_id) {
+      // Fetch department ID if not available
+      if (department && !departmentId) {
         const fetchDepartmentId = async () => {
-          if (department) {
-            try {
-              const { data, error } = await supabase
-                .from("departments")
-                .select("id")
-                .eq("name", department)
-                .single();
-              
-              if (error) {
-                console.error("Error fetching department ID:", error);
-                return;
-              }
-              
-              if (data) {
-                console.log("Found department ID:", data.id, "for department:", department);
-                setFormData(prev => ({ ...prev, department_id: data.id }));
-              }
-            } catch (error) {
-              console.error("Error in fetchDepartmentId:", error);
+          try {
+            const { data, error } = await supabase
+              .from("departments")
+              .select("id")
+              .eq("name", department)
+              .single();
+            
+            if (error) {
+              console.error("Error fetching department ID:", error);
+              return;
             }
+            
+            if (data) {
+              console.log("Found department ID:", data.id, "for department:", department);
+              setFormData(prev => ({ ...prev, department_id: data.id }));
+            }
+          } catch (error) {
+            console.error("Error in fetchDepartmentId:", error);
           }
         };
         
         fetchDepartmentId();
       }
     }
-  }, [profile]);
+  }, [profile, departments]);
 
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneNumber) return null;
@@ -260,7 +275,7 @@ const AgregarAlumno = () => {
                   });
                 }}
                 required
-                disabled={!isAdminOrSecretaria}
+                disabled={isMaestro} // Disable for teachers as they're locked to their department
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar departamento" />
@@ -283,7 +298,7 @@ const AgregarAlumno = () => {
                     setFormData({ ...formData, assigned_class: value })
                   }
                   required
-                  disabled={!isAdminOrSecretaria}
+                  disabled={isMaestro} // Disable for teachers as they're locked to their class
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar clase" />

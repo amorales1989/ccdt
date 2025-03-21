@@ -146,6 +146,54 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
     );
   }
 
+  const userRoleInfo = () => {
+    const basicInfo = (
+      <div className="flex flex-col gap-1">
+        <span className="text-sm md:text-white text-black capitalize">{profile?.role}</span>
+      </div>
+    );
+
+    if (profile?.role === 'maestro') {
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-sm md:text-white text-black capitalize">{profile?.role}</span>
+          {profile?.departments && profile.departments.length > 0 && (
+            <span className="text-sm md:text-white text-black capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
+              {profile.departments[0]}
+            </span>
+          )}
+          {profile?.assigned_class && (
+            <span className="text-sm md:text-white text-black capitalize bg-accent/70 px-2 py-0.5 rounded-full inline-block">
+              Clase: {profile.assigned_class}
+            </span>
+          )}
+        </div>
+      );
+    }
+    
+    if (isAdminOrSecretary) {
+      return basicInfo;
+    }
+
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-sm md:text-white text-black capitalize">{profile?.role}</span>
+        {!isAdminOrSecretary && selectedDepartment && (
+          <>
+            <span className="text-sm md:text-white text-black capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
+              {selectedDepartment}
+            </span>
+            {profile?.assigned_class && (
+              <span className="text-sm md:text-white text-black capitalize bg-accent/50 px-2 py-0.5 rounded-full inline-block">
+                Clase: {profile.assigned_class}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full">
       <SidebarMenu className="flex-grow">
@@ -155,21 +203,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
               <UserRound className="h-5 w-5" />
               <div className="flex flex-col">
                 <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm md:text-white text-black capitalize">{profile?.role}</span>
-                  {!isAdminOrSecretary && selectedDepartment && (
-                    <>
-                      <span className="text-sm md:text-white text-black capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
-                        {selectedDepartment}
-                      </span>
-                      {profile?.assigned_class && (
-                        <span className="text-sm md:text-white text-black capitalize bg-accent/50 px-2 py-0.5 rounded-full inline-block">
-                          Clase: {profile.assigned_class}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
+                {userRoleInfo()}
               </div>
             </div>
           </div>
@@ -230,7 +264,6 @@ export function AppSidebar() {
 
   useEffect(() => {
     if (company) {
-      // Only set the congregation name if company has a name and show_name is true
       if (company.name && company.show_name) {
         setCongregationName(company.congregation_name || company.name || '');
         setShowCongregationName(true);
@@ -238,17 +271,14 @@ export function AppSidebar() {
         setShowCongregationName(false);
       }
       
-      // Set logo path if available
       if (company.logo_url) {
-        // Check if the logo URL is a Supabase storage URL
         if (company.logo_url.startsWith('logos/')) {
-          // Correct format for Supabase storage URLs
           setLogoPath(`${STORAGE_URL}/${company.logo_url}`);
         } else {
           setLogoPath(company.logo_url);
         }
       } else {
-        setLogoPath("/fire.png"); // Default logo
+        setLogoPath("/fire.png");
       }
     }
   }, [company]);
