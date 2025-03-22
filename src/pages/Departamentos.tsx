@@ -47,6 +47,7 @@ const Departamentos = () => {
   const [classes, setClasses] = useState<string[]>([]);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingName, setEditingName] = useState<DepartmentType>("escuelita_central");
 
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
@@ -82,8 +83,8 @@ const Departamentos = () => {
   });
 
   const updateDepartmentMutation = useMutation({
-    mutationFn: async ({ id, description, classes }: { id: string; description?: string; classes?: string[] }) => {
-      return updateDepartment(id, { description, classes });
+    mutationFn: async ({ id, name, description, classes }: { id: string; name?: DepartmentType; description?: string; classes?: string[] }) => {
+      return updateDepartment(id, { name, description, classes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
@@ -282,6 +283,7 @@ const Departamentos = () => {
                         setSelectedDepartment(null);
                         setDescription("");
                         setClasses([]);
+                        setEditingName(department.name as DepartmentType);
                       }
                     }}>
                       <DialogTrigger asChild>
@@ -296,6 +298,7 @@ const Departamentos = () => {
                             setIsEditing(true);
                             setDescription(department.description || "");
                             setClasses(department.classes || []);
+                            setEditingName(department.name as DepartmentType);
                           }}
                         >
                           <Pencil className="h-4 w-4" />
@@ -307,8 +310,20 @@ const Departamentos = () => {
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="name">Nombre</Label>
-                            <p className="text-sm text-muted-foreground capitalize">{department.name}</p>
+                            <Label htmlFor="editName">Nombre</Label>
+                            <select
+                              id="editName"
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value as DepartmentType)}
+                              className="w-full rounded-md border border-input bg-background px-3 py-2"
+                            >
+                              <option value="escuelita_central">Escuelita Central</option>
+                              <option value="pre_adolescentes">Pre Adolescentes</option>
+                              <option value="adolescentes">Adolescentes</option>
+                              <option value="jovenes">Jóvenes</option>
+                              <option value="jovenes_adultos">Jóvenes Adultos</option>
+                              <option value="adultos">Adultos</option>
+                            </select>
                           </div>
                           <div>
                             <Label htmlFor="description">Descripción</Label>
@@ -366,6 +381,7 @@ const Departamentos = () => {
                               if (selectedDepartment) {
                                 updateDepartmentMutation.mutate({
                                   id: selectedDepartment.id,
+                                  name: editingName,
                                   description,
                                   classes
                                 });

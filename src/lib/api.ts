@@ -543,7 +543,7 @@ export const getDepartmentByName = async (name: DepartmentType) => {
   }
 };
 
-export const updateDepartment = async (id: string, updates: { description?: string; classes?: string[] }) => {
+export const updateDepartment = async (id: string, updates: { name?: DepartmentType; description?: string; classes?: string[] }) => {
   try {
     const { data, error } = await supabase
       .from("departments")
