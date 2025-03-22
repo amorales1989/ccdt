@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical, MapPin, Search } from "lucide-react";
@@ -81,13 +82,22 @@ const Index = () => {
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
     };
+    
+    // Get departments that have stats
+    const departmentsWithStats = Object.entries(studentsByDepartment);
+    
+    // If there's only one department card, use a different layout
+    const isSingleCard = departmentsWithStats.length === 1;
 
     return (
       <div className="mb-6">
         <h2 className="text-2xl font-semibold mb-4">Estadísticas de Alumnos</h2>
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
-          {Object.entries(studentsByDepartment).map(([dept, stats]) => (
-            <div key={dept} className="bg-gradient-to-br from-white to-accent/30 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border border-accent/20">
+        <div className={`grid gap-4 ${isSingleCard ? 'place-items-center' : 'grid-cols-2 lg:grid-cols-3'}`}>
+          {departmentsWithStats.map(([dept, stats]) => (
+            <div 
+              key={dept} 
+              className={`bg-gradient-to-br from-white to-accent/30 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border border-accent/20 ${isSingleCard ? 'w-full max-w-sm' : ''}`}
+            >
               <div className="bg-primary p-3 text-center">
                 <h3 className="font-semibold text-white text-sm sm:text-base">
                   {formatDepartmentName(dept)}

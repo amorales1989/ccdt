@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Sidebar,
@@ -307,7 +308,7 @@ export function AppSidebar() {
                   </AvatarFallback>
                 </Avatar>
                 {showCongregationName && congregationName && (
-                  <h2 className="text-lg font-semibold">{congregationName}</h2>
+                  <h2 className="text-lg font-semibold pr-8">{congregationName}</h2>
                 )}
               </div>
               <nav className="p-2">
