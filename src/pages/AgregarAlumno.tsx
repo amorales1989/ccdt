@@ -383,10 +383,10 @@ const AgregarAlumno = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
                   }
-                  placeholder="Sin 0 ni 15 al inicio, ej: 1159080306"
+                  placeholder="Sin 0 ni 15 al inicio, ej: 11xxxxxxxx"
                 />
               </div>
-              <span className="text-xs text-muted-foreground">No incluir el 0 ni el 15 al inicio del número. Ejemplo correcto: 1159080306</span>
+              <span className="text-xs text-muted-foreground">No incluir el 0 ni el 15 al inicio del número. Ejemplo correcto: 11xxxxxxxx</span>
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">Dirección</Label>
