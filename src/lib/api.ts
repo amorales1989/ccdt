@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance, Department, DepartmentType, Company } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
@@ -555,7 +554,7 @@ export const updateDepartment = async (id: string, updates: { name?: DepartmentT
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error in updateDepartment:', error);
+    console.error("Error updating department:", error);
     throw error;
   }
 };

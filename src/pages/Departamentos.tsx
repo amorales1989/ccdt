@@ -41,13 +41,13 @@ const Departamentos = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [name, setName] = useState<DepartmentType>("escuelita_central");
+  const [name, setName] = useState<string>("");
   const [description, setDescription] = useState("");
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingName, setEditingName] = useState<DepartmentType>("escuelita_central");
+  const [editingName, setEditingName] = useState<string>("");
 
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
@@ -68,7 +68,7 @@ const Departamentos = () => {
         description: "El departamento ha sido creado exitosamente"
       });
       setIsCreating(false);
-      setName("escuelita_central");
+      setName("");
       setDescription("");
       setClasses([]);
     },
@@ -83,8 +83,8 @@ const Departamentos = () => {
   });
 
   const updateDepartmentMutation = useMutation({
-    mutationFn: async ({ id, name, description, classes }: { id: string; name?: DepartmentType; description?: string; classes?: string[] }) => {
-      return updateDepartment(id, { name, description, classes });
+    mutationFn: async ({ id, name, description, classes }: { id: string; name?: string; description?: string; classes?: string[] }) => {
+      return updateDepartment(id, { name: name as DepartmentType, description, classes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
@@ -172,19 +172,13 @@ const Departamentos = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">Nombre</Label>
-                  <select
+                  <Input
                     id="name"
                     value={name}
-                    onChange={(e) => setName(e.target.value as DepartmentType)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    <option value="escuelita_central">Escuelita Central</option>
-                    <option value="pre_adolescentes">Pre Adolescentes</option>
-                    <option value="adolescentes">Adolescentes</option>
-                    <option value="jovenes">Jóvenes</option>
-                    <option value="jovenes_adultos">Jóvenes Adultos</option>
-                    <option value="adultos">Adultos</option>
-                  </select>
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nombre del departamento"
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="description">Descripción</Label>
@@ -241,7 +235,7 @@ const Departamentos = () => {
                   onClick={() => {
                     if (name) {
                       createDepartmentMutation.mutate({
-                        name,
+                        name: name as DepartmentType,
                         description: description.trim() || undefined,
                         classes
                       });
@@ -283,7 +277,7 @@ const Departamentos = () => {
                         setSelectedDepartment(null);
                         setDescription("");
                         setClasses([]);
-                        setEditingName(department.name as DepartmentType);
+                        setEditingName("");
                       }
                     }}>
                       <DialogTrigger asChild>
@@ -298,7 +292,7 @@ const Departamentos = () => {
                             setIsEditing(true);
                             setDescription(department.description || "");
                             setClasses(department.classes || []);
-                            setEditingName(department.name as DepartmentType);
+                            setEditingName(department.name);
                           }}
                         >
                           <Pencil className="h-4 w-4" />
@@ -311,19 +305,13 @@ const Departamentos = () => {
                         <div className="space-y-4">
                           <div>
                             <Label htmlFor="editName">Nombre</Label>
-                            <select
+                            <Input
                               id="editName"
                               value={editingName}
-                              onChange={(e) => setEditingName(e.target.value as DepartmentType)}
-                              className="w-full rounded-md border border-input bg-background px-3 py-2"
-                            >
-                              <option value="escuelita_central">Escuelita Central</option>
-                              <option value="pre_adolescentes">Pre Adolescentes</option>
-                              <option value="adolescentes">Adolescentes</option>
-                              <option value="jovenes">Jóvenes</option>
-                              <option value="jovenes_adultos">Jóvenes Adultos</option>
-                              <option value="adultos">Adultos</option>
-                            </select>
+                              onChange={(e) => setEditingName(e.target.value)}
+                              placeholder="Nombre del departamento"
+                              className="w-full"
+                            />
                           </div>
                           <div>
                             <Label htmlFor="description">Descripción</Label>
@@ -413,7 +401,7 @@ const Departamentos = () => {
                         <AlertDialogHeader>
                           <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará permanentemente el departamento
+                            Esta acción eliminará permanentemente el departamento
                             <span className="font-semibold"> {department.name}</span>.
                             <br /><br />
                             <span className="text-amber-500 font-medium">Nota:</span> Si hay estudiantes asignados a este departamento, 
