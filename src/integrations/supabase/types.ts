@@ -168,6 +168,76 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          assigned_class: string | null
+          content: string
+          created_at: string | null
+          department_id: string | null
+          id: string
+          send_to_all: boolean | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_class?: string | null
+          content: string
+          created_at?: string | null
+          department_id?: string | null
+          id?: string
+          send_to_all?: boolean | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_class?: string | null
+          content?: string
+          created_at?: string | null
+          department_id?: string | null
+          id?: string
+          send_to_all?: boolean | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications_read: {
+        Row: {
+          created_at: string | null
+          id: string
+          notification_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notification_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notification_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_read_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           assigned_class: string | null

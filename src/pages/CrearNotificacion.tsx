@@ -1,244 +1,289 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { getDepartments, createNotification } from "@/lib/api";
-import { Department } from "@/types/database";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useAuth } from '@/contexts/AuthContext';
+import { getDepartments, createNotification } from '@/lib/api';
+import { Department } from '@/types/database';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
+
+const formSchema = z.object({
+  title: z.string().min(1, 'El título es requerido'),
+  content: z.string().min(1, 'El contenido es requerido'),
+  department_id: z.string().optional(),
+  assigned_class: z.string().optional(),
+  send_to_all: z.boolean().default(false),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 const CrearNotificacion = () => {
-  const { profile } = useAuth();
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [departmentId, setDepartmentId] = useState<string>("");
-  const [assignedClass, setAssignedClass] = useState<string>("");
-  const [sendToAll, setSendToAll] = useState(false);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [classes, setClasses] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  const isAdmin = profile?.role === "admin" || profile?.role === "secretaria";
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: '',
+      content: '',
+      department_id: '',
+      assigned_class: '',
+      send_to_all: false,
+    },
+  });
 
+  // Check if user has permission to create notifications
   useEffect(() => {
-    if (!isAdmin) {
-      navigate("/");
-      return;
+    if (profile && profile.role !== 'admin' && profile.role !== 'secretaria') {
+      navigate('/');
     }
+  }, [profile, navigate]);
 
+  // Fetch departments
+  useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const deps = await getDepartments();
-        setDepartments(deps);
+        const data = await getDepartments();
+        setDepartments(data);
       } catch (error) {
-        console.error("Error loading departments:", error);
+        console.error('Error fetching departments:', error);
         toast({
-          title: "Error",
-          description: "No se pudieron cargar los departamentos",
-          variant: "destructive",
+          title: 'Error',
+          description: 'No se pudieron cargar los departamentos',
+          variant: 'destructive',
         });
       }
     };
 
     fetchDepartments();
-  }, [isAdmin, navigate, toast]);
+  }, [toast]);
 
   // Update available classes when department changes
+  const watchDepartmentId = form.watch('department_id');
+  
   useEffect(() => {
-    if (departmentId) {
-      const selectedDept = departments.find(d => d.id === departmentId);
-      setClasses(selectedDept?.classes || []);
-      setAssignedClass(""); // Reset selected class
-    } else {
-      setClasses([]);
+    if (!watchDepartmentId) {
+      setAvailableClasses([]);
+      return;
     }
-  }, [departmentId, departments]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     
-    if (!title.trim()) {
-      toast({
-        title: "Error",
-        description: "El título es obligatorio",
-        variant: "destructive",
-      });
-      return;
+    const selectedDepartment = departments.find(d => d.id === watchDepartmentId);
+    if (selectedDepartment && selectedDepartment.classes) {
+      setAvailableClasses(selectedDepartment.classes);
+      
+      // Reset class selection when department changes
+      form.setValue('assigned_class', '');
+    } else {
+      setAvailableClasses([]);
     }
+  }, [watchDepartmentId, departments, form]);
 
-    if (!content.trim()) {
-      toast({
-        title: "Error",
-        description: "El contenido es obligatorio",
-        variant: "destructive",
-      });
-      return;
+  // Handle send to all changes
+  const watchSendToAll = form.watch('send_to_all');
+  
+  useEffect(() => {
+    if (watchSendToAll) {
+      form.setValue('department_id', '');
+      form.setValue('assigned_class', '');
     }
+  }, [watchSendToAll, form]);
 
-    if (!sendToAll && !departmentId) {
-      toast({
-        title: "Error",
-        description: "Debe seleccionar un departamento o enviar a todos",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const onSubmit = async (values: FormValues) => {
+    if (!user) return;
+    
     try {
-      setLoading(true);
-
+      setIsSubmitting(true);
+      
+      // Validate that we have either send_to_all or a department selected
+      if (!values.send_to_all && !values.department_id) {
+        toast({
+          title: 'Error',
+          description: 'Debe seleccionar un departamento o marcar como "Enviar a todos"',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       await createNotification({
-        title,
-        content,
-        department_id: sendToAll ? undefined : departmentId,
-        assigned_class: sendToAll ? undefined : assignedClass,
-        send_to_all: sendToAll,
+        title: values.title,
+        content: values.content,
+        department_id: values.department_id || undefined,
+        assigned_class: values.assigned_class || undefined,
+        send_to_all: values.send_to_all,
       });
-
+      
       toast({
-        title: "Éxito",
-        description: "Notificación creada correctamente",
-        variant: "success",
+        title: 'Notificación creada',
+        description: 'La notificación ha sido creada exitosamente',
       });
-
-      // Reset form
-      setTitle("");
-      setContent("");
-      setDepartmentId("");
-      setAssignedClass("");
-      setSendToAll(false);
-
-      // Navigate to notifications page
-      navigate("/notificaciones");
+      
+      navigate('/notificaciones');
     } catch (error) {
-      console.error("Error creating notification:", error);
+      console.error('Error creating notification:', error);
       toast({
-        title: "Error",
-        description: "No se pudo crear la notificación",
-        variant: "destructive",
+        title: 'Error',
+        description: 'No se pudo crear la notificación',
+        variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (!isAdmin) {
-    return null;
-  }
-
   return (
-    <div className="p-6">
+    <div className="p-2 sm:p-4 md:p-6">
       <Card>
         <CardHeader>
           <CardTitle>Crear Notificación</CardTitle>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Título</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Título de la notificación"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="content">Contenido</Label>
-              <Textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Escriba el contenido de la notificación"
-                rows={6}
-                required
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="sendToAll" 
-                checked={sendToAll} 
-                onCheckedChange={(checked) => {
-                  const isChecked = Boolean(checked);
-                  setSendToAll(isChecked);
-                  if (isChecked) {
-                    setDepartmentId("");
-                    setAssignedClass("");
-                  }
-                }}
-              />
-              <Label htmlFor="sendToAll">Enviar a todos los departamentos y clases</Label>
-            </div>
-
-            {!sendToAll && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="department">Departamento</Label>
-                  <Select
-                    value={departmentId}
-                    onValueChange={setDepartmentId}
-                    disabled={sendToAll}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un departamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {departmentId && classes.length > 0 && (
-                  <div className="space-y-2">
-                    <Label htmlFor="class">Clase</Label>
-                    <Select
-                      value={assignedClass}
-                      onValueChange={setAssignedClass}
-                      disabled={sendToAll || !departmentId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todas las clases" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Todas las clases</SelectItem>
-                        {classes.map((className) => (
-                          <SelectItem key={className} value={className}>
-                            {className}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Título</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Título de la notificación" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </>
-            )}
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creando..." : "Crear Notificación"}
-            </Button>
+              />
+              
+              <FormField
+                control={form.control}
+                name="content"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contenido</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Contenido de la notificación" 
+                        className="min-h-32" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="send_to_all"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Enviar a todos</FormLabel>
+                      <FormMessage />
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              {!watchSendToAll && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="department_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Departamento</FormLabel>
+                        <Select
+                          disabled={watchSendToAll}
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar departamento" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {departments.map((department) => (
+                              <SelectItem key={department.id} value={department.id}>
+                                {department.name?.replace(/_/g, ' ')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {watchDepartmentId && availableClasses.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="assigned_class"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Clase</FormLabel>
+                          <Select
+                            disabled={watchSendToAll || !watchDepartmentId}
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar clase (opcional)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availableClasses.map((className) => (
+                                <SelectItem key={className} value={className}>
+                                  {className}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </>
+              )}
+            </CardContent>
+            
+            <CardFooter className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate('/notificaciones')}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Enviando...' : 'Crear Notificación'}
+              </Button>
+            </CardFooter>
           </form>
-        </CardContent>
+        </Form>
       </Card>
     </div>
   );

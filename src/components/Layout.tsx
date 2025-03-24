@@ -1,6 +1,6 @@
 
 import { Outlet } from "react-router-dom";
-import { AppSidebar } from "./AppSidebar";
+import AppSidebar from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";

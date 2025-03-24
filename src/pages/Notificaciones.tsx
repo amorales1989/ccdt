@@ -1,165 +1,177 @@
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { getNotifications, markNotificationAsRead } from "@/lib/api";
-import { Notification } from "@/types/database";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Bell, BellDot } from "lucide-react";
-import { format } from "date-fns";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { getNotifications, markNotificationAsRead } from '@/lib/api';
+import { Notification } from '@/types/database';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 const Notificaciones = () => {
-  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [openNotification, setOpenNotification] = useState<Notification | null>(null);
+  const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
-    }
-  }, [user]);
+    if (!user) return;
 
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      const notificationsData = await getNotifications(user?.id || "");
-      setNotifications(notificationsData);
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las notificaciones",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchNotifications = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getNotifications(user.id);
+        setNotifications(data);
+        setFilteredNotifications(data);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        toast({
+          title: 'Error',
+          description: 'No se pudieron cargar las notificaciones',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleOpenNotification = async (notification: Notification) => {
-    setOpenNotification(notification);
+    fetchNotifications();
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredNotifications(notifications);
+      return;
+    }
+
+    const filtered = notifications.filter(
+      notification => 
+        notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        notification.content.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    
+    setFilteredNotifications(filtered);
+  }, [searchQuery, notifications]);
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!user) return;
     
     if (!notification.is_read) {
       try {
-        await markNotificationAsRead(notification.id, user?.id || "");
-        // Update the notification in the local state
-        setNotifications(prevNotifications => 
-          prevNotifications.map(n => 
+        await markNotificationAsRead(notification.id, user.id);
+        
+        // Update the local state to reflect the notification has been read
+        setNotifications(prev => 
+          prev.map(n => 
+            n.id === notification.id ? { ...n, is_read: true } : n
+          )
+        );
+        
+        // Also update the filtered list
+        setFilteredNotifications(prev => 
+          prev.map(n => 
             n.id === notification.id ? { ...n, is_read: true } : n
           )
         );
       } catch (error) {
-        console.error("Error marking notification as read:", error);
+        console.error('Error marking notification as read:', error);
       }
     }
+    
+    // We could open a dialog or navigate to a detail page here
+    // For now, we'll just mark it as read
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), "dd/MM/yyyy HH:mm");
-    } catch {
-      return dateString;
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Cargando notificaciones...</p>
-          </CardContent>
-        </Card>
+      <div className="p-6 flex justify-center items-center">
+        <div>Cargando notificaciones...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Notificaciones</CardTitle>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchNotifications}
-          >
-            Actualizar
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {notifications.length === 0 ? (
-            <p className="text-center text-muted-foreground">No hay notificaciones</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]"></TableHead>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Departamento</TableHead>
-                  <TableHead>Clase</TableHead>
-                  <TableHead>Fecha</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {notifications.map((notification) => (
-                  <TableRow 
-                    key={notification.id}
-                    className={`cursor-pointer hover:bg-muted/50 ${notification.is_read ? '' : 'font-medium'}`}
-                    onClick={() => handleOpenNotification(notification)}
-                  >
-                    <TableCell>
-                      {notification.is_read ? (
-                        <Bell className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <BellDot className="h-4 w-4 text-primary" />
-                      )}
-                    </TableCell>
-                    <TableCell>{notification.title}</TableCell>
-                    <TableCell>{notification.department || (notification.send_to_all ? "Todos" : "-")}</TableCell>
-                    <TableCell>{notification.assigned_class || (notification.send_to_all ? "Todas" : "-")}</TableCell>
-                    <TableCell>{formatDate(notification.created_at)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={!!openNotification} onOpenChange={() => setOpenNotification(null)}>
-        {openNotification && (
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{openNotification.title}</DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
-                {openNotification.department || (openNotification.send_to_all ? "Todos los departamentos" : "-")} • 
-                {openNotification.assigned_class || (openNotification.send_to_all ? " Todas las clases" : " -")} • 
-                {formatDate(openNotification.created_at)}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="whitespace-pre-wrap">{openNotification.content}</div>
-          </DialogContent>
+    <div className="p-2 sm:p-4 md:p-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <h1 className="text-2xl font-bold">Notificaciones</h1>
+          
+          {user?.role === 'admin' || user?.role === 'secretaria' ? (
+            <Button onClick={() => navigate('/crear-notificacion')}>
+              Crear notificación
+            </Button>
+          ) : null}
+        </div>
+        
+        <div className="relative mb-4">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar notificaciones..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        
+        {filteredNotifications.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <p className="text-muted-foreground">No hay notificaciones para mostrar</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {filteredNotifications.map((notification) => (
+              <Card 
+                key={notification.id} 
+                className={notification.is_read ? '' : 'border-primary'}
+                onClick={() => handleNotificationClick(notification)}
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{notification.title}</CardTitle>
+                    {!notification.is_read && (
+                      <Badge variant="default">Nueva</Badge>
+                    )}
+                  </div>
+                  <CardDescription>
+                    {format(new Date(notification.created_at), 'dd/MM/yyyy HH:mm')}
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent>
+                  <p className="whitespace-pre-line">{notification.content}</p>
+                </CardContent>
+                
+                <CardFooter>
+                  <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                    {notification.department && (
+                      <div>Departamento: {notification.department.replace(/_/g, ' ')}</div>
+                    )}
+                    {notification.assigned_class && (
+                      <>
+                        <div className="mx-1">•</div>
+                        <div>Clase: {notification.assigned_class}</div>
+                      </>
+                    )}
+                    {notification.send_to_all && (
+                      <div>{notification.department || notification.assigned_class ? ' • ' : ''}Para todos</div>
+                    )}
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         )}
-      </Dialog>
+      </div>
     </div>
   );
 };
