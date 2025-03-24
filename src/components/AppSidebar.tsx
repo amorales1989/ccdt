@@ -1,3 +1,4 @@
+
 import {
   Home,
   Users,
@@ -18,6 +19,7 @@ import { Company } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import NotificationBadge from './NotificationBadge';
+import { useSidebar } from "@/components/ui/sidebar";
 
 interface NavItem {
   title: string;
@@ -30,11 +32,6 @@ interface NavSection {
   items: NavItem[];
 }
 
-interface SidebarProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}
-
 interface SidebarItemProps {
   icon: React.ReactNode;
   title: string;
@@ -42,11 +39,12 @@ interface SidebarItemProps {
   active: boolean;
 }
 
-const AppSidebar = ({ open, setOpen }: SidebarProps) => {
+const AppSidebar = () => {
   const { user, profile } = useAuth();
   const location = useLocation();
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
+  const { open, setOpen } = useSidebar();
 
   useEffect(() => {
     const fetchCompany = async () => {
