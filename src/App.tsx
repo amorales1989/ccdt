@@ -32,6 +32,10 @@ function App() {
           <RouterProvider
             router={createBrowserRouter([
               {
+                path: "/auth",
+                element: <Auth />,
+              },
+              {
                 path: "/",
                 element: <Layout />,
                 children: [
@@ -92,10 +96,6 @@ function App() {
                     element: <NotFound />,
                   },
                 ],
-              },
-              {
-                path: "/auth",
-                element: <Auth />,
               },
               {
                 path: "*",
