@@ -46,6 +46,18 @@ export interface Attendance {
   };
 }
 
+export interface Notification {
+  id: string;
+  title: string;
+  content: string;
+  department_id?: string;
+  assigned_class?: string;
+  send_to_all?: boolean;
+  created_at: string;
+  updated_at: string;
+  is_read?: boolean; // Not stored in DB, computed on frontend
+}
+
 export interface Department {
   id: string;
   name: DepartmentType;

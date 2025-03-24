@@ -19,6 +19,7 @@ import Calendario from "@/pages/Calendario";
 import Departamentos from "@/pages/Departamentos";
 import PromoverAlumnos from "@/pages/PromoverAlumnos";
 import Configuration from "@/pages/Configuration";
+import Notificaciones from "@/pages/Notificaciones";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,10 @@ function App() {
                   {
                     path: "/configuracion",
                     element: <Configuration />,
+                  },
+                  {
+                    path: "/notificaciones",
+                    element: <Notificaciones />,
                   },
                   {
                     path: "*",

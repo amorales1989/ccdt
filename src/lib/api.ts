@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Student, Event, Attendance, Department, DepartmentType, Company } from "@/types/database";
+import { Student, Event, Attendance, Department, DepartmentType, Company, Notification } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 // Students API
@@ -648,6 +648,138 @@ export const updateCompany = async (id: number, updates: Partial<Company>) => {
     return data;
   } catch (error) {
     console.error('Error in updateCompany:', error);
+    throw error;
+  }
+};
+
+// Notifications API
+export const getNotifications = async () => {
+  try {
+    const { data: notifications, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    // Get user's read notifications
+    const { data: readNotifications, error: readError } = await supabase
+      .from("notifications_read")
+      .select("notification_id")
+      .eq("user_id", supabase.auth.getUser().then(u => u.data.user?.id ?? ""));
+
+    if (readError) throw readError;
+
+    // Mark notifications as read/unread
+    const readIds = readNotifications?.map(n => n.notification_id) || [];
+    const notificationsWithReadStatus = notifications?.map(notification => ({
+      ...notification,
+      is_read: readIds.includes(notification.id)
+    })) || [];
+
+    return notificationsWithReadStatus;
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    throw error;
+  }
+};
+
+export const getUserNotifications = async (userId: string) => {
+  try {
+    // Get the user's profile
+    const { data: userProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("department_id, assigned_class, role")
+      .eq("id", userId)
+      .single();
+
+    if (profileError) throw profileError;
+
+    let query = supabase
+      .from("notifications")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    // If not admin or secretary, filter by department_id, assigned_class or send_to_all
+    if (userProfile.role !== 'admin' && userProfile.role !== 'secretaria') {
+      query = query.or(
+        `send_to_all.eq.true,department_id.eq.${userProfile.department_id}${
+          userProfile.assigned_class ? `,assigned_class.eq.${userProfile.assigned_class}` : ''
+        }`
+      );
+    }
+
+    const { data: notifications, error } = await query;
+
+    if (error) throw error;
+
+    // Get user's read notifications
+    const { data: readNotifications, error: readError } = await supabase
+      .from("notifications_read")
+      .select("notification_id")
+      .eq("user_id", userId);
+
+    if (readError) throw readError;
+
+    // Mark notifications as read/unread
+    const readIds = readNotifications?.map(n => n.notification_id) || [];
+    const notificationsWithReadStatus = notifications?.map(notification => ({
+      ...notification,
+      is_read: readIds.includes(notification.id)
+    })) || [];
+
+    return notificationsWithReadStatus;
+  } catch (error) {
+    console.error("Error fetching user notifications:", error);
+    throw error;
+  }
+};
+
+export const createNotification = async (notification: Omit<Notification, "id" | "created_at" | "updated_at">) => {
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .insert([notification])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error creating notification:", error);
+    throw error;
+  }
+};
+
+export const markNotificationAsRead = async (notificationId: string, userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("notifications_read")
+      .insert([{ notification_id: notificationId, user_id: userId }])
+      .select()
+      .single();
+
+    if (error && !error.message.includes('duplicate key value')) {
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+    throw error;
+  }
+};
+
+export const deleteNotification = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error deleting notification:", error);
     throw error;
   }
 };

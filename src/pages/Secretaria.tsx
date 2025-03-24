@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,6 +80,9 @@ const Secretaria = () => {
               </Button>
               <Button onClick={() => navigate("/departamentos")} className="w-full">
                 Gestionar Departamentos
+              </Button>
+              <Button onClick={() => navigate("/notificaciones")} className="w-full">
+                Gestionar Notificaciones
               </Button>
               <Button 
                 onClick={updateAllUserDepartmentIds} 
