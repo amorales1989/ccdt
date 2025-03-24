@@ -134,8 +134,17 @@ const TomarAsistencia = () => {
       // Ajustamos la fecha sumando un día antes de guardar
       const adjustedDate = format(addDays(new Date(selectedDate), 1), "yyyy-MM-dd");
 
+      // Create a default object with all students set to absent (false)
+      const defaultAbsentAttendance: Record<string, boolean> = {};
+      students.forEach(student => {
+        defaultAbsentAttendance[student.id] = false;
+      });
+
+      // Merge with the explicitly marked attendances
+      const finalAttendances = { ...defaultAbsentAttendance, ...asistencias };
+
       await Promise.all(
-        Object.entries(asistencias).map(([studentId, status]) =>
+        Object.entries(finalAttendances).map(([studentId, status]) =>
           markAttendance({
             student_id: studentId,
             date: adjustedDate,
@@ -246,7 +255,7 @@ const TomarAsistencia = () => {
           <Button 
             onClick={handleSaveAttendance} 
             className="w-full"
-            disabled={isLoading || Object.keys(asistencias).length === 0 || !selectedDate}
+            disabled={isLoading || !selectedDate || students.length === 0}
           >
             {isLoading ? "Guardando..." : "Guardar Asistencia"}
           </Button>
