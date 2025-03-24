@@ -1,4 +1,3 @@
-
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
@@ -19,6 +18,8 @@ import Calendario from "@/pages/Calendario";
 import Departamentos from "@/pages/Departamentos";
 import PromoverAlumnos from "@/pages/PromoverAlumnos";
 import Configuration from "@/pages/Configuration";
+import Notificaciones from "./pages/Notificaciones";
+import CrearNotificacion from "./pages/CrearNotificacion";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,14 @@ function App() {
                   {
                     path: "/configuracion",
                     element: <Configuration />,
+                  },
+                  {
+                    path: "/notificaciones",
+                    element: <Notificaciones />,
+                  },
+                  {
+                    path: "/crear-notificacion",
+                    element: <CrearNotificacion />,
                   },
                   {
                     path: "*",

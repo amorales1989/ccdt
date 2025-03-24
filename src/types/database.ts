@@ -55,6 +55,24 @@ export interface Department {
   updated_at: string;
 }
 
+export interface Notification {
+  id: string;
+  title: string;
+  content: string;
+  department_id?: string;
+  assigned_class?: string;
+  send_to_all: boolean;
+  created_at: string;
+  updated_at: string;
+  department?: DepartmentType;
+  departments?: {
+    name?: DepartmentType;
+    id?: string;
+  };
+  is_read?: boolean;
+  notifications_read?: Array<{ user_id: string }>;
+}
+
 export interface Company {
   id: number;
   name: string;
