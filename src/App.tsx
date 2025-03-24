@@ -88,12 +88,12 @@ function App() {
                 ],
               },
               {
-                path: "/auth",
+                path: "/index",
                 element: <Index />,
               },
               {
                 path: "*",
-                element: <Navigate to="/auth" replace />,
+                element: <Navigate to="/index" replace />,
               },
             ])}
           />
