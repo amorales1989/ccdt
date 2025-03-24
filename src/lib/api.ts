@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Student, Event, Attendance, Department, Company, Profile } from "@/types/database";
 
@@ -71,6 +72,23 @@ export const deleteStudent = async (id: string) => {
   return true;
 };
 
+// Check if a DNI already exists in the system
+export const checkDniExists = async (dni: string) => {
+  const { data, error } = await supabase
+    .from('students')
+    .select('id')
+    .eq('document_number', dni)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    // PGRST116 means "no rows returned" - which is what we want
+    console.error("Error checking DNI:", error);
+    throw error;
+  }
+
+  return data !== null;
+};
+
 // Events
 export const getEvents = async () => {
   const { data, error } = await supabase
@@ -128,17 +146,86 @@ export const deleteEvent = async (id: string) => {
 };
 
 // Attendance
-export const getAttendance = async () => {
-  const { data, error } = await supabase
+export const getAttendance = async (startDate?: string, endDate?: string, studentId?: string, departmentId?: string) => {
+  let query = supabase
     .from('attendance')
-    .select('*, students(name)')
-    .order('date', { ascending: false });
+    .select('*, students:student_id(name, departments:department_id(name)), departments:department_id(name)');
+
+  if (startDate && endDate) {
+    query = query.gte('date', startDate).lte('date', endDate);
+  }
+
+  if (studentId) {
+    query = query.eq('student_id', studentId);
+  }
+
+  if (departmentId) {
+    query = query.eq('department_id', departmentId);
+  }
+
+  const { data, error } = await query.order('date', { ascending: false });
 
   if (error) {
     console.error("Error fetching attendance:", error);
     throw error;
   }
   return data as Attendance[];
+};
+
+export const markAttendance = async (attendance: {
+  student_id: string;
+  date: string;
+  status: boolean;
+  department_id?: string;
+  assigned_class?: string;
+  event_id?: string;
+}) => {
+  // Check if an attendance record already exists for this student on this date
+  const { data: existingRecord, error: fetchError } = await supabase
+    .from('attendance')
+    .select('id')
+    .eq('student_id', attendance.student_id)
+    .eq('date', attendance.date)
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error("Error checking existing attendance:", fetchError);
+    throw fetchError;
+  }
+
+  if (existingRecord) {
+    // Update existing record
+    const { data, error } = await supabase
+      .from('attendance')
+      .update({
+        status: attendance.status,
+        department_id: attendance.department_id,
+        assigned_class: attendance.assigned_class,
+        event_id: attendance.event_id
+      })
+      .eq('id', existingRecord.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating attendance:", error);
+      throw error;
+    }
+    return data as Attendance;
+  } else {
+    // Create new record
+    const { data, error } = await supabase
+      .from('attendance')
+      .insert(attendance)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating attendance:", error);
+      throw error;
+    }
+    return data as Attendance;
+  }
 };
 
 export const createAttendance = async (attendance: Omit<Attendance, 'id' | 'created_at' | 'updated_at'>) => {
@@ -197,6 +284,20 @@ export const getDepartments = async () => {
   return data as Department[];
 };
 
+export const getDepartmentByName = async (name: string) => {
+  const { data, error } = await supabase
+    .from('departments')
+    .select('*')
+    .eq('name', name)
+    .single();
+
+  if (error) {
+    console.error("Error fetching department by name:", error);
+    throw error;
+  }
+  return data as Department;
+};
+
 export const createDepartment = async (department: Omit<Department, 'id' | 'created_at' | 'updated_at'>) => {
   const { data, error } = await supabase
     .from('departments')
@@ -242,7 +343,7 @@ export const deleteDepartment = async (id: string) => {
 // Company
 export const getCompany = async (id: number) => {
   const { data, error } = await supabase
-    .from('company')
+    .from('companies')
     .select('*')
     .eq('id', id)
     .single();
@@ -256,7 +357,7 @@ export const getCompany = async (id: number) => {
 
 export const updateCompany = async (id: number, updates: Partial<Company>) => {
   const { data, error } = await supabase
-    .from('company')
+    .from('companies')
     .update(updates)
     .eq('id', id)
     .select()
