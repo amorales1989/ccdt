@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Sidebar,
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon, FolderUp, Settings, Bell } from "lucide-react";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon, FolderUp, Settings } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,11 +67,6 @@ const getItems = (role: string | undefined) => {
         title: "Calendario",
         url: "/calendario",
         icon: FileText,
-      },
-      {
-        title: "Notificaciones",
-        url: "/notificaciones",
-        icon: Bell,
       },
       {
         title: "Registrar Usuario",

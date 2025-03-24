@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { STORAGE_URL } from "@/integrations/supabase/client";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -30,9 +28,7 @@ export default function Auth() {
 
   const { data: company } = useQuery({
     queryKey: ['company'],
-    queryFn: () => getCompany(1),
-    retry: 1,
-    retryDelay: 1000,
+    queryFn: () => getCompany(1)
   });
 
   useEffect(() => {
@@ -47,11 +43,8 @@ export default function Auth() {
 
       // Set logo path if available
       if (company.logo_url) {
-        if (company.logo_url.startsWith('logos/')) {
-          setLogoPath(`${STORAGE_URL}/${company.logo_url}`);
-        } else {
-          setLogoPath(company.logo_url);
-        }
+        // Since we're now storing the complete URL, we can use it directly
+        setLogoPath(company.logo_url);
       } else {
         setLogoPath("/fire.png"); // Default logo
       }

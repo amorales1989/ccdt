@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -72,9 +71,6 @@ const Secretaria = () => {
           </Button>
           <Button onClick={() => navigate("/eventos")} className="w-full">
             Gestionar Eventos
-          </Button>
-          <Button onClick={() => navigate("/notificaciones")} className="w-full bg-primary/90 hover:bg-primary">
-            Gestionar Notificaciones
           </Button>
           {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
             <>

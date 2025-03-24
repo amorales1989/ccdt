@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical, MapPin, Search } from "lucide-react";
@@ -22,7 +23,6 @@ import {
   DropdownMenuItem 
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import NotificationBell from "@/components/NotificationBell";
 
 const Index = () => {
   const { toast } = useToast();
