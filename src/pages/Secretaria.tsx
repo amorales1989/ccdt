@@ -73,6 +73,9 @@ const Secretaria = () => {
           <Button onClick={() => navigate("/eventos")} className="w-full">
             Gestionar Eventos
           </Button>
+          <Button onClick={() => navigate("/notificaciones")} className="w-full bg-primary/90 hover:bg-primary">
+            Gestionar Notificaciones
+          </Button>
           {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
             <>
               <Button onClick={() => navigate("/gestion-usuarios")} className="w-full">
@@ -80,9 +83,6 @@ const Secretaria = () => {
               </Button>
               <Button onClick={() => navigate("/departamentos")} className="w-full">
                 Gestionar Departamentos
-              </Button>
-              <Button onClick={() => navigate("/notificaciones")} className="w-full">
-                Gestionar Notificaciones
               </Button>
               <Button 
                 onClick={updateAllUserDepartmentIds} 

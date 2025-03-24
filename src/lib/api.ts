@@ -1,785 +1,431 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Student, Event, Attendance, Department, DepartmentType, Company, Notification } from "@/types/database";
-import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
+import type { Student, Event, Attendance, Department, Company, Profile } from "@/types/database";
 
-// Students API
+// Students
 export const getStudents = async () => {
-  try {
-    const { data, error } = await supabase
-      .from("students")
-      .select("*, departments:department_id(name)");
-    
-    console.log('Fetching students result:', { data, error });
-    if (error) throw error;
-    
-    // Map department name from the joined department table
-    return data.map(student => ({
-      ...student,
-      department: student.departments?.name
-    }));
-  } catch (error) {
-    console.error('Error in getStudents:', error);
+  const { data, error } = await supabase
+    .from('students')
+    .select('*, departments(name)')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching students:", error);
     throw error;
   }
+  return data as Student[];
 };
 
 export const getStudent = async (id: string) => {
-  try {
-    const { data, error } = await supabase
-      .from("students")
-      .select("*, departments:department_id(name)")
-      .eq("id", id)
-      .single();
-    
-    if (error) throw error;
-    
-    // Map department name from the joined department table
-    return {
-      ...data,
-      department: data.departments?.name
-    };
-  } catch (error) {
-    console.error('Error in getStudent:', error);
+  const { data, error } = await supabase
+    .from('students')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching student:", error);
     throw error;
   }
+  return data as Student;
 };
 
-export const checkDniExists = async (dni: string, excludeStudentId?: string) => {
-  try {
-    let query = supabase
-      .from("students")
-      .select("id")
-      .eq("document_number", dni);
-    
-    if (excludeStudentId) {
-      query = query.neq("id", excludeStudentId);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return data && data.length > 0;
-  } catch (error) {
-    console.error('Error in checkDniExists:', error);
+export const createStudent = async (student: Omit<Student, 'id' | 'created_at' | 'updated_at'>) => {
+  const { data, error } = await supabase
+    .from('students')
+    .insert(student)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating student:", error);
     throw error;
   }
+  return data as Student;
 };
 
-export const createStudent = async (student: Omit<Student, "id" | "created_at" | "updated_at">) => {
-  try {
-    // Check if the DNI already exists
-    if (student.document_number) {
-      const exists = await checkDniExists(student.document_number);
-      if (exists) {
-        throw new Error(`El DNI ${student.document_number} ya está registrado en el sistema`);
-      }
-    }
-    
-    // If we have a department name, we need to get its ID
-    let departmentId = null;
-    if (student.department) {
-      const { data: deptData } = await supabase
-        .from("departments")
-        .select("id")
-        .eq("name", student.department)
-        .single();
-      
-      if (deptData) {
-        departmentId = deptData.id;
-      }
-    }
-    
-    // Create student with department_id instead of department
-    const studentData = {
-      ...student,
-      department_id: departmentId
-    };
-    
-    // Remove the department field as we're using department_id
-    delete studentData.department;
-    
-    const { data, error } = await supabase
-      .from("students")
-      .insert([studentData])
-      .select("*, departments:department_id(name)")
-      .single();
-    
-    if (error) throw error;
-    
-    // Map department name for the returned student
-    return {
-      ...data,
-      department: data.departments?.name
-    };
-  } catch (error) {
-    console.error('Error in createStudent:', error);
-    throw error;
-  }
-};
+export const updateStudent = async (id: string, updates: Partial<Student>) => {
+  const { data, error } = await supabase
+    .from('students')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
 
-export const updateStudent = async (id: string, student: Partial<Omit<Student, "id" | "created_at" | "updated_at">>) => {
-  try {
-    // Check if the DNI already exists (excluding the current student)
-    if (student.document_number) {
-      const exists = await checkDniExists(student.document_number, id);
-      if (exists) {
-        throw new Error(`El DNI ${student.document_number} ya está registrado en el sistema`);
-      }
-    }
-    
-    // If department is provided, we need to get its ID
-    let departmentId = undefined;
-    if (student.department) {
-      const { data: deptData } = await supabase
-        .from("departments")
-        .select("id")
-        .eq("name", student.department)
-        .single();
-      
-      if (deptData) {
-        departmentId = deptData.id;
-      }
-    }
-    
-    // Prepare update data with department_id
-    const updateData = { ...student };
-    
-    // Update department_id if we found one
-    if (departmentId !== undefined) {
-      updateData.department_id = departmentId;
-      // Remove department field as we're using department_id
-      delete updateData.department;
-    }
-    
-    const { data, error } = await supabase
-      .from("students")
-      .update(updateData)
-      .eq("id", id)
-      .select("*, departments:department_id(name)")
-      .single();
-    
-    if (error) throw error;
-    
-    // Map department name for the returned student
-    return {
-      ...data,
-      department: data.departments?.name
-    };
-  } catch (error) {
-    console.error('Error in updateStudent:', error);
+  if (error) {
+    console.error("Error updating student:", error);
     throw error;
   }
+  return data as Student;
 };
 
 export const deleteStudent = async (id: string) => {
-  try {
-    const { error } = await supabase
-      .from("students")
-      .delete()
-      .eq("id", id);
-    
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error in deleteStudent:', error);
+  const { error } = await supabase
+    .from('students')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error deleting student:", error);
     throw error;
   }
+  return true;
 };
 
-// Events API
+// Events
 export const getEvents = async () => {
-  try {
-    const { data, error } = await supabase
-      .from("events")
-      .select("*")
-      .order("date");
-    
-    console.log('Fetching events result:', { data, error });
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in getEvents:', error);
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .order('date', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching events:", error);
     throw error;
   }
+  return data as Event[];
 };
 
-export const getEvent = async (id: string) => {
-  try {
-    const { data, error } = await supabase
-      .from("events")
-      .select("*")
-      .eq("id", id)
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in getEvent:', error);
+export const createEvent = async (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => {
+  const { data, error } = await supabase
+    .from('events')
+    .insert(event)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating event:", error);
     throw error;
   }
+  return data as Event;
 };
 
-export const createEvent = async (event: Omit<Event, "id" | "created_at" | "updated_at">) => {
-  try {
-    const { data, error } = await supabase
-      .from("events")
-      .insert([event])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in createEvent:', error);
-    throw error;
-  }
-};
+export const updateEvent = async (id: string, updates: Partial<Event>) => {
+  const { data, error } = await supabase
+    .from('events')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
 
-export const updateEvent = async (id: string, event: Partial<Omit<Event, "id" | "created_at" | "updated_at">>) => {
-  try {
-    const { data, error } = await supabase
-      .from("events")
-      .update(event)
-      .eq("id", id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in updateEvent:', error);
+  if (error) {
+    console.error("Error updating event:", error);
     throw error;
   }
+  return data as Event;
 };
 
 export const deleteEvent = async (id: string) => {
-  try {
-    const { error } = await supabase
-      .from("events")
-      .delete()
-      .eq("id", id);
-    
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error in deleteEvent:', error);
+  const { error } = await supabase
+    .from('events')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error deleting event:", error);
     throw error;
   }
+  return true;
 };
 
-// Attendance API
-export const getAttendance = async (startDate?: string, endDate?: string, department?: string, departmentId?: string | null) => {
-  try {
-    console.log('Starting attendance fetch with params:', { startDate, endDate, department, departmentId });
-    
-    if (!startDate || !endDate) {
-      console.error('Missing required date parameters');
-      throw new Error('Start date and end date are required');
-    }
+// Attendance
+export const getAttendance = async () => {
+  const { data, error } = await supabase
+    .from('attendance')
+    .select('*, students(name)')
+    .order('date', { ascending: false });
 
-    let query = supabase
-      .from("attendance")
-      .select(`
-        *,
-        students (
-          id,
-          name,
-          departments:department_id(name)
-        )
-      `)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: false }) as PostgrestFilterBuilder<any, any, any>;
-
-    // Filter by department ID if provided (higher priority)
-    if (departmentId) {
-      console.log('Filtering by department ID:', departmentId);
-      query = query.eq('department_id', departmentId);
-    }
-    // Fall back to department name if ID is not provided
-    else if (department) {
-      console.log('Filtering by department name:', department);
-      // Get department id first
-      const { data: deptData } = await supabase
-        .from("departments")
-        .select("id")
-        .eq("name", department)
-        .single();
-      
-      if (deptData) {
-        query = query.eq('department_id', deptData.id);
-      }
-    }
-
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Supabase error fetching attendance:', error);
-      throw error;
-    }
-
-    if (!data) {
-      console.log('No attendance records found for the given criteria');
-      return [];
-    }
-    
-    // Map the department name from the nested departments object
-    const mappedData = data.map(record => ({
-      ...record,
-      students: record.students ? {
-        ...record.students,
-        department: record.students.departments?.name
-      } : null,
-      department: record.departments?.name
-    }));
-
-    console.log(`Successfully fetched ${mappedData.length} attendance records`);
-    return mappedData;
-  } catch (error) {
-    console.error('Error in getAttendance:', error);
+  if (error) {
+    console.error("Error fetching attendance:", error);
     throw error;
   }
+  return data as Attendance[];
 };
 
-// Update markAttendance to use department_id
-export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at" | "updated_at"> & { department_id?: string }) => {
-  try {
-    console.log('Starting attendance marking with data:', attendance);
-    
-    if (!attendance.student_id || !attendance.date) {
-      const error = new Error('Missing required fields for attendance');
-      console.error(error);
-      throw error;
-    }
+export const createAttendance = async (attendance: Omit<Attendance, 'id' | 'created_at' | 'updated_at'>) => {
+  const { data, error } = await supabase
+    .from('attendance')
+    .insert(attendance)
+    .select()
+    .single();
 
-    // Get the student's department_id if not provided
-    let departmentId = attendance.department_id;
-    if (!departmentId) {
-      // First, get the student's department_id and class
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('department_id, assigned_class')
-        .eq('id', attendance.student_id)
-        .maybeSingle();
-
-      if (studentError) {
-        console.error('Error fetching student department:', studentError);
-        throw studentError;
-      }
-
-      if (!student) {
-        const error = new Error(`No student found with ID: ${attendance.student_id}`);
-        console.error(error);
-        throw error;
-      }
-      
-      departmentId = student.department_id;
-    }
-
-    // Check if there's an existing attendance record for this student and date
-    const { data: existingRecords, error: existingError } = await supabase
-      .from('attendance')
-      .select('id')
-      .eq('student_id', attendance.student_id)
-      .eq('date', attendance.date);
-
-    if (existingError) {
-      console.error('Error checking for existing attendance records:', existingError);
-      throw existingError;
-    }
-
-    // Get the student's class if not already provided
-    let assignedClass = attendance.assigned_class;
-    if (!assignedClass) {
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('assigned_class')
-        .eq('id', attendance.student_id)
-        .maybeSingle();
-      
-      if (!studentError && student) {
-        assignedClass = student.assigned_class;
-      }
-    }
-
-    const attendanceData = {
-      student_id: attendance.student_id,
-      date: attendance.date,
-      status: attendance.status,
-      department_id: departmentId,
-      assigned_class: assignedClass,
-      ...(attendance.event_id && { event_id: attendance.event_id })
-    };
-
-    let result;
-    
-    if (existingRecords && existingRecords.length > 0) {
-      console.log(`Found ${existingRecords.length} existing attendance record(s), updating:`, existingRecords[0].id);
-      // Update the first existing record and delete any others
-      
-      // First, delete any duplicate records except the first one
-      if (existingRecords.length > 1) {
-        const recordsToDelete = existingRecords.slice(1).map(r => r.id);
-        
-        const { error: deleteError } = await supabase
-          .from('attendance')
-          .delete()
-          .in('id', recordsToDelete);
-          
-        if (deleteError) {
-          console.error('Error deleting duplicate attendance records:', deleteError);
-          // Continue with the update even if deletion fails
-        } else {
-          console.log(`Deleted ${recordsToDelete.length} duplicate attendance records`);
-        }
-      }
-      
-      // Update the first record
-      const { data, error } = await supabase
-        .from('attendance')
-        .update(attendanceData)
-        .eq('id', existingRecords[0].id)
-        .select()
-        .maybeSingle();
-        
-      if (error) {
-        console.error('Error updating attendance:', error);
-        throw error;
-      }
-      
-      result = data;
-    } else {
-      console.log('No existing record found, creating new attendance record');
-      // Create a new record
-      const { data, error } = await supabase
-        .from('attendance')
-        .insert([attendanceData])
-        .select()
-        .maybeSingle();
-        
-      if (error) {
-        console.error('Error inserting attendance:', error);
-        throw error;
-      }
-      
-      result = data;
-    }
-    
-    console.log('Successfully marked attendance:', result);
-    return result;
-  } catch (error) {
-    console.error('Error in markAttendance:', error);
+  if (error) {
+    console.error("Error creating attendance:", error);
     throw error;
   }
+  return data as Attendance;
 };
 
-export const deleteAttendance = async (studentId: string, eventId: string) => {
-  try {
-    console.log('Attempting to delete attendance record:', { studentId, eventId });
+export const updateAttendance = async (id: string, updates: Partial<Attendance>) => {
+  const { data, error } = await supabase
+    .from('attendance')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
 
-    const { error } = await supabase
-      .from("attendance")
-      .delete()
-      .eq("student_id", studentId)
-      .eq("event_id", eventId);
-    
-    if (error) {
-      console.error('Error deleting attendance:', error);
-      throw error;
-    }
-
-    console.log('Successfully deleted attendance record');
-  } catch (error) {
-    console.error('Error in deleteAttendance:', error);
+  if (error) {
+    console.error("Error updating attendance:", error);
     throw error;
   }
+  return data as Attendance;
 };
 
-// Departments API
+export const deleteAttendance = async (id: string) => {
+  const { error } = await supabase
+    .from('attendance')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error deleting attendance:", error);
+    throw error;
+  }
+  return true;
+};
+
+// Departments
 export const getDepartments = async () => {
-  try {
-    const { data, error } = await supabase
-      .from("departments")
-      .select("*")
-      .order('name');
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in getDepartments:', error);
+  const { data, error } = await supabase
+    .from('departments')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error("Error fetching departments:", error);
     throw error;
   }
+  return data as Department[];
 };
 
-export const getDepartment = async (id: string) => {
-  try {
-    const { data, error } = await supabase
-      .from("departments")
-      .select("*")
-      .eq("id", id)
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in getDepartment:', error);
+export const createDepartment = async (department: Omit<Department, 'id' | 'created_at' | 'updated_at'>) => {
+  const { data, error } = await supabase
+    .from('departments')
+    .insert(department)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating department:", error);
     throw error;
   }
+  return data as Department;
 };
 
-export const getDepartmentByName = async (name: DepartmentType) => {
-  try {
-    const { data, error } = await supabase
-      .from("departments")
-      .select("*")
-      .eq("name", name)
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in getDepartmentByName:', error);
-    throw error;
-  }
-};
+export const updateDepartment = async (id: string, updates: Partial<Department>) => {
+  const { data, error } = await supabase
+    .from('departments')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
 
-export const updateDepartment = async (id: string, updates: { name?: DepartmentType; description?: string; classes?: string[] }) => {
-  try {
-    const { data, error } = await supabase
-      .from("departments")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
+  if (error) {
     console.error("Error updating department:", error);
     throw error;
   }
-};
-
-export const createDepartment = async (department: { name: DepartmentType; description?: string; classes: string[] }) => {
-  try {
-    const { data, error } = await supabase
-      .from("departments")
-      .insert([department])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in createDepartment:', error);
-    throw error;
-  }
+  return data as Department;
 };
 
 export const deleteDepartment = async (id: string) => {
-  try {
-    console.log('Attempting to delete department:', id);
-    
-    // First, update all students that reference this department to set their department_id to null
-    const { error: updateStudentsError } = await supabase
-      .from("students")
-      .update({ department_id: null, department: null })
-      .eq("department_id", id);
-    
-    if (updateStudentsError) {
-      console.error('Error updating students before deleting department:', updateStudentsError);
-      throw updateStudentsError;
-    }
-    
-    console.log('Successfully removed department references from students');
-    
-    // Now delete the department
-    const { error } = await supabase
-      .from("departments")
-      .delete()
-      .eq("id", id);
-    
-    if (error) {
-      console.error('Error deleting department after updating students:', error);
-      throw error;
-    }
-    
-    console.log('Successfully deleted department');
-  } catch (error) {
-    console.error('Error in deleteDepartment:', error);
+  const { error } = await supabase
+    .from('departments')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error deleting department:", error);
     throw error;
   }
+  return true;
 };
 
-// Company API
-export const getCompany = async (id: number = 1) => {
-  try {
-    const { data, error } = await supabase
-      .from("companies")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error in getCompany:', error);
+// Company
+export const getCompany = async (id: number) => {
+  const { data, error } = await supabase
+    .from('company')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching company:", error);
     throw error;
   }
+  return data as Company;
 };
 
 export const updateCompany = async (id: number, updates: Partial<Company>) => {
-  try {
-    console.log('Updating company with:', updates);
-    
-    const { data, error } = await supabase
-      .from("companies")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    
-    // If we've updated the logo_url, update it in localStorage for immediate effect
-    if (updates.logo_url !== undefined) {
-      console.log('Updated logo_url:', updates.logo_url);
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error in updateCompany:', error);
+  const { data, error } = await supabase
+    .from('company')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating company:", error);
     throw error;
   }
+  return data as Company;
 };
 
-// Notifications API
-export const getNotifications = async () => {
-  try {
-    const { data: notifications, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .order("created_at", { ascending: false });
+// Profiles
+export const getProfiles = async () => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*');
 
-    if (error) throw error;
-
-    // Get user's read notifications
-    const { data: readNotifications, error: readError } = await supabase
-      .from("notifications_read")
-      .select("notification_id")
-      .eq("user_id", supabase.auth.getUser().then(u => u.data.user?.id ?? ""));
-
-    if (readError) throw readError;
-
-    // Mark notifications as read/unread
-    const readIds = readNotifications?.map(n => n.notification_id) || [];
-    const notificationsWithReadStatus = notifications?.map(notification => ({
-      ...notification,
-      is_read: readIds.includes(notification.id)
-    })) || [];
-
-    return notificationsWithReadStatus;
-  } catch (error) {
-    console.error("Error fetching notifications:", error);
+  if (error) {
+    console.error("Error fetching profiles:", error);
     throw error;
   }
+  return data as Profile[];
+};
+
+export const updateProfile = async (id: string, updates: Partial<Profile>) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating profile:", error);
+    throw error;
+  }
+  return data as Profile;
+};
+
+// Notification functions
+export const getNotifications = async () => {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
 };
 
 export const getUserNotifications = async (userId: string) => {
-  try {
-    // Get the user's profile
-    const { data: userProfile, error: profileError } = await supabase
-      .from("profiles")
-      .select("department_id, assigned_class, role")
-      .eq("id", userId)
-      .single();
+  // Get all notifications
+  const { data: allNotifications, error: notificationsError } = await supabase
+    .from('notifications')
+    .select('*, departments(name)')
+    .order('created_at', { ascending: false });
 
-    if (profileError) throw profileError;
+  if (notificationsError) throw notificationsError;
 
-    let query = supabase
-      .from("notifications")
-      .select("*")
-      .order("created_at", { ascending: false });
+  if (!allNotifications || allNotifications.length === 0) {
+    return [];
+  }
 
-    // If not admin or secretary, filter by department_id, assigned_class or send_to_all
-    if (userProfile.role !== 'admin' && userProfile.role !== 'secretaria') {
-      query = query.or(
-        `send_to_all.eq.true,department_id.eq.${userProfile.department_id}${
-          userProfile.assigned_class ? `,assigned_class.eq.${userProfile.assigned_class}` : ''
-        }`
-      );
-    }
+  // Get all read notifications for this user
+  const { data: readNotifications, error: readError } = await supabase
+    .from('notifications_read')
+    .select('notification_id')
+    .eq('user_id', userId);
 
-    const { data: notifications, error } = await query;
+  if (readError) throw readError;
 
-    if (error) throw error;
+  // Create a set of read notification IDs for quick lookup
+  const readNotificationIds = new Set(
+    (readNotifications || []).map((item) => item.notification_id)
+  );
 
-    // Get user's read notifications
-    const { data: readNotifications, error: readError } = await supabase
-      .from("notifications_read")
-      .select("notification_id")
-      .eq("user_id", userId);
+  // Get user's profile to check department and class
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('departments, department_id, assigned_class')
+    .eq('id', userId)
+    .single();
 
-    if (readError) throw readError;
+  if (profileError && profileError.code !== 'PGRST116') {
+    // If error is not "No rows found", throw it
+    throw profileError;
+  }
 
-    // Mark notifications as read/unread
-    const readIds = readNotifications?.map(n => n.notification_id) || [];
-    const notificationsWithReadStatus = notifications?.map(notification => ({
+  // Filter notifications that are either:
+  // - Sent to all users
+  // - Sent to user's department
+  // - Sent to user's class
+  // - Sent to user's department and class
+  return allNotifications
+    .filter((notification) => {
+      if (notification.send_to_all) {
+        return true;
+      }
+
+      if (!profile) {
+        return false;
+      }
+
+      const userDepartmentId = profile.department_id;
+      const userClass = profile.assigned_class;
+
+      if (notification.department_id && notification.assigned_class) {
+        // Both department and class must match
+        return (
+          notification.department_id === userDepartmentId &&
+          notification.assigned_class === userClass
+        );
+      } else if (notification.department_id) {
+        // Only department must match
+        return notification.department_id === userDepartmentId;
+      } else if (notification.assigned_class) {
+        // Only class must match
+        return notification.assigned_class === userClass;
+      }
+
+      return false;
+    })
+    .map((notification) => ({
       ...notification,
-      is_read: readIds.includes(notification.id)
-    })) || [];
-
-    return notificationsWithReadStatus;
-  } catch (error) {
-    console.error("Error fetching user notifications:", error);
-    throw error;
-  }
+      is_read: readNotificationIds.has(notification.id),
+    }));
 };
 
-export const createNotification = async (notification: Omit<Notification, "id" | "created_at" | "updated_at">) => {
-  try {
-    const { data, error } = await supabase
-      .from("notifications")
-      .insert([notification])
-      .select()
-      .single();
+export const createNotification = async (notification: {
+  title: string;
+  content: string;
+  department_id?: string;
+  assigned_class?: string;
+  send_to_all?: boolean;
+}) => {
+  const { data, error } = await supabase
+    .from('notifications')
+    .insert(notification)
+    .select()
+    .single();
 
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error("Error creating notification:", error);
-    throw error;
-  }
-};
-
-export const markNotificationAsRead = async (notificationId: string, userId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from("notifications_read")
-      .insert([{ notification_id: notificationId, user_id: userId }])
-      .select()
-      .single();
-
-    if (error && !error.message.includes('duplicate key value')) {
-      throw error;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error("Error marking notification as read:", error);
-    throw error;
-  }
+  if (error) throw error;
+  return data;
 };
 
 export const deleteNotification = async (id: string) => {
-  try {
-    const { error } = await supabase
-      .from("notifications")
-      .delete()
-      .eq("id", id);
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('id', id);
 
-    if (error) throw error;
-  } catch (error) {
-    console.error("Error deleting notification:", error);
+  if (error) throw error;
+  return true;
+};
+
+export const markNotificationAsRead = async (notificationId: string, userId: string) => {
+  const { error } = await supabase
+    .from('notifications_read')
+    .insert({
+      notification_id: notificationId,
+      user_id: userId,
+    })
+    .single();
+
+  if (error && error.code !== '23505') {
+    // Ignore unique violation errors (notification already marked as read)
     throw error;
   }
+
+  return true;
 };
