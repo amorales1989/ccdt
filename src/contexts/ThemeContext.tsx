@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
+import { Company } from "@/types/database";
 
 type Theme = "light" | "dark";
 
@@ -25,13 +26,14 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: company } = useQuery({
     queryKey: ["company"],
     queryFn: () => getCompany(1),
-    // Add error handling and retry configuration
     retry: 1,
     retryDelay: 1000,
-    onError: (error) => {
-      console.error("Failed to fetch company settings:", error);
-      // Apply default theme if we can't get company settings
-      document.documentElement.classList.remove("dark");
+    meta: {
+      errorHandler: (error: any) => {
+        console.error("Failed to fetch company settings:", error);
+        // Apply default theme if we can't get company settings
+        document.documentElement.classList.remove("dark");
+      }
     }
   });
 
@@ -54,7 +56,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   // Effect to update theme based on company settings
   useEffect(() => {
     if (company) {
-      const prefersDark = company.dark_mode;
+      const prefersDark = (company as Company).dark_mode;
       setTheme(prefersDark ? "dark" : "light");
       
       // Apply theme to document
