@@ -19,8 +19,6 @@ import Calendario from "@/pages/Calendario";
 import Departamentos from "@/pages/Departamentos";
 import PromoverAlumnos from "@/pages/PromoverAlumnos";
 import Configuration from "@/pages/Configuration";
-import Notificaciones from "./pages/Notificaciones";
-import CrearNotificacion from "./pages/CrearNotificacion";
 
 const queryClient = new QueryClient();
 
@@ -31,10 +29,6 @@ function App() {
         <ThemeProvider>
           <RouterProvider
             router={createBrowserRouter([
-              {
-                path: "/auth",
-                element: <Auth />,
-              },
               {
                 path: "/",
                 element: <Layout />,
@@ -84,18 +78,14 @@ function App() {
                     element: <Configuration />,
                   },
                   {
-                    path: "/notificaciones",
-                    element: <Notificaciones />,
-                  },
-                  {
-                    path: "/crear-notificacion",
-                    element: <CrearNotificacion />,
-                  },
-                  {
                     path: "*",
                     element: <NotFound />,
                   },
                 ],
+              },
+              {
+                path: "/auth",
+                element: <Auth />,
               },
               {
                 path: "*",

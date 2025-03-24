@@ -1,210 +1,346 @@
 
+import React, { useState, useEffect } from "react";
 import {
-  Home,
-  Users,
-  Calendar,
-  ClipboardList,
-  Settings,
-  UserPlus,
-  Database,
-  ArrowUpDown,
-  Bell,
-  Send
-} from "lucide-react";
-import { NavLink, Link, useLocation } from "react-router-dom";
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenu,
+} from "@/components/ui/sidebar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon, FolderUp, Settings } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
-import { Company } from "@/types/database";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import NotificationBadge from './NotificationBadge';
-import { useSidebar } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { STORAGE_URL } from "@/integrations/supabase/client";
 
-interface NavItem {
-  title: string;
-  icon: React.ReactNode;
-  href: string;
-}
-
-interface NavSection {
-  canAccess: string[];
-  items: NavItem[];
-}
-
-interface SidebarItemProps {
-  icon: React.ReactNode;
-  title: string;
-  href: string;
-  active: boolean;
-}
-
-const AppSidebar = () => {
-  const { user, profile } = useAuth();
-  const location = useLocation();
-  const [company, setCompany] = useState<Company | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { open, setOpen } = useSidebar();
-
-  useEffect(() => {
-    const fetchCompany = async () => {
-      setLoading(true);
-      try {
-        const companyData = await getCompany();
-        setCompany(companyData);
-      } catch (error) {
-        console.error("Error fetching company:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCompany();
-  }, []);
-
-  const navSections: NavSection[] = [
+const getItems = (role: string | undefined) => {
+  const baseItems = [
     {
-      canAccess: ["admin", "lider", "director", "maestro", "secretaria"],
-      items: [
-        {
-          title: "Inicio",
-          icon: <Home className="h-4 w-4" />,
-          href: "/",
-        },
-      ],
+      title: "Inicio",
+      url: "/",
+      icon: Home,
     },
     {
-      canAccess: ["admin", "secretaria"],
-      items: [
-        {
-          title: "Alumnos",
-          icon: <Users className="h-4 w-4" />,
-          href: "/alumnos",
-        },
-        {
-          title: "Agregar Alumno",
-          icon: <UserPlus className="h-4 w-4" />,
-          href: "/agregar-alumno",
-        },
-      ],
+      title: "Lista de Alumnos",
+      url: "/listar",
+      icon: Users,
     },
     {
-      canAccess: ["admin", "lider", "director", "maestro", "secretaria"],
-      items: [
-        {
-          title: "Tomar Asistencia",
-          icon: <ClipboardList className="h-4 w-4" />,
-          href: "/tomar-asistencia",
-        },
-        {
-          title: "Eventos",
-          icon: <Calendar className="h-4 w-4" />,
-          href: "/eventos",
-        },
-      ],
-    },
-    {
-      canAccess: ["admin"],
-      items: [
-        {
-          title: "Departamentos",
-          icon: <Database className="h-4 w-4" />,
-          href: "/departamentos",
-        },
-        {
-          title: "Ajustes",
-          icon: <Settings className="h-4 w-4" />,
-          href: "/ajustes",
-        },
-        {
-          title: "Migraciones",
-          icon: <ArrowUpDown className="h-4 w-4" />,
-          href: "/migraciones",
-        },
-      ],
-    },
-    {
-      canAccess: ["admin", "secretaria"],
-      items: [
-        {
-          title: "Crear Notificación",
-          icon: <Send className="h-4 w-4" />,
-          href: "/crear-notificacion",
-        },
-      ],
-    },
-    {
-      canAccess: ["admin", "lider", "director", "maestro", "secretaria"],
-      items: [
-        {
-          title: "Notificaciones",
-          icon: <Bell className="h-4 w-4" />,
-          href: "/notificaciones",
-        },
-      ],
-    },
+      title: "Agregar Alumno",
+      url: "/agregar",
+      icon: UserPlus,
+    }
   ];
 
-  const SidebarItem = ({ icon, title, href, active }: SidebarItemProps) => {
-    const isNotifications = href === '/notificaciones';
-    
-    return (
-      <Link
-        to={href}
-        className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:text-primary",
-          active ? "bg-muted font-medium text-primary" : "text-muted-foreground"
-        )}
-      >
-        {icon}
-        <span>{title}</span>
-        {isNotifications && <NotificationBadge className="ml-auto" />}
-      </Link>
+  if (role !== "secretaria") {
+    baseItems.push({
+      title: "Tomar Asistencia",
+      url: "/asistencia",
+      icon: ClipboardList,
+    });
+  }
+
+  baseItems.push({
+    title: "Promover Alumnos",
+    url: "/promover",
+    icon: FolderUp,
+  });
+
+  baseItems.push({
+    title: "Historial",
+    url: "/historial",
+    icon: History,
+  });
+
+  if (role === "admin" || role === "secretaria") {
+    baseItems.push(
+      {
+        title: "Calendario",
+        url: "/calendario",
+        icon: FileText,
+      },
+      {
+        title: "Registrar Usuario",
+        url: "/register",
+        icon: UserPlus2,
+      },
+      {
+        title: "Gestión de Usuarios",
+        url: "/gestion-usuarios",
+        icon: UserRound,
+      },
+      {
+        title: "Departamentos",
+        url: "/departamentos",
+        icon: FolderIcon,
+      }
     );
+  }
+
+  return baseItems;
+};
+
+const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
+  const location = useLocation();
+  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const items = getItems(profile?.role);
+  const selectedDepartment = localStorage.getItem('selectedDepartment');
+  const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
+  
+  const handleSignOut = async () => {
+    try {
+      console.log("Starting sign out from sidebar");
+      await signOut();
+      console.log("Sign out successful, navigating to auth");
+      navigate("/auth");
+      onItemClick?.();
+    } catch (error: any) {
+      console.error("Sign out error:", error);
+      toast({
+        title: "Error al cerrar sesión",
+        description: "Por favor intenta nuevamente",
+        variant: "destructive",
+      });
+    }
   };
 
-  const SidebarSection = ({ section }: { section: NavSection }) => {
-    if (!profile || !section.canAccess.includes(profile.role)) {
-      return null;
+  const handleItemClick = () => {
+    onItemClick?.();
+  };
+
+  if (profile?.departments && profile.departments.length > 1 && !selectedDepartment && !isAdminOrSecretary) {
+    return (
+      <div className="p-4 text-center">
+        <div className="flex flex-col gap-2 p-4 rounded-md bg-accent/30">
+          <UserRound className="h-8 w-8 mx-auto text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Por favor selecciona un departamento en la página de inicio de sesión para acceder al menú
+          </p>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/auth")}
+            className="mt-2"
+          >
+            Seleccionar Departamento
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={handleSignOut}
+            className="flex items-center gap-2 mt-2"
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="font-medium">Cerrar Sesión</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const userRoleInfo = () => {
+    const basicInfo = (
+      <div className="flex flex-col gap-1">
+        <span className="text-sm md:text-white text-black capitalize">{profile?.role}</span>
+      </div>
+    );
+
+    if (profile?.role === 'maestro') {
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-sm md:text-white text-black capitalize">{profile?.role}</span>
+          {profile?.departments && profile.departments.length > 0 && (
+            <span className="text-sm md:text-white text-black capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
+              {profile.departments[0]}
+            </span>
+          )}
+          {profile?.assigned_class && (
+            <span className="text-sm md:text-white text-black capitalize bg-accent/70 px-2 py-0.5 rounded-full inline-block">
+              Clase: {profile.assigned_class}
+            </span>
+          )}
+        </div>
+      );
+    }
+    
+    if (isAdminOrSecretary) {
+      return basicInfo;
     }
 
     return (
-      <div className="pb-4">
-        {section.items.map((item) => (
-          <SidebarItem
-            key={item.title}
-            icon={item.icon}
-            title={item.title}
-            href={item.href}
-            active={location.pathname === item.href}
-          />
-        ))}
+      <div className="flex flex-col gap-1">
+        <span className="text-sm md:text-white text-black capitalize">{profile?.role}</span>
+        {!isAdminOrSecretary && selectedDepartment && (
+          <>
+            <span className="text-sm md:text-white text-black capitalize bg-accent px-2 py-0.5 rounded-full inline-block">
+              {selectedDepartment}
+            </span>
+            {profile?.assigned_class && (
+              <span className="text-sm md:text-white text-black capitalize bg-accent/50 px-2 py-0.5 rounded-full inline-block">
+                Clase: {profile.assigned_class}
+              </span>
+            )}
+          </>
+        )}
       </div>
     );
   };
 
   return (
-    <aside
-      className={`fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r bg-background transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full"
-        }`}
-    >
-      <div className="px-6 py-4">
-        {loading ? (
-          <Skeleton className="h-8 w-32" />
-        ) : (
-          <NavLink to="/" className="flex items-center space-x-2 font-semibold">
-            <img src={company?.logo_url} alt={company?.name} className="h-8" />
-            <span>{company?.name}</span>
-          </NavLink>
-        )}
-      </div>
-      <div className="flex-1 overflow-y-auto px-6">
-        {navSections.map((section, index) => (
-          <SidebarSection key={index} section={section} />
+    <div className="flex flex-col h-full">
+      <SidebarMenu className="flex-grow">
+        <SidebarMenuItem className="mb-4">
+          <div className="flex flex-col gap-2 p-2 rounded-md bg-accent/30">
+            <div className="flex items-center gap-2">
+              <UserRound className="h-5 w-5" />
+              <div className="flex flex-col">
+                <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
+                {userRoleInfo()}
+              </div>
+            </div>
+          </div>
+        </SidebarMenuItem>
+        {items.map((item) => (
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton
+              asChild
+              className={location.pathname === item.url ? "bg-accent" : ""}
+              onClick={handleItemClick}
+            >
+              <Link to={item.url} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/50">
+                <item.icon className="h-5 w-5" />
+                <span className="font-medium">{item.title}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         ))}
+      </SidebarMenu>
+      <div className="mt-auto pt-4 border-t border-border/50">
+        {(profile?.role === "admin" || profile?.role === "secretaria") && (
+          <SidebarMenuButton
+            asChild
+            className={location.pathname === "/configuracion" ? "bg-accent mb-2" : "mb-2"}
+            onClick={handleItemClick}
+          >
+            <Link to="/configuracion" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/50">
+              <Settings className="h-5 w-5" />
+              <span className="font-medium">Configuración</span>
+            </Link>
+          </SidebarMenuButton>
+        )}
+        <SidebarMenuButton
+          onClick={handleSignOut}
+          className="flex items-center gap-2 p-2 rounded-md hover:bg-destructive/10 text-destructive w-full"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="font-medium">Cerrar Sesión</span>
+        </SidebarMenuButton>
       </div>
-    </aside>
+    </div>
   );
 };
 
-export default AppSidebar;
+export function AppSidebar() {
+  const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [congregationName, setCongregationName] = useState("");
+  const [showCongregationName, setShowCongregationName] = useState(false);
+  const [logoPath, setLogoPath] = useState("/fire.png");
+
+  const { data: company } = useQuery({
+    queryKey: ['company'],
+    queryFn: () => getCompany(1),
+    enabled: !!user
+  });
+
+  useEffect(() => {
+    if (company) {
+      if (company.name && company.show_name) {
+        setCongregationName(company.congregation_name || company.name || '');
+        setShowCongregationName(true);
+      } else {
+        setShowCongregationName(false);
+      }
+      
+      if (company.logo_url) {
+        if (company.logo_url.startsWith('logos/')) {
+          setLogoPath(`${STORAGE_URL}/${company.logo_url}`);
+        } else {
+          setLogoPath(company.logo_url);
+        }
+      } else {
+        setLogoPath("/fire.png");
+      }
+    }
+  }, [company]);
+
+  if (!user) {
+    return null;
+  }
+
+  if (isMobile) {
+    return (
+      <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="hover:bg-accent/50">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Abrir menú</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[280px] p-0">
+            <div className="h-full bg-background">
+              <div className="p-4 border-b flex items-center">
+                <Avatar className="h-8 w-8 mr-2">
+                  <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                  <AvatarFallback>
+                    <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
+                  </AvatarFallback>
+                </Avatar>
+                {showCongregationName && congregationName && (
+                  <h2 className="text-lg font-semibold pr-8">{congregationName}</h2>
+                )}
+              </div>
+              <nav className="p-2">
+                <NavigationMenu onItemClick={() => setIsOpen(false)} />
+              </nav>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    );
+  }
+
+  return (
+    <Sidebar>
+      <SidebarContent className="w-64">
+        <SidebarGroup>
+          {showCongregationName && congregationName && (
+            <SidebarGroupLabel className="flex items-center">
+              <Avatar className="h-6 w-6 mr-2">
+                <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                <AvatarFallback>
+                  <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
+                </AvatarFallback>
+              </Avatar>
+              {congregationName}
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <NavigationMenu />
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+  );
+}

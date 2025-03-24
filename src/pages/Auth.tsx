@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +22,7 @@ export default function Auth() {
   const [logoPath, setLogoPath] = useState("/fire.png"); // Default logo
   const [companyName, setCompanyName] = useState("");
   const [showCompanyName, setShowCompanyName] = useState(false);
-  const { signIn, profile, loading, user } = useAuth();
+  const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -51,9 +50,7 @@ export default function Auth() {
       }
     }
 
-    // Only handle profile-based navigation when we have completed authentication checking
-    // and have a valid user and profile
-    if (!loading && user && profile) {
+    if (profile) {
       console.log("Perfil cargado correctamente:", profile);
       if (profile.departments && profile.departments.length > 1) {
         setUserDepartments(profile.departments);
@@ -72,7 +69,7 @@ export default function Auth() {
         navigate("/"); // Si no tiene departamentos, también procede al login
       }
     }
-  }, [profile, navigate, company, loading, user]);
+  }, [profile, navigate, company]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
