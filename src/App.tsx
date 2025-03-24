@@ -7,11 +7,11 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Layout } from "@/components/Layout";
 import Index from "@/pages/Index";
+import Home from "@/pages/Home";
 import ListarAlumnos from "@/pages/ListarAlumnos";
 import AgregarAlumno from "@/pages/AgregarAlumno";
 import TomarAsistencia from "@/pages/TomarAsistencia";
 import HistorialAsistencia from "@/pages/HistorialAsistencia";
-import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 import Register from "@/pages/Register";
 import GestionUsuarios from "@/pages/GestionUsuarios";
@@ -35,7 +35,11 @@ function App() {
                 children: [
                   {
                     index: true,
-                    element: <Index />,
+                    element: <Home />,
+                  },
+                  {
+                    path: "/home",
+                    element: <Home />,
                   },
                   {
                     path: "/listar",
@@ -85,7 +89,7 @@ function App() {
               },
               {
                 path: "/auth",
-                element: <Auth />,
+                element: <Index />,
               },
               {
                 path: "*",
