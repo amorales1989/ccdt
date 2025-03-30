@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,7 +48,7 @@ export default function Register() {
       const department = departments.find(d => d.name === selectedDepartment);
       if (department) {
         setAvailableClasses(department.classes || []);
-        setSelectedDepartmentId(department.id); // Store the department ID
+        setSelectedDepartmentId(department.id); 
         console.log(`Selected department ID: ${department.id} (${typeof department.id})`);
       } else {
         setAvailableClasses([]);
@@ -83,7 +82,7 @@ export default function Register() {
         last_name: lastName,
         role,
         departments: selectedDepartment ? [selectedDepartment] : [],
-        department_id: selectedDepartmentId,
+        department_id: selectedDepartmentId, // This is the string representation of the UUID
         assigned_class: selectedClass || null
       };
 

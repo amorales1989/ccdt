@@ -145,8 +145,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       dept as DepartmentType
     ) || [];
 
-    // Do not convert department_id - it needs to stay as a string
-    // The edge function will handle this as a UUID
+    // Convert department_id to string to ensure it's properly handled
+    // The department_id is already a string, we just need to ensure it's passed as-is
+    console.log("Department ID being sent to Supabase:", userData.department_id, typeof userData.department_id);
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -156,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           last_name: userData.last_name,
           role: userData.role,
           departments: formattedDepartments,
-          department_id: userData.department_id, // Keeping as string
+          department_id: userData.department_id, // This needs to be a UUID string
           assigned_class: userData.assigned_class || null
         },
       },

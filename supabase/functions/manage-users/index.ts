@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0"
 
@@ -36,11 +35,13 @@ serve(async (req) => {
         })
 
       case 'create':
-        // Make sure department_id is either valid or null
+        // Ensure department_id is handled as a UUID string
         let departmentId = null;
         
+        console.log("Create user with raw department_id:", userData.department_id, typeof userData.department_id);
+        
         if (userData.department_id) {
-          console.log("Create user with department_id:", userData.department_id, typeof userData.department_id);
+          // The department_id should already be a string (UUID format)
           departmentId = userData.department_id;
         } else if (userData.departments && userData.departments.length > 0) {
           const { data: departmentData, error: departmentError } = await supabaseClient
@@ -56,7 +57,7 @@ serve(async (req) => {
           }
         }
 
-        console.log("Creating user with department_id:", departmentId);
+        console.log("Creating user with department_id:", departmentId, typeof departmentId);
 
         const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
           email: userData.email,
@@ -77,11 +78,13 @@ serve(async (req) => {
         })
 
       case 'update':
-        // Make sure department_id is either valid or null
+        // Ensure department_id is handled as a UUID string
         let updatedDepartmentId = null;
         
+        console.log("Update user with raw department_id:", userData.department_id, typeof userData.department_id);
+        
         if (userData.department_id) {
-          console.log("Update user with department_id:", userData.department_id, typeof userData.department_id);
+          // The department_id should already be a string (UUID format)
           updatedDepartmentId = userData.department_id;
         } else if (userData.departments && userData.departments.length > 0) {
           const { data: departmentData, error: departmentError } = await supabaseClient
@@ -97,7 +100,7 @@ serve(async (req) => {
           }
         }
 
-        console.log("Updating user with department_id:", updatedDepartmentId);
+        console.log("Updating user with department_id:", updatedDepartmentId, typeof updatedDepartmentId);
 
         const updates: any = {
           user_metadata: {
