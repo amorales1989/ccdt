@@ -6,14 +6,14 @@ export interface Student {
   address?: string;
   gender: string;
   birthdate?: string;
-  department?: DepartmentType;
+  department?: string;
   department_id?: string;
   assigned_class?: string;
   document_number?: string;
   created_at: string;
   updated_at: string;
   departments?: { 
-    name?: DepartmentType;
+    name?: string;
     id?: string;
   };
 }
@@ -34,21 +34,21 @@ export interface Attendance {
   event_id?: string;
   date: string;
   status: boolean;
-  department?: DepartmentType;
+  department?: string;
   department_id?: string;
   assigned_class?: string;
   created_at: string;
   updated_at: string;
   students?: Student;
   departments?: {
-    name?: DepartmentType;
+    name?: string;
     id?: string;
   };
 }
 
 export interface Department {
   id: string;
-  name: DepartmentType;
+  name: string;
   description?: string;
   classes: string[];
   created_at: string;
@@ -78,7 +78,6 @@ export type DepartmentType =
   | "jovenes" 
   | "jovenes_adultos" 
   | "adultos"
-  | "Examen Físico_Rev1" 
   | string; // Added string to allow for any department name from database
 
 export interface Profile {
@@ -86,7 +85,7 @@ export interface Profile {
   first_name: string;
   last_name: string;
   role: AppRole;
-  departments: DepartmentType[];
+  departments: string[];
   department_id?: string;
   email?: string;
   assigned_class?: string;

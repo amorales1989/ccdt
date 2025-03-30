@@ -271,6 +271,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "lider" | "director" | "maestro" | "secretaria"
+      department_type:
+        | "escuelita_central"
+        | "pre_adolescentes"
+        | "adolescentes"
+        | "jovenes"
+        | "jovenes_adultos"
+        | "adultos"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Department, DepartmentType } from "@/types/database";
+import { Department } from "@/types/database";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -21,7 +21,7 @@ export default function Register() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<AppRole>("maestro");
-  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const { signUp } = useAuth();
@@ -75,7 +75,7 @@ export default function Register() {
         first_name: firstName,
         last_name: lastName,
         role,
-        departments: [selectedDepartment],
+        departments: [selectedDepartment], // Ensure this is an array of strings
         department_id,
         assigned_class: selectedClass || undefined
       };
@@ -174,14 +174,14 @@ export default function Register() {
               <Label htmlFor="department">Departamento</Label>
               <Select 
                 value={selectedDepartment || undefined}
-                onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
+                onValueChange={(value: string) => setSelectedDepartment(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un departamento" />
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.name}>
+                    <SelectItem key={dept.id} value={dept.name || ""}>
                       {dept.name}
                     </SelectItem>
                   ))}
