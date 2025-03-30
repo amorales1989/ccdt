@@ -25,6 +25,7 @@ export default function Register() {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -65,6 +66,7 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     if (!selectedDepartment) {
       toast({
@@ -72,6 +74,7 @@ export default function Register() {
         description: "Por favor seleccione un departamento",
         variant: "destructive",
       });
+      setIsLoading(false);
       return;
     }
 
@@ -120,6 +123,8 @@ export default function Register() {
         description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -226,8 +231,8 @@ export default function Register() {
             )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full">
-              Registrar Usuario
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Registrando..." : "Registrar Usuario"}
             </Button>
           </CardFooter>
         </form>
