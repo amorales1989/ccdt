@@ -103,7 +103,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       console.log("Profile data:", data);
       
-      // Ensure departments is correctly typed as DepartmentType[]
       if (data) {
         const typedProfile: Profile = {
           ...data,
@@ -148,9 +147,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: {
         data: {
-          ...userData,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          role: userData.role,
           departments: formattedDepartments,
-          department_id: userData.department_id
+          department_id: userData.department_id,
+          assigned_class: userData.assigned_class
         },
       },
     });
@@ -164,16 +166,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Starting sign out process");
       
-      // Clear local storage first
       localStorage.removeItem('selectedDepartment');
       
-      // Reset state before attempting to sign out
       setUser(null);
       setProfile(null);
       setSession(null);
       
       try {
-        // Attempt to sign out from Supabase
         const { error } = await supabase.auth.signOut();
         if (error) {
           console.warn("Supabase sign out warning:", error);

@@ -69,17 +69,26 @@ export default function Register() {
     try {
       // Find the department ID based on the selected department name
       const departmentObj = departments.find(d => d.name === selectedDepartment);
-      const department_id = departmentObj?.id || "";
+      
+      if (!departmentObj?.id) {
+        toast({
+          title: "Error",
+          description: "No se pudo encontrar el ID del departamento seleccionado",
+          variant: "destructive",
+        });
+        return;
+      }
       
       const profileData = {
         first_name: firstName,
         last_name: lastName,
         role,
         departments: [selectedDepartment], // Ensure this is an array of strings
-        department_id,
+        department_id: departmentObj.id, // This ensures department_id is a UUID string
         assigned_class: selectedClass || undefined
       };
 
+      console.log("Enviando datos de registro:", profileData);
       await signUp(email, password, profileData);
       
       toast({
