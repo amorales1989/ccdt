@@ -79,7 +79,7 @@ export default function Register() {
     }
 
     try {
-      // Log registration data to identify issues
+      // Log registration data for debugging
       console.log("Registration data:", {
         email,
         firstName,
@@ -89,6 +89,11 @@ export default function Register() {
         selectedDepartmentId,
         selectedClass
       });
+      
+      // Ensure all required data is present
+      if (!email || !password || !firstName || !lastName || !selectedDepartmentId) {
+        throw new Error("Por favor complete todos los campos obligatorios");
+      }
       
       const profileData = {
         first_name: firstName,
@@ -100,22 +105,34 @@ export default function Register() {
       };
 
       console.log("Profile data to be sent:", profileData);
+      
+      // Register the user
       await signUp(email, password, profileData);
       
+      // Success notification
       toast({
         title: "Registro exitoso",
         description: "El usuario ha sido registrado exitosamente.",
+        variant: "success",
       });
+      
+      // Navigate to secretary page
       navigate("/secretaria");
     } catch (error: any) {
       console.error("Register error:", error);
       
+      // Handle different error scenarios
       let errorMessage = "Ha ocurrido un error";
       
-      if (error.message && error.message.includes("User already registered")) {
-        errorMessage = "Este correo electrónico ya está registrado";
-      } else if (error.message && error.message.includes("Database error")) {
-        errorMessage = "Error en la base de datos al registrar el usuario. Verifique los datos ingresados.";
+      if (error.message) {
+        if (error.message.includes("User already registered")) {
+          errorMessage = "Este correo electrónico ya está registrado";
+        } else if (error.message.includes("Database error")) {
+          errorMessage = "Error en la base de datos al registrar el usuario. Verifique los datos ingresados.";
+        } else {
+          // Use the error message from the API if available
+          errorMessage = error.message;
+        }
       }
       
       toast({
@@ -177,6 +194,7 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
             <div className="space-y-2">

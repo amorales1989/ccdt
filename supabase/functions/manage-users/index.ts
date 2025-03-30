@@ -38,53 +38,55 @@ serve(async (req) => {
       case 'create':
         console.log("Create user with full userData:", JSON.stringify(userData, null, 2));
         
-        // Store the department_id separately for later use
-        // Make sure it's properly handled as a UUID
-        const departmentId = userData.department_id || null;
-        
-        // Remove department_id from the user_metadata completely
-        const userMetadata = {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          role: userData.role,
-          departments: userData.departments || [],
-          assigned_class: userData.assigned_class || null
-        };
-        
-        // Create the user without department_id in metadata
-        const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
-          email: userData.email,
-          password: userData.password,
-          email_confirm: true,
-          user_metadata: userMetadata
-        });
-        
-        if (createError) {
-          console.error("Error creating user:", createError);
-          throw createError;
-        }
-        
-        // If user was created successfully and we have a department_id,
-        // update the profile table directly with the correctly typed UUID
-        if (createData && departmentId) {
-          try {
-            console.log(`Updating profile with department_id: ${departmentId} (${typeof departmentId})`);
-            const { error: profileError } = await supabaseClient
-              .from('profiles')
-              .update({ department_id: departmentId })
-              .eq('id', createData.user.id);
-              
-            if (profileError) {
-              console.error("Error updating profile department_id:", profileError);
+        try {
+          // Step 1: Create the user in auth.users first
+          const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
+            email: userData.email,
+            password: userData.password,
+            email_confirm: true,
+            user_metadata: {
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              role: userData.role,
+              departments: userData.departments || [],
+              assigned_class: userData.assigned_class || null
             }
-          } catch (err) {
-            console.error("Exception updating profile department_id:", err);
+          });
+          
+          if (createError) {
+            console.error("Error creating user:", createError);
+            throw createError;
           }
+          
+          console.log("User successfully created in auth.users with ID:", createData.user.id);
+          
+          // Step 2: If user was created successfully and we have a department_id,
+          // update the profile table directly with the department_id
+          if (createData && userData.department_id) {
+            try {
+              console.log(`Updating profile with department_id: ${userData.department_id} (${typeof userData.department_id})`);
+              const { error: profileError } = await supabaseClient
+                .from('profiles')
+                .update({ department_id: userData.department_id })
+                .eq('id', createData.user.id);
+                
+              if (profileError) {
+                console.error("Error updating profile department_id:", profileError);
+              } else {
+                console.log("Profile successfully updated with department_id");
+              }
+            } catch (err) {
+              console.error("Exception updating profile department_id:", err);
+            }
+          }
+          
+          return new Response(JSON.stringify(createData), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } catch (error) {
+          console.error("Error in user creation process:", error);
+          throw error;
         }
-        
-        return new Response(JSON.stringify(createData), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
 
       case 'update':
         console.log("Update user with full userData:", JSON.stringify(userData, null, 2));

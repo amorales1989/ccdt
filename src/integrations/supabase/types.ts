@@ -183,7 +183,7 @@ export type Database = {
           department_id?: string | null
           departments?: string[] | null
           first_name?: string | null
-          id: string
+          id?: string
           last_name?: string | null
           role?: Database["public"]["Enums"]["app_role"]
         }
