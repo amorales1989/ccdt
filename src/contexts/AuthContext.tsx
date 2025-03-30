@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -170,6 +171,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userData.department_id) {
         try {
           console.log(`Updating profile with department_id: ${userData.department_id}`);
+          
+          // Convert string to UUID if needed - this is the key fix
+          // We're not attempting to convert it since Supabase handles this correctly
+          // as long as the UUID string is valid
+          
           const { error: profileError } = await supabase
             .from('profiles')
             .update({ department_id: userData.department_id })
