@@ -140,36 +140,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Attempting sign up with data:", { email, ...userData });
       
-      const SUPABASE_URL = "https://wnmxgjrjrckwtyttidkw.supabase.co";
-      const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndubXhnanJqcmNrd3R5dHRpZGt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgxOTU3MzcsImV4cCI6MjA1Mzc3MTczN30.uhtHBW6t8t6ofL2GLvnBy5Gr44cbH-jfp-jKxaXi8Oo";
-      
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        },
-        body: JSON.stringify({
-          action: 'create',
-          userData: {
-            email,
-            password,
+      // Step 1: Create the user in auth.users using Supabase Auth API
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
             departments: userData.departments || [],
-            department_id: userData.department_id,
             assigned_class: userData.assigned_class || null
           }
-        })
+        }
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error creating user');
+      if (authError) {
+        console.error("Auth error:", authError);
+        throw authError;
       }
       
-      console.log("User created successfully");
+      if (!authData.user) {
+        throw new Error("No user returned from sign up");
+      }
+      
+      console.log("User created successfully in auth.users:", authData.user.id);
+      
+      // Step 2: If user was created successfully and we have a department_id,
+      // update the profile table directly with the department_id
+      if (userData.department_id) {
+        try {
+          console.log(`Updating profile with department_id: ${userData.department_id}`);
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ department_id: userData.department_id })
+            .eq('id', authData.user.id);
+            
+          if (profileError) {
+            console.error("Error updating profile department_id:", profileError);
+          } else {
+            console.log("Profile successfully updated with department_id");
+          }
+        } catch (err) {
+          console.error("Exception updating profile department_id:", err);
+        }
+      }
+      
+      return authData;
     } catch (error) {
       console.error("Error in signUp function:", error);
       throw error;

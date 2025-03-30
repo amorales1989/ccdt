@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -72,6 +71,17 @@ export default function Register() {
       toast({
         title: "Error",
         description: "Por favor seleccione un departamento",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+    
+    // Validate password length
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "La contraseña debe tener al menos 6 caracteres",
         variant: "destructive",
       });
       setIsLoading(false);
