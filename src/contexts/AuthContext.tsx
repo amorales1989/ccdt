@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -186,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      return authData;
+      // Removed the return of authData to match the Promise<void> return type
     } catch (error) {
       console.error("Error in signUp function:", error);
       throw error;
