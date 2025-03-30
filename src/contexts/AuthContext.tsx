@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -104,7 +103,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       console.log("Profile data:", data);
       
-      // Ensure departments is correctly typed as DepartmentType[]
       if (data) {
         const typedProfile: Profile = {
           ...data,
@@ -141,12 +139,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Attempting sign up with data:", { email, ...userData });
       
-      // Use the imported constants directly from the client.ts file
-      // Or use environment variables directly if they are available
       const SUPABASE_URL = "https://wnmxgjrjrckwtyttidkw.supabase.co";
       const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndubXhnanJqcmNrd3R5dHRpZGt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgxOTU3MzcsImV4cCI6MjA1Mzc3MTczN30.uhtHBW6t8t6ofL2GLvnBy5Gr44cbH-jfp-jKxaXi8Oo";
       
-      // Instead of using Supabase auth directly, use our edge function
       const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-users`, {
         method: 'POST',
         headers: {
@@ -184,16 +179,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Starting sign out process");
       
-      // Clear local storage first
       localStorage.removeItem('selectedDepartment');
       
-      // Reset state before attempting to sign out
       setUser(null);
       setProfile(null);
       setSession(null);
       
       try {
-        // Attempt to sign out from Supabase
         const { error } = await supabase.auth.signOut();
         if (error) {
           console.warn("Supabase sign out warning:", error);

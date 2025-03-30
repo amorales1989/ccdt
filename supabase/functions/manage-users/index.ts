@@ -38,8 +38,11 @@ serve(async (req) => {
       case 'create':
         console.log("Create user with full userData:", JSON.stringify(userData, null, 2));
         
+        // Store the department_id separately for later use
+        // Make sure it's properly handled as a UUID
+        const departmentId = userData.department_id || null;
+        
         // Remove department_id from the user_metadata completely
-        // We'll handle it separately in the database trigger
         const userMetadata = {
           first_name: userData.first_name,
           last_name: userData.last_name,
@@ -63,12 +66,12 @@ serve(async (req) => {
         
         // If user was created successfully and we have a department_id,
         // update the profile table directly with the correctly typed UUID
-        if (createData && userData.department_id) {
+        if (createData && departmentId) {
           try {
-            console.log(`Updating profile with department_id: ${userData.department_id}`);
+            console.log(`Updating profile with department_id: ${departmentId} (${typeof departmentId})`);
             const { error: profileError } = await supabaseClient
               .from('profiles')
-              .update({ department_id: userData.department_id })
+              .update({ department_id: departmentId })
               .eq('id', createData.user.id);
               
             if (profileError) {
@@ -86,6 +89,9 @@ serve(async (req) => {
       case 'update':
         console.log("Update user with full userData:", JSON.stringify(userData, null, 2));
 
+        // Store the department_id separately and handle it properly as UUID
+        const deptId = userData.department_id || null;
+        
         // Remove department_id from the metadata update
         const updates = {
           user_metadata: {
@@ -113,11 +119,11 @@ serve(async (req) => {
         if (updateError) throw updateError;
         
         // Update the department_id separately if provided
-        if (userData.department_id) {
+        if (deptId) {
           try {
             const { error: deptUpdateError } = await supabaseClient
               .from('profiles')
-              .update({ department_id: userData.department_id })
+              .update({ department_id: deptId })
               .eq('id', userId);
               
             if (deptUpdateError) {
