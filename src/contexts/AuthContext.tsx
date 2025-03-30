@@ -141,30 +141,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Attempting sign up with data:", { email, ...userData });
       
-      // Simplify the metadata structure - let the database trigger handle conversions
-      const metadataForSignup = {
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        role: userData.role,
-        departments: userData.departments || [],
-        department_id: userData.department_id,
-        assigned_class: userData.assigned_class || null
-      };
-      
-      console.log("Final metadata being sent:", JSON.stringify(metadataForSignup, null, 2));
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: metadataForSignup
+      // Instead of using Supabase auth directly, use our edge function
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/manage-users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.supabaseKey}`
         },
+        body: JSON.stringify({
+          action: 'create',
+          userData: {
+            email,
+            password,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            role: userData.role,
+            departments: userData.departments || [],
+            department_id: userData.department_id,
+            assigned_class: userData.assigned_class || null
+          }
+        })
       });
       
-      if (error) {
-        console.error("Signup error:", error);
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error creating user');
       }
+      
+      console.log("User created successfully");
     } catch (error) {
       console.error("Error in signUp function:", error);
       throw error;

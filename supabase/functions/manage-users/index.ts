@@ -38,25 +38,45 @@ serve(async (req) => {
       case 'create':
         console.log("Create user with full userData:", JSON.stringify(userData, null, 2));
         
-        // Instead of trying to handle UUID conversion here, let's pass a simpler user_metadata
-        // and let the database trigger handle the conversion
+        // Remove department_id from the user_metadata completely
+        // We'll handle it separately in the database trigger
+        const userMetadata = {
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          role: userData.role,
+          departments: userData.departments || [],
+          assigned_class: userData.assigned_class || null
+        };
+        
+        // Create the user without department_id in metadata
         const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
           email: userData.email,
           password: userData.password,
           email_confirm: true,
-          user_metadata: {
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            role: userData.role,
-            departments: userData.departments || [],
-            department_id: userData.department_id || null,
-            assigned_class: userData.assigned_class || null
-          }
-        })
+          user_metadata: userMetadata
+        });
         
         if (createError) {
           console.error("Error creating user:", createError);
           throw createError;
+        }
+        
+        // If user was created successfully and we have a department_id,
+        // update the profile table directly with the correctly typed UUID
+        if (createData && userData.department_id) {
+          try {
+            console.log(`Updating profile with department_id: ${userData.department_id}`);
+            const { error: profileError } = await supabaseClient
+              .from('profiles')
+              .update({ department_id: userData.department_id })
+              .eq('id', createData.user.id);
+              
+            if (profileError) {
+              console.error("Error updating profile department_id:", profileError);
+            }
+          } catch (err) {
+            console.error("Exception updating profile department_id:", err);
+          }
         }
         
         return new Response(JSON.stringify(createData), {
@@ -66,30 +86,48 @@ serve(async (req) => {
       case 'update':
         console.log("Update user with full userData:", JSON.stringify(userData, null, 2));
 
-        const updates: any = {
+        // Remove department_id from the metadata update
+        const updates = {
           user_metadata: {
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
             departments: userData.departments || [],
-            department_id: userData.department_id || null,
             assigned_class: userData.assigned_class || null
           }
-        }
+        };
 
         if (userData.email) {
-          updates.email = userData.email
+          updates.email = userData.email;
         }
         
         if (userData.password) {
-          updates.password = userData.password
+          updates.password = userData.password;
         }
 
         const { data: updateData, error: updateError } = await supabaseClient.auth.admin.updateUserById(
           userId,
           updates
-        )
-        if (updateError) throw updateError
+        );
+        
+        if (updateError) throw updateError;
+        
+        // Update the department_id separately if provided
+        if (userData.department_id) {
+          try {
+            const { error: deptUpdateError } = await supabaseClient
+              .from('profiles')
+              .update({ department_id: userData.department_id })
+              .eq('id', userId);
+              
+            if (deptUpdateError) {
+              console.error("Error updating profile department_id:", deptUpdateError);
+            }
+          } catch (err) {
+            console.error("Exception updating profile department_id:", err);
+          }
+        }
+        
         return new Response(JSON.stringify(updateData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })

@@ -109,9 +109,9 @@ export default function Register() {
       
       let errorMessage = "Ha ocurrido un error";
       
-      if (error.message.includes("User already registered")) {
+      if (error.message && error.message.includes("User already registered")) {
         errorMessage = "Este correo electrónico ya está registrado";
-      } else if (error.message.includes("Database error")) {
+      } else if (error.message && error.message.includes("Database error")) {
         errorMessage = "Error en la base de datos al registrar el usuario. Verifique los datos ingresados.";
       }
       
