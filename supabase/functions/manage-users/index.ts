@@ -52,8 +52,6 @@ serve(async (req) => {
           }
         }
 
-        console.log('Creating user with department_id:', departmentId);
-
         const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
           email: userData.email,
           password: userData.password,
@@ -62,8 +60,8 @@ serve(async (req) => {
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
-            departments: userData.departments, // Ensure this is an array of strings
-            department_id: departmentId, // This should be a UUID string
+            departments: userData.departments,
+            department_id: departmentId,
             assigned_class: userData.assigned_class
           }
         })

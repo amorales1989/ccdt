@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -104,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       console.log("Profile data:", data);
       
+      // Ensure departments is correctly typed as DepartmentType[]
       if (data) {
         const typedProfile: Profile = {
           ...data,
@@ -139,25 +139,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }) {
     console.log("Attempting sign up with data:", { email, ...userData });
     
-    // Ensure departments is an array of strings
     const formattedDepartments = userData.departments?.map(dept => 
       dept as DepartmentType
     ) || [];
 
-    // Important: userData.department_id is already a string (UUID), no need to convert
-    console.log("Department ID before signup:", userData.department_id);
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          role: userData.role,
+          ...userData,
           departments: formattedDepartments,
-          department_id: userData.department_id, // Ensure this is a string UUID
-          assigned_class: userData.assigned_class
+          department_id: userData.department_id
         },
       },
     });
@@ -171,13 +164,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Starting sign out process");
       
+      // Clear local storage first
       localStorage.removeItem('selectedDepartment');
       
+      // Reset state before attempting to sign out
       setUser(null);
       setProfile(null);
       setSession(null);
       
       try {
+        // Attempt to sign out from Supabase
         const { error } = await supabase.auth.signOut();
         if (error) {
           console.warn("Supabase sign out warning:", error);

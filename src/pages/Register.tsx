@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Department } from "@/types/database";
+import { Department, DepartmentType } from "@/types/database";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -21,7 +21,7 @@ export default function Register() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<AppRole>("maestro");
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const { signUp } = useAuth();
@@ -69,31 +69,17 @@ export default function Register() {
     try {
       // Find the department ID based on the selected department name
       const departmentObj = departments.find(d => d.name === selectedDepartment);
-      
-      if (!departmentObj?.id) {
-        toast({
-          title: "Error",
-          description: "No se pudo encontrar el ID del departamento seleccionado",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Ensure department_id is a string (UUID)
-      const departmentId = String(departmentObj.id);
-      console.log("Department ID type:", typeof departmentId);
-      console.log("Department ID value:", departmentId);
+      const department_id = departmentObj?.id || "";
       
       const profileData = {
         first_name: firstName,
         last_name: lastName,
         role,
-        departments: [selectedDepartment], // Array of strings
-        department_id: departmentId, // String UUID
+        departments: [selectedDepartment],
+        department_id,
         assigned_class: selectedClass || undefined
       };
 
-      console.log("Enviando datos de registro:", profileData);
       await signUp(email, password, profileData);
       
       toast({
@@ -188,14 +174,14 @@ export default function Register() {
               <Label htmlFor="department">Departamento</Label>
               <Select 
                 value={selectedDepartment || undefined}
-                onValueChange={(value: string) => setSelectedDepartment(value)}
+                onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un departamento" />
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.name || ""}>
+                    <SelectItem key={dept.id} value={dept.name}>
                       {dept.name}
                     </SelectItem>
                   ))}
