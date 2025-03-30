@@ -138,33 +138,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     department_id: Profile["department_id"];
     assigned_class: Profile["assigned_class"];
   }) {
-    console.log("Attempting sign up with data:", { email, ...userData });
-    
-    // Make sure departments is an array, even if it's empty
-    const formattedDepartments = userData.departments?.map(dept => 
-      dept as DepartmentType
-    ) || [];
-
-    // Convert department_id to string to ensure it's properly handled
-    // The department_id is already a string, we just need to ensure it's passed as-is
-    console.log("Department ID being sent to Supabase:", userData.department_id, typeof userData.department_id);
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          role: userData.role,
-          departments: formattedDepartments,
-          department_id: userData.department_id, // This needs to be a UUID string
-          assigned_class: userData.assigned_class || null
+    try {
+      console.log("Attempting sign up with data:", { email, ...userData });
+      
+      // Store formatted data for better logging
+      const metadataForSignup = {
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        role: userData.role,
+        departments: userData.departments || [],
+        department_id: userData.department_id, // Pass as is - we'll let Supabase handle the UUID conversion
+        assigned_class: userData.assigned_class || null
+      };
+      
+      console.log("Final metadata being sent:", JSON.stringify(metadataForSignup, null, 2));
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadataForSignup
         },
-      },
-    });
-    if (error) {
-      console.error("Signup error:", error);
+      });
+      
+      if (error) {
+        console.error("Signup error:", error);
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error in signUp function:", error);
       throw error;
     }
   }

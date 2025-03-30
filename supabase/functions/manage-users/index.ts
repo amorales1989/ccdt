@@ -35,30 +35,10 @@ serve(async (req) => {
         })
 
       case 'create':
-        // Ensure department_id is handled as a UUID string
-        let departmentId = null;
+        console.log("Create user with full userData:", JSON.stringify(userData, null, 2));
         
-        console.log("Create user with raw department_id:", userData.department_id, typeof userData.department_id);
-        
-        if (userData.department_id) {
-          // The department_id should already be a string (UUID format)
-          departmentId = userData.department_id;
-        } else if (userData.departments && userData.departments.length > 0) {
-          const { data: departmentData, error: departmentError } = await supabaseClient
-            .from('departments')
-            .select('id')
-            .eq('name', userData.departments[0])
-            .single();
-          
-          if (departmentError) {
-            console.error('Error fetching department ID:', departmentError);
-          } else if (departmentData) {
-            departmentId = departmentData.id;
-          }
-        }
-
-        console.log("Creating user with department_id:", departmentId, typeof departmentId);
-
+        // Create user with the metadata as-is
+        // The database trigger will handle converting the metadata to the profile
         const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
           email: userData.email,
           password: userData.password,
@@ -67,48 +47,31 @@ serve(async (req) => {
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
-            departments: userData.departments,
-            department_id: departmentId,
+            departments: userData.departments || [],
+            department_id: userData.department_id, // Let Postgres handle type conversion
             assigned_class: userData.assigned_class || null
           }
         })
-        if (createError) throw createError
+        
+        if (createError) {
+          console.error("Error creating user:", createError);
+          throw createError;
+        }
+        
         return new Response(JSON.stringify(createData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
 
       case 'update':
-        // Ensure department_id is handled as a UUID string
-        let updatedDepartmentId = null;
-        
-        console.log("Update user with raw department_id:", userData.department_id, typeof userData.department_id);
-        
-        if (userData.department_id) {
-          // The department_id should already be a string (UUID format)
-          updatedDepartmentId = userData.department_id;
-        } else if (userData.departments && userData.departments.length > 0) {
-          const { data: departmentData, error: departmentError } = await supabaseClient
-            .from('departments')
-            .select('id')
-            .eq('name', userData.departments[0])
-            .single();
-          
-          if (departmentError) {
-            console.error('Error fetching department ID:', departmentError);
-          } else if (departmentData) {
-            updatedDepartmentId = departmentData.id;
-          }
-        }
-
-        console.log("Updating user with department_id:", updatedDepartmentId, typeof updatedDepartmentId);
+        console.log("Update user with full userData:", JSON.stringify(userData, null, 2));
 
         const updates: any = {
           user_metadata: {
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
-            departments: userData.departments,
-            department_id: updatedDepartmentId,
+            departments: userData.departments || [],
+            department_id: userData.department_id,
             assigned_class: userData.assigned_class || null
           }
         }
