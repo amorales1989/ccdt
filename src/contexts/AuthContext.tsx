@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -138,10 +139,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }) {
     console.log("Attempting sign up with data:", { email, ...userData });
     
+    // Ensure departments is an array of strings
     const formattedDepartments = userData.departments?.map(dept => 
       dept as DepartmentType
     ) || [];
 
+    // Important: userData.department_id is already a string (UUID), no need to convert
+    console.log("Department ID before signup:", userData.department_id);
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -151,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           last_name: userData.last_name,
           role: userData.role,
           departments: formattedDepartments,
-          department_id: userData.department_id,
+          department_id: userData.department_id, // Ensure this is a string UUID
           assigned_class: userData.assigned_class
         },
       },

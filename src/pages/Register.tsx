@@ -79,12 +79,17 @@ export default function Register() {
         return;
       }
       
+      // Ensure department_id is a string (UUID)
+      const departmentId = String(departmentObj.id);
+      console.log("Department ID type:", typeof departmentId);
+      console.log("Department ID value:", departmentId);
+      
       const profileData = {
         first_name: firstName,
         last_name: lastName,
         role,
-        departments: [selectedDepartment], // Ensure this is an array of strings
-        department_id: departmentObj.id, // This ensures department_id is a UUID string
+        departments: [selectedDepartment], // Array of strings
+        department_id: departmentId, // String UUID
         assigned_class: selectedClass || undefined
       };
 
