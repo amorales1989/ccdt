@@ -36,9 +36,13 @@ serve(async (req) => {
         })
 
       case 'create':
-        // Get department_id from the department name if provided
+        // Make sure department_id is either valid or null
         let departmentId = null;
-        if (userData.departments && userData.departments.length > 0) {
+        
+        if (userData.department_id) {
+          console.log("Create user with department_id:", userData.department_id, typeof userData.department_id);
+          departmentId = userData.department_id;
+        } else if (userData.departments && userData.departments.length > 0) {
           const { data: departmentData, error: departmentError } = await supabaseClient
             .from('departments')
             .select('id')
@@ -52,6 +56,8 @@ serve(async (req) => {
           }
         }
 
+        console.log("Creating user with department_id:", departmentId);
+
         const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
           email: userData.email,
           password: userData.password,
@@ -62,7 +68,7 @@ serve(async (req) => {
             role: userData.role,
             departments: userData.departments,
             department_id: departmentId,
-            assigned_class: userData.assigned_class
+            assigned_class: userData.assigned_class || null
           }
         })
         if (createError) throw createError
@@ -71,9 +77,13 @@ serve(async (req) => {
         })
 
       case 'update':
-        // Get department_id from the department name if provided
+        // Make sure department_id is either valid or null
         let updatedDepartmentId = null;
-        if (userData.departments && userData.departments.length > 0) {
+        
+        if (userData.department_id) {
+          console.log("Update user with department_id:", userData.department_id, typeof userData.department_id);
+          updatedDepartmentId = userData.department_id;
+        } else if (userData.departments && userData.departments.length > 0) {
           const { data: departmentData, error: departmentError } = await supabaseClient
             .from('departments')
             .select('id')
@@ -87,6 +97,8 @@ serve(async (req) => {
           }
         }
 
+        console.log("Updating user with department_id:", updatedDepartmentId);
+
         const updates: any = {
           user_metadata: {
             first_name: userData.first_name,
@@ -94,7 +106,7 @@ serve(async (req) => {
             role: userData.role,
             departments: userData.departments,
             department_id: updatedDepartmentId,
-            assigned_class: userData.assigned_class
+            assigned_class: userData.assigned_class || null
           }
         }
 

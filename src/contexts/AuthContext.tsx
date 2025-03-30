@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -139,18 +140,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }) {
     console.log("Attempting sign up with data:", { email, ...userData });
     
+    // Make sure departments is an array, even if it's empty
     const formattedDepartments = userData.departments?.map(dept => 
       dept as DepartmentType
     ) || [];
 
+    // Do not convert department_id - it needs to stay as a string
+    // The edge function will handle this as a UUID
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          ...userData,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          role: userData.role,
           departments: formattedDepartments,
-          department_id: userData.department_id
+          department_id: userData.department_id, // Keeping as string
+          assigned_class: userData.assigned_class || null
         },
       },
     });

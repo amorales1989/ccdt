@@ -24,6 +24,7 @@ export default function Register() {
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -46,11 +47,19 @@ export default function Register() {
   useEffect(() => {
     if (selectedDepartment) {
       const department = departments.find(d => d.name === selectedDepartment);
-      setAvailableClasses(department?.classes || []);
+      if (department) {
+        setAvailableClasses(department.classes || []);
+        setSelectedDepartmentId(department.id); // Store the department ID
+        console.log(`Selected department ID: ${department.id} (${typeof department.id})`);
+      } else {
+        setAvailableClasses([]);
+        setSelectedDepartmentId(null);
+      }
       setSelectedClass(""); // Reset selected class when department changes
     } else {
       setAvailableClasses([]);
       setSelectedClass("");
+      setSelectedDepartmentId(null);
     }
   }, [selectedDepartment, departments]);
 
@@ -67,19 +76,18 @@ export default function Register() {
     }
 
     try {
-      // Find the department ID based on the selected department name
-      const departmentObj = departments.find(d => d.name === selectedDepartment);
-      const department_id = departmentObj?.id || "";
+      console.log("Submitting registration with department_id:", selectedDepartmentId);
       
       const profileData = {
         first_name: firstName,
         last_name: lastName,
         role,
-        departments: [selectedDepartment],
-        department_id,
-        assigned_class: selectedClass || undefined
+        departments: selectedDepartment ? [selectedDepartment] : [],
+        department_id: selectedDepartmentId,
+        assigned_class: selectedClass || null
       };
 
+      console.log("Profile data to be sent:", profileData);
       await signUp(email, password, profileData);
       
       toast({
@@ -94,6 +102,8 @@ export default function Register() {
       
       if (error.message.includes("User already registered")) {
         errorMessage = "Este correo electrónico ya está registrado";
+      } else if (error.message.includes("Database error")) {
+        errorMessage = "Error en la base de datos al registrar el usuario. Verifique los datos ingresados.";
       }
       
       toast({
