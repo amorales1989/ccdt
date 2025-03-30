@@ -141,13 +141,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Attempting sign up with data:", { email, ...userData });
       
-      // Store formatted data for better logging
+      // Simplify the metadata structure - let the database trigger handle conversions
       const metadataForSignup = {
         first_name: userData.first_name,
         last_name: userData.last_name,
         role: userData.role,
         departments: userData.departments || [],
-        department_id: userData.department_id, // Pass as is - we'll let Supabase handle the UUID conversion
+        department_id: userData.department_id,
         assigned_class: userData.assigned_class || null
       };
       

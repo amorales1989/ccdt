@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0"
 
@@ -37,8 +38,8 @@ serve(async (req) => {
       case 'create':
         console.log("Create user with full userData:", JSON.stringify(userData, null, 2));
         
-        // Create user with the metadata as-is
-        // The database trigger will handle converting the metadata to the profile
+        // Instead of trying to handle UUID conversion here, let's pass a simpler user_metadata
+        // and let the database trigger handle the conversion
         const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
           email: userData.email,
           password: userData.password,
@@ -48,7 +49,7 @@ serve(async (req) => {
             last_name: userData.last_name,
             role: userData.role,
             departments: userData.departments || [],
-            department_id: userData.department_id, // Let Postgres handle type conversion
+            department_id: userData.department_id || null,
             assigned_class: userData.assigned_class || null
           }
         })
@@ -71,7 +72,7 @@ serve(async (req) => {
             last_name: userData.last_name,
             role: userData.role,
             departments: userData.departments || [],
-            department_id: userData.department_id,
+            department_id: userData.department_id || null,
             assigned_class: userData.assigned_class || null
           }
         }
