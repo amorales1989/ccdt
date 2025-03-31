@@ -140,6 +140,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Attempting sign up with data:", { email, ...userData });
       
+      // Validate department_id format if provided
+      if (userData.department_id) {
+        // UUID validation regex
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(userData.department_id)) {
+          console.error("Invalid UUID format for department_id:", userData.department_id);
+          throw new Error("Department ID tiene un formato inválido. Contacte al administrador.");
+        }
+      }
+      
       // Step 1: Create the user in auth.users using Supabase Auth API
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -170,11 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // update the profile table directly with the department_id
       if (userData.department_id) {
         try {
-          console.log(`Updating profile with department_id: ${userData.department_id}`);
-          
-          // Convert string to UUID if needed - this is the key fix
-          // We're not attempting to convert it since Supabase handles this correctly
-          // as long as the UUID string is valid
+          console.log(`Updating profile with department_id: ${userData.department_id} (${typeof userData.department_id})`);
           
           const { error: profileError } = await supabase
             .from('profiles')

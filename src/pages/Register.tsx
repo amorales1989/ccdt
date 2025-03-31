@@ -29,7 +29,6 @@ export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Fetch departments
   const { data: departments = [] } = useQuery({
     queryKey: ['departments'],
     queryFn: async () => {
@@ -43,7 +42,6 @@ export default function Register() {
     }
   });
 
-  // Update available classes when department changes
   useEffect(() => {
     if (selectedDepartment) {
       const department = departments.find(d => d.name === selectedDepartment);
@@ -77,7 +75,6 @@ export default function Register() {
       return;
     }
     
-    // Validate password length
     if (password.length < 6) {
       toast({
         title: "Error",
@@ -89,7 +86,6 @@ export default function Register() {
     }
 
     try {
-      // Log registration data for debugging
       console.log("Registration data:", {
         email,
         firstName,
@@ -100,7 +96,13 @@ export default function Register() {
         selectedClass
       });
       
-      // Ensure all required data is present
+      if (selectedDepartmentId) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(selectedDepartmentId)) {
+          throw new Error("El ID del departamento seleccionado no es válido. Por favor, seleccione otro departamento.");
+        }
+      }
+      
       if (!email || !password || !firstName || !lastName || !selectedDepartmentId) {
         throw new Error("Por favor complete todos los campos obligatorios");
       }
@@ -116,22 +118,18 @@ export default function Register() {
 
       console.log("Profile data to be sent:", profileData);
       
-      // Register the user
       await signUp(email, password, profileData);
       
-      // Success notification
       toast({
         title: "Registro exitoso",
         description: "El usuario ha sido registrado exitosamente.",
         variant: "success",
       });
       
-      // Navigate to secretary page
       navigate("/secretaria");
     } catch (error: any) {
       console.error("Register error:", error);
       
-      // Handle different error scenarios
       let errorMessage = "Ha ocurrido un error";
       
       if (error.message) {
@@ -140,7 +138,6 @@ export default function Register() {
         } else if (error.message.includes("Database error")) {
           errorMessage = "Error en la base de datos al registrar el usuario. Verifique los datos ingresados.";
         } else {
-          // Use the error message from the API if available
           errorMessage = error.message;
         }
       }

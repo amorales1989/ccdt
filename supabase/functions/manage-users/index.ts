@@ -39,18 +39,23 @@ serve(async (req) => {
         console.log("Create user with full userData:", JSON.stringify(userData, null, 2));
         
         try {
+          // Prepare user_metadata without department_id (will be handled separately)
+          const userMetadata = {
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            role: userData.role,
+            departments: userData.departments || [],
+            assigned_class: userData.assigned_class || null
+          };
+          
+          console.log("Creating user with metadata:", JSON.stringify(userMetadata, null, 2));
+          
           // Step 1: Create the user in auth.users first
           const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
             email: userData.email,
             password: userData.password,
             email_confirm: true,
-            user_metadata: {
-              first_name: userData.first_name,
-              last_name: userData.last_name,
-              role: userData.role,
-              departments: userData.departments || [],
-              assigned_class: userData.assigned_class || null
-            }
+            user_metadata: userMetadata
           });
           
           if (createError) {
@@ -65,6 +70,13 @@ serve(async (req) => {
           if (createData && userData.department_id) {
             try {
               console.log(`Updating profile with department_id: ${userData.department_id} (${typeof userData.department_id})`);
+              
+              // Validate UUID format before updating
+              if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userData.department_id)) {
+                console.error("Invalid UUID format for department_id:", userData.department_id);
+                throw new Error("Invalid UUID format for department_id");
+              }
+              
               const { error: profileError } = await supabaseClient
                 .from('profiles')
                 .update({ department_id: userData.department_id })
@@ -123,6 +135,12 @@ serve(async (req) => {
         // Update the department_id separately if provided
         if (deptId) {
           try {
+            // Validate UUID format before updating
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(deptId)) {
+              console.error("Invalid UUID format for department_id:", deptId);
+              throw new Error("Invalid UUID format for department_id");
+            }
+            
             const { error: deptUpdateError } = await supabaseClient
               .from('profiles')
               .update({ department_id: deptId })
