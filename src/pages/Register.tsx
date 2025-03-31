@@ -24,12 +24,11 @@ export default function Register() {
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Fetch departments
   const { data: departments = [] } = useQuery({
     queryKey: ['departments'],
     queryFn: async () => {
@@ -43,28 +42,20 @@ export default function Register() {
     }
   });
 
+  // Update available classes when department changes
   useEffect(() => {
     if (selectedDepartment) {
       const department = departments.find(d => d.name === selectedDepartment);
-      if (department) {
-        setAvailableClasses(department.classes || []);
-        setSelectedDepartmentId(department.id);
-        console.log(`Selected department ID: ${department.id} (${typeof department.id})`);
-      } else {
-        setAvailableClasses([]);
-        setSelectedDepartmentId(null);
-      }
+      setAvailableClasses(department?.classes || []);
       setSelectedClass(""); // Reset selected class when department changes
     } else {
       setAvailableClasses([]);
       setSelectedClass("");
-      setSelectedDepartmentId(null);
     }
   }, [selectedDepartment, departments]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     
     if (!selectedDepartment) {
       toast({
@@ -72,76 +63,37 @@ export default function Register() {
         description: "Por favor seleccione un departamento",
         variant: "destructive",
       });
-      setIsLoading(false);
-      return;
-    }
-    
-    if (password.length < 6) {
-      toast({
-        title: "Error",
-        description: "La contraseña debe tener al menos 6 caracteres",
-        variant: "destructive",
-      });
-      setIsLoading(false);
       return;
     }
 
     try {
-      console.log("Registration data:", {
-        email,
-        firstName,
-        lastName,
-        role,
-        selectedDepartment,
-        selectedDepartmentId,
-        selectedClass
-      });
-      
-      // Validate UUID format of selectedDepartmentId
-      if (selectedDepartmentId) {
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(selectedDepartmentId)) {
-          throw new Error("El ID del departamento seleccionado no es válido. Por favor, seleccione otro departamento.");
-        }
-      }
-      
-      if (!email || !password || !firstName || !lastName || !selectedDepartmentId) {
-        throw new Error("Por favor complete todos los campos obligatorios");
-      }
+      // Find the department ID based on the selected department name
+      const departmentObj = departments.find(d => d.name === selectedDepartment);
+      const department_id = departmentObj?.id || "";
       
       const profileData = {
         first_name: firstName,
         last_name: lastName,
         role,
-        departments: selectedDepartment ? [selectedDepartment] : [],
-        department_id: selectedDepartmentId,
-        assigned_class: selectedClass || null
+        departments: [selectedDepartment],
+        department_id,
+        assigned_class: selectedClass || undefined
       };
 
-      console.log("Profile data to be sent:", profileData);
-      
       await signUp(email, password, profileData);
       
       toast({
         title: "Registro exitoso",
         description: "El usuario ha sido registrado exitosamente.",
-        variant: "success",
       });
-      
       navigate("/secretaria");
     } catch (error: any) {
       console.error("Register error:", error);
       
       let errorMessage = "Ha ocurrido un error";
       
-      if (error.message) {
-        if (error.message.includes("User already registered")) {
-          errorMessage = "Este correo electrónico ya está registrado";
-        } else if (error.message.includes("Database error")) {
-          errorMessage = "Error en la base de datos al registrar el usuario. Verifique los datos ingresados.";
-        } else {
-          errorMessage = error.message;
-        }
+      if (error.message.includes("User already registered")) {
+        errorMessage = "Este correo electrónico ya está registrado";
       }
       
       toast({
@@ -149,8 +101,6 @@ export default function Register() {
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -203,7 +153,6 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
               />
             </div>
             <div className="space-y-2">
@@ -258,8 +207,8 @@ export default function Register() {
             )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Registrando..." : "Registrar Usuario"}
+            <Button type="submit" className="w-full">
+              Registrar Usuario
             </Button>
           </CardFooter>
         </form>

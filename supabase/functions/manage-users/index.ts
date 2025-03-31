@@ -7,12 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// UUID validation function
-function isValidUUID(uuid: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -42,96 +36,81 @@ serve(async (req) => {
         })
 
       case 'create':
-        console.log("Create user with full userData:", JSON.stringify(userData, null, 2));
-        
-        try {
-          // Handle department_id - make sure it's a valid UUID if provided
-          let departmentId = null;
-          if (userData.department_id) {
-            console.log(`Validating department_id: ${userData.department_id} (${typeof userData.department_id})`);
-            
-            if (!isValidUUID(userData.department_id)) {
-              console.error("Invalid UUID format for department_id:", userData.department_id);
-              throw new Error("Department ID tiene un formato inválido. Contacte al administrador.");
-            }
-            departmentId = userData.department_id;
+        // Get department_id from the department name if provided
+        let departmentId = null;
+        if (userData.departments && userData.departments.length > 0) {
+          const { data: departmentData, error: departmentError } = await supabaseClient
+            .from('departments')
+            .select('id')
+            .eq('name', userData.departments[0])
+            .single();
+          
+          if (departmentError) {
+            console.error('Error fetching department ID:', departmentError);
+          } else if (departmentData) {
+            departmentId = departmentData.id;
           }
-          
-          // Prepare user_metadata without department_id (will be handled separately)
-          const userMetadata = {
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            role: userData.role,
-            departments: userData.departments || [],
-            department_id: departmentId, // Including properly validated UUID
-            assigned_class: userData.assigned_class || null
-          };
-          
-          console.log("Creating user with metadata:", JSON.stringify(userMetadata, null, 2));
-          
-          // Create the user in auth.users
-          const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
-            email: userData.email,
-            password: userData.password,
-            email_confirm: true,
-            user_metadata: userMetadata
-          });
-          
-          if (createError) {
-            console.error("Error creating user:", createError);
-            throw createError;
-          }
-          
-          console.log("User successfully created in auth.users with ID:", createData.user.id);
-          
-          return new Response(JSON.stringify(createData), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        } catch (error) {
-          console.error("Error in user creation process:", error);
-          throw error;
         }
 
-      case 'update':
-        console.log("Update user with full userData:", JSON.stringify(userData, null, 2));
-
-        // Store the department_id separately and handle it properly as UUID
-        let deptId = null;
-        if (userData.department_id) {
-          if (!isValidUUID(userData.department_id)) {
-            console.error("Invalid UUID format for department_id:", userData.department_id);
-            throw new Error("Invalid UUID format for department_id");
-          }
-          deptId = userData.department_id;
-        }
-        
-        // Remove department_id from the metadata update
-        const updates = {
+        const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
+          email: userData.email,
+          password: userData.password,
+          email_confirm: true,
           user_metadata: {
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
-            departments: userData.departments || [],
-            department_id: deptId,
-            assigned_class: userData.assigned_class || null
+            departments: userData.departments,
+            department_id: departmentId,
+            assigned_class: userData.assigned_class
           }
-        };
+        })
+        if (createError) throw createError
+        return new Response(JSON.stringify(createData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+
+      case 'update':
+        // Get department_id from the department name if provided
+        let updatedDepartmentId = null;
+        if (userData.departments && userData.departments.length > 0) {
+          const { data: departmentData, error: departmentError } = await supabaseClient
+            .from('departments')
+            .select('id')
+            .eq('name', userData.departments[0])
+            .single();
+          
+          if (departmentError) {
+            console.error('Error fetching department ID:', departmentError);
+          } else if (departmentData) {
+            updatedDepartmentId = departmentData.id;
+          }
+        }
+
+        const updates: any = {
+          user_metadata: {
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            role: userData.role,
+            departments: userData.departments,
+            department_id: updatedDepartmentId,
+            assigned_class: userData.assigned_class
+          }
+        }
 
         if (userData.email) {
-          updates.email = userData.email;
+          updates.email = userData.email
         }
         
         if (userData.password) {
-          updates.password = userData.password;
+          updates.password = userData.password
         }
 
         const { data: updateData, error: updateError } = await supabaseClient.auth.admin.updateUserById(
           userId,
           updates
-        );
-        
-        if (updateError) throw updateError;
-        
+        )
+        if (updateError) throw updateError
         return new Response(JSON.stringify(updateData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })

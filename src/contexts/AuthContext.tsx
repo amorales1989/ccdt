@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import type { DepartmentType, AppRole } from "@/types/database";
 
@@ -103,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       console.log("Profile data:", data);
       
+      // Ensure departments is correctly typed as DepartmentType[]
       if (data) {
         const typedProfile: Profile = {
           ...data,
@@ -136,49 +137,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     department_id: Profile["department_id"];
     assigned_class: Profile["assigned_class"];
   }) {
-    try {
-      console.log("Attempting sign up with data:", { email, ...userData });
-      
-      // Validate department_id format if provided
-      if (userData.department_id) {
-        // UUID validation regex
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(userData.department_id)) {
-          console.error("Invalid UUID format for department_id:", userData.department_id);
-          throw new Error("Department ID tiene un formato inválido. Contacte al administrador.");
-        }
-      }
-      
-      // Step 1: Create the user in auth.users using Supabase Auth API
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            role: userData.role,
-            departments: userData.departments || [],
-            department_id: userData.department_id, // This will be validated by the trigger function
-            assigned_class: userData.assigned_class || null
-          }
-        }
-      });
-      
-      if (authError) {
-        console.error("Auth error:", authError);
-        throw authError;
-      }
-      
-      if (!authData.user) {
-        throw new Error("No user returned from sign up");
-      }
-      
-      console.log("User created successfully in auth.users:", authData.user.id);
-      
-      // No return statement to match the Promise<void> return type
-    } catch (error) {
-      console.error("Error in signUp function:", error);
+    console.log("Attempting sign up with data:", { email, ...userData });
+    
+    const formattedDepartments = userData.departments?.map(dept => 
+      dept as DepartmentType
+    ) || [];
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          ...userData,
+          departments: formattedDepartments,
+          department_id: userData.department_id
+        },
+      },
+    });
+    if (error) {
+      console.error("Signup error:", error);
       throw error;
     }
   }
@@ -187,13 +164,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Starting sign out process");
       
+      // Clear local storage first
       localStorage.removeItem('selectedDepartment');
       
+      // Reset state before attempting to sign out
       setUser(null);
       setProfile(null);
       setSession(null);
       
       try {
+        // Attempt to sign out from Supabase
         const { error } = await supabase.auth.signOut();
         if (error) {
           console.warn("Supabase sign out warning:", error);
