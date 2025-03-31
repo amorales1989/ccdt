@@ -183,7 +183,7 @@ export type Database = {
           department_id?: string | null
           departments?: string[] | null
           first_name?: string | null
-          id: string
+          id?: string
           last_name?: string | null
           role?: Database["public"]["Enums"]["app_role"]
         }
@@ -271,6 +271,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "lider" | "director" | "maestro" | "secretaria"
+      department_type:
+        | "escuelita_central"
+        | "pre_adolescentes"
+        | "adolescentes"
+        | "jovenes"
+        | "jovenes_adultos"
+        | "adultos"
     }
     CompositeTypes: {
       [_ in never]: never

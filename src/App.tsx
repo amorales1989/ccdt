@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Layout } from "@/components/Layout";
 import Index from "@/pages/Index";
+import Home from "@/pages/Home";
 import ListarAlumnos from "@/pages/ListarAlumnos";
 import AgregarAlumno from "@/pages/AgregarAlumno";
 import TomarAsistencia from "@/pages/TomarAsistencia";
@@ -36,6 +37,10 @@ function App() {
                   {
                     index: true,
                     element: <Index />,
+                  },
+                  {
+                    path: "/home",
+                    element: <Home />,
                   },
                   {
                     path: "/listar",
