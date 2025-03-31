@@ -7,6 +7,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// UUID validation function
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -39,6 +45,18 @@ serve(async (req) => {
         console.log("Create user with full userData:", JSON.stringify(userData, null, 2));
         
         try {
+          // Handle department_id - make sure it's a valid UUID if provided
+          let departmentId = null;
+          if (userData.department_id) {
+            console.log(`Validating department_id: ${userData.department_id} (${typeof userData.department_id})`);
+            
+            if (!isValidUUID(userData.department_id)) {
+              console.error("Invalid UUID format for department_id:", userData.department_id);
+              throw new Error("Department ID tiene un formato inválido. Contacte al administrador.");
+            }
+            departmentId = userData.department_id;
+          }
+          
           // Prepare user_metadata without department_id (will be handled separately)
           const userMetadata = {
             first_name: userData.first_name,
@@ -67,19 +85,13 @@ serve(async (req) => {
           
           // Step 2: If user was created successfully and we have a department_id,
           // update the profile table directly with the department_id
-          if (createData && userData.department_id) {
+          if (createData && departmentId) {
             try {
-              console.log(`Updating profile with department_id: ${userData.department_id} (${typeof userData.department_id})`);
-              
-              // Validate UUID format before updating
-              if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userData.department_id)) {
-                console.error("Invalid UUID format for department_id:", userData.department_id);
-                throw new Error("Invalid UUID format for department_id");
-              }
+              console.log(`Updating profile with department_id: ${departmentId}`);
               
               const { error: profileError } = await supabaseClient
                 .from('profiles')
-                .update({ department_id: userData.department_id })
+                .update({ department_id: departmentId })
                 .eq('id', createData.user.id);
                 
               if (profileError) {
@@ -104,7 +116,14 @@ serve(async (req) => {
         console.log("Update user with full userData:", JSON.stringify(userData, null, 2));
 
         // Store the department_id separately and handle it properly as UUID
-        const deptId = userData.department_id || null;
+        let deptId = null;
+        if (userData.department_id) {
+          if (!isValidUUID(userData.department_id)) {
+            console.error("Invalid UUID format for department_id:", userData.department_id);
+            throw new Error("Invalid UUID format for department_id");
+          }
+          deptId = userData.department_id;
+        }
         
         // Remove department_id from the metadata update
         const updates = {
@@ -135,12 +154,6 @@ serve(async (req) => {
         // Update the department_id separately if provided
         if (deptId) {
           try {
-            // Validate UUID format before updating
-            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(deptId)) {
-              console.error("Invalid UUID format for department_id:", deptId);
-              throw new Error("Invalid UUID format for department_id");
-            }
-            
             const { error: deptUpdateError } = await supabaseClient
               .from('profiles')
               .update({ department_id: deptId })

@@ -197,7 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      // Removed the return of authData to match the Promise<void> return type
+      // No return statement to match the Promise<void> return type
     } catch (error) {
       console.error("Error in signUp function:", error);
       throw error;
