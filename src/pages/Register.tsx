@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -96,6 +97,7 @@ export default function Register() {
         selectedClass
       });
       
+      // Validate UUID format of selectedDepartmentId
       if (selectedDepartmentId) {
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(selectedDepartmentId)) {

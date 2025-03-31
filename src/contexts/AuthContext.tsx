@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -160,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             last_name: userData.last_name,
             role: userData.role,
             departments: userData.departments || [],
+            department_id: userData.department_id, // This will be validated by the trigger function
             assigned_class: userData.assigned_class || null
           }
         }
@@ -175,27 +175,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       console.log("User created successfully in auth.users:", authData.user.id);
-      
-      // Step 2: If user was created successfully and we have a department_id,
-      // update the profile table directly with the department_id
-      if (userData.department_id) {
-        try {
-          console.log(`Updating profile with department_id: ${userData.department_id} (${typeof userData.department_id})`);
-          
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ department_id: userData.department_id })
-            .eq('id', authData.user.id);
-            
-          if (profileError) {
-            console.error("Error updating profile department_id:", profileError);
-          } else {
-            console.log("Profile successfully updated with department_id");
-          }
-        } catch (err) {
-          console.error("Exception updating profile department_id:", err);
-        }
-      }
       
       // No return statement to match the Promise<void> return type
     } catch (error) {

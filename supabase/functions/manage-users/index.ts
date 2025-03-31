@@ -63,12 +63,13 @@ serve(async (req) => {
             last_name: userData.last_name,
             role: userData.role,
             departments: userData.departments || [],
+            department_id: departmentId, // Including properly validated UUID
             assigned_class: userData.assigned_class || null
           };
           
           console.log("Creating user with metadata:", JSON.stringify(userMetadata, null, 2));
           
-          // Step 1: Create the user in auth.users first
+          // Create the user in auth.users
           const { data: createData, error: createError } = await supabaseClient.auth.admin.createUser({
             email: userData.email,
             password: userData.password,
@@ -82,27 +83,6 @@ serve(async (req) => {
           }
           
           console.log("User successfully created in auth.users with ID:", createData.user.id);
-          
-          // Step 2: If user was created successfully and we have a department_id,
-          // update the profile table directly with the department_id
-          if (createData && departmentId) {
-            try {
-              console.log(`Updating profile with department_id: ${departmentId}`);
-              
-              const { error: profileError } = await supabaseClient
-                .from('profiles')
-                .update({ department_id: departmentId })
-                .eq('id', createData.user.id);
-                
-              if (profileError) {
-                console.error("Error updating profile department_id:", profileError);
-              } else {
-                console.log("Profile successfully updated with department_id");
-              }
-            } catch (err) {
-              console.error("Exception updating profile department_id:", err);
-            }
-          }
           
           return new Response(JSON.stringify(createData), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -132,6 +112,7 @@ serve(async (req) => {
             last_name: userData.last_name,
             role: userData.role,
             departments: userData.departments || [],
+            department_id: deptId,
             assigned_class: userData.assigned_class || null
           }
         };
@@ -150,22 +131,6 @@ serve(async (req) => {
         );
         
         if (updateError) throw updateError;
-        
-        // Update the department_id separately if provided
-        if (deptId) {
-          try {
-            const { error: deptUpdateError } = await supabaseClient
-              .from('profiles')
-              .update({ department_id: deptId })
-              .eq('id', userId);
-              
-            if (deptUpdateError) {
-              console.error("Error updating profile department_id:", deptUpdateError);
-            }
-          } catch (err) {
-            console.error("Exception updating profile department_id:", err);
-          }
-        }
         
         return new Response(JSON.stringify(updateData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
