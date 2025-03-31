@@ -12,7 +12,6 @@ import ListarAlumnos from "@/pages/ListarAlumnos";
 import AgregarAlumno from "@/pages/AgregarAlumno";
 import TomarAsistencia from "@/pages/TomarAsistencia";
 import HistorialAsistencia from "@/pages/HistorialAsistencia";
-import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 import Register from "@/pages/Register";
 import GestionUsuarios from "@/pages/GestionUsuarios";
@@ -89,12 +88,8 @@ function App() {
                 ],
               },
               {
-                path: "/auth",
-                element: <Auth />,
-              },
-              {
                 path: "*",
-                element: <Navigate to="/auth" replace />,
+                element: <Navigate to="/" replace />,
               },
             ])}
           />
