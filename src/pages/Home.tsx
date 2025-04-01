@@ -135,10 +135,13 @@ const Home = () => {
         const studentDept = s.departments?.name || s.department;
         return studentDept === deptName && s.assigned_class === className;
       });
-
+      
+      const maleCount = deptStudents.filter(s => s.gender === "M").length;
+      const femaleCount = deptStudents.filter(s => s.gender === "F").length;
+      
       return {
-        male: deptStudents.filter(s => s.gender === "masculino").length,
-        female: deptStudents.filter(s => s.gender === "femenino").length,
+        male: maleCount,
+        female: femaleCount,
         total: deptStudents.length
       };
     };

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon, FolderUp, Settings } from "lucide-react";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon, FolderUp, Settings, Cog } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { STORAGE_URL } from "@/integrations/supabase/client";
+import { UserSettings } from "./UserSettings";
 
 const getItems = (role: string | undefined) => {
   const baseItems = [
@@ -97,6 +98,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   const items = getItems(profile?.role);
   const selectedDepartment = localStorage.getItem('selectedDepartment');
   const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   
   const handleSignOut = async () => {
     try {
@@ -117,6 +119,15 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
 
   const handleItemClick = () => {
     onItemClick?.();
+  };
+
+  const openSettingsModal = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowSettingsModal(true);
+    if (onItemClick) {
+      onItemClick();
+    }
   };
 
   if (profile?.departments && profile.departments.length > 1 && !selectedDepartment && !isAdminOrSecretary) {
@@ -206,6 +217,13 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
                 <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
                 {userRoleInfo()}
               </div>
+              <button 
+                onClick={openSettingsModal}
+                className="ml-auto p-1.5 rounded-full hover:bg-accent/50"
+                aria-label="Configuración de perfil"
+              >
+                <Cog className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </SidebarMenuItem>
@@ -245,6 +263,11 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
           <span className="font-medium">Cerrar Sesión</span>
         </SidebarMenuButton>
       </div>
+      
+      <UserSettings 
+        open={showSettingsModal} 
+        onOpenChange={setShowSettingsModal} 
+      />
     </div>
   );
 };
@@ -256,6 +279,7 @@ export function AppSidebar() {
   const [congregationName, setCongregationName] = useState("");
   const [showCongregationName, setShowCongregationName] = useState(false);
   const [logoPath, setLogoPath] = useState("/fire.png");
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const { data: company } = useQuery({
     queryKey: ['company'],
@@ -310,6 +334,15 @@ export function AppSidebar() {
                 {showCongregationName && congregationName && (
                   <h2 className="text-lg font-semibold pr-8">{congregationName}</h2>
                 )}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="ml-auto hover:bg-accent/50"
+                  onClick={() => setShowSettingsModal(true)}
+                >
+                  <Cog className="h-5 w-5" />
+                  <span className="sr-only">Configuración</span>
+                </Button>
               </div>
               <nav className="p-2">
                 <NavigationMenu onItemClick={() => setIsOpen(false)} />
@@ -317,6 +350,27 @@ export function AppSidebar() {
             </div>
           </SheetContent>
         </Sheet>
+        
+        <div className="flex-1 flex justify-center">
+          {showCongregationName && congregationName && (
+            <h2 className="text-lg font-semibold">{congregationName}</h2>
+          )}
+        </div>
+        
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="hover:bg-accent/50 ml-auto"
+          onClick={() => setShowSettingsModal(true)}
+        >
+          <Cog className="h-5 w-5" />
+          <span className="sr-only">Configuración</span>
+        </Button>
+        
+        <UserSettings 
+          open={showSettingsModal} 
+          onOpenChange={setShowSettingsModal} 
+        />
       </div>
     );
   }
@@ -325,22 +379,36 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent className="w-64">
         <SidebarGroup>
-          {showCongregationName && congregationName && (
-            <SidebarGroupLabel className="flex items-center">
+          <SidebarGroupLabel className="flex items-center justify-between">
+            <div className="flex items-center">
               <Avatar className="h-6 w-6 mr-2">
                 <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
                 <AvatarFallback>
                   <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
                 </AvatarFallback>
               </Avatar>
-              {congregationName}
-            </SidebarGroupLabel>
-          )}
+              {showCongregationName && congregationName && congregationName}
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 hover:bg-accent/50"
+              onClick={() => setShowSettingsModal(true)}
+            >
+              <Cog className="h-4 w-4" />
+              <span className="sr-only">Configuración</span>
+            </Button>
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <NavigationMenu />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
+      <UserSettings 
+        open={showSettingsModal} 
+        onOpenChange={setShowSettingsModal} 
+      />
     </Sidebar>
   );
 }
