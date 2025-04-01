@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Sidebar,
@@ -332,7 +331,7 @@ export function AppSidebar() {
                   </AvatarFallback>
                 </Avatar>
                 {showCongregationName && congregationName && (
-                  <h2 className="text-lg font-semibold pr-8">{congregationName}</h2>
+                  <h2 className="text-lg font-semibold">{congregationName}</h2>
                 )}
                 <Button 
                   variant="ghost" 
@@ -351,21 +350,22 @@ export function AppSidebar() {
           </SheetContent>
         </Sheet>
         
-        <div className="flex-1 flex justify-center">
+        <div className="flex-1 flex justify-center items-center">
           {showCongregationName && congregationName && (
-            <h2 className="text-lg font-semibold">{congregationName}</h2>
+            <div className="flex items-center">
+              <h2 className="text-lg font-semibold">{congregationName}</h2>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="ml-2 hover:bg-accent/50"
+                onClick={() => setShowSettingsModal(true)}
+              >
+                <Cog className="h-5 w-5" />
+                <span className="sr-only">Configuración</span>
+              </Button>
+            </div>
           )}
         </div>
-        
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="hover:bg-accent/50 ml-auto"
-          onClick={() => setShowSettingsModal(true)}
-        >
-          <Cog className="h-5 w-5" />
-          <span className="sr-only">Configuración</span>
-        </Button>
         
         <UserSettings 
           open={showSettingsModal} 
@@ -380,24 +380,26 @@ export function AppSidebar() {
       <SidebarContent className="w-64">
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center justify-between">
-            <div className="flex items-center">
+            <div className="flex items-center flex-1">
               <Avatar className="h-6 w-6 mr-2">
                 <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
                 <AvatarFallback>
                   <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
                 </AvatarFallback>
               </Avatar>
-              {showCongregationName && congregationName && congregationName}
+              {showCongregationName && congregationName && (
+                <span className="truncate">{congregationName}</span>
+              )}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 ml-2 hover:bg-accent/50"
+                onClick={() => setShowSettingsModal(true)}
+              >
+                <Cog className="h-4 w-4" />
+                <span className="sr-only">Configuración</span>
+              </Button>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 hover:bg-accent/50"
-              onClick={() => setShowSettingsModal(true)}
-            >
-              <Cog className="h-4 w-4" />
-              <span className="sr-only">Configuración</span>
-            </Button>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <NavigationMenu />
