@@ -55,20 +55,27 @@ const Home = () => {
     if (!profile) return null;
 
     const userDepartments = profile.departments || [];
+    const userAssignedClass = profile.assigned_class;
+
+    // Filter students by user's assigned class if they are a teacher
+    const filteredStudents = profile.role === "maestro" && userAssignedClass 
+      ? students.filter(s => s.assigned_class === userAssignedClass)
+      : students;
 
     const departmentTypes: DepartmentType[] = ["escuelita_central", "pre_adolescentes", "adolescentes", "jovenes", "jovenes_adultos", "adultos"];
     const studentsByDepartment = departmentTypes.reduce((acc, dept) => {
+      // Skip departments that aren't accessible to this user
       if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
         return acc;
       }
 
-      const deptStudents = students.filter(s => {
-        if (s.departments && s.departments.name) {
-          return s.departments.name === dept;
-        }
-        return s.department === dept;
+      // For teachers, only show their assigned class
+      let deptStudents = filteredStudents.filter(s => {
+        const studentDept = s.departments && s.departments.name ? s.departments.name : s.department;
+        return studentDept === dept;
       });
 
+      // For teachers with an assigned class, we've already filtered the students earlier
       acc[dept] = {
         male: deptStudents.filter(s => s.gender === "masculino").length,
         female: deptStudents.filter(s => s.gender === "femenino").length,
@@ -89,9 +96,14 @@ const Home = () => {
     // If there's only one department card, use a different layout
     const isSingleCard = departmentsWithStats.length === 1;
 
+    // For teachers, show a label that indicates these are stats for their assigned class
+    const showClassLabel = profile.role === "maestro" && userAssignedClass;
+
     return (
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold mb-4">Estadísticas de Alumnos</h2>
+        <h2 className="text-2xl font-semibold mb-4">
+          {showClassLabel ? `Estadísticas de Alumnos - Clase: ${userAssignedClass}` : "Estadísticas de Alumnos"}
+        </h2>
         <div className={`grid gap-4 ${isSingleCard ? 'place-items-center' : 'grid-cols-2 lg:grid-cols-3'}`}>
           {departmentsWithStats.map(([dept, stats]) => (
             <div 
