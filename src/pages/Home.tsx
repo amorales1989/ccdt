@@ -6,7 +6,7 @@ import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments } from "@/lib/api";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isBefore, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
@@ -21,12 +21,14 @@ import {
   DropdownMenuItem 
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -60,6 +62,11 @@ const Home = () => {
   const handleDepartmentClick = (department: Department) => {
     setSelectedDepartment(department);
     setDetailsDialogOpen(true);
+  };
+
+  const handleClassClick = (departmentName: string, className: string) => {
+    setDetailsDialogOpen(false);
+    navigate(`/listar-alumnos?department=${departmentName}&class=${className}`);
   };
 
   const renderStudentStats = () => {
@@ -198,7 +205,11 @@ const Home = () => {
                     {selectedDepartment.classes.map(className => {
                       const classStats = getStatsForClass(selectedDepartment.name || '', className);
                       return (
-                        <Card key={className} className="bg-accent/10">
+                        <Card 
+                          key={className} 
+                          className="bg-accent/10 cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => handleClassClick(selectedDepartment.name || '', className)}
+                        >
                           <CardHeader className="pb-2">
                             <CardTitle className="text-lg">{className}</CardTitle>
                           </CardHeader>
