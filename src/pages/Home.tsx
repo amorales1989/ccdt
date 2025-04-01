@@ -1,19 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical, MapPin, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, PersonStanding, Clock, MoreVertical, MapPin, Search, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { getEvents, createEvent, updateEvent, deleteEvent, getStudents } from "@/lib/api";
+import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isBefore, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Event, DepartmentType, Student } from "@/types/database";
+import type { Event, DepartmentType, Student, Department } from "@/types/database";
 import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   DropdownMenu, 
@@ -29,6 +28,8 @@ const Home = () => {
   const { profile } = useAuth();
   const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
@@ -45,11 +46,21 @@ const Home = () => {
     })
   });
 
+  const { data: departments = [], isLoading: departmentsLoading } = useQuery({
+    queryKey: ['departments'],
+    queryFn: getDepartments
+  });
+
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
 
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null);
+
+  const handleDepartmentClick = (department: Department) => {
+    setSelectedDepartment(department);
+    setDetailsDialogOpen(true);
+  };
 
   const renderStudentStats = () => {
     if (!profile) return null;
@@ -61,8 +72,17 @@ const Home = () => {
       ? students.filter(s => s.assigned_class === userAssignedClass)
       : students;
 
-    const departmentTypes: DepartmentType[] = ["escuelita_central", "pre_adolescentes", "adolescentes", "jovenes", "jovenes_adultos", "adultos"];
-    const studentsByDepartment = departmentTypes.reduce((acc, dept) => {
+    let departmentsToShow = [];
+    
+    if (isAdminOrSecretary) {
+      departmentsToShow = departments.map(dept => dept.name as DepartmentType).filter(Boolean);
+    } else {
+      departmentsToShow = userDepartments.filter(dept => 
+        departments.some(d => d.name === dept)
+      ) as DepartmentType[];
+    }
+
+    const studentsByDepartment = departmentsToShow.reduce((acc, dept) => {
       if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
         return acc;
       }
@@ -92,47 +112,131 @@ const Home = () => {
 
     const showClassLabel = isTeacherOrLeader && userAssignedClass;
 
+    const getClassesForDepartment = (deptName: string) => {
+      const dept = departments.find(d => d.name === deptName);
+      return dept?.classes || [];
+    };
+
+    const getStatsForClass = (deptName: string, className: string) => {
+      const deptStudents = filteredStudents.filter(s => {
+        const studentDept = s.departments?.name || s.department;
+        return studentDept === deptName && s.assigned_class === className;
+      });
+
+      return {
+        male: deptStudents.filter(s => s.gender === "masculino").length,
+        female: deptStudents.filter(s => s.gender === "femenino").length,
+        total: deptStudents.length
+      };
+    };
+
     return (
       <div className="mb-6">
         <h2 className="text-2xl font-semibold mb-4">
           {showClassLabel ? `Estadísticas de Alumnos - Clase: ${userAssignedClass}` : "Estadísticas de Alumnos"}
         </h2>
         <div className={`grid gap-4 ${isSingleCard ? 'place-items-center' : 'grid-cols-2 lg:grid-cols-3'}`}>
-          {departmentsWithStats.map(([dept, stats]) => (
-            <div 
-              key={dept} 
-              className={`bg-gradient-to-br from-white to-accent/30 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border border-accent/20 ${isSingleCard ? 'w-full max-w-sm' : ''}`}
-            >
-              <div className="bg-primary p-3 text-center">
-                <h3 className="font-semibold text-white text-sm sm:text-base">
-                  {formatDepartmentName(dept)}
-                </h3>
-              </div>
-              <div className="p-4 flex flex-col items-center">
-                <div className="text-center mb-2">
-                  <p className="text-gray-500 text-xs">Total</p>
-                  <p className="text-secondary text-4xl font-semibold">{stats.total}</p>
+          {departmentsWithStats.map(([dept, stats]) => {
+            const departmentObj = departments.find(d => d.name === dept);
+            const hasClasses = departmentObj?.classes?.length > 0;
+            
+            return (
+              <div 
+                key={dept} 
+                className={`bg-gradient-to-br from-white to-accent/30 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border border-accent/20 ${isSingleCard ? 'w-full max-w-sm' : ''} ${isAdminOrSecretary && hasClasses ? 'cursor-pointer' : ''}`}
+                onClick={() => isAdminOrSecretary && hasClasses ? handleDepartmentClick(departmentObj) : null}
+              >
+                <div className="bg-primary p-3 text-center">
+                  <h3 className="font-semibold text-white text-sm sm:text-base">
+                    {formatDepartmentName(dept)}
+                  </h3>
                 </div>
-                <div className="w-full space-y-1 mt-2">
-                  <div className="flex items-center text-gray-600 text-sm">
-                    <PersonStanding className="h-4 w-4 text-[#3A82AF] mr-1" />
-                    <p>Varones: {stats.male}</p>
+                <div className="p-4 flex flex-col items-center">
+                  <div className="text-center mb-2">
+                    <p className="text-gray-500 text-xs">Total</p>
+                    <p className="text-secondary text-4xl font-semibold">{stats.total}</p>
                   </div>
-                  <div className="flex items-center text-gray-600 text-sm">
-                    <PersonStanding className="h-4 w-4 text-[#E83E8C] mr-1" />
-                    <p>Mujeres: {stats.female}</p>
-                  </div>
-                  {isTeacherOrLeader && userAssignedClass && (
+                  <div className="w-full space-y-1 mt-2">
                     <div className="flex items-center text-gray-600 text-sm">
-                      <CheckCircle2 className="h-3 w-3 text-[#7E69AB] mr-1" />
-                      <p>Clase: {userAssignedClass}</p>
+                      <PersonStanding className="h-4 w-4 text-[#3A82AF] mr-1" />
+                      <p>Varones: {stats.male}</p>
                     </div>
-                  )}
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <PersonStanding className="h-4 w-4 text-[#E83E8C] mr-1" />
+                      <p>Mujeres: {stats.female}</p>
+                    </div>
+                    {isTeacherOrLeader && userAssignedClass && (
+                      <div className="flex items-center text-gray-600 text-sm">
+                        <CheckCircle2 className="h-3 w-3 text-[#7E69AB] mr-1" />
+                        <p>Clase: {userAssignedClass}</p>
+                      </div>
+                    )}
+                    {isAdminOrSecretary && hasClasses && (
+                      <div className="flex items-center justify-center mt-2">
+                        <p className="text-xs text-blue-500">Click para ver detalle por clases</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+
+        {selectedDepartment && (
+          <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+            <DialogContent className="max-w-3xl overflow-y-auto max-h-[80vh]">
+              <DialogHeader>
+                <DialogTitle className="text-xl">
+                  Estadísticas por Clase: {formatDepartmentName(selectedDepartment.name || '')}
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="mt-4">
+                {selectedDepartment.classes && selectedDepartment.classes.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedDepartment.classes.map(className => {
+                      const classStats = getStatsForClass(selectedDepartment.name || '', className);
+                      return (
+                        <Card key={className} className="bg-accent/10">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-lg">{className}</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex justify-between items-center">
+                              <div className="flex flex-col items-center">
+                                <span className="text-sm text-gray-500">Total</span>
+                                <span className="text-2xl font-bold text-primary">{classStats.total}</span>
+                              </div>
+                              <div className="flex gap-4">
+                                <div className="flex flex-col items-center">
+                                  <div className="flex items-center">
+                                    <PersonStanding className="h-4 w-4 text-[#3A82AF] mr-1" />
+                                    <span className="text-sm">Varones</span>
+                                  </div>
+                                  <span className="text-xl font-semibold">{classStats.male}</span>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                  <div className="flex items-center">
+                                    <PersonStanding className="h-4 w-4 text-[#E83E8C] mr-1" />
+                                    <span className="text-sm">Mujeres</span>
+                                  </div>
+                                  <span className="text-xl font-semibold">{classStats.female}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-center py-4">No hay clases configuradas para este departamento.</p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     );
   };
