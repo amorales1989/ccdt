@@ -23,6 +23,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 
+interface ClassStats {
+  male: number;
+  female: number;
+  total: number;
+}
+
 const Home = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -124,7 +130,7 @@ const Home = () => {
       return dept?.classes || [];
     };
 
-    const getStatsForClass = (deptName: string, className: string) => {
+    const getStatsForClass = (deptName: string, className: string): ClassStats => {
       const deptStudents = filteredStudents.filter(s => {
         const studentDept = s.departments?.name || s.department;
         return studentDept === deptName && s.assigned_class === className;
