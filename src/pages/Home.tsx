@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, Users, CheckCircle2, PersonStanding, Clock, MoreVertical, MapPin, Search } from "lucide-react";
@@ -47,6 +46,7 @@ const Home = () => {
   });
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
+  const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
 
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null);
@@ -57,25 +57,21 @@ const Home = () => {
     const userDepartments = profile.departments || [];
     const userAssignedClass = profile.assigned_class;
 
-    // Filter students by user's assigned class if they are a teacher
-    const filteredStudents = profile.role === "maestro" && userAssignedClass 
+    const filteredStudents = isTeacherOrLeader && userAssignedClass 
       ? students.filter(s => s.assigned_class === userAssignedClass)
       : students;
 
     const departmentTypes: DepartmentType[] = ["escuelita_central", "pre_adolescentes", "adolescentes", "jovenes", "jovenes_adultos", "adultos"];
     const studentsByDepartment = departmentTypes.reduce((acc, dept) => {
-      // Skip departments that aren't accessible to this user
       if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
         return acc;
       }
 
-      // For teachers, only show their assigned class
       let deptStudents = filteredStudents.filter(s => {
         const studentDept = s.departments && s.departments.name ? s.departments.name : s.department;
         return studentDept === dept;
       });
 
-      // For teachers with an assigned class, we've already filtered the students earlier
       acc[dept] = {
         male: deptStudents.filter(s => s.gender === "masculino").length,
         female: deptStudents.filter(s => s.gender === "femenino").length,
@@ -90,14 +86,11 @@ const Home = () => {
       ).join(' ');
     };
     
-    // Get departments that have stats
     const departmentsWithStats = Object.entries(studentsByDepartment);
     
-    // If there's only one department card, use a different layout
     const isSingleCard = departmentsWithStats.length === 1;
 
-    // For teachers, show a label that indicates these are stats for their assigned class
-    const showClassLabel = profile.role === "maestro" && userAssignedClass;
+    const showClassLabel = isTeacherOrLeader && userAssignedClass;
 
     return (
       <div className="mb-6">
@@ -129,10 +122,10 @@ const Home = () => {
                     <PersonStanding className="h-4 w-4 text-[#E83E8C] mr-1" />
                     <p>Mujeres: {stats.female}</p>
                   </div>
-                  {profile?.role === "maestro" && profile?.assigned_class && (
+                  {isTeacherOrLeader && userAssignedClass && (
                     <div className="flex items-center text-gray-600 text-sm">
                       <CheckCircle2 className="h-3 w-3 text-[#7E69AB] mr-1" />
-                      <p>Clase: {profile.assigned_class}</p>
+                      <p>Clase: {userAssignedClass}</p>
                     </div>
                   )}
                 </div>
