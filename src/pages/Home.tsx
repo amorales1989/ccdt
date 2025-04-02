@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, PersonStanding, Clock, MoreVertical, MapPin, Search, CheckCircle2 } from "lucide-react";
+import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ClassStats {
   male: number;
@@ -497,45 +498,44 @@ const Home = () => {
             </div>
           ) : (
             <div className="overflow-hidden rounded-md border animate-fade-in">
-              <Table>
-                <TableHeader className="bg-primary/10">
-                  <TableRow>
-                    <TableHead className="font-semibold text-primary">Título</TableHead>
-                    <TableHead className="font-semibold text-primary">Fecha</TableHead>
-                    <TableHead className="font-semibold text-primary">Hora</TableHead>
-                    <TableHead className="font-semibold text-primary">Descripción</TableHead>
-                    {isAdminOrSecretary && <TableHead className="text-right text-primary">Acciones</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {futureEvents.map((event) => (
-                    <TableRow key={event.id} className="hover:bg-accent/20 transition-colors duration-200">
-                      <TableCell className="font-medium">{event.title}</TableCell>
-                      <TableCell>
-                        {format(new Date(event.date), "dd/MM", { locale: es })}
-                      </TableCell>
-                      <TableCell>
-                        {event.time && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>{event.time}</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <div className="max-h-16 overflow-y-auto">
-                          {event.description || <span className="text-muted-foreground text-sm italic">Sin descripción</span>}
-                        </div>
-                      </TableCell>
-                      {isAdminOrSecretary && (
-                        <TableCell className="text-right">
-                          {renderActionButtons(event)}
-                        </TableCell>
-                      )}
+              <ScrollArea className="h-[300px]">
+                <Table>
+                  <TableHeader className="bg-primary/10">
+                    <TableRow>
+                      <TableHead className="font-semibold text-primary">Título</TableHead>
+                      <TableHead className="font-semibold text-primary">Fecha</TableHead>
+                      <TableHead className="font-semibold text-primary">Hora</TableHead>
+                      <TableHead className="font-semibold text-primary">Descripción</TableHead>
+                      {isAdminOrSecretary && <TableHead className="text-right text-primary">Acciones</TableHead>}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {futureEvents.map((event) => (
+                      <TableRow key={event.id} className="hover:bg-accent/20 transition-colors duration-200">
+                        <TableCell className="font-medium">{event.title}</TableCell>
+                        <TableCell>
+                          {format(new Date(event.date), "dd/MM", { locale: es })}
+                        </TableCell>
+                        <TableCell>
+                          {event.time && (
+                            <span>{event.time}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="max-h-16 overflow-y-auto">
+                            {event.description || <span className="text-muted-foreground text-sm italic">Sin descripción</span>}
+                          </div>
+                        </TableCell>
+                        {isAdminOrSecretary && (
+                          <TableCell className="text-right">
+                            {renderActionButtons(event)}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </div>
           )}
         </CardContent>

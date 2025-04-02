@@ -35,6 +35,7 @@ import { EventForm } from "@/components/EventForm";
 import { useToast } from "@/components/ui/use-toast";
 import { createEvent, updateEvent } from "@/lib/api";
 import type { Event } from "@/types/database";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Calendario() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -306,28 +307,32 @@ export default function Calendario() {
               </h3>
               <div className="space-y-2">
                 {currentMonthEvents.length > 0 ? (
-                  currentMonthEvents.map((event) => (
-                    <div 
-                      key={event.id} 
-                      className={`flex items-center justify-between p-2 rounded-md cursor-pointer ${getEventCardStyle(event.date)}`}
-                      onClick={() => handleEventClick(event)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium dark:text-white">
-                          {format(new Date(event.date), 'dd/MM')}
-                        </span>
-                        <span className="dark:text-gray-200">{event.title}</span>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-7 w-7 p-0" 
-                        onClick={(e) => handleDeleteClick(event, e)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
-                      </Button>
+                  <ScrollArea className="h-[300px] pr-4">
+                    <div className="space-y-2">
+                      {currentMonthEvents.map((event) => (
+                        <div 
+                          key={event.id} 
+                          className={`flex items-center justify-between p-2 rounded-md cursor-pointer ${getEventCardStyle(event.date)}`}
+                          onClick={() => handleEventClick(event)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium dark:text-white">
+                              {format(new Date(event.date), 'dd/MM')}
+                            </span>
+                            <span className="dark:text-gray-200">{event.title}</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-7 w-7 p-0" 
+                            onClick={(e) => handleDeleteClick(event, e)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                  ))
+                  </ScrollArea>
                 ) : (
                   <p className="text-muted-foreground dark:text-gray-400">No hay eventos este mes</p>
                 )}
