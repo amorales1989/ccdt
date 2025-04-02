@@ -39,7 +39,7 @@ interface ProfileEditorProps {
 }
 
 export function ProfileEditor({ onClose }: ProfileEditorProps) {
-  const { profile, user } = useAuth();
+  const { profile, user, getProfile } = useAuth();
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -85,6 +85,11 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
       
       // Invalidate profile data in the cache
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      
+      // Refresh the profile in the Auth context
+      if (getProfile) {
+        await getProfile(user.id);
+      }
       
       onClose();
     } catch (error: any) {

@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -28,6 +29,7 @@ type AuthContextType = {
     assigned_class: Profile["assigned_class"];
   }) => Promise<void>;
   signOut: () => Promise<void>;
+  getProfile: (userId: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -189,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut, getProfile }}>
       {children}
     </AuthContext.Provider>
   );

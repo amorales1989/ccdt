@@ -155,7 +155,7 @@ const Home = () => {
 
     return (
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold mb-4">
+        <h2 className="text-2xl font-semibold mb-4 text-center">
           {statsTitle}
         </h2>
         <div className={`grid gap-4 ${isSingleCard ? 'place-items-center' : 'grid-cols-2 lg:grid-cols-3'}`}>
