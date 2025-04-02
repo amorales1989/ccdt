@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, PersonStanding, Clock, MoreVertical, MapPin, Search, CheckCircle2 } from "lucide-react";
@@ -24,12 +23,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 
-// Define the ClassStats interface to fix TypeScript errors
 interface ClassStats {
   male: number;
   female: number;
   total: number;
 }
+
+type DepartmentStatsMap = Record<DepartmentType, ClassStats>;
 
 const Home = () => {
   const { toast } = useToast();
@@ -40,6 +40,8 @@ const Home = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null);
 
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
@@ -51,7 +53,7 @@ const Home = () => {
     queryFn: () => getStudents().then(data => {
       return data.map(student => ({
         ...student,
-        department: student.department as DepartmentType
+        department: student.departments?.name
       })) as Student[];
     })
   });
@@ -63,9 +65,6 @@ const Home = () => {
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
-
-  const [eventDialogOpen, setEventDialogOpen] = useState(false);
-  const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null);
 
   const handleDepartmentClick = (department: Department) => {
     setSelectedDepartment(department);
@@ -97,7 +96,7 @@ const Home = () => {
       ) as DepartmentType[];
     }
 
-    const studentsByDepartment = departmentsToShow.reduce((acc, dept) => {
+    const studentsByDepartment = departmentsToShow.reduce<DepartmentStatsMap>((acc, dept) => {
       if (!isAdminOrSecretary && !userDepartments.includes(dept)) {
         return acc;
       }
@@ -113,7 +112,7 @@ const Home = () => {
         total: deptStudents.length
       };
       return acc;
-    }, {} as Record<DepartmentType, { male: number; female: number; total: number }>);
+    }, {} as DepartmentStatsMap);
 
     const formatDepartmentName = (name: string) => {
       return name.replace(/_/g, ' ').split(' ').map(word => 
@@ -127,7 +126,6 @@ const Home = () => {
 
     const showClassLabel = isTeacherOrLeader && userAssignedClass;
 
-    // Determine the title based on user role
     let statsTitle = "Estadísticas de Alumnos";
     if (isAdminOrSecretary) {
       statsTitle = `Estadísticas de Alumnos - ${profile.role === "admin" ? "Admin" : "Secretaria"}`;
