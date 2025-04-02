@@ -21,6 +21,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { STORAGE_URL } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ProfileEditor } from "@/components/ProfileEditor";
 
 const getItems = (role: string | undefined) => {
   const baseItems = [
@@ -97,6 +99,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   const items = getItems(profile?.role);
   const selectedDepartment = localStorage.getItem('selectedDepartment');
   const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   
   const handleSignOut = async () => {
     try {
@@ -200,10 +203,16 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
       <SidebarMenu className="flex-grow">
         <SidebarMenuItem className="mb-4">
           <div className="flex flex-col gap-2 p-2 rounded-md bg-accent/30">
-            <div className="flex items-center gap-2">
+            <div 
+              className="flex items-center gap-2 cursor-pointer hover:bg-accent/50 p-1 rounded-md transition-colors"
+              onClick={() => setProfileDialogOpen(true)}
+            >
               <UserRound className="h-5 w-5" />
-              <div className="flex flex-col">
-                <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
+              <div className="flex flex-grow flex-col">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                </div>
                 {userRoleInfo()}
               </div>
             </div>
@@ -245,6 +254,15 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
           <span className="font-medium">Cerrar Sesión</span>
         </SidebarMenuButton>
       </div>
+
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Perfil</DialogTitle>
+          </DialogHeader>
+          <ProfileEditor onClose={() => setProfileDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -256,6 +274,7 @@ export function AppSidebar() {
   const [congregationName, setCongregationName] = useState("");
   const [showCongregationName, setShowCongregationName] = useState(false);
   const [logoPath, setLogoPath] = useState("/fire.png");
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   const { data: company } = useQuery({
     queryKey: ['company'],
@@ -300,16 +319,26 @@ export function AppSidebar() {
           </SheetTrigger>
           <SheetContent side="left" className="w-[280px] p-0">
             <div className="h-full bg-background">
-              <div className="p-4 border-b flex items-center">
-                <Avatar className="h-8 w-8 mr-2">
-                  <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
-                  <AvatarFallback>
-                    <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
-                  </AvatarFallback>
-                </Avatar>
-                {showCongregationName && congregationName && (
-                  <h2 className="text-lg font-semibold pr-8">{congregationName}</h2>
-                )}
+              <div className="p-4 border-b flex items-center justify-between">
+                <div className="flex items-center">
+                  <Avatar className="h-8 w-8 mr-2">
+                    <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                    <AvatarFallback>
+                      <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
+                    </AvatarFallback>
+                  </Avatar>
+                  {showCongregationName && congregationName && (
+                    <h2 className="text-lg font-semibold">{congregationName}</h2>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  onClick={() => setProfileDialogOpen(true)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
               </div>
               <nav className="p-2">
                 <NavigationMenu onItemClick={() => setIsOpen(false)} />
@@ -317,6 +346,15 @@ export function AppSidebar() {
             </div>
           </SheetContent>
         </Sheet>
+
+        <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Editar Perfil</DialogTitle>
+            </DialogHeader>
+            <ProfileEditor onClose={() => setProfileDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -326,14 +364,24 @@ export function AppSidebar() {
       <SidebarContent className="w-64">
         <SidebarGroup>
           {showCongregationName && congregationName && (
-            <SidebarGroupLabel className="flex items-center">
-              <Avatar className="h-6 w-6 mr-2">
-                <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
-                <AvatarFallback>
-                  <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
-                </AvatarFallback>
-              </Avatar>
-              {congregationName}
+            <SidebarGroupLabel className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Avatar className="h-6 w-6 mr-2">
+                  <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                  <AvatarFallback>
+                    <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
+                  </AvatarFallback>
+                </Avatar>
+                {congregationName}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full"
+                onClick={() => setProfileDialogOpen(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
@@ -341,6 +389,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Perfil</DialogTitle>
+          </DialogHeader>
+          <ProfileEditor onClose={() => setProfileDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </Sidebar>
   );
 }

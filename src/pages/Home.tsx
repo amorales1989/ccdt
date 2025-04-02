@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, PersonStanding, Clock, MoreVertical, MapPin, Search, CheckCircle2 } from "lucide-react";
@@ -23,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 
+// Define the ClassStats interface to fix TypeScript errors
 interface ClassStats {
   male: number;
   female: number;
@@ -72,7 +74,7 @@ const Home = () => {
 
   const handleClassClick = (departmentName: string, className: string) => {
     setDetailsDialogOpen(false);
-    navigate(`/listar-alumnos?department=${departmentName}&class=${className}`);
+    navigate(`/listar?department=${departmentName}&class=${className}`);
   };
 
   const renderStudentStats = () => {
@@ -125,6 +127,14 @@ const Home = () => {
 
     const showClassLabel = isTeacherOrLeader && userAssignedClass;
 
+    // Determine the title based on user role
+    let statsTitle = "Estadísticas de Alumnos";
+    if (isAdminOrSecretary) {
+      statsTitle = `Estadísticas de Alumnos - ${profile.role === "admin" ? "Admin" : "Secretaria"}`;
+    } else if (showClassLabel) {
+      statsTitle = `Estadísticas de Alumnos - Clase: ${userAssignedClass}`;
+    }
+
     const getClassesForDepartment = (deptName: string) => {
       const dept = departments.find(d => d.name === deptName);
       return dept?.classes || [];
@@ -146,7 +156,7 @@ const Home = () => {
     return (
       <div className="mb-6">
         <h2 className="text-2xl font-semibold mb-4">
-          {showClassLabel ? `Estadísticas de Alumnos - Clase: ${userAssignedClass}` : "Estadísticas de Alumnos"}
+          {statsTitle}
         </h2>
         <div className={`grid gap-4 ${isSingleCard ? 'place-items-center' : 'grid-cols-2 lg:grid-cols-3'}`}>
           {departmentsWithStats.map(([dept, stats]) => {
