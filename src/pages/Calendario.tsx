@@ -36,6 +36,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { createEvent, updateEvent } from "@/lib/api";
 import type { Event } from "@/types/database";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function Calendario() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -307,32 +308,55 @@ export default function Calendario() {
               </h3>
               <div className="space-y-2">
                 {currentMonthEvents.length > 0 ? (
-                  <ScrollArea className="h-[300px] pr-4">
-                    <div className="space-y-2">
-                      {currentMonthEvents.map((event) => (
-                        <div 
-                          key={event.id} 
-                          className={`flex items-center justify-between p-2 rounded-md cursor-pointer ${getEventCardStyle(event.date)}`}
-                          onClick={() => handleEventClick(event)}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium dark:text-white">
-                              {format(new Date(event.date), 'dd/MM')}
-                            </span>
-                            <span className="dark:text-gray-200">{event.title}</span>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-7 w-7 p-0" 
-                            onClick={(e) => handleDeleteClick(event, e)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
-                          </Button>
-                        </div>
-                      ))}
+                  <div className="overflow-hidden rounded-md border">
+                    <div className="bg-primary/10 dark:bg-primary/20">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="font-semibold text-primary w-16">Fecha</TableHead>
+                            <TableHead className="font-semibold text-primary">Título</TableHead>
+                            <TableHead className="font-semibold text-primary w-16">Hora</TableHead>
+                            <TableHead className="font-semibold text-primary w-10"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                      </Table>
                     </div>
-                  </ScrollArea>
+                    <ScrollArea className="h-[250px]">
+                      <Table>
+                        <TableBody>
+                          {currentMonthEvents.map((event) => (
+                            <TableRow 
+                              key={event.id} 
+                              className={`hover:bg-muted/50 cursor-pointer transition-colors duration-200 ${
+                                isAfter(new Date(event.date), new Date()) 
+                                ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70" 
+                                : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70"
+                              }`}
+                              onClick={() => handleEventClick(event)}
+                            >
+                              <TableCell className="font-medium w-16">
+                                {format(new Date(event.date), 'dd/MM')}
+                              </TableCell>
+                              <TableCell>{event.title}</TableCell>
+                              <TableCell className="w-16">
+                                {event.time || "-"}
+                              </TableCell>
+                              <TableCell className="w-10">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-7 w-7 p-0" 
+                                  onClick={(e) => handleDeleteClick(event, e)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
                 ) : (
                   <p className="text-muted-foreground dark:text-gray-400">No hay eventos este mes</p>
                 )}
