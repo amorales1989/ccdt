@@ -126,11 +126,13 @@ const Home = () => {
 
     const showClassLabel = isTeacherOrLeader && userAssignedClass;
 
-    let statsTitle = "Estadísticas de Alumnos";
-    if (isAdminOrSecretary) {
-      statsTitle = `Estadísticas de Alumnos - ${profile.role === "admin" ? "Admin" : "Secretaria"}`;
-    } else if (showClassLabel) {
-      statsTitle = `Estadísticas de Alumnos - Clase: ${userAssignedClass}`;
+    let statsTitle = "";
+    if (isTeacherOrLeader && userAssignedClass) {
+      statsTitle = userAssignedClass;
+    } else if (departmentsWithStats.length === 1) {
+      statsTitle = formatDepartmentName(departmentsWithStats[0][0]);
+    } else {
+      statsTitle = "Estadísticas de Alumnos";
     }
 
     const getClassesForDepartment = (deptName: string) => {

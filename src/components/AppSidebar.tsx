@@ -331,14 +331,6 @@ export function AppSidebar() {
                     <h2 className="text-lg font-semibold">{congregationName}</h2>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full"
-                  onClick={() => setProfileDialogOpen(true)}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
               </div>
               <nav className="p-2">
                 <NavigationMenu onItemClick={() => setIsOpen(false)} />
@@ -364,7 +356,7 @@ export function AppSidebar() {
       <SidebarContent className="w-64">
         <SidebarGroup>
           {showCongregationName && congregationName && (
-            <SidebarGroupLabel className="flex items-center justify-between">
+            <SidebarGroupLabel className="flex items-center">
               <div className="flex items-center">
                 <Avatar className="h-6 w-6 mr-2">
                   <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
@@ -374,14 +366,6 @@ export function AppSidebar() {
                 </Avatar>
                 {congregationName}
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 rounded-full"
-                onClick={() => setProfileDialogOpen(true)}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
