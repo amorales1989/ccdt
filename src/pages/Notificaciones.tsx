@@ -105,9 +105,9 @@ const Notificaciones = () => {
           departments,
           department_id,
           assigned_class,
-          auth.users!auth_id(email)
+          email
         `)
-        .not('id', 'eq', profile?.id); // exclude current user
+        .neq('id', profile?.id || ''); // exclude current user
       
       if (departmentFilter) {
         query = query.eq('department_id', departmentFilter);
@@ -128,12 +128,7 @@ const Notificaciones = () => {
         return;
       }
       
-      const formattedUsers = data?.map(user => ({
-        ...user,
-        email: user.auth?.email
-      })) || [];
-      
-      setUsers(formattedUsers);
+      setUsers(data || []);
       setSelectedUsers([]);
       setSelectAll(false);
     };
@@ -146,14 +141,16 @@ const Notificaciones = () => {
   // Load notifications
   useEffect(() => {
     const fetchNotifications = async () => {
+      if (!profile?.id) return;
+      
       const { data, error } = await supabase
         .from("notifications")
         .select(`
           *,
-          profiles!sender_id(first_name, last_name),
-          notification_recipients!inner(recipient_id, read, read_at)
+          sender:profiles!sender_id(first_name, last_name),
+          recipients:notification_recipients!inner(recipient_id, read, read_at)
         `)
-        .eq('notification_recipients.recipient_id', profile?.id)
+        .eq('recipients.recipient_id', profile.id)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -167,10 +164,10 @@ const Notificaciones = () => {
         title: item.title,
         message: item.message,
         sender_id: item.sender_id,
-        sender_name: `${item.profiles.first_name} ${item.profiles.last_name}`,
+        sender_name: `${item.sender.first_name} ${item.sender.last_name}`,
         created_at: item.created_at,
         updated_at: item.updated_at,
-        read: item.notification_recipients[0].read
+        read: item.recipients[0].read
       }));
       
       setNotifications(mappedNotifications);

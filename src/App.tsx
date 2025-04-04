@@ -1,7 +1,7 @@
 
 import React, { lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "./components/ui/theme-provider";
+import { ThemeProvider } from "@/components/ui/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import Home from "@/pages/Home";
