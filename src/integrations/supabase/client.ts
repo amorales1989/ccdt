@@ -13,3 +13,42 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 
 // Export the storage URL for easy access
 export const STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
+
+// Environment configuration
+export const getCurrentEnvironment = async (): Promise<string> => {
+  try {
+    // Fetch the current environment from the database
+    const { data, error } = await supabase.rpc('get_environment');
+    
+    if (error) {
+      console.error('Error fetching environment:', error);
+      return 'development'; // Default to development on error
+    }
+    
+    return data || 'development';
+  } catch (error) {
+    console.error('Error in getCurrentEnvironment:', error);
+    return 'development'; // Default to development on error
+  }
+};
+
+// Fetch environment-specific configuration
+export const getEnvironmentConfig = async (env?: string): Promise<any> => {
+  try {
+    const environment = env || await getCurrentEnvironment();
+    
+    const { data, error } = await supabase.functions.invoke('env-config', {
+      query: { env: environment }
+    });
+    
+    if (error) {
+      console.error('Error fetching environment config:', error);
+      return { environment };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error in getEnvironmentConfig:', error);
+    return { environment: 'development' };
+  }
+};

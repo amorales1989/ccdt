@@ -111,6 +111,27 @@ export type Database = {
         }
         Relationships: []
       }
+      db_version: {
+        Row: {
+          applied_at: string | null
+          environment: string
+          id: number
+          version: string
+        }
+        Insert: {
+          applied_at?: string | null
+          environment: string
+          id?: number
+          version: string
+        }
+        Update: {
+          applied_at?: string | null
+          environment?: string
+          id?: number
+          version?: string
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           classes: string[] | null
@@ -264,6 +285,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_environment: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       update_department_ids: {
         Args: Record<PropertyKey, never>
         Returns: undefined
