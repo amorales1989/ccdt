@@ -18,7 +18,8 @@ export const STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
 export const getCurrentEnvironment = async (): Promise<string> => {
   try {
     // Fetch the current environment from the database
-    const { data, error } = await supabase.rpc('get_environment');
+    // Need to use "as any" because TypeScript doesn't recognize dynamic RPC functions
+    const { data, error } = await supabase.rpc('get_environment' as any);
     
     if (error) {
       console.error('Error fetching environment:', error);
@@ -38,7 +39,7 @@ export const getEnvironmentConfig = async (env?: string): Promise<any> => {
     const environment = env || await getCurrentEnvironment();
     
     const { data, error } = await supabase.functions.invoke('env-config', {
-      query: { env: environment }
+      body: { env: environment }
     });
     
     if (error) {
