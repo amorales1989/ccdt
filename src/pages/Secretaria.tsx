@@ -82,6 +82,9 @@ const Secretaria = () => {
               <Button onClick={() => navigate("/departamentos")} className="w-full">
                 Gestionar Departamentos
               </Button>
+              <Button onClick={() => navigate("/notificaciones")} className="w-full">
+                Notificaciones
+              </Button>
               <Button 
                 onClick={updateAllUserDepartmentIds} 
                 disabled={isLoading} 
