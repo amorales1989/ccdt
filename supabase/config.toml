@@ -3,7 +3,3 @@ project_id = "wnmxgjrjrckwtyttidkw"
 
 [functions.manage-users]
 verify_jwt = true
-
-[functions.env-config]
-verify_jwt = true
-
