@@ -12,11 +12,11 @@ export const getStudents = async () => {
     console.log('Fetching students result:', { data, error });
     if (error) throw error;
     
-    // Map department name from the joined department table
+    // Map the data to match our Student interface
     return data.map(student => ({
       ...student,
       department: student.departments?.name
-    }));
+    })) as Student[];
   } catch (error) {
     console.error('Error in getStudents:', error);
     throw error;
@@ -37,7 +37,7 @@ export const getStudent = async (id: string) => {
     return {
       ...data,
       department: data.departments?.name
-    };
+    } as Student;
   } catch (error) {
     console.error('Error in getStudent:', error);
     throw error;
@@ -90,14 +90,18 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
       }
     }
     
-    // Create student with department_id instead of department
+    // Create student data object
     const studentData = {
-      ...student,
-      department_id: departmentId
+      first_name: student.first_name,
+      last_name: student.last_name,
+      gender: student.gender,
+      department_id: departmentId,
+      phone: student.phone,
+      address: student.address,
+      birthdate: student.birthdate,
+      document_number: student.document_number,
+      assigned_class: student.assigned_class
     };
-    
-    // Remove the department field as we're using department_id
-    delete studentData.department;
     
     const { data, error } = await supabase
       .from("students")
@@ -111,7 +115,7 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
     return {
       ...data,
       department: data.departments?.name
-    };
+    } as Student;
   } catch (error) {
     console.error('Error in createStudent:', error);
     throw error;
@@ -165,7 +169,7 @@ export const updateStudent = async (id: string, student: Partial<Omit<Student, "
     return {
       ...data,
       department: data.departments?.name
-    };
+    } as Student;
   } catch (error) {
     console.error('Error in updateStudent:', error);
     throw error;
