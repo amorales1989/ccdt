@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,8 @@ const AgregarAlumno = () => {
   const [isValidatingDni, setIsValidatingDni] = useState(false);
   
   const [formData, setFormData] = useState({
-    name: "",
+    first_name: "",
+    last_name: "",
     phone: "",
     phoneCode: "54",
     address: "",
@@ -198,12 +200,22 @@ const AgregarAlumno = () => {
       return;
     }
 
+    if (!formData.first_name) {
+      toast({
+        title: "Error",
+        description: "Por favor ingrese el nombre del alumno",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const formattedPhone = formatPhoneNumber(formData.phoneCode, formData.phone);
 
     setIsLoading(true);
     try {
       await createStudent({
-        name: formData.name,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         phone: formattedPhone,
         address: formData.address || null,
         gender: formData.gender,
@@ -254,16 +266,29 @@ const AgregarAlumno = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre completo</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="first_name">Nombre</Label>
+                <Input
+                  id="first_name"
+                  value={formData.first_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, first_name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="last_name">Apellido</Label>
+                <Input
+                  id="last_name"
+                  value={formData.last_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, last_name: e.target.value })
+                  }
+                  required
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="document_number" error={!!dniError}>DNI</Label>

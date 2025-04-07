@@ -33,8 +33,10 @@ export const StudentSearch = ({ students }: StudentSearchProps) => {
 
   const filteredStudents = students.filter((student) => {
     const searchLower = searchTerm.toLowerCase();
+    const fullName = `${student.first_name} ${student.last_name || ''}`.toLowerCase();
+    
     return (
-      student.name.toLowerCase().includes(searchLower) ||
+      fullName.includes(searchLower) ||
       (student.phone && student.phone.includes(searchTerm)) ||
       (student.document_number && student.document_number.includes(searchTerm))
     );
@@ -58,23 +60,29 @@ export const StudentSearch = ({ students }: StudentSearchProps) => {
           {showResults && filteredStudents.length > 0 && (
             <div className="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 max-h-60 overflow-auto">
               <ul className="py-1">
-                {filteredStudents.map((student) => (
-                  <li
-                    key={student.id}
-                    className="px-4 py-2 hover:bg-primary/10 cursor-pointer"
-                    onClick={() => handleSelectStudent(student)}
-                  >
-                    <div className="font-medium">{student.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {student.document_number && (
-                        <span className="mr-3">DNI: {student.document_number}</span>
-                      )}
-                      {student.phone && (
-                        <span>Tel: {student.phone}</span>
-                      )}
-                    </div>
-                  </li>
-                ))}
+                {filteredStudents.map((student) => {
+                  const displayName = student.last_name 
+                    ? `${student.first_name} ${student.last_name}` 
+                    : student.first_name;
+                    
+                  return (
+                    <li
+                      key={student.id}
+                      className="px-4 py-2 hover:bg-primary/10 cursor-pointer"
+                      onClick={() => handleSelectStudent(student)}
+                    >
+                      <div className="font-medium">{displayName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {student.document_number && (
+                          <span className="mr-3">DNI: {student.document_number}</span>
+                        )}
+                        {student.phone && (
+                          <span>Tel: {student.phone}</span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}

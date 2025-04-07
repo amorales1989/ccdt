@@ -14,12 +14,16 @@ export const StudentDetails = ({ student }: StudentDetailsProps) => {
     return dept.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const displayName = student.last_name 
+    ? `${student.first_name} ${student.last_name}` 
+    : student.first_name;
+
   return (
     <Card>
       <CardContent className="pt-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <h3 className="text-lg font-semibold mb-4">{student.name}</h3>
+            <h3 className="text-lg font-semibold mb-4">{displayName}</h3>
             
             <div className="space-y-3">
               {student.document_number && (
