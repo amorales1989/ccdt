@@ -114,7 +114,7 @@ const ListarAlumnos = () => {
       setEditDepartmentId(studentToEdit.department_id || null);
       
       form.reset({
-        name: studentToEdit.name,
+        name: getFullName(studentToEdit),
         phone: "",
         address: studentToEdit.address || "",
         birthdate: studentToEdit.birthdate || "",
@@ -125,6 +125,12 @@ const ListarAlumnos = () => {
       });
     }
   }, [studentToEdit, form]);
+
+  const getFullName = (student: Student): string => {
+    return student.last_name 
+      ? `${student.first_name} ${student.last_name}` 
+      : student.first_name;
+  };
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
@@ -215,7 +221,11 @@ const ListarAlumnos = () => {
           ...student,
           department: student.departments?.name
         }))
-        .sort((a, b) => a.name.localeCompare(b.name)) as Student[];
+        .sort((a, b) => {
+          const nameA = `${a.first_name} ${a.last_name || ''}`;
+          const nameB = `${b.first_name} ${b.last_name || ''}`;
+          return nameA.localeCompare(nameB);
+        }) as Student[];
       
       return processedData;
     },
@@ -304,7 +314,8 @@ const ListarAlumnos = () => {
     const fileName = `alumnos_${selectedDepartment || 'todos'}_${selectedClass || 'todas-clases'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
     
     const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
-      Nombre: student.name,
+      Nombre: student.first_name,
+      Apellido: student.last_name || '',
       Departamento: student.department?.replace(/_/g, ' ') || '',
       Clase: student.assigned_class || '',
       Teléfono: formatPhoneDisplay(student.phone) || '',
@@ -395,7 +406,15 @@ const ListarAlumnos = () => {
     
     const updatedData: any = {};
     
-    updatedData.name = data.name;
+    const nameParts = data.name.trim().split(/\s+/);
+    if (nameParts.length > 0) {
+      updatedData.first_name = nameParts[0];
+      if (nameParts.length > 1) {
+        updatedData.last_name = nameParts.slice(1).join(' ');
+      } else {
+        updatedData.last_name = null;
+      }
+    }
     
     if (phoneNumber) {
       updatedData.phone = formattedPhone;
@@ -467,7 +486,7 @@ const ListarAlumnos = () => {
       await deleteStudent(studentToDelete.id);
       toast({
         title: "Alumno eliminado",
-        description: `${studentToDelete.name} ha sido eliminado con éxito.`,
+        description: `${getFullName(studentToDelete)} ha sido eliminado con éxito.`,
       });
       setIsAlertOpen(false);
       queryClient.invalidateQueries({ queryKey: ["students"] });
@@ -482,14 +501,20 @@ const ListarAlumnos = () => {
     }
   };
 
-  const renderStudentDetails = (student: any) => (
+  const renderStudentDetails = (student: Student) => (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 px-4 bg-muted/30 rounded-lg">
       <div className="space-y-2">
         <div className="font-semibold">Información Personal</div>
         <div>
           <span className="font-medium">Nombre:</span>
-          <span className="ml-2">{student.name}</span>
+          <span className="ml-2">{student.first_name}</span>
         </div>
+        {student.last_name && (
+          <div>
+            <span className="font-medium">Apellido:</span>
+            <span className="ml-2">{student.last_name}</span>
+          </div>
+        )}
         {student.document_number && (
           <div>
             <span className="font-medium">DNI:</span>
@@ -540,7 +565,7 @@ const ListarAlumnos = () => {
     </div>
   );
 
-  const renderActions = (student: any) => {
+  const renderActions = (student: Student) => {
     const actions = (
       <>
         <Button
@@ -623,7 +648,7 @@ const ListarAlumnos = () => {
     return <div className="flex gap-2">{actions}</div>;
   };
 
-  const renderStudentList = (students: any[], title: string) => (
+  const renderStudentList = (students: Student[], title: string) => (
     <Card className="p-4 md:p-6 mb-6 w-full">
       <h3 className="text-lg font-semibold mb-4">{title}</h3>
       <div className="overflow-x-auto w-full">
@@ -644,7 +669,7 @@ const ListarAlumnos = () => {
                         <div className="flex items-center">
                           <CollapsibleTrigger asChild>
                             <button className="font-medium hover:underline text-left w-full truncate">
-                              {student.name}
+                              {getFullName(student)}
                             </button>
                           </CollapsibleTrigger>
                         </div>

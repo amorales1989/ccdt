@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ const TomarAsistencia = () => {
   const currentDepartment = profile?.departments?.[0];
   const userClass = profile?.assigned_class;
 
-  // Fetch department ID when component loads or profile changes
   useEffect(() => {
     const fetchDepartmentId = async () => {
       if (currentDepartment) {
@@ -77,7 +75,6 @@ const TomarAsistencia = () => {
           return [];
         }
         
-        // Filter by department_id
         query = query.eq("department_id", departmentId);
         
         if (userClass) {
@@ -98,9 +95,14 @@ const TomarAsistencia = () => {
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(departmentId)),
   });
 
+  const getFullName = (student: any): string => {
+    return student.last_name 
+      ? `${student.first_name} ${student.last_name}` 
+      : student.first_name;
+  };
+
   const checkExistingAttendance = async (date: string) => {
     try {
-      // Use department ID instead of department name
       const attendanceData = await getAttendance(date, date, undefined, departmentId);
       const hasAttendance = attendanceData && attendanceData.length > 0;
       console.log("Checking attendance for date:", date, "departmentId:", departmentId, "exists:", hasAttendance);
@@ -131,16 +133,13 @@ const TomarAsistencia = () => {
         return;
       }
 
-      // Ajustamos la fecha sumando un día antes de guardar
       const adjustedDate = format(addDays(new Date(selectedDate), 1), "yyyy-MM-dd");
 
-      // Create a default object with all students set to absent (false)
       const defaultAbsentAttendance: Record<string, boolean> = {};
       students.forEach(student => {
         defaultAbsentAttendance[student.id] = false;
       });
 
-      // Merge with the explicitly marked attendances
       const finalAttendances = { ...defaultAbsentAttendance, ...asistencias };
 
       await Promise.all(
@@ -225,7 +224,7 @@ const TomarAsistencia = () => {
             <TableBody>
               {students?.map((student) => (
                 <TableRow key={student.id}>
-                  <TableCell>{student.name}</TableCell>
+                  <TableCell>{getFullName(student)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button

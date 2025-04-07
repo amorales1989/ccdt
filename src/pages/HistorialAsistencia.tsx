@@ -34,6 +34,14 @@ const departments = [
   { value: "adultos", label: "Adultos" }
 ];
 
+const getFullName = (student: any): string => {
+  if (!student) return ""; 
+  
+  return student.last_name 
+    ? `${student.first_name} ${student.last_name}` 
+    : student.first_name;
+};
+
 const HistorialAsistencia = () => {
   const [selectedRange, setSelectedRange] = useState("today");
   const [startDate, setStartDate] = useState<Date>(new Date());
@@ -575,7 +583,7 @@ const HistorialAsistencia = () => {
                     <TableBody>
                       {editRecords.map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="font-medium">{record.students?.name}</TableCell>
+                          <TableCell className="font-medium">{getFullName(record.students)}</TableCell>
                           <TableCell>
                             <span className={`flex items-center gap-2 ${record.status ? "text-green-500" : "text-red-500"}`}>
                               {record.status ? (
@@ -636,7 +644,7 @@ const HistorialAsistencia = () => {
                     <TableBody>
                       {filteredAttendance.map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="font-medium">{record.students?.name}</TableCell>
+                          <TableCell className="font-medium">{getFullName(record.students)}</TableCell>
                           <TableCell>
                             <span className={`flex items-center gap-2 ${record.status ? "text-green-500" : "text-red-500"}`}>
                               {record.status ? (

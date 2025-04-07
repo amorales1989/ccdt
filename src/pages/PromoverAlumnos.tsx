@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -116,7 +115,11 @@ const PromoverAlumnos = () => {
           ...student,
           department: student.departments?.name
         }))
-        .sort((a, b) => a.name.localeCompare(b.name)) as Student[];
+        .sort((a, b) => {
+          const nameA = `${a.first_name} ${a.last_name || ''}`;
+          const nameB = `${b.first_name} ${b.last_name || ''}`;
+          return nameA.localeCompare(nameB);
+        }) as Student[];
       
       return processedData;
     },
@@ -139,6 +142,12 @@ const PromoverAlumnos = () => {
   const formatDepartment = (dept?: string) => {
     if (!dept) return "No asignado";
     return dept.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const getFullName = (student: any): string => {
+    return student.last_name 
+      ? `${student.first_name} ${student.last_name}` 
+      : student.first_name;
   };
 
   const handleDepartmentChange = async (value: string) => {
@@ -432,7 +441,7 @@ const PromoverAlumnos = () => {
                             onCheckedChange={() => handleStudentCheckboxChange(student.id)}
                           />
                         </TableCell>
-                        <TableCell>{student.name}</TableCell>
+                        <TableCell>{getFullName(student)}</TableCell>
                         <TableCell>{calculateAge(student.birthdate)}</TableCell>
                         <TableCell>{formatDepartment(student.department)}</TableCell>
                         <TableCell>{student.assigned_class || "Sin asignar"}</TableCell>
