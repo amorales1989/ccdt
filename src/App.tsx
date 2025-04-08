@@ -21,6 +21,7 @@ import PromoverAlumnos from "@/pages/PromoverAlumnos";
 import Configuration from "@/pages/Configuration";
 import Secretaria from "@/pages/Secretaria";
 import Notificaciones from "@/pages/Notificaciones";
+import AutorizacionesSalida from "@/pages/AutorizacionesSalida";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,10 @@ function App() {
                   {
                     path: "/notificaciones",
                     element: <Notificaciones />,
+                  },
+                  {
+                    path: "/autorizaciones",
+                    element: <AutorizacionesSalida />,
                   },
                   {
                     path: "*",
