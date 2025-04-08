@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -325,6 +326,7 @@ const PromoverAlumnos = () => {
     }
 
     try {
+      // Update student department information
       const { error } = await supabase
         .from("students")
         .update({
@@ -344,15 +346,40 @@ const PromoverAlumnos = () => {
         return;
       }
 
+      // Now, for each promoted student, check if they had an authorization for the target department
+      // and remove it as they are now officially part of that department
+      const deletePromises = selectedStudents.map(async (studentId) => {
+        try {
+          const { error: deleteError } = await supabase
+            .from("student_authorizations")
+            .delete()
+            .eq("student_id", studentId)
+            .eq("department_id", targetDepartmentId);
+          
+          if (deleteError) {
+            console.error("Error al eliminar autorización:", deleteError);
+          } else {
+            console.log(`Eliminada autorización para estudiante ${studentId} en departamento ${targetDepartmentId}`);
+          }
+        } catch (e) {
+          console.error("Error al procesar eliminación de autorización:", e);
+        }
+      });
+
+      // Wait for all deletion operations to complete
+      await Promise.all(deletePromises);
+
       toast({
         title: "Éxito",
         description: `${selectedStudents.length} alumnos promovidos exitosamente`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["student-authorizations"] });
       setSelectedStudents([]);
       setSelectAll(false);
       refetch();
+      refetchAuthorizations();
       
     } catch (error) {
       console.error("Error al promover alumnos:", error);
