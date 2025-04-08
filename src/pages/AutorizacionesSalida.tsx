@@ -90,18 +90,28 @@ const AutorizacionesSalida = () => {
       doc.text("Hora de regreso:", leftMargin, fieldY + lineHeight * 4);
       doc.setFont("helvetica", "normal");
       doc.text(data.horaRegreso, leftMargin + 40, fieldY + lineHeight * 4);
+
+      // Photo/video consent text
+      const consentY = fieldY + lineHeight * 5.5;
+      doc.setFontSize(8);
+      const consentText = "Asimismo, autorizo expresamente el uso de fotografías y/o videos en los que el menor aparezca, tomados durante dicha salida, para ser publicados en las redes sociales oficiales de la congregación con fines institucionales y de difusión.";
+      doc.text(consentText, leftMargin, consentY, { 
+        align: "justify", 
+        maxWidth: pageWidth - leftMargin * 2 
+      });
       
-      // Signature fields
-      const signY = fieldY + lineHeight * 6;
+      // Signature fields - adjusted spacing to fit everything
+      const signY = consentY + lineHeight * 2;
       
+      doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text("Nombre del alumno/a: ________________________________", leftMargin, signY);
       
-      doc.text("Firma del padre/tutor: ________________________________", leftMargin, signY + lineHeight * 2);
+      doc.text("Firma del padre/tutor: ________________________________", leftMargin, signY + lineHeight * 1.5);
       
-      doc.text("Aclaración: ________________________________", leftMargin, signY + lineHeight * 4);
+      doc.text("Aclaración: ________________________________", leftMargin, signY + lineHeight * 3);
       
-      doc.text("DNI: ________________________________", leftMargin, signY + lineHeight * 6);
+      doc.text("DNI: ________________________________", leftMargin, signY + lineHeight * 4.5);
       
       // Draw border
       doc.setDrawColor(0);
