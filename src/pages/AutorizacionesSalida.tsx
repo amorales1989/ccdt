@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
@@ -39,7 +38,6 @@ const AutorizacionesSalida = () => {
     return_time: ''
   });
 
-  // Get departments
   const { data: departments = [] } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
@@ -91,7 +89,6 @@ const AutorizacionesSalida = () => {
     enabled: Boolean(selectedDepartment),
   });
 
-  // Update selected students when selectAll changes
   useEffect(() => {
     if (selectAll) {
       setSelectedStudents(students);
@@ -165,70 +162,70 @@ const AutorizacionesSalida = () => {
       return;
     }
 
-    if (!authFormRef.current) return;
-
     try {
+      // Create a single PDF document
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const margin = 10;
-      const availableWidth = pdfWidth - 2 * margin;
-      const authHeight = 140; // Approximate height of each authorization in mm
-
+      
+      // Loop through students to create authorization forms
       for (let i = 0; i < selectedStudents.length; i++) {
         // Create a temporary div for each student's authorization
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = `
-          <div class="auth-form" style="padding: 10px; font-family: Arial, sans-serif;">
-            <h3 style="text-align: center; font-weight: bold; margin-bottom: 10px;">AUTORIZACIÓN PARA SALIDA EDUCATIVA</h3>
-            <p style="margin-bottom: 8px;">
-              Por medio de la presente, yo, ________________________________, en calidad de padre/madre/tutor del
-              menor ${getFullName(selectedStudents[i])}, autorizo su participación en la salida organizada por la
+          <div class="auth-form" style="padding: 15px; font-family: Arial, sans-serif; color: #000000; font-size: 14px;">
+            <h3 style="text-align: center; font-weight: bold; margin-bottom: 15px; color: #000000; font-size: 16px;">AUTORIZACIÓN PARA SALIDA EDUCATIVA</h3>
+            <p style="margin-bottom: 10px; color: #000000;">
+              Por medio de la presente, yo, <span style="text-decoration: underline; padding: 0 50px;"></span>, en calidad de padre/madre/tutor del
+              menor <strong>${getFullName(selectedStudents[i])}</strong>, autorizo su participación en la salida organizada por la
               congregación, con los siguientes datos:
             </p>
             <ul style="margin-left: 20px; padding-left: 0; list-style-type: none;">
-              <li style="margin-bottom: 5px;">• Día de la salida: ${authorizationDetails.departure_date}</li>
-              <li style="margin-bottom: 5px;">• Hora de salida: ${authorizationDetails.departure_time}</li>
-              <li style="margin-bottom: 5px;">• Lugar de salida: ${authorizationDetails.departure_place}</li>
-              <li style="margin-bottom: 5px;">• Lugar de destino: ${authorizationDetails.destination_place}</li>
-              <li style="margin-bottom: 5px;">• Hora de regreso: ${authorizationDetails.return_time}</li>
+              <li style="margin-bottom: 8px; color: #000000;">• Día de la salida: <strong>${authorizationDetails.departure_date}</strong></li>
+              <li style="margin-bottom: 8px; color: #000000;">• Hora de salida: <strong>${authorizationDetails.departure_time}</strong></li>
+              <li style="margin-bottom: 8px; color: #000000;">• Lugar de salida: <strong>${authorizationDetails.departure_place}</strong></li>
+              <li style="margin-bottom: 8px; color: #000000;">• Lugar de destino: <strong>${authorizationDetails.destination_place}</strong></li>
+              <li style="margin-bottom: 8px; color: #000000;">• Hora de regreso: <strong>${authorizationDetails.return_time}</strong></li>
             </ul>
-            <p style="margin-bottom: 8px;">
+            <p style="margin: 15px 0; color: #000000;">
               Asimismo, autorizo expresamente el uso de fotografías y/o videos en los que el menor aparezca,
               tomados durante dicha salida, para ser publicados en las <strong>redes sociales oficiales de la congregación</strong>
               con fines institucionales y de difusión.
             </p>
-            <div style="margin-top: 15px;">
-              <p style="margin-bottom: 5px;">Firma del adulto responsable: ________________________________</p>
-              <p style="margin-bottom: 5px;">Aclaración: ________________________________</p>
-              <p style="margin-bottom: 5px;">Teléfono de contacto: ________________________________</p>
+            <div style="margin-top: 25px;">
+              <p style="margin-bottom: 10px; color: #000000;">Firma del adulto responsable: <span style="text-decoration: underline; padding: 0 100px;"></span></p>
+              <p style="margin-bottom: 10px; color: #000000;">Aclaración: <span style="text-decoration: underline; padding: 0 100px;"></span></p>
+              <p style="margin-bottom: 10px; color: #000000;">Teléfono de contacto: <span style="text-decoration: underline; padding: 0 100px;"></span></p>
             </div>
           </div>
         `;
         document.body.appendChild(tempDiv);
 
-        // Convert the temp div to canvas
+        // Convert the temp div to canvas with higher quality
         const canvas = await html2canvas(tempDiv, {
-          scale: 2,
+          scale: 3, // Higher scale for better quality
           logging: false,
-          useCORS: true
+          useCORS: true,
+          backgroundColor: "#ffffff"
         });
 
-        // Calculate positioning for 2 authorizations per page
+        // Add image to PDF
         const imgData = canvas.toDataURL('image/png');
-        if (i % 2 === 0) {
-          if (i > 0) {
-            pdf.addPage();
-          }
-          pdf.addImage(imgData, 'PNG', margin, margin, availableWidth, authHeight);
-        } else {
-          pdf.addImage(imgData, 'PNG', margin, margin + authHeight, availableWidth, authHeight);
+        
+        // Add new page for each student (except first one)
+        if (i > 0) {
+          pdf.addPage();
         }
-
-        // Remove the temp div
+        
+        // Add the image to the page
+        pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - 2*margin, 0);
+        
+        // Clean up
         document.body.removeChild(tempDiv);
       }
 
+      // Save the PDF
       pdf.save('autorizaciones_salida.pdf');
       
       toast({
@@ -432,34 +429,34 @@ const AutorizacionesSalida = () => {
         </div>
       </div>
       
-      {/* Hidden authorization form template */}
+      {/* Hidden authorization form template - Kept for reference but no longer used */}
       <div className="hidden">
         <div ref={authFormRef} className="auth-template">
-          <div className="auth-form" style={{padding: '20px', fontFamily: 'Arial, sans-serif'}}>
-            <h3 style={{textAlign: 'center', fontWeight: 'bold', marginBottom: '15px'}}>
+          <div className="auth-form" style={{padding: '20px', fontFamily: 'Arial, sans-serif', color: '#000000'}}>
+            <h3 style={{textAlign: 'center', fontWeight: 'bold', marginBottom: '15px', color: '#000000'}}>
               AUTORIZACIÓN PARA SALIDA EDUCATIVA
             </h3>
-            <p style={{marginBottom: '10px'}}>
+            <p style={{marginBottom: '10px', color: '#000000'}}>
               Por medio de la presente, yo, ________________________________, en calidad de padre/madre/tutor del
               menor ________________________________, autorizo su participación en la salida organizada por la
               congregación, con los siguientes datos:
             </p>
             <ul style={{marginLeft: '20px', paddingLeft: '0', listStyleType: 'none'}}>
-              <li style={{marginBottom: '5px'}}>• Día de la salida: {authorizationDetails.departure_date}</li>
-              <li style={{marginBottom: '5px'}}>• Hora de salida: {authorizationDetails.departure_time}</li>
-              <li style={{marginBottom: '5px'}}>• Lugar de salida: {authorizationDetails.departure_place}</li>
-              <li style={{marginBottom: '5px'}}>• Lugar de destino: {authorizationDetails.destination_place}</li>
-              <li style={{marginBottom: '5px'}}>• Hora de regreso: {authorizationDetails.return_time}</li>
+              <li style={{marginBottom: '5px', color: '#000000'}}>• Día de la salida: {authorizationDetails.departure_date}</li>
+              <li style={{marginBottom: '5px', color: '#000000'}}>• Hora de salida: {authorizationDetails.departure_time}</li>
+              <li style={{marginBottom: '5px', color: '#000000'}}>• Lugar de salida: {authorizationDetails.departure_place}</li>
+              <li style={{marginBottom: '5px', color: '#000000'}}>• Lugar de destino: {authorizationDetails.destination_place}</li>
+              <li style={{marginBottom: '5px', color: '#000000'}}>• Hora de regreso: {authorizationDetails.return_time}</li>
             </ul>
-            <p style={{marginBottom: '10px'}}>
+            <p style={{marginBottom: '10px', color: '#000000'}}>
               Asimismo, autorizo expresamente el uso de fotografías y/o videos en los que el menor aparezca,
               tomados durante dicha salida, para ser publicados en las <strong>redes sociales oficiales de la congregación</strong>
               con fines institucionales y de difusión.
             </p>
             <div style={{marginTop: '20px'}}>
-              <p style={{marginBottom: '5px'}}>Firma del adulto responsable: ________________________________</p>
-              <p style={{marginBottom: '5px'}}>Aclaración: ________________________________</p>
-              <p style={{marginBottom: '5px'}}>Teléfono de contacto: ________________________________</p>
+              <p style={{marginBottom: '5px', color: '#000000'}}>Firma del adulto responsable: ________________________________</p>
+              <p style={{marginBottom: '5px', color: '#000000'}}>Aclaración: ________________________________</p>
+              <p style={{marginBottom: '5px', color: '#000000'}}>Teléfono de contacto: ________________________________</p>
             </div>
           </div>
         </div>
