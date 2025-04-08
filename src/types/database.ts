@@ -106,11 +106,3 @@ export interface StudentAuthorization {
   student?: Student;
   department?: Department;
 }
-
-export interface TripAuthorization {
-  departure_date: string;
-  departure_time: string;
-  departure_place: string;
-  destination_place: string;
-  return_time: string;
-}
