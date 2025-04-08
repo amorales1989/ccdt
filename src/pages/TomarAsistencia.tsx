@@ -1,7 +1,8 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, X, UserCheck } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 const TomarAsistencia = () => {
   const { toast } = useToast();
@@ -28,6 +30,7 @@ const TomarAsistencia = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [departmentId, setDepartmentId] = useState<string | null>(null);
+  const [authorizedStudents, setAuthorizedStudents] = useState<Record<string, boolean>>({});
 
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
   const currentDepartment = profile?.departments?.[0];
@@ -61,11 +64,43 @@ const TomarAsistencia = () => {
     fetchDepartmentId();
   }, [currentDepartment]);
 
+  // Fetch authorized students
+  useEffect(() => {
+    const fetchAuthorizedStudents = async () => {
+      if (departmentId) {
+        try {
+          const { data, error } = await supabase
+            .from("student_authorizations")
+            .select("student_id")
+            .eq("department_id", departmentId);
+          
+          if (error) {
+            console.error("Error fetching authorized students:", error);
+            return;
+          }
+          
+          const authStudents: Record<string, boolean> = {};
+          data?.forEach(auth => {
+            authStudents[auth.student_id] = true;
+          });
+          
+          setAuthorizedStudents(authStudents);
+        } catch (error) {
+          console.error("Error in fetchAuthorizedStudents:", error);
+        }
+      }
+    };
+    
+    fetchAuthorizedStudents();
+  }, [departmentId]);
+
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: ["students-attendance", departmentId, userClass],
     queryFn: async () => {
       console.log("Fetching students for attendance...", { departmentId, userClass });
-      let query = supabase
+      
+      // First, get department students
+      let departmentQuery = supabase
         .from("students")
         .select("*, departments:department_id(name, id)");
 
@@ -75,22 +110,47 @@ const TomarAsistencia = () => {
           return [];
         }
         
-        query = query.eq("department_id", departmentId);
+        departmentQuery = departmentQuery.eq("department_id", departmentId);
         
         if (userClass) {
           console.log("Filtering by class:", userClass);
-          query = query.eq("assigned_class", userClass);
+          departmentQuery = departmentQuery.eq("assigned_class", userClass);
         }
       }
 
-      const { data, error } = await query;
+      const { data: departmentStudents, error } = await departmentQuery;
       if (error) {
         console.error("Error fetching students for attendance:", error);
         throw error;
       }
       
-      console.log("Fetched students for attendance:", data);
-      return data;
+      // If not admin or secretaria, also fetch authorized students from other departments
+      let allStudents = [...departmentStudents];
+      
+      if (!isAdminOrSecretaria && departmentId) {
+        const { data: authorizedData, error: authError } = await supabase
+          .from("student_authorizations")
+          .select("*, student:student_id(*)")
+          .eq("department_id", departmentId);
+        
+        if (authError) {
+          console.error("Error fetching authorized students:", authError);
+        } else if (authorizedData) {
+          // Add authorized students (avoiding duplicates)
+          const existingIds = new Set(departmentStudents.map(s => s.id));
+          const authorizedStudents = authorizedData
+            .filter(a => a.student && !existingIds.has(a.student.id))
+            .map(a => ({
+              ...a.student,
+              is_authorized: true
+            }));
+            
+          allStudents = [...departmentStudents, ...authorizedStudents];
+        }
+      }
+      
+      console.log("Fetched students for attendance:", allStudents);
+      return allStudents;
     },
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(departmentId)),
   });
@@ -198,6 +258,11 @@ const TomarAsistencia = () => {
     return <div className="p-6">Cargando alumnos...</div>;
   }
 
+  // Check if a student is authorized (either directly in the department or via authorization)
+  const isAuthorizedStudent = (student: any) => {
+    return student.is_authorized || authorizedStudents[student.id];
+  };
+
   return (
     <div className="p-6">
       <Card>
@@ -223,8 +288,16 @@ const TomarAsistencia = () => {
             </TableHeader>
             <TableBody>
               {students?.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>{getFullName(student)}</TableCell>
+                <TableRow key={student.id} className={isAuthorizedStudent(student) ? "bg-green-50" : ""}>
+                  <TableCell className="flex items-center gap-2">
+                    {getFullName(student)}
+                    {isAuthorizedStudent(student) && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 ml-2 flex items-center gap-1">
+                        <UserCheck className="h-3 w-3" />
+                        Autorizado
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button

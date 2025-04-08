@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   first_name: string;
@@ -94,3 +93,14 @@ export interface Profile {
 }
 
 export type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria";
+
+export interface StudentAuthorization {
+  id: string;
+  student_id: string;
+  department_id: string;
+  class?: string;
+  created_at: string;
+  updated_at: string;
+  student?: Student;
+  department?: Department;
+}

@@ -222,8 +222,8 @@ const ListarAlumnos = () => {
           department: student.departments?.name
         }))
         .sort((a, b) => {
-          const nameA = `${a.first_name} ${a.last_name || ''}`;
-          const nameB = `${b.first_name} ${b.last_name || ''}`;
+          const nameA = `${a.first_name} ${a.last_name || ''}`.toLowerCase();
+          const nameB = `${b.first_name} ${b.last_name || ''}`.toLowerCase();
           return nameA.localeCompare(nameB);
         }) as Student[];
       
@@ -310,11 +310,11 @@ const ListarAlumnos = () => {
     return `${differenceInYears(new Date(), new Date(birthdate))} años`;
   };
 
-  const handleExport = () => {
+  const exportToExcel = () => {
     const fileName = `alumnos_${selectedDepartment || 'todos'}_${selectedClass || 'todas-clases'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
     
     const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
-      Nombre: student.first_name,
+      Nombre: `${student.first_name} ${student.last_name || ''}`,
       Apellido: student.last_name || '',
       Departamento: student.department?.replace(/_/g, ' ') || '',
       Clase: student.assigned_class || '',
@@ -766,7 +766,7 @@ const ListarAlumnos = () => {
         {isAdminOrSecretaria && students.length > 0 && (
           <Button
             variant="outline"
-            onClick={handleExport}
+            onClick={exportToExcel}
             className="w-full md:w-auto"
           >
             <Download className="h-4 w-4 mr-2" />
