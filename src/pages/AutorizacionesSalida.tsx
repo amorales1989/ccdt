@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { jsPDF } from "jspdf";
 import { Calendar, Download } from "lucide-react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 type FormValues = {
   fecha: string;
@@ -18,6 +20,15 @@ type FormValues = {
 };
 
 const AutorizacionesSalida = () => {
+  const { profile } = useAuth();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  
+  useEffect(() => {
+    if (profile) {
+      setIsAuthorized(profile.role === 'admin' || profile.role === 'secretaria');
+    }
+  }, [profile]);
+
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
       fecha: format(new Date(), "yyyy-MM-dd"),
@@ -37,6 +48,11 @@ const AutorizacionesSalida = () => {
   };
 
   const generatePDF = (data: FormValues) => {
+    // Format date to DD/MM/YYYY
+    const formattedDate = data.fecha ? 
+      format(parse(data.fecha, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : 
+      '';
+    
     // Create a new jsPDF instance
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -59,59 +75,73 @@ const AutorizacionesSalida = () => {
       doc.setFont("helvetica", "normal");
       doc.text("Por medio de la presente autorizo a que mi hijo/a participe en la salida", pageWidth / 2, y + 20, { align: "center" });
       
-      // Form fields
+      // Form fields with adjusted layout for 3 columns
       doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
       
-      const leftMargin = 20;
+      // First column
+      const col1X = 15;
+      const col2X = pageWidth / 3 + 10;
+      const col3X = 2 * (pageWidth / 3) + 5;
       const fieldY = y + 30;
       const lineHeight = 10;
       
-      doc.text("Día de la salida:", leftMargin, fieldY);
+      // First column
+      doc.setFont("helvetica", "bold");
+      doc.text("Día de la salida:", col1X, fieldY);
       doc.setFont("helvetica", "normal");
-      doc.text(data.fecha, leftMargin + 40, fieldY);
+      doc.text(formattedDate, col1X, fieldY + 5);
       
       doc.setFont("helvetica", "bold");
-      doc.text("Hora de salida:", leftMargin, fieldY + lineHeight);
+      doc.text("Hora de salida:", col1X, fieldY + lineHeight * 2);
       doc.setFont("helvetica", "normal");
-      doc.text(data.horaSalida, leftMargin + 40, fieldY + lineHeight);
+      doc.text(data.horaSalida, col1X, fieldY + lineHeight * 2 + 5);
+      
+      // Second column
+      doc.setFont("helvetica", "bold");
+      doc.text("Lugar de salida:", col2X, fieldY);
+      doc.setFont("helvetica", "normal");
+      doc.text(data.lugarSalida, col2X, fieldY + 5);
       
       doc.setFont("helvetica", "bold");
-      doc.text("Lugar de salida:", leftMargin, fieldY + lineHeight * 2);
+      doc.text("Lugar de destino:", col2X, fieldY + lineHeight * 2);
       doc.setFont("helvetica", "normal");
-      doc.text(data.lugarSalida, leftMargin + 40, fieldY + lineHeight * 2);
+      doc.text(data.lugarDestino, col2X, fieldY + lineHeight * 2 + 5);
       
+      // Third column
       doc.setFont("helvetica", "bold");
-      doc.text("Lugar de destino:", leftMargin, fieldY + lineHeight * 3);
+      doc.text("Hora de regreso:", col3X, fieldY);
       doc.setFont("helvetica", "normal");
-      doc.text(data.lugarDestino, leftMargin + 40, fieldY + lineHeight * 3);
-      
-      doc.setFont("helvetica", "bold");
-      doc.text("Hora de regreso:", leftMargin, fieldY + lineHeight * 4);
-      doc.setFont("helvetica", "normal");
-      doc.text(data.horaRegreso, leftMargin + 40, fieldY + lineHeight * 4);
+      doc.text(data.horaRegreso, col3X, fieldY + 5);
 
-      // Photo/video consent text
-      const consentY = fieldY + lineHeight * 5.5;
+      // Photo/video consent text - moved below the form fields
+      const consentY = fieldY + lineHeight * 4;
       doc.setFontSize(8);
       const consentText = "Asimismo, autorizo expresamente el uso de fotografías y/o videos en los que el menor aparezca, tomados durante dicha salida, para ser publicados en las redes sociales oficiales de la congregación con fines institucionales y de difusión.";
-      doc.text(consentText, leftMargin, consentY, { 
+      doc.text(consentText, margin + 5, consentY, { 
         align: "justify", 
-        maxWidth: pageWidth - leftMargin * 2 
+        maxWidth: pageWidth - (margin * 2) - 10
       });
       
       // Signature fields - adjusted spacing to fit everything
       const signY = consentY + lineHeight * 2;
       
       doc.setFontSize(10);
+      // Two signatures per row to save space
+      const signCol1 = margin + 5;
+      const signCol2 = pageWidth / 2;
+      
       doc.setFont("helvetica", "normal");
-      doc.text("Nombre del alumno/a: ________________________________", leftMargin, signY);
+      doc.text("Nombre del alumno/a:", signCol1, signY);
+      doc.text("________________________________", signCol1 + 35, signY);
       
-      doc.text("Firma del padre/tutor: ________________________________", leftMargin, signY + lineHeight * 1.5);
+      doc.text("Firma del padre/tutor:", signCol1, signY + lineHeight * 2);
+      doc.text("________________________________", signCol1 + 35, signY + lineHeight * 2);
       
-      doc.text("Aclaración: ________________________________", leftMargin, signY + lineHeight * 3);
+      doc.text("Aclaración:", signCol2, signY);
+      doc.text("________________________________", signCol2 + 25, signY);
       
-      doc.text("DNI: ________________________________", leftMargin, signY + lineHeight * 4.5);
+      doc.text("DNI:", signCol2, signY + lineHeight * 2);
+      doc.text("________________________________", signCol2 + 25, signY + lineHeight * 2);
       
       // Draw border
       doc.setDrawColor(0);
@@ -127,6 +157,10 @@ const AutorizacionesSalida = () => {
     doc.save("autorizacion_salida.pdf");
   };
 
+  if (!isAuthorized) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-2xl font-bold mb-6">Generar Autorización de Salida</h1>
@@ -137,7 +171,7 @@ const AutorizacionesSalida = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fecha" error={!!errors.fecha}>Fecha de salida</Label>
                 <div className="relative">
@@ -164,6 +198,17 @@ const AutorizacionesSalida = () => {
               </div>
               
               <div className="space-y-2">
+                <Label htmlFor="horaRegreso" error={!!errors.horaRegreso}>Hora de regreso</Label>
+                <Input
+                  id="horaRegreso"
+                  type="time"
+                  {...register("horaRegreso", { required: "Este campo es requerido" })}
+                  error={!!errors.horaRegreso}
+                />
+                {errors.horaRegreso && <p className="text-sm text-destructive">{errors.horaRegreso.message}</p>}
+              </div>
+              
+              <div className="space-y-2">
                 <Label htmlFor="lugarSalida" error={!!errors.lugarSalida}>Lugar de salida</Label>
                 <Input
                   id="lugarSalida"
@@ -181,17 +226,6 @@ const AutorizacionesSalida = () => {
                   error={!!errors.lugarDestino}
                 />
                 {errors.lugarDestino && <p className="text-sm text-destructive">{errors.lugarDestino.message}</p>}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="horaRegreso" error={!!errors.horaRegreso}>Hora de regreso</Label>
-                <Input
-                  id="horaRegreso"
-                  type="time"
-                  {...register("horaRegreso", { required: "Este campo es requerido" })}
-                  error={!!errors.horaRegreso}
-                />
-                {errors.horaRegreso && <p className="text-sm text-destructive">{errors.horaRegreso.message}</p>}
               </div>
             </div>
             
