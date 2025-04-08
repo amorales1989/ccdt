@@ -163,15 +163,29 @@ const PromoverAlumnos = () => {
       
       const { data, error } = await (supabase
         .from("student_authorizations") as any)
-        .select("*, student:student_id(*), department:department_id(*)")
+        .select(`
+          id, 
+          class,
+          student:student_id(
+            id, 
+            first_name, 
+            last_name, 
+            gender, 
+            birthdate,
+            department_id, 
+            assigned_class,
+            departments:department_id(name)
+          )
+        `)
         .eq("department_id", profile.department_id);
       
       if (error) throw error;
       
       return data?.map((auth: any) => ({
         ...auth.student,
+        department: auth.student?.departments?.name,
         authorized: true,
-        authorized_to: auth.department?.name
+        authorized_to: profile?.departments?.[0] || ""
       })) || [];
     },
     enabled: Boolean(profile?.department_id),
@@ -884,7 +898,7 @@ const PromoverAlumnos = () => {
                           <TableHead>Nombre</TableHead>
                           <TableHead>Edad</TableHead>
                           <TableHead>Departamento Original</TableHead>
-                          <TableHead>Clase</TableHead>
+                          <TableHead>Clase Original</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
