@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   first_name: string;
@@ -70,7 +69,7 @@ export interface Company {
   compact_view?: boolean;
   show_profile_images?: boolean;
   congregation_name?: string;
-  show_name?: boolean; // New field to control congregation name display
+  show_name?: boolean;
 }
 
 export type DepartmentType = 
@@ -81,7 +80,7 @@ export type DepartmentType =
   | "jovenes_adultos" 
   | "adultos"
   | "Examen Físico_Rev1" 
-  | string; // Added string to allow for any department name from database
+  | string;
 
 export interface Profile {
   id: string;

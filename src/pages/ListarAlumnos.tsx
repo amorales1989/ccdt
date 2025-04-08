@@ -132,6 +132,16 @@ const ListarAlumnos = () => {
       : student.first_name;
   };
 
+  const getStudentName = (student: any): string => {
+    if (student.first_name && student.last_name) {
+      return `${student.first_name} ${student.last_name}`;
+    } else if (student.first_name) {
+      return student.first_name;
+    } else {
+      return "Unknown";
+    }
+  };
+
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
   const userDepartment = profile?.departments?.[0] || null;
@@ -507,7 +517,7 @@ const ListarAlumnos = () => {
         <div className="font-semibold">Información Personal</div>
         <div>
           <span className="font-medium">Nombre:</span>
-          <span className="ml-2">{student.first_name}</span>
+          <span className="ml-2">{getStudentName(student)}</span>
         </div>
         {student.last_name && (
           <div>
@@ -669,7 +679,7 @@ const ListarAlumnos = () => {
                         <div className="flex items-center">
                           <CollapsibleTrigger asChild>
                             <button className="font-medium hover:underline text-left w-full truncate">
-                              {getFullName(student)}
+                              {getStudentName(student)}
                             </button>
                           </CollapsibleTrigger>
                         </div>

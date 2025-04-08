@@ -292,6 +292,48 @@ export type Database = {
           },
         ]
       }
+      student_authorizations: {
+        Row: {
+          class: string | null
+          created_at: string | null
+          department_id: string | null
+          id: string
+          student_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          class?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          id?: string
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          class?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          id?: string
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_authorizations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_authorizations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           address: string | null

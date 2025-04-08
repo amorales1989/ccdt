@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -69,8 +68,8 @@ const TomarAsistencia = () => {
     const fetchAuthorizedStudents = async () => {
       if (departmentId) {
         try {
-          const { data, error } = await supabase
-            .from("student_authorizations")
+          const { data, error } = await (supabase
+            .from("student_authorizations") as any)
             .select("student_id")
             .eq("department_id", departmentId);
           
@@ -81,7 +80,7 @@ const TomarAsistencia = () => {
           
           const authStudents: Record<string, boolean> = {};
           if (data) {
-            data.forEach(auth => {
+            data.forEach((auth: any) => {
               if (auth.student_id) {
                 authStudents[auth.student_id] = true;
               }
@@ -132,19 +131,18 @@ const TomarAsistencia = () => {
       let allStudents = [...departmentStudents];
       
       if (!isAdminOrSecretaria && departmentId) {
-        const { data: authorizedData, error: authError } = await supabase
-          .from("student_authorizations")
+        const { data: authorizedData, error: authError } = await (supabase
+          .from("student_authorizations") as any)
           .select("*, student:student_id(*)")
           .eq("department_id", departmentId);
         
         if (authError) {
           console.error("Error fetching authorized students:", authError);
         } else if (authorizedData) {
-          // Add authorized students (avoiding duplicates)
           const existingIds = new Set(departmentStudents.map(s => s.id));
           const authorizedStudents = authorizedData
-            .filter(a => a.student && !existingIds.has(a.student.id))
-            .map(a => ({
+            .filter((a: any) => a.student && !existingIds.has(a.student.id))
+            .map((a: any) => ({
               ...a.student,
               is_authorized: true
             }));
@@ -262,7 +260,6 @@ const TomarAsistencia = () => {
     return <div className="p-6">Cargando alumnos...</div>;
   }
 
-  // Check if a student is authorized (either directly in the department or via authorization)
   const isAuthorizedStudent = (student: any) => {
     return student.is_authorized || authorizedStudents[student.id];
   };

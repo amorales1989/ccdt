@@ -72,14 +72,14 @@ const PromoverAlumnos = () => {
   const { data: studentAuthorizations = [], refetch: refetchAuthorizations } = useQuery({
     queryKey: ["student-authorizations"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("student_authorizations")
+      const { data, error } = await (supabase
+        .from("student_authorizations") as any)
         .select("*, student:student_id(id, first_name, last_name), department:department_id(id, name)");
       
       if (error) throw error;
       
       const authorizations: Record<string, string[]> = {};
-      data?.forEach(auth => {
+      data?.forEach((auth: any) => {
         if (auth.student && auth.student.id) {
           if (!authorizations[auth.student.id]) {
             authorizations[auth.student.id] = [];
@@ -161,14 +161,14 @@ const PromoverAlumnos = () => {
     queryFn: async () => {
       if (!profile?.department_id) return [];
       
-      const { data, error } = await supabase
-        .from("student_authorizations")
+      const { data, error } = await (supabase
+        .from("student_authorizations") as any)
         .select("*, student:student_id(*), department:department_id(*)")
         .eq("department_id", profile.department_id);
       
       if (error) throw error;
       
-      return data?.map(auth => ({
+      return data?.map((auth: any) => ({
         ...auth.student,
         authorized: true,
         authorized_to: auth.department?.name
@@ -376,8 +376,8 @@ const PromoverAlumnos = () => {
         class: targetClass || null
       }));
 
-      const { error } = await supabase
-        .from("student_authorizations")
+      const { error } = await (supabase
+        .from("student_authorizations") as any)
         .upsert(authorizationRecords, {
           onConflict: 'student_id,department_id',
           ignoreDuplicates: false
@@ -414,8 +414,8 @@ const PromoverAlumnos = () => {
 
   const handleRemoveAuthorization = async (studentId: string, departmentId: string) => {
     try {
-      const { error } = await supabase
-        .from("student_authorizations")
+      const { error } = await (supabase
+        .from("student_authorizations") as any)
         .delete()
         .eq("student_id", studentId)
         .eq("department_id", departmentId);
