@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { jsPDF } from "jspdf";
 import { Calendar, Download } from "lucide-react";
 import { format, parse } from "date-fns";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
 type FormValues = {
   fecha: string;
@@ -22,12 +23,26 @@ type FormValues = {
 const AutorizacionesSalida = () => {
   const { profile } = useAuth();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
   
   useEffect(() => {
+    // Check if user is authorized
     if (profile) {
-      setIsAuthorized(profile.role === 'admin' || profile.role === 'secretaria');
+      const authorized = profile.role === 'admin' || profile.role === 'secretaria';
+      setIsAuthorized(authorized);
+      
+      if (!authorized) {
+        console.log("User not authorized:", profile.role);
+        toast({
+          title: "Acceso restringido",
+          description: "No tienes permisos para acceder a esta sección",
+          variant: "destructive"
+        });
+        navigate("/");
+      }
     }
-  }, [profile]);
+  }, [profile, navigate, toast]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
@@ -157,8 +172,10 @@ const AutorizacionesSalida = () => {
     doc.save("autorizacion_salida.pdf");
   };
 
-  if (!isAuthorized) {
-    return <Navigate to="/" replace />;
+  // If user is not authorized, they will be redirected by the useEffect
+  // But as an extra precaution, return null while checking authorization
+  if (!profile) {
+    return <div>Cargando...</div>;
   }
 
   return (
