@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -5,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MessageSquare, Pencil, Trash2, MoreVertical, Download, Filter } from "lucide-react";
+import { MessageSquare, Pencil, Trash2, MoreVertical, Download, Filter, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
-import { DepartmentType, Department, Student } from "@/types/database";
+import { DepartmentType, Department, Student, StudentAuthorization } from "@/types/database";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
+import { Badge } from "@/components/ui/badge";
 
 const updateStudent = async (id: string, data: any) => {
   const { error } = await supabase
@@ -57,6 +59,7 @@ const ListarAlumnos = () => {
   const [editDepartmentId, setEditDepartmentId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+  const [authorizedStudents, setAuthorizedStudents] = useState<Record<string, boolean>>({});
 
   type StudentFormData = {
     name: string;
@@ -167,6 +170,7 @@ const ListarAlumnos = () => {
           if (data) {
             console.log("Found department ID:", data.id, "for department:", userDepartment);
             setSelectedDepartmentId(data.id);
+            fetchAuthorizedStudents(data.id);
           }
         } catch (error) {
           console.error("Error in fetchDepartmentId:", error);
@@ -180,6 +184,43 @@ const ListarAlumnos = () => {
       }
     }
   }, [isAdminOrSecretaria, userDepartment, userClass]);
+
+  const fetchAuthorizedStudents = async (departmentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("student_authorizations" as any)
+        .select("*, student:student_id(*)")
+        .eq("department_id", departmentId);
+      
+      if (error) {
+        console.error("Error fetching authorized students:", error);
+        return;
+      }
+      
+      const authorizedStudentsMap: Record<string, boolean> = {};
+      const authorizedStudentsList: Student[] = [];
+      
+      if (data) {
+        data.forEach((auth: any) => {
+          if (auth.student_id) {
+            authorizedStudentsMap[auth.student_id] = true;
+          }
+          if (auth.student) {
+            authorizedStudentsList.push({
+              ...auth.student,
+              is_authorized: true
+            });
+          }
+        });
+      }
+      
+      console.log("Authorized students:", authorizedStudentsList);
+      setAuthorizedStudents(authorizedStudentsMap);
+      
+    } catch (error) {
+      console.error("Error in fetchAuthorizedStudents:", error);
+    }
+  };
 
   const { data: departments = [] } = useQuery({
     queryKey: ["departments"],
@@ -204,8 +245,8 @@ const ListarAlumnos = () => {
 
   const editDepartmentHasClasses = editAvailableClasses.length > 0;
 
-  const { data: students = [], isLoading, refetch } = useQuery({
-    queryKey: ["students", selectedDepartmentId, selectedClass],
+  const { data: departmentStudents = [], isLoading: isLoadingDepartmentStudents } = useQuery({
+    queryKey: ["students-department", selectedDepartmentId, selectedClass],
     queryFn: async () => {
       if (isAdminOrSecretaria && !selectedDepartmentId) {
         return [];
@@ -224,7 +265,7 @@ const ListarAlumnos = () => {
       const { data, error } = await query;
       if (error) throw error;
       
-      console.log("Fetched students:", data);
+      console.log("Fetched department students:", data);
       
       const processedData = (data || [])
         .map(student => ({
@@ -240,6 +281,52 @@ const ListarAlumnos = () => {
       return processedData;
     },
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(selectedDepartmentId)),
+  });
+
+  const { data: authorizedStudentsList = [], isLoading: isLoadingAuthorizedStudents } = useQuery({
+    queryKey: ["authorized-students", selectedDepartmentId],
+    queryFn: async () => {
+      if (!selectedDepartmentId || isAdminOrSecretaria) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("student_authorizations" as any)
+        .select("*, student:student_id(*)")
+        .eq("department_id", selectedDepartmentId);
+      
+      if (error) {
+        console.error("Error fetching authorized students:", error);
+        throw error;
+      }
+      
+      const authorizedStudents = data
+        .filter((auth: any) => auth.student)
+        .map((auth: any) => ({
+          ...auth.student,
+          is_authorized: true
+        })) as Student[];
+      
+      console.log("Fetched authorized students:", authorizedStudents);
+      
+      return authorizedStudents;
+    },
+    enabled: Boolean(profile) && !isAdminOrSecretaria && Boolean(selectedDepartmentId),
+  });
+
+  // Combine departmental students and authorized students, avoiding duplicates
+  const students = [...departmentStudents];
+  
+  authorizedStudentsList.forEach(authStudent => {
+    // Check if this student is already in the department list
+    const existingIndex = students.findIndex(s => s.id === authStudent.id);
+    if (existingIndex === -1) {
+      // This is an authorized student not in the department
+      students.push(authStudent);
+    } else {
+      // This student is already in the department, mark as authorized too
+      students[existingIndex].is_authorized = true;
+    }
   });
 
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
@@ -358,6 +445,7 @@ const ListarAlumnos = () => {
       if (data) {
         console.log("Found department ID:", data.id, "for department:", departmentName);
         setSelectedDepartmentId(data.id);
+        fetchAuthorizedStudents(data.id);
       }
     } catch (error) {
       console.error("Error in handleDepartmentChange:", error);
@@ -478,7 +566,8 @@ const ListarAlumnos = () => {
       });
       setIsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["students"] });
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["students-department"] });
+      queryClient.invalidateQueries({ queryKey: ["authorized-students"] });
     } catch (error: any) {
       console.error("Error al actualizar alumno:", error);
       toast({
@@ -500,7 +589,8 @@ const ListarAlumnos = () => {
       });
       setIsAlertOpen(false);
       queryClient.invalidateQueries({ queryKey: ["students"] });
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["students-department"] });
+      queryClient.invalidateQueries({ queryKey: ["authorized-students"] });
     } catch (error) {
       console.error("Error al eliminar alumno:", error);
       toast({
@@ -673,13 +763,19 @@ const ListarAlumnos = () => {
                     setSelectedStudent(selectedStudent?.id === student.id ? null : student);
                   }}
                 >
-                  <TableRow>
+                  <TableRow className={student.is_authorized ? "bg-green-50" : ""}>
                     <TableCell className="p-0 w-full">
                       <div className="grid grid-cols-[200px_1fr_1fr_1fr] gap-4 p-4 w-full">
                         <div className="flex items-center">
                           <CollapsibleTrigger asChild>
-                            <button className="font-medium hover:underline text-left w-full truncate">
+                            <button className="font-medium hover:underline text-left w-full truncate flex items-center gap-2">
                               {getStudentName(student)}
+                              {student.is_authorized && (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 flex items-center gap-1">
+                                  <UserCheck className="h-3 w-3" />
+                                  Autorizado
+                                </Badge>
+                              )}
                             </button>
                           </CollapsibleTrigger>
                         </div>
@@ -768,6 +864,8 @@ const ListarAlumnos = () => {
     );
   };
 
+  const isLoading = isLoadingDepartmentStudents || isLoadingAuthorizedStudents;
+
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -808,6 +906,9 @@ const ListarAlumnos = () => {
                     {userClass && (
                       <> - Clase: <span className="font-medium">{userClass}</span></>
                     )}
+                    {authorizedStudentsList.length > 0 && (
+                      <> - <span className="font-medium text-green-600">{authorizedStudentsList.length} alumnos autorizados</span></>
+                    )}
                   </p>
                 </div>
               )}
@@ -835,7 +936,7 @@ const ListarAlumnos = () => {
           <DialogHeader>
             <DialogTitle>Editar Alumno</DialogTitle>
             <DialogDescription>
-              Actualiza la información del alumno {studentToEdit?.name}
+              Actualiza la información del alumno {studentToEdit ? getFullName(studentToEdit) : ""}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -980,7 +1081,7 @@ const ListarAlumnos = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará permanentemente a {studentToDelete?.name} y no se puede deshacer.
+              Esta acción eliminará permanentemente a {studentToDelete ? getFullName(studentToDelete) : ""} y no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -996,3 +1097,4 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
+

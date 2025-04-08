@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -68,8 +69,8 @@ const TomarAsistencia = () => {
     const fetchAuthorizedStudents = async () => {
       if (departmentId) {
         try {
-          const { data, error } = await (supabase
-            .from("student_authorizations") as any)
+          const { data, error } = await supabase
+            .from("student_authorizations")
             .select("student_id")
             .eq("department_id", departmentId);
           
@@ -131,8 +132,8 @@ const TomarAsistencia = () => {
       let allStudents = [...departmentStudents];
       
       if (!isAdminOrSecretaria && departmentId) {
-        const { data: authorizedData, error: authError } = await (supabase
-          .from("student_authorizations") as any)
+        const { data: authorizedData, error: authError } = await supabase
+          .from("student_authorizations")
           .select("*, student:student_id(*)")
           .eq("department_id", departmentId);
         
@@ -354,3 +355,4 @@ const TomarAsistencia = () => {
 };
 
 export default TomarAsistencia;
+
