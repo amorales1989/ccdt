@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -11,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInYears } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { DepartmentType, Department, Student } from "@/types/database";
+import { DepartmentType, Department, Student, StudentAuthorization } from "@/types/database";
 import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,7 +28,7 @@ const PromoverAlumnos = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [activeTab, setActiveTab] = useState<"promote" | "authorize">("promote");
   const [authorizedStudents, setAuthorizedStudents] = useState<Record<string, string[]>>({});
-  isMobile = useIsMobile();
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
 
@@ -70,7 +69,6 @@ const PromoverAlumnos = () => {
     }
   }, [isAdminOrSecretaria, userDepartment, userClass]);
 
-  // Fetch all department authorizations
   const { data: studentAuthorizations = [], refetch: refetchAuthorizations } = useQuery({
     queryKey: ["student-authorizations"],
     queryFn: async () => {
@@ -80,15 +78,14 @@ const PromoverAlumnos = () => {
       
       if (error) throw error;
       
-      // Organize authorizations by student ID for easier access
       const authorizations: Record<string, string[]> = {};
       data?.forEach(auth => {
-        if (auth.student_id) {
-          if (!authorizations[auth.student_id]) {
-            authorizations[auth.student_id] = [];
+        if (auth.student && auth.student.id) {
+          if (!authorizations[auth.student.id]) {
+            authorizations[auth.student.id] = [];
           }
           if (auth.department?.name) {
-            authorizations[auth.student_id].push(auth.department.name);
+            authorizations[auth.student.id].push(auth.department.name);
           }
         }
       });
@@ -159,7 +156,6 @@ const PromoverAlumnos = () => {
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(selectedDepartmentId)),
   });
 
-  // New query to fetch authorized students for the current user's department
   const { data: authorizedStudentsList = [], refetch: refetchAuthorizedStudents } = useQuery({
     queryKey: ["authorized-students", profile?.department_id],
     queryFn: async () => {
@@ -172,7 +168,6 @@ const PromoverAlumnos = () => {
       
       if (error) throw error;
       
-      // Return full student records for authorized students
       return data?.map(auth => ({
         ...auth.student,
         authorized: true,
@@ -355,7 +350,6 @@ const PromoverAlumnos = () => {
     }
   };
 
-  // Handler for authorizing students
   const handleAuthorize = async () => {
     if (!targetDepartmentId) {
       toast({
@@ -376,7 +370,6 @@ const PromoverAlumnos = () => {
     }
 
     try {
-      // Create authorization records for each selected student
       const authorizationRecords = selectedStudents.map(studentId => ({
         student_id: studentId,
         department_id: targetDepartmentId,
@@ -405,7 +398,6 @@ const PromoverAlumnos = () => {
         description: `${selectedStudents.length} alumnos autorizados exitosamente`,
       });
 
-      // Refresh data
       refetchAuthorizations();
       setSelectedStudents([]);
       setSelectAll(false);
@@ -420,7 +412,6 @@ const PromoverAlumnos = () => {
     }
   };
 
-  // Handler for removing authorization
   const handleRemoveAuthorization = async (studentId: string, departmentId: string) => {
     try {
       const { error } = await supabase
@@ -444,7 +435,6 @@ const PromoverAlumnos = () => {
         description: "Autorización removida exitosamente",
       });
 
-      // Refresh data
       refetchAuthorizations();
       refetchAuthorizedStudents();
       
@@ -509,12 +499,10 @@ const PromoverAlumnos = () => {
     );
   };
 
-  // New function to check if a student is authorized for a department
   const isStudentAuthorized = (studentId: string, departmentName: string) => {
     return authorizedStudents[studentId]?.includes(departmentName);
   };
 
-  // Get departments where a student is authorized
   const getStudentAuthorizedDepartments = (studentId: string) => {
     return authorizedStudents[studentId] || [];
   };
@@ -806,7 +794,6 @@ const PromoverAlumnos = () => {
                                         size="icon"
                                         className="h-4 w-4 rounded-full"
                                         onClick={async () => {
-                                          // Find the department ID from the department name
                                           const deptObj = departments.find(d => d.name === dept);
                                           if (deptObj) {
                                             await handleRemoveAuthorization(student.id, deptObj.id);

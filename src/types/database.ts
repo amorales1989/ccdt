@@ -1,3 +1,4 @@
+
 export interface Student {
   id: string;
   first_name: string;
@@ -16,6 +17,7 @@ export interface Student {
     name?: DepartmentType;
     id?: string;
   };
+  is_authorized?: boolean;
 }
 
 export interface Event {

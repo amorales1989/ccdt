@@ -80,9 +80,13 @@ const TomarAsistencia = () => {
           }
           
           const authStudents: Record<string, boolean> = {};
-          data?.forEach(auth => {
-            authStudents[auth.student_id] = true;
-          });
+          if (data) {
+            data.forEach(auth => {
+              if (auth.student_id) {
+                authStudents[auth.student_id] = true;
+              }
+            });
+          }
           
           setAuthorizedStudents(authStudents);
         } catch (error) {
