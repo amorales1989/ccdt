@@ -409,8 +409,9 @@ const ListarAlumnos = () => {
     const fileName = `alumnos_${selectedDepartment || 'todos'}_${selectedClass || 'todas-clases'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
     
     const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
-      Nombre: `${student.first_name} ${student.last_name || ''}`,
+      Nombre: student.first_name || '',
       Apellido: student.last_name || '',
+      DNI: student.document_number || '',
       Departamento: student.department?.replace(/_/g, ' ') || '',
       Clase: student.assigned_class || '',
       Teléfono: formatPhoneDisplay(student.phone) || '',
@@ -471,15 +472,7 @@ const ListarAlumnos = () => {
         }
         
         let firstName = row['Nombre'] || '';
-        let lastName = '';
-        
-        if (firstName.includes(' ')) {
-          const nameParts = firstName.split(' ');
-          firstName = nameParts[0];
-          lastName = nameParts.slice(1).join(' ');
-        } else if (row['Apellido']) {
-          lastName = row['Apellido'];
-        }
+        let lastName = row['Apellido'] || '';
         
         let department = row['Departamento'] || null;
         if (department) {
@@ -496,7 +489,7 @@ const ListarAlumnos = () => {
         
         return {
           first_name: firstName,
-          last_name: lastName || null,
+          last_name: lastName,
           department: department,
           assigned_class: row['Clase'] || null,
           phone: phone,
