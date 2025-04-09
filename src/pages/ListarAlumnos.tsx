@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { MessageSquare, Pencil, Trash2, MoreVertical, Download, Filter, UserCheck, Upload, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, differenceInYears, parse } from "date-fns";
+import { format, differenceInYears, parse, isValid } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
 import { DepartmentType, Department, Student, StudentAuthorization } from "@/types/database";
@@ -453,10 +453,18 @@ const ListarAlumnos = () => {
         let birthdate = null;
         if (row['Fecha de Nacimiento']) {
           try {
-            birthdate = format(
-              parse(row['Fecha de Nacimiento'], 'dd/MM/yyyy', new Date()), 
-              'yyyy-MM-dd'
-            );
+            if (typeof row['Fecha de Nacimiento'] === 'string') {
+              const parsedDate = parse(row['Fecha de Nacimiento'], 'dd/MM/yyyy', new Date());
+              if (isValid(parsedDate)) {
+                birthdate = format(parsedDate, 'yyyy-MM-dd');
+              }
+            } else if (typeof row['Fecha de Nacimiento'] === 'number') {
+              const excelDateValue = row['Fecha de Nacimiento'];
+              const jsDate = new Date(Math.round((excelDateValue - 25569) * 86400 * 1000));
+              if (isValid(jsDate)) {
+                birthdate = format(jsDate, 'yyyy-MM-dd');
+              }
+            }
           } catch (e) {
             console.error('Error parsing date:', row['Fecha de Nacimiento'], e);
           }
@@ -519,6 +527,8 @@ const ListarAlumnos = () => {
         }
         return student;
       }));
+      
+      console.log('Processed students:', studentsWithDepartmentIds);
       
       const result = await importStudentsFromExcel(studentsWithDepartmentIds);
       
