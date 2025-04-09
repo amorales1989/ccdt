@@ -779,10 +779,6 @@ const ListarAlumnos = () => {
       updatedData.assigned_class = studentToEdit.assigned_class;
     }
     
-    console.log("Original student data:", studentToEdit);
-    console.log("Form data to update:", data);
-    console.log("Final data to send to API:", updatedData);
-    
     try {
       await updateStudent(studentToEdit.id, updatedData);
       toast({
@@ -832,7 +828,7 @@ const ListarAlumnos = () => {
         <div className="font-semibold">Información Personal</div>
         <div>
           <span className="font-medium">Nombre:</span>
-          <span className="ml-2">{getStudentName(student)}</span>
+          <span className="ml-2">{student.first_name}</span>
         </div>
         {student.last_name && (
           <div>

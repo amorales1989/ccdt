@@ -149,15 +149,7 @@ const HistorialAsistencia = () => {
 
       const formattedStartDate = format(actualStartDate, "yyyy-MM-dd");
       const formattedEndDate = format(actualEndDate, "yyyy-MM-dd");
-      
-      console.log("Fetching attendance with params:", { 
-        formattedStartDate, 
-        formattedEndDate, 
-        selectedDepartment, 
-        selectedClass,
-        userDepartmentId 
-      });
-      
+            
       let departmentToUse = "";
       let departmentIdToUse = null;
       
@@ -193,12 +185,6 @@ const HistorialAsistencia = () => {
       if (!editDate) return [];
       
       const formattedDate = format(editDate, "yyyy-MM-dd");
-      console.log("Fetching attendance for edit mode:", { 
-        formattedDate, 
-        departmentId: userDepartmentId, 
-        class: userClass,
-        selectedDepartment 
-      });
       
       let departmentIdToUse = null;
       

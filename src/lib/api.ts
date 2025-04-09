@@ -9,7 +9,6 @@ export const getStudents = async () => {
       .from("students")
       .select("*, departments:department_id(name)");
     
-    console.log('Fetching students result:', { data, error });
     if (error) throw error;
     
     // Map the data to match our Student interface
@@ -198,7 +197,6 @@ export const getEvents = async () => {
       .select("*")
       .order("date");
     
-    console.log('Fetching events result:', { data, error });
     if (error) throw error;
     return data;
   } catch (error) {

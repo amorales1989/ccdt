@@ -52,7 +52,6 @@ export default function Index() {
     }
 
     if (profile) {
-      console.log("Perfil cargado correctamente:", profile);
       if (profile.departments && profile.departments.length > 1) {
         setUserDepartments(profile.departments);
         setShowDepartmentSelect(true); // Mostrar selector si tiene más de un departamento
