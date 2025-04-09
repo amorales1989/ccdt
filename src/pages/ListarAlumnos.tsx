@@ -423,21 +423,6 @@ const ListarAlumnos = () => {
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.json_to_sheet(data);
     
-    const headerStyle = {
-      font: { bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "4F46E5" } },
-      alignment: { horizontal: "center" }
-    };
-    
-    worksheet['!protect'] = { sheet: true };
-    
-    const genderOptions = ['masculino', 'femenino'];
-    const departmentOptions = departments.map(d => d.name.replace(/_/g, ' '));
-    
-    const genderCol = 'G';
-    const departmentCol = 'D';
-    const classCol = 'E';
-    
     const columnWidths = [
       { wch: 15 },
       { wch: 15 },
@@ -451,6 +436,71 @@ const ListarAlumnos = () => {
     ];
     
     worksheet['!cols'] = columnWidths;
+    
+    const genderValidation = {
+      type: 'list',
+      allowBlank: true,
+      formula1: '"masculino,femenino"',
+      showErrorMessage: true,
+      error: 'El valor debe ser masculino o femenino',
+      errorTitle: 'Género inválido'
+    };
+    
+    const departmentOptionsString = departments
+      .map(d => d.name.replace(/_/g, ' '))
+      .join(',');
+    
+    const departmentValidation = {
+      type: 'list',
+      allowBlank: true,
+      formula1: `"${departmentOptionsString}"`,
+      showErrorMessage: true,
+      error: 'Seleccione un departamento válido',
+      errorTitle: 'Departamento inválido'
+    };
+    
+    const rangeInfo = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    const protections = [];
+    
+    protections.push({
+      sqref: `A1:${XLSX.utils.encode_col(rangeInfo.e.c)}1`,
+      password: ''
+    });
+    
+    worksheet['!protect'] = {
+      password: '',
+      formatCells: false,
+      formatColumns: false,
+      formatRows: false,
+      insertColumns: false,
+      insertRows: true,
+      insertHyperlinks: false,
+      deleteColumns: false,
+      deleteRows: false,
+      sort: false,
+      autoFilter: false,
+      pivotTables: false,
+      objects: false,
+      scenarios: false
+    };
+    
+    worksheet['!protections'] = protections;
+    
+    if (!worksheet['!dataValidations']) {
+      worksheet['!dataValidations'] = [];
+    }
+    
+    if (rangeInfo.e.r > 0) {
+      worksheet['!dataValidations'].push({
+        sqref: `G2:G${rangeInfo.e.r + 100}`,
+        ...genderValidation
+      });
+      
+      worksheet['!dataValidations'].push({
+        sqref: `D2:D${rangeInfo.e.r + 100}`,
+        ...departmentValidation
+      });
+    }
     
     XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
     
