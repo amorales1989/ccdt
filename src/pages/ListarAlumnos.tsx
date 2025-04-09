@@ -408,7 +408,7 @@ const ListarAlumnos = () => {
   const exportToExcel = () => {
     const fileName = `alumnos_${selectedDepartment || 'todos'}_${selectedClass || 'todas-clases'}_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
     
-    const worksheet = XLSX.utils.json_to_sheet(students.map(student => ({
+    const data = students.map(student => ({
       Nombre: student.first_name || '',
       Apellido: student.last_name || '',
       DNI: student.document_number || '',
@@ -418,10 +418,42 @@ const ListarAlumnos = () => {
       Dirección: student.address || '',
       Género: student.gender,
       'Fecha de Nacimiento': student.birthdate ? format(new Date(student.birthdate), "dd/MM/yyyy") : ''
-    })));
+    }));
 
     const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "4F46E5" } },
+      alignment: { horizontal: "center" }
+    };
+    
+    worksheet['!protect'] = { sheet: true };
+    
+    const genderOptions = ['masculino', 'femenino'];
+    const departmentOptions = departments.map(d => d.name.replace(/_/g, ' '));
+    
+    const genderCol = 'G';
+    const departmentCol = 'D';
+    const classCol = 'E';
+    
+    const columnWidths = [
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 10 },
+      { wch: 15 }
+    ];
+    
+    worksheet['!cols'] = columnWidths;
+    
     XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
+    
     XLSX.writeFile(workbook, fileName);
   };
 
