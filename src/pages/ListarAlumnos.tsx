@@ -1,15 +1,14 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MessageSquare, Pencil, Trash2, MoreVertical, Download, Filter, UserCheck } from "lucide-react";
+import { MessageSquare, Pencil, Trash2, MoreVertical, Download, Filter, UserCheck, Upload, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, differenceInYears } from "date-fns";
+import { format, differenceInYears, parse } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
 import { DepartmentType, Department, Student, StudentAuthorization } from "@/types/database";
@@ -22,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { Badge } from "@/components/ui/badge";
+import { importStudentsFromExcel } from "@/lib/api";
 
 const updateStudent = async (id: string, data: any) => {
   const { error } = await supabase
@@ -60,6 +60,8 @@ const ListarAlumnos = () => {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [authorizedStudents, setAuthorizedStudents] = useState<Record<string, boolean>>({});
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   type StudentFormData = {
     name: string;
@@ -314,17 +316,13 @@ const ListarAlumnos = () => {
     enabled: Boolean(profile) && !isAdminOrSecretaria && Boolean(selectedDepartmentId),
   });
 
-  // Combine departmental students and authorized students, avoiding duplicates
   const students = [...departmentStudents];
   
   authorizedStudentsList.forEach(authStudent => {
-    // Check if this student is already in the department list
     const existingIndex = students.findIndex(s => s.id === authStudent.id);
     if (existingIndex === -1) {
-      // This is an authorized student not in the department
       students.push(authStudent);
     } else {
-      // This student is already in the department, mark as authorized too
       students[existingIndex].is_authorized = true;
     }
   });
@@ -424,6 +422,138 @@ const ListarAlumnos = () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
     XLSX.writeFile(workbook, fileName);
+  };
+
+  const importFromExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+      return;
+    }
+    
+    try {
+      setIsImporting(true);
+      const file = event.target.files[0];
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+      
+      console.log('Excel data:', jsonData);
+      
+      if (jsonData.length === 0) {
+        toast({
+          title: "Error",
+          description: "El archivo Excel no contiene datos",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const students = jsonData.map(row => {
+        let birthdate = null;
+        if (row['Fecha de Nacimiento']) {
+          try {
+            birthdate = format(
+              parse(row['Fecha de Nacimiento'], 'dd/MM/yyyy', new Date()), 
+              'yyyy-MM-dd'
+            );
+          } catch (e) {
+            console.error('Error parsing date:', row['Fecha de Nacimiento'], e);
+          }
+        }
+        
+        let firstName = row['Nombre'] || '';
+        let lastName = '';
+        
+        if (firstName.includes(' ')) {
+          const nameParts = firstName.split(' ');
+          firstName = nameParts[0];
+          lastName = nameParts.slice(1).join(' ');
+        } else if (row['Apellido']) {
+          lastName = row['Apellido'];
+        }
+        
+        let department = row['Departamento'] || null;
+        if (department) {
+          department = department.toLowerCase().replace(/\s+/g, '_') as DepartmentType;
+        }
+        
+        let phone = row['Teléfono'] || null;
+        if (phone) {
+          if (!phone.startsWith('54')) {
+            phone = '54' + phone;
+          }
+        }
+        
+        return {
+          first_name: firstName,
+          last_name: lastName || null,
+          department: department,
+          assigned_class: row['Clase'] || null,
+          phone: phone,
+          address: row['Dirección'] || null,
+          gender: (row['Género']?.toLowerCase() === 'femenino') ? 'femenino' : 'masculino',
+          birthdate: birthdate,
+          document_number: row['DNI']?.toString() || null
+        } as Omit<Student, "id" | "created_at" | "updated_at">;
+      });
+      
+      const studentsWithDepartmentIds = await Promise.all(students.map(async (student) => {
+        if (student.department) {
+          try {
+            const { data: deptData } = await supabase
+              .from("departments")
+              .select("id")
+              .eq("name", student.department)
+              .maybeSingle();
+            
+            if (deptData) {
+              return {
+                ...student,
+                department_id: deptData.id
+              };
+            }
+          } catch (error) {
+            console.error('Error fetching department ID:', error);
+          }
+        }
+        return student;
+      }));
+      
+      const result = await importStudentsFromExcel(studentsWithDepartmentIds);
+      
+      if (result.failed > 0) {
+        toast({
+          title: "Importación completada con errores",
+          description: `${result.successful} alumnos importados correctamente. ${result.failed} alumnos fallaron.`,
+          variant: "destructive",
+        });
+        
+        console.error('Import errors:', result.errors);
+      } else {
+        toast({
+          title: "Importación exitosa",
+          description: `${result.successful} alumnos importados correctamente.`,
+        });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students-department"] });
+      queryClient.invalidateQueries({ queryKey: ["authorized-students"] });
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error importing from Excel:', error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al importar desde Excel. Revisa el formato del archivo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const handleDepartmentChange = async (value: string) => {
@@ -871,15 +1001,47 @@ const ListarAlumnos = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-xl md:text-2xl font-bold">Lista de Alumnos</h2>
         
-        {isAdminOrSecretaria && students.length > 0 && (
-          <Button
-            variant="outline"
-            onClick={exportToExcel}
-            className="w-full md:w-auto"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
+        {isAdminOrSecretaria && (
+          <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+            {students.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={exportToExcel}
+                className="w-full md:w-auto"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            )}
+            
+            <div className="relative">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".xlsx, .xls"
+                onChange={importFromExcel}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full md:w-auto"
+                disabled={isImporting}
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Importando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -1097,4 +1259,3 @@ const ListarAlumnos = () => {
 };
 
 export default ListarAlumnos;
-

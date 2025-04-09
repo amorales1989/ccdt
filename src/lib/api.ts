@@ -655,3 +655,48 @@ export const updateCompany = async (id: number, updates: Partial<Company>) => {
     throw error;
   }
 };
+
+// Student Import API
+export const importStudentsFromExcel = async (students: Omit<Student, "id" | "created_at" | "updated_at">[]) => {
+  try {
+    console.log('Importing students:', students);
+    
+    // Process each student in sequence to properly handle duplicates and errors
+    const results = {
+      successful: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+    
+    for (const student of students) {
+      try {
+        // Check if student with same name and department already exists
+        const { data: existingStudents } = await supabase
+          .from("students")
+          .select("id")
+          .eq("first_name", student.first_name)
+          .eq("last_name", student.last_name || "")
+          .eq("department", student.department || "");
+        
+        if (existingStudents && existingStudents.length > 0) {
+          // Update existing student
+          await updateStudent(existingStudents[0].id, student);
+          results.successful++;
+        } else {
+          // Create new student
+          await createStudent(student);
+          results.successful++;
+        }
+      } catch (error) {
+        console.error('Error importing student:', student, error);
+        results.failed++;
+        results.errors.push(`Error con ${student.first_name} ${student.last_name || ''}: ${error.message || 'Error desconocido'}`);
+      }
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('Error in importStudentsFromExcel:', error);
+    throw error;
+  }
+};
