@@ -460,46 +460,55 @@ const ListarAlumnos = () => {
     };
     
     const rangeInfo = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-    const protections = [];
-    
-    protections.push({
-      sqref: `A1:${XLSX.utils.encode_col(rangeInfo.e.c)}1`,
-      password: ''
-    });
     
     worksheet['!protect'] = {
-      password: '',
       formatCells: false,
-      formatColumns: false,
+      formatColumns: false, 
       formatRows: false,
       insertColumns: false,
       insertRows: true,
       insertHyperlinks: false,
       deleteColumns: false,
       deleteRows: false,
-      sort: false,
-      autoFilter: false,
+      selectLockedCells: true,
+      selectUnlockedCells: true,
+      sort: true,
+      autoFilter: true,
       pivotTables: false,
       objects: false,
       scenarios: false
     };
     
-    worksheet['!protections'] = protections;
+    const headers = XLSX.utils.decode_range('A1:' + XLSX.utils.encode_cell({r: 0, c: rangeInfo.e.c}));
     
     if (!worksheet['!dataValidations']) {
       worksheet['!dataValidations'] = [];
     }
     
-    if (rangeInfo.e.r > 0) {
-      worksheet['!dataValidations'].push({
-        sqref: `G2:G${rangeInfo.e.r + 100}`,
-        ...genderValidation
-      });
-      
-      worksheet['!dataValidations'].push({
-        sqref: `D2:D${rangeInfo.e.r + 100}`,
-        ...departmentValidation
-      });
+    worksheet['!dataValidations'].push({
+      sqref: `G2:G${rangeInfo.e.r + 100}`,
+      ...genderValidation
+    });
+    
+    worksheet['!dataValidations'].push({
+      sqref: `D2:D${rangeInfo.e.r + 100}`,
+      ...departmentValidation
+    });
+    
+    for(let C = headers.s.c; C <= headers.e.c; ++C) {
+      const cell = XLSX.utils.encode_cell({r: 0, c: C});
+      if(!worksheet[cell]) continue;
+      if(!worksheet[cell].s) worksheet[cell].s = {};
+      worksheet[cell].s.locked = true;
+    }
+    
+    for(let R = headers.e.r + 1; R <= rangeInfo.e.r + 100; ++R) {
+      for(let C = rangeInfo.s.c; C <= rangeInfo.e.c; ++C) {
+        const cell = XLSX.utils.encode_cell({r: R, c: C});
+        if(!worksheet[cell]) continue;
+        if(!worksheet[cell].s) worksheet[cell].s = {};
+        worksheet[cell].s.locked = false;
+      }
     }
     
     XLSX.utils.book_append_sheet(workbook, worksheet, "Alumnos");
