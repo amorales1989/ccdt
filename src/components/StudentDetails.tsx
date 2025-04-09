@@ -26,6 +26,16 @@ export const StudentDetails = ({ student }: StudentDetailsProps) => {
             <h3 className="text-lg font-semibold mb-4">{displayName}</h3>
             
             <div className="space-y-3">
+              <div>
+                <span className="font-medium">Nombre:</span> {student.first_name}
+              </div>
+              
+              {student.last_name && (
+                <div>
+                  <span className="font-medium">Apellido:</span> {student.last_name}
+                </div>
+              )}
+              
               {student.document_number && (
                 <div>
                   <span className="font-medium">DNI:</span> {student.document_number}
