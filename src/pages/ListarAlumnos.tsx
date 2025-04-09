@@ -486,8 +486,9 @@ const ListarAlumnos = () => {
           department = department.toLowerCase().replace(/\s+/g, '_') as DepartmentType;
         }
         
-        let phone = row['Teléfono'] || null;
-        if (phone) {
+        let phone = null;
+        if (row['Teléfono'] !== undefined && row['Teléfono'] !== null) {
+          phone = String(row['Teléfono']);
           if (!phone.startsWith('54')) {
             phone = '54' + phone;
           }
