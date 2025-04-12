@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +27,7 @@ const AgregarAlumno = () => {
     phoneCode: "54",
     address: "",
     gender: "masculino",
-    birthdate: "",
+    birthdate: format(new Date(), 'yyyy-MM-dd'),
     document_number: "",
     department: null as DepartmentType | null,
     department_id: "",
@@ -54,19 +53,16 @@ const AgregarAlumno = () => {
   const departmentHasClasses = availableClasses.length > 0;
 
   useEffect(() => {
-    // Initialize with teacher's department and class if available
     if (profile) {
       let department = null;
       let departmentId = "";
       let assignedClass = "";
       
-      // If teacher has a department, use it
       if (profile.departments?.[0]) {
         department = profile.departments[0] as DepartmentType;
         departmentId = profile.department_id || "";
       }
       
-      // If teacher has a class, use it
       if (profile.assigned_class) {
         assignedClass = profile.assigned_class;
       }
@@ -78,7 +74,6 @@ const AgregarAlumno = () => {
         assigned_class: assignedClass
       }));
       
-      // Fetch department ID if not available
       if (department && !departmentId) {
         const fetchDepartmentId = async () => {
           try {
@@ -125,7 +120,7 @@ const AgregarAlumno = () => {
       }
     } catch (error) {
       console.error("Error validating DNI:", error);
-      return true; // Don't block submission for validation errors
+      return true;
     } finally {
       setIsValidatingDni(false);
     }
@@ -160,7 +155,6 @@ const AgregarAlumno = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate DNI before submission
     if (formData.document_number) {
       const isValid = await validateDni(formData.document_number);
       if (!isValid) {
@@ -191,15 +185,6 @@ const AgregarAlumno = () => {
       return;
     }
 
-    if (!formData.document_number) {
-      toast({
-        title: "Error",
-        description: "Por favor ingrese el DNI del alumno",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!formData.first_name) {
       toast({
         title: "Error",
@@ -210,6 +195,7 @@ const AgregarAlumno = () => {
     }
 
     const formattedPhone = formatPhoneNumber(formData.phoneCode, formData.phone);
+    const birthdate = formData.birthdate || format(new Date(), 'yyyy-MM-dd');
 
     setIsLoading(true);
     try {
@@ -219,7 +205,7 @@ const AgregarAlumno = () => {
         phone: formattedPhone,
         address: formData.address || null,
         gender: formData.gender,
-        birthdate: formData.birthdate || null,
+        birthdate: birthdate,
         document_number: formData.document_number,
         department: formData.department,
         department_id: formData.department_id || undefined,
@@ -346,11 +332,11 @@ const AgregarAlumno = () => {
                     ...formData, 
                     department: value as DepartmentType,
                     department_id: selectedDept?.id || "",
-                    assigned_class: "" // Reset class when department changes
+                    assigned_class: "" 
                   });
                 }}
                 required
-                disabled={isMaestro} // Disable for teachers as they're locked to their department
+                disabled={isMaestro}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar departamento" />
@@ -373,7 +359,7 @@ const AgregarAlumno = () => {
                     setFormData({ ...formData, assigned_class: value })
                   }
                   required
-                  disabled={isMaestro} // Disable for teachers as they're locked to their class
+                  disabled={isMaestro}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar clase" />

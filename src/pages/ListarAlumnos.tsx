@@ -125,7 +125,7 @@ const ListarAlumnos = () => {
         last_name: studentToEdit.last_name || "",
         phone: "",
         address: studentToEdit.address || "",
-        birthdate: studentToEdit.birthdate || "",
+        birthdate: studentToEdit.birthdate || format(new Date(), 'yyyy-MM-dd'),
         gender: validGender,
         department: departmentValue,
         assigned_class: studentToEdit.assigned_class || "",
@@ -747,10 +747,10 @@ const ListarAlumnos = () => {
       updatedData.address = studentToEdit.address;
     }
     
-    if (data.birthdate !== undefined) {
+    if (data.birthdate) {
       updatedData.birthdate = data.birthdate;
     } else {
-      updatedData.birthdate = studentToEdit.birthdate;
+      updatedData.birthdate = format(new Date(), 'yyyy-MM-dd');
     }
     
     updatedData.gender = data.gender;
