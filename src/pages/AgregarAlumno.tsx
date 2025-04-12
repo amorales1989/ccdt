@@ -104,7 +104,7 @@ const AgregarAlumno = () => {
   }, [profile, departments]);
 
   const validateDni = async (dni: string) => {
-    if (!dni) {
+    if (!dni || dni.trim() === '') {
       setDniError(null);
       return true;
     }
@@ -128,8 +128,10 @@ const AgregarAlumno = () => {
   };
 
   const handleDniBlur = async () => {
-    if (formData.document_number) {
+    if (formData.document_number && formData.document_number.trim() !== '') {
       await validateDni(formData.document_number);
+    } else {
+      setDniError(null);
     }
   };
 
@@ -156,7 +158,7 @@ const AgregarAlumno = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.document_number) {
+    if (formData.document_number && formData.document_number.trim() !== '') {
       const isValid = await validateDni(formData.document_number);
       if (!isValid) {
         toast({

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance, Department, DepartmentType, Company } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
@@ -45,6 +46,11 @@ export const getStudent = async (id: string) => {
 
 export const checkDniExists = async (dni: string, excludeStudentId?: string) => {
   try {
+    // If DNI is empty or null, don't check for duplicates
+    if (!dni || dni.trim() === '') {
+      return false;
+    }
+    
     let query = supabase
       .from("students")
       .select("id")
@@ -67,8 +73,8 @@ export const checkDniExists = async (dni: string, excludeStudentId?: string) => 
 
 export const createStudent = async (student: Omit<Student, "id" | "created_at" | "updated_at">) => {
   try {
-    // Check if the DNI already exists
-    if (student.document_number) {
+    // Check if the DNI already exists, but only if a non-empty DNI is provided
+    if (student.document_number && student.document_number.trim() !== '') {
       const exists = await checkDniExists(student.document_number);
       if (exists) {
         throw new Error(`El DNI ${student.document_number} ya está registrado en el sistema`);
@@ -123,8 +129,8 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
 
 export const updateStudent = async (id: string, student: Partial<Omit<Student, "id" | "created_at" | "updated_at">>) => {
   try {
-    // Check if the DNI already exists (excluding the current student)
-    if (student.document_number) {
+    // Check if the DNI already exists (excluding the current student), but only if a non-empty DNI is provided
+    if (student.document_number && student.document_number.trim() !== '') {
       const exists = await checkDniExists(student.document_number, id);
       if (exists) {
         throw new Error(`El DNI ${student.document_number} ya está registrado en el sistema`);
