@@ -295,7 +295,8 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
         *,
         students (
           id,
-          name,
+          first_name,
+          last_name,
           departments:department_id(name)
         )
       `)
@@ -340,7 +341,8 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
       ...record,
       students: record.students ? {
         ...record.students,
-        department: record.students.departments?.name
+        department: record.students.departments?.name,
+        name: record.students ? `${record.students.first_name} ${record.students.last_name || ''}` : ''
       } : null,
       department: record.departments?.name
     }));

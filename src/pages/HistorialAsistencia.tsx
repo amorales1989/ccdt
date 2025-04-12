@@ -277,7 +277,7 @@ const HistorialAsistencia = () => {
     if (!record.students) return false;
 
     const matchesSearch = searchQuery === "" || 
-      record.students.name.toLowerCase().includes(searchQuery.toLowerCase());
+      record.students.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesSearch;
   });
