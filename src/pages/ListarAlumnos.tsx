@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -778,9 +779,21 @@ const ListarAlumnos = () => {
         description: `Los datos de ${data.first_name} ${data.last_name || ''} han sido actualizados con éxito.`,
       });
       setIsDialogOpen(false);
+      
+      // Invalidate all relevant queries to ensure lists are updated
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["students-department"] });
       queryClient.invalidateQueries({ queryKey: ["authorized-students"] });
+      
+      // If the user edited a student in the current department, make sure the view is refreshed
+      if (selectedDepartmentId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ["students-department", selectedDepartmentId, selectedClass] 
+        });
+      }
+      
+      // Clear selected student to refresh the view
+      setSelectedStudent(null);
     } catch (error: any) {
       console.error("Error al actualizar alumno:", error);
       toast({
