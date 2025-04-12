@@ -154,6 +154,11 @@ export const updateStudent = async (id: string, student: Partial<Omit<Student, "
     // Prepare update data with department_id
     const updateData = { ...student };
     
+    // If the document_number is an empty string, explicitly set it to null in the database
+    if (student.document_number !== undefined && student.document_number.trim() === '') {
+      updateData.document_number = null;
+    }
+    
     // Update department_id if we found one
     if (departmentId !== undefined) {
       updateData.department_id = departmentId;

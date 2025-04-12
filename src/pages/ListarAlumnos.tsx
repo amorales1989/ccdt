@@ -755,11 +755,7 @@ const ListarAlumnos = () => {
     
     updatedData.gender = data.gender;
     
-    if (data.document_number !== undefined) {
-      updatedData.document_number = data.document_number;
-    } else {
-      updatedData.document_number = studentToEdit.document_number;
-    }
+    updatedData.document_number = data.document_number?.trim() || null;
     
     if (data.department) {
       updatedData.department = data.department;
