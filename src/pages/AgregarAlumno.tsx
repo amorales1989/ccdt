@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -168,24 +167,6 @@ const AgregarAlumno = () => {
         return;
       }
     }
-    
-    if (!formData.department) {
-      toast({
-        title: "Error",
-        description: "Por favor seleccione un departamento",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (departmentHasClasses && !formData.assigned_class) {
-      toast({
-        title: "Error",
-        description: "Por favor seleccione una clase",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (!formData.first_name) {
       toast({
@@ -203,13 +184,13 @@ const AgregarAlumno = () => {
     try {
       await createStudent({
         first_name: formData.first_name,
-        last_name: formData.last_name,
+        last_name: formData.last_name || "",
         phone: formattedPhone,
         address: formData.address || null,
-        gender: formData.gender,
+        gender: formData.gender || "masculino",
         birthdate: birthdate,
-        document_number: formData.document_number,
-        department: formData.department,
+        document_number: formData.document_number || null,
+        department: formData.department || null,
         department_id: formData.department_id || undefined,
         assigned_class: formData.assigned_class || null,
       });
@@ -256,7 +237,7 @@ const AgregarAlumno = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first_name">Nombre</Label>
+                <Label htmlFor="first_name">Nombre *</Label>
                 <Input
                   id="first_name"
                   value={formData.first_name}
@@ -274,7 +255,6 @@ const AgregarAlumno = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, last_name: e.target.value })
                   }
-                  required
                 />
               </div>
             </div>
@@ -288,7 +268,6 @@ const AgregarAlumno = () => {
                 }
                 onBlur={handleDniBlur}
                 placeholder="Ingrese el DNI sin puntos"
-                required
                 error={!!dniError}
               />
               {dniError && (
@@ -304,7 +283,6 @@ const AgregarAlumno = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, birthdate: e.target.value })
                 }
-                required
               />
             </div>
             <div className="space-y-2">
@@ -337,7 +315,6 @@ const AgregarAlumno = () => {
                     assigned_class: "" 
                   });
                 }}
-                required
                 disabled={isMaestro}
               >
                 <SelectTrigger>
@@ -360,7 +337,6 @@ const AgregarAlumno = () => {
                   onValueChange={(value) =>
                     setFormData({ ...formData, assigned_class: value })
                   }
-                  required
                   disabled={isMaestro}
                 >
                   <SelectTrigger>
