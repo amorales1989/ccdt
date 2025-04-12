@@ -64,7 +64,8 @@ const ListarAlumnos = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   type StudentFormData = {
-    name: string;
+    first_name: string;
+    last_name: string;
     phone: string;
     address: string;
     birthdate: string;
@@ -76,7 +77,8 @@ const ListarAlumnos = () => {
 
   const form = useForm<StudentFormData>({
     defaultValues: {
-      name: "",
+      first_name: "",
+      last_name: "",
       phone: "",
       address: "",
       birthdate: "",
@@ -119,7 +121,8 @@ const ListarAlumnos = () => {
       setEditDepartmentId(studentToEdit.department_id || null);
       
       form.reset({
-        name: getFullName(studentToEdit),
+        first_name: studentToEdit.first_name,
+        last_name: studentToEdit.last_name || "",
         phone: "",
         address: studentToEdit.address || "",
         birthdate: studentToEdit.birthdate || "",
@@ -727,17 +730,10 @@ const ListarAlumnos = () => {
     
     const formattedPhone = formatPhoneNumber(phoneCode, phoneNumber);
     
-    const updatedData: any = {};
-    
-    const nameParts = data.name.trim().split(/\s+/);
-    if (nameParts.length > 0) {
-      updatedData.first_name = nameParts[0];
-      if (nameParts.length > 1) {
-        updatedData.last_name = nameParts.slice(1).join(' ');
-      } else {
-        updatedData.last_name = null;
-      }
-    }
+    const updatedData: any = {
+      first_name: data.first_name,
+      last_name: data.last_name || null
+    };
     
     if (phoneNumber) {
       updatedData.phone = formattedPhone;
@@ -783,7 +779,7 @@ const ListarAlumnos = () => {
       await updateStudent(studentToEdit.id, updatedData);
       toast({
         title: "Alumno actualizado",
-        description: `Los datos de ${data.name} han sido actualizados con éxito.`,
+        description: `Los datos de ${data.first_name} ${data.last_name || ''} han sido actualizados con éxito.`,
       });
       setIsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["students"] });
@@ -1189,18 +1185,32 @@ const ListarAlumnos = () => {
           <DialogHeader>
             <DialogTitle>Editar Alumno</DialogTitle>
             <DialogDescription>
-              Actualiza la información del alumno {studentToEdit ? getFullName(studentToEdit) : ""}
+              Actualiza la información del alumno
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre completo</Label>
-                <Input 
-                  id="name"
-                  {...form.register("name")}
-                  placeholder="Nombre completo"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="first_name">Nombre</Label>
+                  <Input 
+                    id="first_name"
+                    {...form.register("first_name", { required: true })}
+                    placeholder="Nombre"
+                  />
+                  {form.formState.errors.first_name && (
+                    <p className="text-sm text-red-500">El nombre es requerido</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="last_name">Apellido</Label>
+                  <Input 
+                    id="last_name"
+                    {...form.register("last_name")}
+                    placeholder="Apellido"
+                  />
+                </div>
               </div>
               
               <div className="space-y-2">
@@ -1209,7 +1219,6 @@ const ListarAlumnos = () => {
                   id="document_number"
                   {...form.register("document_number")}
                   placeholder="Ingrese el DNI sin puntos"
-                  required
                 />
               </div>
               
