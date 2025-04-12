@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Student, Event, Attendance, Department, DepartmentType, Company } from "@/types/database";
 import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
@@ -355,7 +354,7 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
   }
 };
 
-// Update markAttendance to use department_id
+// Update markAttendance to ensure status is correctly saved
 export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at" | "updated_at"> & { department_id?: string }) => {
   try {
     console.log('Starting attendance marking with data:', attendance);
@@ -416,10 +415,16 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       }
     }
 
+    // Make sure the status is explicitly a boolean to avoid any type issues
+    const status = Boolean(attendance.status);
+    
+    // Log the status to verify it's correct
+    console.log(`Setting attendance status for student ${attendance.student_id} to: ${status} (${status ? 'Present' : 'Absent'})`);
+
     const attendanceData = {
       student_id: attendance.student_id,
       date: attendance.date,
-      status: attendance.status,
+      status: status, // Use the explicit boolean status
       department_id: departmentId,
       assigned_class: assignedClass,
       ...(attendance.event_id && { event_id: attendance.event_id })

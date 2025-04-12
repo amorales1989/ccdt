@@ -164,12 +164,21 @@ const HistorialAsistencia = () => {
         departmentIdToUse = userDepartmentId;
       }
       
+      console.log("Fetching attendance with params:", {
+        formattedStartDate,
+        formattedEndDate,
+        departmentIdToUse,
+        selectedClass
+      });
+      
       const attendanceData = await getAttendance(
         formattedStartDate, 
         formattedEndDate, 
         "", 
         departmentIdToUse
       );
+      
+      console.log("Received attendance data:", attendanceData);
       
       if (selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);

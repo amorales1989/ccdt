@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,6 @@ const TomarAsistencia = () => {
     fetchDepartmentId();
   }, [currentDepartment]);
 
-  // Fetch authorized students
   useEffect(() => {
     const fetchAuthorizedStudents = async () => {
       if (departmentId) {
@@ -103,7 +101,6 @@ const TomarAsistencia = () => {
     queryFn: async () => {
       console.log("Fetching students for attendance...", { departmentId, userClass });
       
-      // First, get department students
       let departmentQuery = supabase
         .from("students")
         .select("*, departments:department_id(name, id)");
@@ -128,7 +125,6 @@ const TomarAsistencia = () => {
         throw error;
       }
       
-      // If not admin or secretaria, also fetch authorized students from other departments
       let allStudents = [...departmentStudents];
       
       if (!isAdminOrSecretaria && departmentId) {
@@ -205,15 +201,18 @@ const TomarAsistencia = () => {
 
       const finalAttendances = { ...defaultAbsentAttendance, ...asistencias };
 
+      console.log("Saving attendance data:", finalAttendances);
+
       await Promise.all(
-        Object.entries(finalAttendances).map(([studentId, status]) =>
-          markAttendance({
+        Object.entries(finalAttendances).map(([studentId, status]) => {
+          console.log(`Marking student ${studentId} as ${status ? 'present' : 'absent'}`);
+          return markAttendance({
             student_id: studentId,
             date: adjustedDate,
-            status,
+            status: status,
             department_id: departmentId || undefined,
-          })
-        )
+          });
+        })
       );
 
       toast({
@@ -236,6 +235,7 @@ const TomarAsistencia = () => {
   };
 
   const marcarAsistencia = (id: string, presente: boolean) => {
+    console.log(`Marcando estudiante ${id} como ${presente ? 'presente' : 'ausente'}`);
     setAsistencias((prev) => ({ ...prev, [id]: presente }));
   };
 
@@ -355,4 +355,3 @@ const TomarAsistencia = () => {
 };
 
 export default TomarAsistencia;
-
