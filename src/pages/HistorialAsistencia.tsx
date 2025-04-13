@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,6 +47,7 @@ const HistorialAsistencia = () => {
   const [selectedRange, setSelectedRange] = useState("today");
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedClass, setSelectedClass] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,6 +57,7 @@ const HistorialAsistencia = () => {
   
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const [singleDateOpen, setSingleDateOpen] = useState(false);
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [editDate, setEditDate] = useState<Date>(new Date());
@@ -99,16 +102,24 @@ const HistorialAsistencia = () => {
       case "today":
         setStartDate(today);
         setEndDate(today);
+        setSelectedDate(today);
         break;
       case "7days":
         setStartDate(subDays(today, 7));
         setEndDate(today);
+        setSelectedDate(today);
         break;
       case "30days":
         setStartDate(subDays(today, 30));
         setEndDate(today);
+        setSelectedDate(today);
         break;
       case "custom":
+        // For non-admin/secretaria users, we'll use a single date
+        if (!isAdminOrSecretaria) {
+          setStartDate(today);
+          setEndDate(today);
+        }
         break;
     }
   };
@@ -138,6 +149,15 @@ const HistorialAsistencia = () => {
       }
       
       setEndDateOpen(false);
+    }
+  };
+
+  const handleSingleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      setStartDate(date);
+      setEndDate(date);
+      setSingleDateOpen(false);
     }
   };
 
@@ -451,58 +471,90 @@ const HistorialAsistencia = () => {
                   </div>
 
                   {selectedRange === "custom" && (
-                    <>
+                    isAdminOrSecretaria ? (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Fecha Inicio</label>
+                          <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !startDate && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {startDate ? format(startDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={startDate}
+                                onSelect={handleStartDateSelect}
+                                initialFocus
+                                className={cn("p-3 pointer-events-auto")}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Fecha Fin</label>
+                          <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !endDate && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {endDate ? format(endDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={endDate}
+                                onSelect={handleEndDateSelect}
+                                initialFocus
+                                className={cn("p-3 pointer-events-auto")}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </>
+                    ) : (
+                      // Single date picker for non-admin/secretaria users
                       <div>
-                        <label className="text-sm font-medium mb-2 block">Fecha Inicio</label>
-                        <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                        <label className="text-sm font-medium mb-2 block">Fecha</label>
+                        <Popover open={singleDateOpen} onOpenChange={setSingleDateOpen}>
                           <PopoverTrigger asChild>
                             <Button
                               variant={"outline"}
                               className={cn(
                                 "w-full justify-start text-left font-normal",
-                                !startDate && "text-muted-foreground"
+                                !selectedDate && "text-muted-foreground"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {startDate ? format(startDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                              {selectedDate ? format(selectedDate, "dd/MM/yyyy") : "Seleccionar fecha"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
-                              selected={startDate}
-                              onSelect={handleStartDateSelect}
+                              selected={selectedDate}
+                              onSelect={handleSingleDateSelect}
                               initialFocus
+                              className={cn("p-3 pointer-events-auto")}
                             />
                           </PopoverContent>
                         </Popover>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Fecha Fin</label>
-                        <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !endDate && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {endDate ? format(endDate, "dd/MM/yyyy") : "Seleccionar fecha"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={endDate}
-                              onSelect={handleEndDateSelect}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </>
+                    )
                   )}
 
                   <div>
@@ -542,7 +594,12 @@ const HistorialAsistencia = () => {
             <CardTitle className="text-lg md:text-xl">
               {isEditMode 
                 ? `Editar Asistencia del ${format(editDate, "dd/MM/yyyy")}` 
-                : `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`}
+                : isAdminOrSecretaria 
+                  ? `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`
+                  : selectedRange === "custom"
+                    ? `Asistencia del ${format(selectedDate, "dd/MM/yyyy")}`
+                    : `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`
+              }
             </CardTitle>
             <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
               {!isEditMode && (
