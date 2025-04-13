@@ -148,24 +148,18 @@ const TomarAsistencia = () => {
         }
       }
       
-      // Sort students by last name (prioritizing last name) and then by first name
-      // If last name is empty, it will be sorted after names with last names
       allStudents.sort((a, b) => {
-        // Ensure empty or null last names are sorted last
         const lastNameA = a.last_name || '';
         const lastNameB = b.last_name || '';
 
-        // First, sort by last name
         if (lastNameA.toLowerCase() !== lastNameB.toLowerCase()) {
           return lastNameA.toLowerCase().localeCompare(lastNameB.toLowerCase());
         }
 
-        // If last names are the same, sort by first name
         const firstNameSort = a.first_name.toLowerCase().localeCompare(b.first_name.toLowerCase());
         
-        // Then, as a final sort criteria, sort by gender (keeping the order consistent)
         if (firstNameSort === 0) {
-          return a.gender.localeCompare(b.gender);
+          return a.gender.toLowerCase().localeCompare(b.gender.toLowerCase());
         }
 
         return firstNameSort;
@@ -178,9 +172,11 @@ const TomarAsistencia = () => {
   });
 
   const getFullName = (student: any): string => {
-    return student.last_name 
-      ? `${student.first_name} ${student.last_name}` 
-      : student.first_name;
+    if (student.last_name) {
+      return `${student.last_name}, ${student.first_name}`;
+    } else {
+      return student.first_name;
+    }
   };
 
   const checkExistingAttendance = async (date: string) => {
