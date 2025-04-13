@@ -149,20 +149,23 @@ const TomarAsistencia = () => {
       }
       
       allStudents.sort((a, b) => {
-        const lastNameA = a.last_name || '';
-        const lastNameB = b.last_name || '';
-
-        if (lastNameA.toLowerCase() !== lastNameB.toLowerCase()) {
-          return lastNameA.toLowerCase().localeCompare(lastNameB.toLowerCase());
-        }
-
-        const firstNameSort = a.first_name.toLowerCase().localeCompare(b.first_name.toLowerCase());
+        const genderA = (a.gender || '').toLowerCase();
+        const genderB = (b.gender || '').toLowerCase();
         
-        if (firstNameSort === 0) {
-          return a.gender.toLowerCase().localeCompare(b.gender.toLowerCase());
+        if (genderA !== genderB) {
+          if (genderA === "femenino") return -1;
+          if (genderB === "femenino") return 1;
+          return genderA.localeCompare(genderB);
         }
-
-        return firstNameSort;
+        
+        const lastNameA = (a.last_name || '').toLowerCase();
+        const lastNameB = (b.last_name || '').toLowerCase();
+        
+        if (lastNameA !== lastNameB) {
+          return lastNameA.localeCompare(lastNameB);
+        }
+        
+        return a.first_name.toLowerCase().localeCompare(b.first_name.toLowerCase());
       });
 
       console.log("Fetched students for attendance:", allStudents);
