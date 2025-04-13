@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Student } from "@/types/database";
 
@@ -12,6 +12,15 @@ interface StudentDetailsProps {
 export const StudentDetails = ({ student }: StudentDetailsProps) => {
   const formatDepartment = (dept: string) => {
     return dept.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatBirthdate = (birthdate: string | null) => {
+    if (!birthdate) return "";
+    
+    // Using parseISO to correctly parse the ISO date string without timezone conversion
+    // This ensures we don't lose a day when formatting
+    const parsedDate = parseISO(birthdate);
+    return format(parsedDate, "dd MMMM yyyy", { locale: es });
   };
 
   return (
@@ -59,7 +68,7 @@ export const StudentDetails = ({ student }: StudentDetailsProps) => {
               {student.birthdate && (
                 <div>
                   <span className="font-medium">Fecha de nacimiento:</span>{" "}
-                  {format(new Date(student.birthdate), "dd MMMM yyyy", { locale: es })}
+                  {formatBirthdate(student.birthdate)}
                 </div>
               )}
             </div>
