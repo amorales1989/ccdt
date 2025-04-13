@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -158,14 +159,18 @@ const TomarAsistencia = () => {
           return genderA.localeCompare(genderB);
         }
         
-        const lastNameA = (a.last_name || '').toLowerCase();
-        const lastNameB = (b.last_name || '').toLowerCase();
+        // Now sorting by first name first, then last name if needed
+        const firstNameA = (a.first_name || '').toLowerCase();
+        const firstNameB = (b.first_name || '').toLowerCase();
         
-        if (lastNameA !== lastNameB) {
-          return lastNameA.localeCompare(lastNameB);
+        if (firstNameA !== firstNameB) {
+          return firstNameA.localeCompare(firstNameB);
         }
         
-        return a.first_name.toLowerCase().localeCompare(b.first_name.toLowerCase());
+        // If first names are the same, sort by last name
+        const lastNameA = (a.last_name || '').toLowerCase();
+        const lastNameB = (b.last_name || '').toLowerCase();
+        return lastNameA.localeCompare(lastNameB);
       });
 
       console.log("Fetched students for attendance:", allStudents);
@@ -176,7 +181,7 @@ const TomarAsistencia = () => {
 
   const getFullName = (student: any): string => {
     if (student.last_name) {
-      return `${student.last_name}, ${student.first_name}`;
+      return `${student.first_name} ${student.last_name}`;
     } else {
       return student.first_name;
     }
