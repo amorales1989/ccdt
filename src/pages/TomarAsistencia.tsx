@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { markAttendance, getAttendance } from "@/lib/api";
-import { format, addDays } from "date-fns";
+import { format, addDays, compareAsc } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -148,6 +148,29 @@ const TomarAsistencia = () => {
         }
       }
       
+      // Sort students by last name (prioritizing last name) and then by first name
+      // If last name is empty, it will be sorted after names with last names
+      allStudents.sort((a, b) => {
+        // Ensure empty or null last names are sorted last
+        const lastNameA = a.last_name || '';
+        const lastNameB = b.last_name || '';
+
+        // First, sort by last name
+        if (lastNameA.toLowerCase() !== lastNameB.toLowerCase()) {
+          return lastNameA.toLowerCase().localeCompare(lastNameB.toLowerCase());
+        }
+
+        // If last names are the same, sort by first name
+        const firstNameSort = a.first_name.toLowerCase().localeCompare(b.first_name.toLowerCase());
+        
+        // Then, as a final sort criteria, sort by gender (keeping the order consistent)
+        if (firstNameSort === 0) {
+          return a.gender.localeCompare(b.gender);
+        }
+
+        return firstNameSort;
+      });
+
       console.log("Fetched students for attendance:", allStudents);
       return allStudents;
     },
