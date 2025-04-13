@@ -16,15 +16,12 @@ export const StudentDetails = ({ student }: StudentDetailsProps) => {
 
   const formatBirthdate = (birthdate: string | null) => {
     if (!birthdate) return "";
-  
-    // Parse the date
+    
+    // Parse the date and add one day
     const parsedDate = parseISO(birthdate);
-  
-    // Add one day to the parsed date
-    const oneDayAfter = addDays(parsedDate, 1);
-  
-    // Format and return
-    return format(oneDayAfter, "dd MMMM yyyy", { locale: es });
+    const adjustedDate = addDays(parsedDate, 1);
+    
+    return format(adjustedDate, "dd MMMM yyyy", { locale: es });
   };
 
   return (

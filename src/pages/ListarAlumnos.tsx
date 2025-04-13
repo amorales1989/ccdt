@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { MessageSquare, Pencil, Trash2, MoreVertical, Download, Filter, UserCheck, Upload, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, differenceInYears, parse, isValid } from "date-fns";
+import { format, differenceInYears, parse, isValid, addDays } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
 import { DepartmentType, Department, Student, StudentAuthorization } from "@/types/database";
@@ -880,10 +880,10 @@ const ListarAlumnos = () => {
           <span className="ml-2">{student.assigned_class || "Sin asignar"}</span>
         </div>
         <div>
-          <span className="font-medium">Fecha de nacimiento:</span>
+        <span className="font-medium">Fecha de nacimiento:</span>
           <span className="ml-2">
-            {student.birthdate 
-              ? format(new Date(student.birthdate), "dd/MM/yyyy") 
+            {student.birthdate
+              ? format(addDays(new Date(student.birthdate), 1), "dd/MM/yyyy")
               : "No especificada"}
           </span>
         </div>
