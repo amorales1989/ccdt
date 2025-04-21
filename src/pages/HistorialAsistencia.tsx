@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { DepartmentType, Attendance } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { markAttendance } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -64,7 +64,7 @@ const HistorialAsistencia = () => {
   const [editDateOpen, setEditDateOpen] = useState(false);
   const [editRecords, setEditRecords] = useState<Attendance[]>([]);
   const [savingAttendance, setSavingAttendance] = useState(false);
-  
+  const [allStudents, setAllStudents] = useState<any[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
@@ -239,11 +239,77 @@ const HistorialAsistencia = () => {
     enabled: isEditMode && !!editDate
   });
 
+  const { data: departmentStudents = [], isLoading: isLoadingDepartmentStudents } = useQuery({
+    queryKey: ["students-for-attendance", userDepartmentId, selectedDepartment, selectedClass],
+    queryFn: async () => {
+      let departmentIdToUse = null;
+      
+      if (isAdminOrSecretaria && selectedDepartment !== "all") {
+        const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
+        if (departmentData && departmentData.id) {
+          departmentIdToUse = departmentData.id;
+        }
+      } else if (userDepartmentId) {
+        departmentIdToUse = userDepartmentId;
+      }
+      
+      if (!departmentIdToUse) return [];
+      
+      let query = supabase
+        .from('students')
+        .select('*, departments:department_id(name)')
+        .eq('department_id', departmentIdToUse);
+      
+      if ((isAdminOrSecretaria && selectedClass !== "all") || (!isAdminOrSecretaria && userClass)) {
+        const classFilter = (isAdminOrSecretaria && selectedClass !== "all") ? selectedClass : userClass;
+        query = query.eq('assigned_class', classFilter);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error("Error fetching students:", error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    enabled: isEditMode && Boolean(userDepartmentId || (isAdminOrSecretaria && selectedDepartment !== "all"))
+  });
+
   useEffect(() => {
-    if (isEditMode && dateAttendance.length > 0) {
-      setEditRecords([...dateAttendance]);
+    if (isEditMode && departmentStudents.length > 0) {
+      setAllStudents(departmentStudents);
     }
-  }, [dateAttendance, isEditMode]);
+  }, [departmentStudents, isEditMode]);
+
+  useEffect(() => {
+    if (isEditMode && dateAttendance.length > 0 && allStudents.length > 0) {
+      const attendanceMap = new Map();
+      dateAttendance.forEach(record => {
+        attendanceMap.set(record.student_id, record);
+      });
+      
+      const fullAttendanceRecords = [...dateAttendance];
+      
+      allStudents.forEach(student => {
+        if (!attendanceMap.has(student.id)) {
+          const newRecord: Attendance = {
+            id: `new-${student.id}`,
+            student_id: student.id,
+            status: false,
+            date: format(editDate, "yyyy-MM-dd"),
+            department_id: student.department_id,
+            assigned_class: student.assigned_class,
+            students: student
+          };
+          fullAttendanceRecords.push(newRecord);
+        }
+      });
+      
+      setEditRecords(fullAttendanceRecords);
+    }
+  }, [dateAttendance, allStudents, isEditMode, editDate]);
 
   const handleEditDateSelect = (date: Date | undefined) => {
     if (date) {
@@ -266,16 +332,18 @@ const HistorialAsistencia = () => {
   const saveAttendanceChanges = async () => {
     setSavingAttendance(true);
     try {
-      const promises = editRecords.map(record => 
-        markAttendance({
+      const promises = editRecords.map(record => {
+        const isNewRecord = record.id.toString().startsWith('new-');
+        
+        return markAttendance({
           student_id: record.student_id,
           date: record.date,
           status: record.status,
           department_id: record.department_id || userDepartmentId,
           assigned_class: record.assigned_class,
           ...(record.event_id && { event_id: record.event_id })
-        })
-      );
+        });
+      });
       
       await Promise.all(promises);
       
@@ -285,7 +353,6 @@ const HistorialAsistencia = () => {
       });
       
       setIsEditMode(false);
-      
       setRefreshTrigger(prev => prev + 1);
       
       await refetchDateAttendance();
@@ -527,7 +594,6 @@ const HistorialAsistencia = () => {
                         </div>
                       </>
                     ) : (
-                      // Single date picker for non-admin/secretaria users
                       <div>
                         <label className="text-sm font-medium mb-2 block">Fecha</label>
                         <Popover open={singleDateOpen} onOpenChange={setSingleDateOpen}>
@@ -618,7 +684,7 @@ const HistorialAsistencia = () => {
           </CardHeader>
           <CardContent>
             {isEditMode ? (
-              dateAttendanceLoading ? (
+              isLoadingDepartmentStudents || dateAttendanceLoading ? (
                 <p className="text-muted-foreground">Cargando...</p>
               ) : !editRecords?.length ? (
                 <p className="text-muted-foreground">No hay registros de asistencia para esta fecha.</p>
