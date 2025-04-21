@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -421,7 +420,7 @@ const ListarAlumnos = () => {
       Teléfono: formatPhoneDisplay(student.phone) || '',
       Dirección: student.address || '',
       Género: student.gender,
-      'Fecha de Nacimiento': student.birthdate ? format(new Date(student.birthdate), "dd/MM/yyyy") : ''
+      'Fecha de Nacimiento': student.birthdate ? format(addDays(new Date(student.birthdate), 1), "dd/MM/yyyy") : ''
     }));
 
     const workbook = XLSX.utils.book_new();
@@ -780,19 +779,16 @@ const ListarAlumnos = () => {
       });
       setIsDialogOpen(false);
       
-      // Invalidate all relevant queries to ensure lists are updated
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["students-department"] });
       queryClient.invalidateQueries({ queryKey: ["authorized-students"] });
       
-      // If the user edited a student in the current department, make sure the view is refreshed
       if (selectedDepartmentId) {
         queryClient.invalidateQueries({ 
           queryKey: ["students-department", selectedDepartmentId, selectedClass] 
         });
       }
       
-      // Clear selected student to refresh the view
       setSelectedStudent(null);
     } catch (error: any) {
       console.error("Error al actualizar alumno:", error);
