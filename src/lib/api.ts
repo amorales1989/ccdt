@@ -7,11 +7,12 @@ export const getStudents = async () => {
   try {
     const { data, error } = await supabase
       .from("students")
-      .select("*, departments:department_id(name)");
+      .select("*, departments:department_id(name)")
+      .is('deleted_at', null)
+      .order('first_name');
     
     if (error) throw error;
     
-    // Map the data to match our Student interface
     return data.map(student => ({
       ...student,
       department: student.departments?.name
@@ -32,7 +33,6 @@ export const getStudent = async (id: string) => {
     
     if (error) throw error;
     
-    // Map department name from the joined department table
     return {
       ...data,
       department: data.departments?.name
@@ -45,7 +45,6 @@ export const getStudent = async (id: string) => {
 
 export const checkDniExists = async (dni: string, excludeStudentId?: string) => {
   try {
-    // If DNI is empty or null, don't check for duplicates
     if (!dni || dni.trim() === '') {
       return false;
     }
@@ -72,7 +71,6 @@ export const checkDniExists = async (dni: string, excludeStudentId?: string) => 
 
 export const createStudent = async (student: Omit<Student, "id" | "created_at" | "updated_at">) => {
   try {
-    // Check if the DNI already exists, but only if a non-empty DNI is provided
     if (student.document_number && student.document_number.trim() !== '') {
       const exists = await checkDniExists(student.document_number);
       if (exists) {
@@ -80,7 +78,6 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
       }
     }
     
-    // If we have a department name, we need to get its ID
     let departmentId = null;
     if (student.department) {
       const { data: deptData } = await supabase
@@ -94,7 +91,6 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
       }
     }
     
-    // Create student data object
     const studentData = {
       first_name: student.first_name,
       last_name: student.last_name,
@@ -115,7 +111,6 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
     
     if (error) throw error;
     
-    // Map department name for the returned student
     return {
       ...data,
       department: data.departments?.name
@@ -128,7 +123,6 @@ export const createStudent = async (student: Omit<Student, "id" | "created_at" |
 
 export const updateStudent = async (id: string, student: Partial<Omit<Student, "id" | "created_at" | "updated_at">>) => {
   try {
-    // Check if the DNI already exists (excluding the current student), but only if a non-empty DNI is provided
     if (student.document_number && student.document_number.trim() !== '') {
       const exists = await checkDniExists(student.document_number, id);
       if (exists) {
@@ -136,7 +130,6 @@ export const updateStudent = async (id: string, student: Partial<Omit<Student, "
       }
     }
     
-    // If department is provided, we need to get its ID
     let departmentId = undefined;
     if (student.department) {
       const { data: deptData } = await supabase
@@ -150,18 +143,14 @@ export const updateStudent = async (id: string, student: Partial<Omit<Student, "
       }
     }
     
-    // Prepare update data with department_id
     const updateData = { ...student };
     
-    // If the document_number is an empty string, explicitly set it to null in the database
     if (student.document_number !== undefined && student.document_number.trim() === '') {
       updateData.document_number = null;
     }
     
-    // Update department_id if we found one
     if (departmentId !== undefined) {
       updateData.department_id = departmentId;
-      // Remove department field as we're using department_id
       delete updateData.department;
     }
     
@@ -174,7 +163,6 @@ export const updateStudent = async (id: string, student: Partial<Omit<Student, "
     
     if (error) throw error;
     
-    // Map department name for the returned student
     return {
       ...data,
       department: data.departments?.name
@@ -187,12 +175,15 @@ export const updateStudent = async (id: string, student: Partial<Omit<Student, "
 
 export const deleteStudent = async (id: string) => {
   try {
+    console.log('Soft deleting student:', id);
+    
     const { error } = await supabase
       .from("students")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", id);
     
     if (error) throw error;
+    return { success: true };
   } catch (error) {
     console.error('Error in deleteStudent:', error);
     throw error;
@@ -296,22 +287,20 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
           id,
           first_name,
           last_name,
+          deleted_at,
           departments:department_id(name)
         )
       `)
       .gte('date', startDate)
       .lte('date', endDate)
-      .order('date', { ascending: false }) as PostgrestFilterBuilder<any, any, any>;
+      .order('date', { ascending: false });
 
-    // Filter by department ID if provided (higher priority)
     if (departmentId) {
       console.log('Filtering by department ID:', departmentId);
       query = query.eq('department_id', departmentId);
     }
-    // Fall back to department name if ID is not provided
     else if (department) {
       console.log('Filtering by department name:', department);
-      // Get department id first
       const { data: deptData } = await supabase
         .from("departments")
         .select("id")
@@ -335,12 +324,12 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
       return [];
     }
     
-    // Map the department name from the nested departments object
     const mappedData = data.map(record => ({
       ...record,
       students: record.students ? {
         ...record.students,
         department: record.students.departments?.name,
+        is_deleted: record.students.deleted_at !== null,
         name: record.students ? `${record.students.first_name} ${record.students.last_name || ''}` : ''
       } : null,
       department: record.departments?.name
@@ -354,7 +343,6 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
   }
 };
 
-// Update markAttendance to ensure status is correctly saved
 export const markAttendance = async (attendance: Omit<Attendance, "id" | "created_at" | "updated_at"> & { department_id?: string }) => {
   try {
     console.log('Starting attendance marking with data:', attendance);
@@ -365,16 +353,14 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       throw error;
     }
 
-    // Get the student's department_id if not provided
     let departmentId = attendance.department_id;
     if (!departmentId) {
-      // First, get the student's department_id and class
       const { data: student, error: studentError } = await supabase
         .from('students')
         .select('department_id, assigned_class')
         .eq('id', attendance.student_id)
         .maybeSingle();
-
+      
       if (studentError) {
         console.error('Error fetching student department:', studentError);
         throw studentError;
@@ -389,7 +375,6 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       departmentId = student.department_id;
     }
 
-    // Check if there's an existing attendance record for this student and date
     const { data: existingRecords, error: existingError } = await supabase
       .from('attendance')
       .select('id')
@@ -401,7 +386,6 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       throw existingError;
     }
 
-    // Get the student's class if not already provided
     let assignedClass = attendance.assigned_class;
     if (!assignedClass) {
       const { data: student, error: studentError } = await supabase
@@ -415,16 +399,14 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       }
     }
 
-    // Make sure the status is explicitly a boolean to avoid any type issues
     const status = Boolean(attendance.status);
     
-    // Log the status to verify it's correct
     console.log(`Setting attendance status for student ${attendance.student_id} to: ${status} (${status ? 'Present' : 'Absent'})`);
 
     const attendanceData = {
       student_id: attendance.student_id,
       date: attendance.date,
-      status: status, // Use the explicit boolean status
+      status: status,
       department_id: departmentId,
       assigned_class: assignedClass,
       ...(attendance.event_id && { event_id: attendance.event_id })
@@ -434,9 +416,6 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
     
     if (existingRecords && existingRecords.length > 0) {
       console.log(`Found ${existingRecords.length} existing attendance record(s), updating:`, existingRecords[0].id);
-      // Update the first existing record and delete any others
-      
-      // First, delete any duplicate records except the first one
       if (existingRecords.length > 1) {
         const recordsToDelete = existingRecords.slice(1).map(r => r.id);
         
@@ -447,13 +426,11 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
           
         if (deleteError) {
           console.error('Error deleting duplicate attendance records:', deleteError);
-          // Continue with the update even if deletion fails
         } else {
           console.log(`Deleted ${recordsToDelete.length} duplicate attendance records`);
         }
       }
       
-      // Update the first record
       const { data, error } = await supabase
         .from('attendance')
         .update(attendanceData)
@@ -469,7 +446,6 @@ export const markAttendance = async (attendance: Omit<Attendance, "id" | "create
       result = data;
     } else {
       console.log('No existing record found, creating new attendance record');
-      // Create a new record
       const { data, error } = await supabase
         .from('attendance')
         .insert([attendanceData])
@@ -599,7 +575,6 @@ export const deleteDepartment = async (id: string) => {
   try {
     console.log('Attempting to delete department:', id);
     
-    // First, update all students that reference this department to set their department_id to null
     const { error: updateStudentsError } = await supabase
       .from("students")
       .update({ department_id: null, department: null })
@@ -612,7 +587,6 @@ export const deleteDepartment = async (id: string) => {
     
     console.log('Successfully removed department references from students');
     
-    // Now delete the department
     const { error } = await supabase
       .from("departments")
       .delete()
@@ -660,7 +634,6 @@ export const updateCompany = async (id: number, updates: Partial<Company>) => {
     
     if (error) throw error;
     
-    // If we've updated the logo_url, update it in localStorage for immediate effect
     if (updates.logo_url !== undefined) {
       console.log('Updated logo_url:', updates.logo_url);
     }
@@ -677,7 +650,6 @@ export const importStudentsFromExcel = async (students: Omit<Student, "id" | "cr
   try {
     console.log('Importing students:', students);
     
-    // Process each student in sequence to properly handle duplicates and errors
     const results = {
       successful: 0,
       failed: 0,
@@ -686,7 +658,6 @@ export const importStudentsFromExcel = async (students: Omit<Student, "id" | "cr
     
     for (const student of students) {
       try {
-        // Check if student with same name and department already exists
         const { data: existingStudents } = await supabase
           .from("students")
           .select("id")
@@ -695,11 +666,9 @@ export const importStudentsFromExcel = async (students: Omit<Student, "id" | "cr
           .eq("department", student.department || "");
         
         if (existingStudents && existingStudents.length > 0) {
-          // Update existing student
           await updateStudent(existingStudents[0].id, student);
           results.successful++;
         } else {
-          // Create new student
           await createStudent(student);
           results.successful++;
         }

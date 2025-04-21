@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   first_name: string;
@@ -13,11 +12,13 @@ export interface Student {
   document_number?: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
   departments?: { 
     name?: DepartmentType;
     id?: string;
   };
   is_authorized?: boolean;
+  is_deleted?: boolean;
 }
 
 export interface Event {

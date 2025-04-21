@@ -58,6 +58,13 @@ export type Database = {
             foreignKeyName: "attendance_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
+            referencedRelation: "active_students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
@@ -329,6 +336,13 @@ export type Database = {
             foreignKeyName: "student_authorizations_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
+            referencedRelation: "active_students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_authorizations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
@@ -340,6 +354,7 @@ export type Database = {
           assigned_class: string | null
           birthdate: string | null
           created_at: string
+          deleted_at: string | null
           department: string | null
           department_id: string | null
           document_number: string | null
@@ -355,6 +370,7 @@ export type Database = {
           assigned_class?: string | null
           birthdate?: string | null
           created_at?: string
+          deleted_at?: string | null
           department?: string | null
           department_id?: string | null
           document_number?: string | null
@@ -370,6 +386,7 @@ export type Database = {
           assigned_class?: string | null
           birthdate?: string | null
           created_at?: string
+          deleted_at?: string | null
           department?: string | null
           department_id?: string | null
           document_number?: string | null
@@ -392,7 +409,65 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      active_students: {
+        Row: {
+          address: string | null
+          assigned_class: string | null
+          birthdate: string | null
+          created_at: string | null
+          deleted_at: string | null
+          department: string | null
+          department_id: string | null
+          document_number: string | null
+          first_name: string | null
+          gender: string | null
+          id: string | null
+          last_name: string | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          assigned_class?: string | null
+          birthdate?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          department?: string | null
+          department_id?: string | null
+          document_number?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id?: string | null
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          assigned_class?: string | null
+          birthdate?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          department?: string | null
+          department_id?: string | null
+          document_number?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id?: string | null
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_environment: {
