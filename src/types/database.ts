@@ -43,10 +43,7 @@ export interface Attendance {
   created_at: string;
   updated_at: string;
   students?: Student;
-  departments?: {
-    name?: DepartmentType;
-    id?: string;
-  };
+  department_name?: string; // Add this property to match what's being used
 }
 
 export interface Department {

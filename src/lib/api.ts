@@ -324,16 +324,21 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
       return [];
     }
     
-    const mappedData = data.map(record => ({
-      ...record,
-      students: record.students ? {
-        ...record.students,
-        department: record.students.departments?.name,
-        is_deleted: record.students.deleted_at !== null,
-        name: record.students ? `${record.students.first_name} ${record.students.last_name || ''}` : ''
-      } : null,
-      department: record.departments?.name
-    }));
+    const mappedData = data.map(record => {
+      const studentName = record.students ? `${record.students.first_name} ${record.students.last_name || ''}` : '';
+      const departmentName = record.students?.departments?.name || record.department;
+      
+      return {
+        ...record,
+        students: record.students ? {
+          ...record.students,
+          department: departmentName,
+          is_deleted: record.students.deleted_at !== null,
+          name: studentName
+        } : null,
+        department_name: departmentName
+      };
+    });
 
     console.log(`Successfully fetched ${mappedData.length} attendance records`);
     return mappedData;
