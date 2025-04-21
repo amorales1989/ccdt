@@ -36,7 +36,7 @@ const departments = [
 ];
 
 const getFullName = (student: any): string => {
-  if (!student) return ""; 
+  if (!student) return "Alumno eliminado"; 
   
   return student.last_name 
     ? `${student.first_name} ${student.last_name}` 
@@ -374,12 +374,17 @@ const HistorialAsistencia = () => {
   };
 
   const filteredAttendance = attendance.filter(record => {
-    if (!record.students) return false;
-
-    const matchesSearch = searchQuery === "" || 
-      record.students.name?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesSearch;
+    if (searchQuery === "") return true;
+    
+    // Check if student exists or has been deleted
+    if (!record.students) {
+      // If searching for "eliminado" or similar terms, include this record
+      return "alumno eliminado".includes(searchQuery.toLowerCase());
+    }
+    
+    // Normal search by student name
+    return record.students.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           record.students.last_name?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const attendanceStats = {
@@ -389,10 +394,12 @@ const HistorialAsistencia = () => {
 
   const handleExportToExcel = () => {
     const data = filteredAttendance.map(record => ({
-      Nombre: record.students?.name,
+      Nombre: record.students ? `${record.students.first_name} ${record.students.last_name || ''}` : "Alumno eliminado",
       Estado: record.status ? "Presente" : "Ausente",
       Fecha: adjustDateForDisplay(record.date),
-      Departamento: record.students?.departments?.name || 'Sin departamento',
+      Departamento: record.students?.departments?.name 
+        ? record.students.departments.name.replace(/_/g, ' ') 
+        : (record.department ? record.department.replace(/_/g, ' ') : 'Sin departamento'),
       Clase: record.assigned_class || 'Sin asignar'
     }));
 
@@ -781,7 +788,9 @@ const HistorialAsistencia = () => {
                           {!isMobile && (
                             <>
                               <TableCell className="capitalize">
-                                {record.students?.departments?.name?.replace(/_/g, ' ') || 'Sin departamento'}
+                                {record.students?.departments?.name
+                                  ? record.students.departments.name.replace(/_/g, ' ')
+                                  : (record.department ? record.department.replace(/_/g, ' ') : 'Sin departamento')}
                               </TableCell>
                               <TableCell>
                                 {record.assigned_class || 'Sin asignar'}
