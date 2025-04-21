@@ -334,9 +334,13 @@ export const getAttendance = async (startDate?: string, endDate?: string, depart
           ...record.students,
           department: departmentName,
           is_deleted: record.students.deleted_at !== null,
-          name: studentName
+          name: studentName,
+          gender: record.students.gender || '',
+          created_at: record.students.created_at || record.created_at,
+          updated_at: record.students.updated_at || record.updated_at
         } : null,
-        department_name: departmentName
+        department_name: departmentName,
+        department: record.department
       };
     });
 

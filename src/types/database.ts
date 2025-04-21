@@ -1,3 +1,4 @@
+
 export interface Student {
   id: string;
   first_name: string;
@@ -19,6 +20,7 @@ export interface Student {
   };
   is_authorized?: boolean;
   is_deleted?: boolean;
+  name?: string; // Add this for convenience
 }
 
 export interface Event {
@@ -42,8 +44,8 @@ export interface Attendance {
   assigned_class?: string;
   created_at: string;
   updated_at: string;
-  students?: Student;
-  department_name?: string; // Add this property to match what's being used
+  students?: Student | any; // Making this more flexible
+  department_name?: string;
 }
 
 export interface Department {

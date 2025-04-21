@@ -296,13 +296,15 @@ const HistorialAsistencia = () => {
         if (!attendanceMap.has(student.id)) {
           const currentDate = new Date().toISOString();
           
-          const newRecord = {
+          const newRecord: Attendance = {
             id: `new-${student.id}`,
             student_id: student.id,
             status: false,
             date: format(editDate, "yyyy-MM-dd"),
             department_id: student.department_id,
             assigned_class: student.assigned_class,
+            department: student.departments?.name,
+            department_name: student.departments?.name,
             students: {
               ...student,
               name: `${student.first_name} ${student.last_name || ''}`,
