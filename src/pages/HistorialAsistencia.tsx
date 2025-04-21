@@ -294,6 +294,8 @@ const HistorialAsistencia = () => {
       
       allStudents.forEach(student => {
         if (!attendanceMap.has(student.id)) {
+          const currentDate = new Date().toISOString();
+          
           const newRecord: Attendance = {
             id: `new-${student.id}`,
             student_id: student.id,
@@ -301,7 +303,9 @@ const HistorialAsistencia = () => {
             date: format(editDate, "yyyy-MM-dd"),
             department_id: student.department_id,
             assigned_class: student.assigned_class,
-            students: student
+            students: student,
+            created_at: currentDate,
+            updated_at: currentDate
           };
           fullAttendanceRecords.push(newRecord);
         }
