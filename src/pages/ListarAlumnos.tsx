@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,7 +44,6 @@ const deleteStudent = async (id: string) => {
 };
 
 const ListarAlumnos = () => {
-  // Adding state definitions for the missing variables
   const [importModalState, setImportModalState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [importResults, setImportResults] = useState<{
     failed: number;
@@ -178,9 +176,9 @@ const ListarAlumnos = () => {
       first_name: student.first_name,
       last_name: student.last_name,
       gender: student.gender,
-      date_of_birth: new Date(student.date_of_birth),
+      date_of_birth: new Date(student.birthdate || student.date_of_birth || new Date()),
       address: student.address || "",
-      phone_number: student.phone_number || "",
+      phone_number: student.phone || student.phone_number || "",
       email: student.email || "",
       document_type: student.document_type || "DNI",
       document_number: student.document_number || "",
@@ -363,7 +361,7 @@ const ListarAlumnos = () => {
     const nameFilter = filters.name.toLowerCase();
     const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
     const departmentFilter = filters.department;
-    const age = calculateAge(student.date_of_birth);
+    const age = calculateAge(student.birthdate || student.date_of_birth);
 
     const nameMatch = fullName.includes(nameFilter);
     const departmentMatch = departmentFilter ? student.departments?.name === departmentFilter : true;
@@ -409,7 +407,6 @@ const ListarAlumnos = () => {
         console.error("Errores de importación:", result.errors);
       }
 
-      // Refresh student list
       queryClient.invalidateQueries({ queryKey: ["students"] });
     }
   };
@@ -528,8 +525,8 @@ const ListarAlumnos = () => {
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.first_name} {student.last_name}</TableCell>
                     <TableCell>{student.departments?.name || 'Sin curso'}</TableCell>
-                    <TableCell>{calculateAge(student.date_of_birth) || 'Desconocida'}</TableCell>
-                    <TableCell>{student.student_authorizations?.name || 'Sin autorización'}</TableCell>
+                    <TableCell>{calculateAge(student.birthdate || student.date_of_birth) || 'Desconocida'}</TableCell>
+                    <TableCell>{(student.student_authorizations && student.student_authorizations.name) || 'Sin autorización'}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -561,7 +558,6 @@ const ListarAlumnos = () => {
           </Table>
         </div>
 
-        {/* Promote Modal */}
         <Dialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -575,8 +571,8 @@ const ListarAlumnos = () => {
                 <Label htmlFor="department" className="text-right">
                   Curso
                 </Label>
-                <Select onValueChange={setSelectedDepartment} defaultValue={selectedDepartment ?? ""} className="col-span-3">
-                  <SelectTrigger>
+                <Select onValueChange={setSelectedDepartment} defaultValue={selectedDepartment ?? ""}>
+                  <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Seleccione un curso" />
                   </SelectTrigger>
                   <SelectContent>
@@ -624,7 +620,6 @@ const ListarAlumnos = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Import Modal */}
         <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -672,7 +667,6 @@ const ListarAlumnos = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -932,7 +926,6 @@ const ListarAlumnos = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Alert */}
         <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -948,7 +941,6 @@ const ListarAlumnos = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Add Student Modal */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -957,7 +949,6 @@ const ListarAlumnos = () => {
                 Complete la información del nuevo alumno.
               </DialogDescription>
             </DialogHeader>
-            {/* Content for Add Student form would go here */}
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
                 Cancelar

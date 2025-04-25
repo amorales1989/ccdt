@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   first_name: string;
@@ -21,6 +20,20 @@ export interface Student {
   is_authorized?: boolean;
   is_deleted?: boolean;
   name?: string; // Add this for convenience
+  
+  // Add missing properties
+  date_of_birth?: string; // Alternative to birthdate
+  phone_number?: string; // Alternative to phone
+  email?: string;
+  document_type?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  medical_information?: string;
+  authorization_id?: string;
+  student_authorizations?: {
+    name?: string;
+    id?: string;
+  };
 }
 
 export interface Event {
@@ -105,4 +118,5 @@ export interface StudentAuthorization {
   updated_at: string;
   student?: Student;
   department?: Department;
+  name?: string; // Add this property
 }
