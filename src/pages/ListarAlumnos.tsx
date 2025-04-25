@@ -411,86 +411,98 @@ const ListarAlumnos = () => {
     }
   };
 
+  const { profile } = useAuth();
+  const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin';
+  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider';
+
   return (
     <Card className="w-full">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Listado de Alumnos</h2>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filtrar
-            </Button>
-            <Button onClick={() => setIsImportModalOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Importar
-            </Button>
+            {canFilter && (
+              <Button variant="outline" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                <Filter className="mr-2 h-4 w-4" />
+                Filtrar
+              </Button>
+            )}
+            {canManageStudents && (
+              <>
+                <Button onClick={() => setIsImportModalOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Importar
+                </Button>
+              </>
+            )}
             <Button onClick={() => setOpen(true)}>
               Agregar Alumno
             </Button>
           </div>
         </div>
 
-        <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="mt-2 w-full justify-start">
-              Filtros <Filter className="ml-2 h-4 w-4" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-            <div>
-              <Label htmlFor="name">Nombre</Label>
-              <Input
-                type="text"
-                id="name"
-                name="name"
-                value={filters.name}
-                onChange={handleFilterChange}
-              />
-            </div>
-            <div>
-              <Label htmlFor="department">Curso</Label>
-              <Select onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))} defaultValue={filters.department}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleccione un curso" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
-                  {departments?.map((department) => (
-                    <SelectItem key={department.id} value={department.name}>
-                      {department.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="ageFrom">Edad Desde</Label>
-              <Input
-                type="number"
-                id="ageFrom"
-                name="ageFrom"
-                value={filters.ageFrom}
-                onChange={handleFilterChange}
-              />
-            </div>
-            <div>
-              <Label htmlFor="ageTo">Edad Hasta</Label>
-              <Input
-                type="number"
-                id="ageTo"
-                name="ageTo"
-                value={filters.ageTo}
-                onChange={handleFilterChange}
-              />
-            </div>
-            <div className="md:col-span-4 flex justify-end">
-              <Button variant="secondary" size="sm" onClick={handleClearFilters}>
-                Limpiar Filtros
+        {canFilter && (
+          <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="mt-2 w-full justify-start">
+                Filtros <Filter className="ml-2 h-4 w-4" />
               </Button>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+              <div>
+                <Label htmlFor="name">Nombre</Label>
+                <Input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={filters.name}
+                  onChange={handleFilterChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="department">Curso</Label>
+                <Select onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))} defaultValue={filters.department}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccione un curso" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos</SelectItem>
+                    {departments?.map((department) => (
+                      <SelectItem key={department.id} value={department.name}>
+                        {department.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="ageFrom">Edad Desde</Label>
+                <Input
+                  type="number"
+                  id="ageFrom"
+                  name="ageFrom"
+                  value={filters.ageFrom}
+                  onChange={handleFilterChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="ageTo">Edad Hasta</Label>
+                <Input
+                  type="number"
+                  id="ageTo"
+                  name="ageTo"
+                  value={filters.ageTo}
+                  onChange={handleFilterChange}
+                />
+              </div>
+              <div className="md:col-span-4 flex justify-end">
+                <Button variant="secondary" size="sm" onClick={handleClearFilters}>
+                  Limpiar Filtros
+                </Button>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         <div className="overflow-x-auto mt-4">
           <Table>
@@ -499,7 +511,6 @@ const ListarAlumnos = () => {
                 <TableCell className="font-medium">Nombre</TableCell>
                 <TableCell className="font-medium">Curso</TableCell>
                 <TableCell className="font-medium">Edad</TableCell>
-                <TableCell className="font-medium">Autorización</TableCell>
                 <TableCell className="relative w-[80px]"></TableCell>
               </TableRow>
               {isLoading ? (
@@ -525,8 +536,7 @@ const ListarAlumnos = () => {
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.first_name} {student.last_name}</TableCell>
                     <TableCell>{student.departments?.name || 'Sin curso'}</TableCell>
-                    <TableCell>{calculateAge(student.birthdate || student.date_of_birth) || 'Desconocida'}</TableCell>
-                    <TableCell>{(student.student_authorizations && student.student_authorizations.name) || 'Sin autorización'}</TableCell>
+                    <TableCell>{calculateAge(student.birthdate) || 'Desconocida'}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
