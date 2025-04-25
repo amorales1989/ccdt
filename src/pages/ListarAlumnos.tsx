@@ -421,8 +421,12 @@ const ListarAlumnos = () => {
       return;
     }
 
-    const formattedNumber = phoneNumber.replace(/\s/g, '');
-    const whatsappNumber = formattedNumber.startsWith('+') ? formattedNumber : `+54${formattedNumber}`;
+    const cleanedNumber = phoneNumber.replace(/\D/g, '').replace(/^0+/, '');
+    
+    const whatsappNumber = cleanedNumber.startsWith('54') 
+      ? `+${cleanedNumber}` 
+      : `+54${cleanedNumber}`;
+
     const whatsappUrl = `https://wa.me/${whatsappNumber}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -525,7 +529,9 @@ const ListarAlumnos = () => {
             <TableBody>
               <TableRow>
                 <TableCell className="font-medium">Nombre</TableCell>
-                <TableCell className="font-medium">Curso</TableCell>
+                {!isMobile && (
+                  <TableCell className="font-medium">Curso</TableCell>
+                )}
                 <TableCell className="font-medium">Edad</TableCell>
                 <TableCell className="relative w-[80px]"></TableCell>
               </TableRow>
@@ -551,7 +557,9 @@ const ListarAlumnos = () => {
                 filteredStudents?.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium">{student.first_name} {student.last_name}</TableCell>
-                    <TableCell>{student.departments?.name || 'Sin curso'}</TableCell>
+                    {!isMobile && (
+                      <TableCell>{student.departments?.name || 'Sin curso'}</TableCell>
+                    )}
                     <TableCell>{calculateAge(student.birthdate) || 'Desconocida'}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
