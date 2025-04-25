@@ -2,9 +2,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
 
-export const getAttendance = async (): Promise<Attendance[]> => {
+export const getAttendance = async (
+  startDate?: string,
+  endDate?: string,
+  studentId?: string,
+  departmentId?: string | null
+): Promise<Attendance[]> => {
   try {
-    let { data: attendances, error } = await supabase
+    let query = supabase
       .from('attendance')
       .select(`
         *,
@@ -13,9 +18,25 @@ export const getAttendance = async (): Promise<Attendance[]> => {
           first_name,
           last_name,
           deleted_at,
-          departments (name)
+          departments:department_id(name)
         )
       `);
+
+    if (startDate && endDate) {
+      query = query.gte('date', startDate).lte('date', endDate);
+    } else if (startDate) {
+      query = query.eq('date', startDate);
+    }
+
+    if (studentId) {
+      query = query.eq('student_id', studentId);
+    }
+
+    if (departmentId) {
+      query = query.eq('department_id', departmentId);
+    }
+
+    const { data: attendances, error } = await query;
 
     if (error) throw error;
 
@@ -100,8 +121,8 @@ export const getStudents = async () => {
   }
 };
 
-// Create Student function
-export const createStudent = async (student: Partial<Student>) => {
+// Create Student function - Fixed type issue by specifying required fields
+export const createStudent = async (student: { first_name: string; gender: string } & Partial<Student>) => {
   try {
     const { data, error } = await supabase
       .from('students')
@@ -222,14 +243,21 @@ export const getDepartmentByName = async (name: string) => {
 };
 
 // Mark Attendance function - updated with correct parameters
-export const markAttendance = async (studentId: string, status: boolean, date: string, departmentId: string) => {
+export const markAttendance = async (attendanceData: {
+  student_id: string;
+  date: string;
+  status: boolean;
+  department_id?: string | null;
+  assigned_class?: string;
+  event_id?: string;
+}) => {
   try {
     // Check if attendance record exists for this student and date
     const { data: existingAttendance, error: fetchError } = await supabase
       .from('attendance')
       .select('*')
-      .eq('student_id', studentId)
-      .eq('date', date)
+      .eq('student_id', attendanceData.student_id)
+      .eq('date', attendanceData.date)
       .maybeSingle();
 
     if (fetchError) throw fetchError;
@@ -240,7 +268,7 @@ export const markAttendance = async (studentId: string, status: boolean, date: s
       // Update existing record
       const { data, error } = await supabase
         .from('attendance')
-        .update({ status })
+        .update({ status: attendanceData.status })
         .eq('id', existingAttendance.id)
         .select()
         .single();
@@ -252,10 +280,12 @@ export const markAttendance = async (studentId: string, status: boolean, date: s
       const { data, error } = await supabase
         .from('attendance')
         .insert({
-          student_id: studentId,
-          status,
-          date,
-          department_id: departmentId
+          student_id: attendanceData.student_id,
+          status: attendanceData.status,
+          date: attendanceData.date,
+          department_id: attendanceData.department_id,
+          assigned_class: attendanceData.assigned_class,
+          event_id: attendanceData.event_id
         })
         .select()
         .single();
@@ -287,7 +317,8 @@ export const getEvents = async () => {
   }
 };
 
-export const createEvent = async (event: Partial<Event>) => {
+// Fixed the type issue by ensuring title and date are included
+export const createEvent = async (event: { title: string; date: string } & Partial<Event>) => {
   try {
     const { data, error } = await supabase
       .from('events')
@@ -335,18 +366,43 @@ export const deleteEvent = async (id: string) => {
   }
 };
 
-// Import students from Excel
-export const importStudentsFromExcel = async (students: Partial<Student>[]) => {
+// Import students from Excel - Fixed for array handling
+export const importStudentsFromExcel = async (students: { first_name: string; gender: string }[]) => {
   try {
+    // Make sure each student has the required fields
+    const validStudents = students.filter(student => 
+      student.first_name && student.gender
+    );
+    
+    if (validStudents.length === 0) {
+      return { 
+        data: [], 
+        successful: 0, 
+        failed: students.length,
+        errors: ['No valid students to import']
+      };
+    }
+    
     const { data, error } = await supabase
       .from('students')
-      .insert(students)
+      .insert(validStudents)
       .select();
 
     if (error) throw error;
-    return data;
+    
+    return { 
+      data,
+      successful: data?.length || 0,
+      failed: students.length - (data?.length || 0),
+      errors: error ? [error.message] : []
+    };
   } catch (error) {
     console.error('Error importing students:', error);
-    throw error;
+    return { 
+      data: [],
+      successful: 0,
+      failed: students.length,
+      errors: [error instanceof Error ? error.message : 'Unknown error']
+    };
   }
 };

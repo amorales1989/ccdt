@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -189,8 +188,11 @@ const TomarAsistencia = () => {
 
   const checkExistingAttendance = async (date: string) => {
     try {
+      console.log("Checking attendance for date:", date, "departmentId:", departmentId);
+      
       const attendanceData = await getAttendance(date, date, undefined, departmentId);
       const hasAttendance = attendanceData && attendanceData.length > 0;
+      
       console.log("Checking attendance for date:", date, "departmentId:", departmentId, "exists:", hasAttendance);
       return hasAttendance;
     } catch (error) {
