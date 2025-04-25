@@ -77,50 +77,50 @@ const AutorizacionSimple = () => {
       doc.setFont("helvetica", "normal");
       
       let currentY = startY + 25;
-      const lineHeight = 7;
+      const lineHeight = 6;
       const col1X = margin + 5;
 
       doc.text("Yo, _____________________________________________,", col1X, currentY);
-      currentY += lineHeight * 1.5;
+      currentY += lineHeight;
       
       doc.text("DNI Nº __________________, en calidad de adulto responsable del menor:", col1X, currentY);
-      currentY += lineHeight * 1.5;
+      currentY += lineHeight;
       
       doc.text("Nombre del menor: ________________________________________________", col1X, currentY);
       currentY += lineHeight;
       
       doc.text("DNI del menor: ____________________", col1X, currentY);
-      currentY += lineHeight * 1.5;
+      currentY += lineHeight;
 
       const [day, month, year] = formattedDate.split('/');
       doc.text(`Autorizo la salida recreativa del día ${day} / ${month} / ${year} con los siguientes detalles:`, col1X, currentY);
-      currentY += lineHeight * 2;
+      currentY += lineHeight;
 
-      doc.text("- Hora de salida: " + data.horaSalida, col1X, currentY);
+      doc.text(`- Hora de salida: ${data.horaSalida}`, col1X, currentY);
       currentY += lineHeight;
       
-      doc.text("- Hora estimada de regreso: " + data.horaRegreso, col1X, currentY);
+      doc.text(`- Hora estimada de regreso: ${data.horaRegreso}`, col1X, currentY);
       currentY += lineHeight;
       
-      doc.text("- Lugar de recreación: " + data.lugarSalida, col1X, currentY);
-      currentY += lineHeight * 2;
+      doc.text(`- Lugar de recreación: ${data.lugarSalida}`, col1X, currentY);
+      currentY += lineHeight;
 
       const declarationText = "Declaro estar informado/a de la actividad que se realizará, y me hago responsable por cualquier";
       doc.text(declarationText, col1X, currentY);
       currentY += lineHeight;
       doc.text("eventualidad que pudiera surgir durante el tiempo en que el/la menor se encuentre fuera.", col1X, currentY);
-      currentY += lineHeight * 2;
+      currentY += lineHeight;
 
       doc.text("Firma del adulto responsable: _____________________________________", col1X, currentY);
-      currentY += lineHeight * 1.5;
+      currentY += lineHeight;
       
       doc.text("Aclaración: _________________________________________________", col1X, currentY);
-      currentY += lineHeight * 1.5;
+      currentY += lineHeight;
       
       doc.text("Teléfono de contacto: ______________________", col1X, currentY);
 
       doc.setDrawColor(200);
-      doc.line(margin, startY + 125, pageWidth - margin, startY + 125);
+      doc.line(margin, startY + 100, pageWidth - margin, startY + 100);
     };
 
     drawAuthorization(margin);
