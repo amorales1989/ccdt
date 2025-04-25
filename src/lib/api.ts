@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import type { Attendance } from "@/types/database";
+import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
 
 export const getAttendance = async (): Promise<Attendance[]> => {
   try {
@@ -28,7 +29,7 @@ export const getAttendance = async (): Promise<Attendance[]> => {
           department: student?.departments?.name || '',
           is_deleted: !!student?.deleted_at,
           name: `${student?.first_name} ${student?.last_name}`,
-          gender: null, // Add default values for required fields
+          gender: 'masculino', // Add default values for required fields
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         },
@@ -41,6 +42,311 @@ export const getAttendance = async (): Promise<Attendance[]> => {
     return formattedAttendances;
   } catch (error) {
     console.error('Error fetching attendance:', error);
+    throw error;
+  }
+};
+
+// Get Company function
+export const getCompany = async (id: number) => {
+  try {
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching company:', error);
+    throw error;
+  }
+};
+
+// Update Company function
+export const updateCompany = async (id: number, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('companies')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating company:', error);
+    throw error;
+  }
+};
+
+// Get Students function
+export const getStudents = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select(`
+        *,
+        departments (name)
+      `)
+      .order('first_name');
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    throw error;
+  }
+};
+
+// Create Student function
+export const createStudent = async (student: Partial<Student>) => {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .insert(student)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating student:', error);
+    throw error;
+  }
+};
+
+// Check if DNI exists function
+export const checkDniExists = async (dni: string) => {
+  try {
+    const { data, error, count } = await supabase
+      .from('students')
+      .select('*', { count: 'exact', head: true })
+      .eq('document_number', dni);
+
+    if (error) throw error;
+    return count && count > 0;
+  } catch (error) {
+    console.error('Error checking DNI:', error);
+    throw error;
+  }
+};
+
+// Get Departments function
+export const getDepartments = async (): Promise<Department[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    throw error;
+  }
+};
+
+// Update Department function
+export const updateDepartment = async (id: string, updates: Partial<Department>) => {
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating department:', error);
+    throw error;
+  }
+};
+
+// Create Department function
+export const createDepartment = async (department: {
+  name: DepartmentType;
+  description: string;
+  classes: string[];
+}) => {
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .insert(department)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating department:', error);
+    throw error;
+  }
+};
+
+// Delete Department function
+export const deleteDepartment = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('departments')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting department:', error);
+    throw error;
+  }
+};
+
+// Get Department by Name function
+export const getDepartmentByName = async (name: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*')
+      .eq('name', name)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching department by name:', error);
+    throw error;
+  }
+};
+
+// Mark Attendance function - updated with correct parameters
+export const markAttendance = async (studentId: string, status: boolean, date: string, departmentId: string) => {
+  try {
+    // Check if attendance record exists for this student and date
+    const { data: existingAttendance, error: fetchError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('date', date)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    let result;
+
+    if (existingAttendance) {
+      // Update existing record
+      const { data, error } = await supabase
+        .from('attendance')
+        .update({ status })
+        .eq('id', existingAttendance.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
+    } else {
+      // Create new record
+      const { data, error } = await supabase
+        .from('attendance')
+        .insert({
+          student_id: studentId,
+          status,
+          date,
+          department_id: departmentId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error marking attendance:', error);
+    throw error;
+  }
+};
+
+// Events API functions
+export const getEvents = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('date');
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    throw error;
+  }
+};
+
+export const createEvent = async (event: Partial<Event>) => {
+  try {
+    const { data, error } = await supabase
+      .from('events')
+      .insert(event)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating event:', error);
+    throw error;
+  }
+};
+
+export const updateEvent = async (id: string, event: Partial<Event>) => {
+  try {
+    const { data, error } = await supabase
+      .from('events')
+      .update(event)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating event:', error);
+    throw error;
+  }
+};
+
+export const deleteEvent = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('events')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    throw error;
+  }
+};
+
+// Import students from Excel
+export const importStudentsFromExcel = async (students: Partial<Student>[]) => {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .insert(students)
+      .select();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error importing students:', error);
     throw error;
   }
 };
