@@ -16,12 +16,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
+import { toast } from "@/hooks/use-toast";
+import { StudentDetails } from "@/components/StudentDetails";
 import { Badge } from "@/components/ui/badge";
 import { importStudentsFromExcel } from "@/lib/api";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const updateStudent = async (id: string, data: any) => {
   const { error } = await supabase
@@ -56,6 +70,7 @@ const ListarAlumnos = () => {
   });
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
@@ -97,6 +112,10 @@ const ListarAlumnos = () => {
         throw error;
       }
 
+      if (profile?.role !== 'secretaria' && profile?.role !== 'admin') {
+        return data?.filter(student => student.department_id === profile?.department_id && student.assigned_class === profile?.assigned_class) || [];
+      }
+
       return data;
     },
   });
@@ -122,6 +141,25 @@ const ListarAlumnos = () => {
         return [];
       }
       return data || [];
+    },
+  });
+
+  const form = useForm({
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      gender: "masculino",
+      date_of_birth: new Date(),
+      address: "",
+      phone_number: "",
+      email: "",
+      document_type: "DNI",
+      document_number: "",
+      emergency_contact_name: "",
+      emergency_contact_phone: "",
+      medical_information: "",
+      department_id: "",
+      authorization_id: "",
     },
   });
 
@@ -396,6 +434,10 @@ const ListarAlumnos = () => {
     }
   };
 
+  const handleStudentClick = (studentId: string) => {
+    setExpandedStudentId(expandedStudentId === studentId ? null : studentId);
+  };
+
   const handleWhatsAppClick = (phoneNumber: string | null) => {
     if (!phoneNumber) {
       toast({
@@ -407,7 +449,6 @@ const ListarAlumnos = () => {
     }
 
     const cleanedNumber = phoneNumber.replace(/\D/g, '').replace(/^0+/, '');
-    
     const whatsappNumber = cleanedNumber.startsWith('54') 
       ? `+${cleanedNumber}` 
       : `+54${cleanedNumber}`;
@@ -536,37 +577,50 @@ const ListarAlumnos = () => {
                 </TableRow>
               ) : (
                 filteredStudents?.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.first_name} {student.last_name}</TableCell>
-                    {!isMobile && (
-                      <TableCell>{student.departments?.name || 'Sin curso'}</TableCell>
+                  <>
+                    <TableRow key={student.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleStudentClick(student.id)}>
+                      <TableCell className="font-medium">{student.first_name} {student.last_name}</TableCell>
+                      {!isMobile && (
+                        <TableCell>{student.departments?.name || 'Sin curso'}</TableCell>
+                      )}
+                      <TableCell>{calculateAge(student.birthdate) || 'Desconocida'}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canManageStudents && (
+                              <>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(student); }}>
+                                  <Pencil className="mr-2 h-4 w-4" /> Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}>
+                                  <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleWhatsAppClick(student.phone); }}>
+                              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                              </svg>
+                              WhatsApp
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                    {expandedStudentId === student.id && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="bg-gray-50">
+                          <StudentDetails student={student} />
+                        </TableCell>
+                      </TableRow>
                     )}
-                    <TableCell>{calculateAge(student.birthdate) || 'Desconocida'}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(student)}>
-                            <Pencil className="mr-2 h-4 w-4" /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(student.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleWhatsAppClick(student.phone)}>
-                            <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                            </svg>
-                            WhatsApp
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                  </>
                 ))
               )}
             </TableBody>
@@ -750,231 +804,4 @@ const ListarAlumnos = () => {
                         <Input
                           type="date"
                           {...field}
-                          value={format(new Date(field.value), 'yyyy-MM-dd')}
-                          onChange={(e) => {
-                            try {
-                              const parsedDate = parse(e.target.value, 'yyyy-MM-dd', new Date());
-                              if (isValid(parsedDate)) {
-                                field.onChange(parsedDate);
-                              } else {
-                                console.error("Invalid date format");
-                              }
-                            } catch (error) {
-                              console.error("Error parsing date:", error);
-                            }
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dirección</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Dirección" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="phone_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teléfono</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Teléfono" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="document_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Documento</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione el tipo de documento" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="DNI">DNI</SelectItem>
-                          <SelectItem value="Pasaporte">Pasaporte</SelectItem>
-                          <SelectItem value="Otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="document_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número de Documento</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Número de Documento" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="emergency_contact_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre de Contacto de Emergencia</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nombre de Contacto de Emergencia" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="emergency_contact_phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teléfono de Contacto de Emergencia</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Teléfono de Contacto de Emergencia" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="medical_information"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Información Médica</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Información Médica" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="department_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Curso</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un curso" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {departments?.map((department) => (
-                            <SelectItem key={department.id} value={department.id}>
-                              {department.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="authorization_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Autorización</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione una autorización" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {authorizations?.map((authorization) => (
-                            <SelectItem key={authorization.id} value={authorization.id}>
-                              {authorization.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="button" variant="secondary" onClick={() => setIsEditModalOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit">Guardar</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Estás seguro de que quieres eliminar este alumno?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. ¿Estás seguro de que quieres eliminar este alumno?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setStudentToDelete(null)}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete}>Eliminar</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Agregar Alumno</DialogTitle>
-              <DialogDescription>
-                Complete la información del nuevo alumno.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit">Guardar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
-  );
-};
-
-export default ListarAlumnos;
+                          value={format
