@@ -77,39 +77,9 @@ const ListarAlumnos = () => {
 
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const form = useForm<{
-    first_name: string;
-    last_name: string;
-    gender: string;
-    date_of_birth: Date;
-    address: string;
-    phone_number: string;
-    email: string;
-    document_type: string;
-    document_number: string;
-    emergency_contact_name: string;
-    emergency_contact_phone: string;
-    medical_information: string;
-    department_id: string;
-    authorization_id: string;
-  }>({
-    defaultValues: {
-      first_name: "",
-      last_name: "",
-      gender: "masculino",
-      date_of_birth: new Date(),
-      address: "",
-      phone_number: "",
-      email: "",
-      document_type: "DNI",
-      document_number: "",
-      emergency_contact_name: "",
-      emergency_contact_phone: "",
-      medical_information: "",
-      department_id: "",
-      authorization_id: "",
-    },
-  });
+  const profile = useAuth().profile;
+  const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin';
+  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider';
 
   const { data: students, isLoading, isError, refetch } = useQuery({
     queryKey: ["students"],
@@ -358,17 +328,32 @@ const ListarAlumnos = () => {
   };
 
   const filteredStudents = students?.filter(student => {
-    const nameFilter = filters.name.toLowerCase();
-    const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
-    const departmentFilter = filters.department;
-    const age = calculateAge(student.birthdate || student.date_of_birth);
+    if (profile?.role === 'admin' || profile?.role === 'secretaria') {
+      const nameFilter = filters.name.toLowerCase();
+      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+      const departmentFilter = filters.department;
+      const age = calculateAge(student.birthdate);
 
-    const nameMatch = fullName.includes(nameFilter);
-    const departmentMatch = departmentFilter ? student.departments?.name === departmentFilter : true;
-    const ageFromMatch = filters.ageFrom ? (age !== null && age >= parseInt(filters.ageFrom)) : true;
-    const ageToMatch = filters.ageTo ? (age !== null && age <= parseInt(filters.ageTo)) : true;
+      const nameMatch = fullName.includes(nameFilter);
+      const departmentMatch = departmentFilter ? student.departments?.name === departmentFilter : true;
+      const ageFromMatch = filters.ageFrom ? (age !== null && age >= parseInt(filters.ageFrom)) : true;
+      const ageToMatch = filters.ageTo ? (age !== null && age <= parseInt(filters.ageTo)) : true;
 
-    return nameMatch && departmentMatch && ageFromMatch && ageToMatch;
+      return nameMatch && departmentMatch && ageFromMatch && ageToMatch;
+    } else {
+      const nameFilter = filters.name.toLowerCase();
+      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+      const age = calculateAge(student.birthdate);
+
+      const nameMatch = fullName.includes(nameFilter);
+      const ageFromMatch = filters.ageFrom ? (age !== null && age >= parseInt(filters.ageFrom)) : true;
+      const ageToMatch = filters.ageTo ? (age !== null && age <= parseInt(filters.ageTo)) : true;
+
+      const departmentMatch = student.department_id === profile?.department_id;
+      const classMatch = student.assigned_class === profile?.assigned_class;
+
+      return nameMatch && departmentMatch && classMatch && ageFromMatch && ageToMatch;
+    }
   });
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -430,10 +415,6 @@ const ListarAlumnos = () => {
     const whatsappUrl = `https://wa.me/${whatsappNumber}`;
     window.open(whatsappUrl, '_blank');
   };
-
-  const { profile } = useAuth();
-  const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin';
-  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider';
 
   return (
     <Card className="w-full">
