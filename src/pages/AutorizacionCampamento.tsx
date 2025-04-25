@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +9,7 @@ import { Calendar, Clock, MapPin } from "lucide-react";
 import { format, parse } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 type FormValues = {
   fechaSalida: string;
@@ -27,7 +26,7 @@ const AutorizacionCampamento = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  
+
   useEffect(() => {
     if (profile) {
       const authorized = profile.role === 'admin' || profile.role === 'secretaria';
@@ -57,7 +56,6 @@ const AutorizacionCampamento = () => {
   });
 
   const generatePDF = (data: FormValues) => {
-    // Format dates
     const fechaSalidaFormatted = data.fechaSalida ? 
       format(parse(data.fechaSalida, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : '';
     const fechaRegresoFormatted = data.fechaRegreso ? 
@@ -69,23 +67,19 @@ const AutorizacionCampamento = () => {
     const margin = 10;
     const authHeight = (pageHeight - margin * 2) / 2;
     
-    // Function to draw one authorization
     const drawAuthorization = (startY: number) => {
-      doc.setFontSize(14);
+      doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("AUTORIZACIÓN PARA CAMPAMENTO", pageWidth / 2, startY + 10, { align: "center" });
+      doc.text("AUTORIZACIÓN DE CAMPAMENTO", pageWidth / 2, startY + 10, { align: "center" });
       
-      // Content
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       
-      // Grid layout for info
       const col1X = margin + 5;
       const col2X = pageWidth / 2;
       const lineHeight = 8;
       let currentY = startY + 25;
       
-      // Departure info
       doc.setFont("helvetica", "bold");
       doc.text("Fecha de salida:", col1X, currentY);
       doc.setFont("helvetica", "normal");
@@ -98,7 +92,6 @@ const AutorizacionCampamento = () => {
       
       currentY += lineHeight * 1.5;
       
-      // Return info
       doc.setFont("helvetica", "bold");
       doc.text("Fecha de regreso:", col1X, currentY);
       doc.setFont("helvetica", "normal");
@@ -111,7 +104,6 @@ const AutorizacionCampamento = () => {
       
       currentY += lineHeight * 1.5;
       
-      // Location info
       doc.setFont("helvetica", "bold");
       doc.text("Lugar de salida:", col1X, currentY);
       doc.setFont("helvetica", "normal");
@@ -124,10 +116,8 @@ const AutorizacionCampamento = () => {
       doc.setFont("helvetica", "normal");
       doc.text(data.lugarDestino, col1X + 35, currentY);
       
-      // Parent/Guardian info section
       currentY += lineHeight * 2;
       
-      // Signature fields
       const signatureY = currentY + 5;
       doc.text("Nombre del alumno/a: _________________________________", col1X, signatureY);
       doc.text("Teléfono de urgencias: _______________________________", col2X - 15, signatureY);
@@ -135,13 +125,11 @@ const AutorizacionCampamento = () => {
       doc.text("Firma del padre/tutor: _______________________________", col1X, signatureY + lineHeight * 2);
       doc.text("Aclaración: _______________________________________", col2X - 15, signatureY + lineHeight * 2);
       
-      // Draw border around the authorization
       doc.setDrawColor(0);
       doc.setLineWidth(0.5);
       doc.rect(margin, startY, pageWidth - margin * 2, authHeight - 5);
     };
     
-    // Draw both authorizations
     drawAuthorization(margin);
     drawAuthorization(margin + authHeight);
     
@@ -169,7 +157,6 @@ const AutorizacionCampamento = () => {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Fecha y hora de salida */}
               <div className="space-y-2">
                 <Label htmlFor="fechaSalida">Fecha de salida</Label>
                 <div className="relative">
@@ -196,7 +183,6 @@ const AutorizacionCampamento = () => {
                 {errors.horaSalida && <p className="text-sm text-destructive">{errors.horaSalida.message}</p>}
               </div>
 
-              {/* Fecha y hora de regreso */}
               <div className="space-y-2">
                 <Label htmlFor="fechaRegreso">Fecha de regreso</Label>
                 <div className="relative">
@@ -223,7 +209,6 @@ const AutorizacionCampamento = () => {
                 {errors.horaRegreso && <p className="text-sm text-destructive">{errors.horaRegreso.message}</p>}
               </div>
 
-              {/* Lugares */}
               <div className="space-y-2">
                 <Label htmlFor="lugarSalida">Lugar de salida</Label>
                 <div className="relative">
