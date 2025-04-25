@@ -74,6 +74,9 @@ const AutorizacionSimple = () => {
       doc.text("AUTORIZACIÓN DE SALIDA RECREATIVA", pageWidth / 2, startY + 10, { align: "center" });
       
       doc.setFontSize(10);
+      doc.text("Comunidad Cristiana Don Torcuato", pageWidth / 2, startY + 17, { align: "center" });
+      
+      doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       
       let currentY = startY + 25;
