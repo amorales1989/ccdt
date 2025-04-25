@@ -16,6 +16,10 @@ type FormValues = {
   horaSalida: string;
   horaRegreso: string;
   lugarSalida: string;
+  nombreResponsable: string;
+  dniResponsable: string;
+  nombreMenor: string;
+  dniMenor: string;
 };
 
 const AutorizacionSimple = () => {
@@ -48,6 +52,10 @@ const AutorizacionSimple = () => {
       horaSalida: "",
       horaRegreso: "",
       lugarSalida: "",
+      nombreResponsable: "",
+      dniResponsable: "",
+      nombreMenor: "",
+      dniMenor: "",
     }
   });
 
@@ -61,62 +69,62 @@ const AutorizacionSimple = () => {
     const margin = 10;
 
     const drawAuthorization = (startY: number) => {
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text("INSTITUTO SAN JOSÉ", pageWidth / 2, startY + 10, { align: "center" });
-      
       doc.setFontSize(14);
-      doc.text("AUTORIZACIÓN DE SALIDA", pageWidth / 2, startY + 20, { align: "center" });
+      doc.setFont("helvetica", "bold");
+      doc.text("AUTORIZACIÓN DE SALIDA RECREATIVA", pageWidth / 2, startY + 10, { align: "center" });
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-
-      const contentY = startY + 30;
-      const col1X = margin + 5;
-      const col2X = pageWidth / 2;
+      
+      let currentY = startY + 25;
       const lineHeight = 7;
+      const col1X = margin + 5;
 
-      doc.setFont("helvetica", "bold");
-      doc.text("Fecha:", col1X, contentY);
-      doc.setFont("helvetica", "normal");
-      doc.text(formattedDate, col1X + 20, contentY);
-
-      doc.setFont("helvetica", "bold");
-      doc.text("Hora de salida:", col2X - 15, contentY);
-      doc.setFont("helvetica", "normal");
-      doc.text(data.horaSalida, col2X + 15, contentY);
-
-      doc.setFont("helvetica", "bold");
-      doc.text("Hora de regreso:", col1X, contentY + lineHeight);
-      doc.setFont("helvetica", "normal");
-      doc.text(data.horaRegreso, col1X + 35, contentY + lineHeight);
-
-      doc.setFont("helvetica", "bold");
-      doc.text("Lugar de salida:", col1X, contentY + lineHeight * 2);
-      doc.setFont("helvetica", "normal");
-      doc.text(data.lugarSalida, col1X + 35, contentY + lineHeight * 2);
-
-      const authText = "Por medio de la presente autorizo a mi hijo/a a participar de la salida detallada anteriormente:";
-      doc.text(authText, pageWidth / 2, contentY + lineHeight * 4, { align: "center" });
-
-      const signatureY = contentY + lineHeight * 6;
-      doc.text("_____________________________", col1X, signatureY);
-      doc.text("_____________________________", col2X, signatureY);
+      doc.text("Yo, _____________________________________________,", col1X, currentY);
+      currentY += lineHeight * 1.5;
       
-      doc.setFontSize(8);
-      doc.text("Firma del padre/madre/tutor", col1X + 15, signatureY + 5);
-      doc.text("Aclaración", col2X + 15, signatureY + 5);
+      doc.text("DNI Nº __________________, en calidad de adulto responsable del menor:", col1X, currentY);
+      currentY += lineHeight * 1.5;
+      
+      doc.text("Nombre del menor: ________________________________________________", col1X, currentY);
+      currentY += lineHeight;
+      
+      doc.text("DNI del menor: ____________________", col1X, currentY);
+      currentY += lineHeight * 1.5;
 
-      const emergencyY = signatureY + lineHeight * 2;
-      doc.setFontSize(10);
-      doc.text("Teléfono de contacto para urgencias: _________________________________", col1X, emergencyY);
+      const [day, month, year] = formattedDate.split('/');
+      doc.text(`Autorizo la salida recreativa del día ${day} / ${month} / ${year} con los siguientes detalles:`, col1X, currentY);
+      currentY += lineHeight * 2;
+
+      doc.text("- Hora de salida: " + data.horaSalida, col1X, currentY);
+      currentY += lineHeight;
+      
+      doc.text("- Hora estimada de regreso: " + data.horaRegreso, col1X, currentY);
+      currentY += lineHeight;
+      
+      doc.text("- Lugar de recreación: " + data.lugarSalida, col1X, currentY);
+      currentY += lineHeight * 2;
+
+      const declarationText = "Declaro estar informado/a de la actividad que se realizará, y me hago responsable por cualquier";
+      doc.text(declarationText, col1X, currentY);
+      currentY += lineHeight;
+      doc.text("eventualidad que pudiera surgir durante el tiempo en que el/la menor se encuentre fuera.", col1X, currentY);
+      currentY += lineHeight * 2;
+
+      doc.text("Firma del adulto responsable: _____________________________________", col1X, currentY);
+      currentY += lineHeight * 1.5;
+      
+      doc.text("Aclaración: _________________________________________________", col1X, currentY);
+      currentY += lineHeight * 1.5;
+      
+      doc.text("Teléfono de contacto: ______________________", col1X, currentY);
 
       doc.setDrawColor(200);
-      doc.line(margin, startY + 85, pageWidth - margin, startY + 85);
+      doc.line(margin, startY + 125, pageWidth - margin, startY + 125);
     };
 
     drawAuthorization(margin);
-    drawAuthorization(pageHeight / 2);
+    drawAuthorization(pageHeight / 2 + margin);
 
     doc.save("autorizacion_simple.pdf");
   };
@@ -137,7 +145,7 @@ const AutorizacionSimple = () => {
       
       <Card>
         <CardHeader>
-          <CardTitle>Datos de la Salida</CardTitle>
+          <CardTitle>Datos de la Autorización</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -182,7 +190,7 @@ const AutorizacionSimple = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lugarSalida">Lugar de salida</Label>
+                <Label htmlFor="lugarSalida">Lugar de recreación</Label>
                 <div className="relative">
                   <Input
                     id="lugarSalida"
