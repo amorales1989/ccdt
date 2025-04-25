@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,64 +60,64 @@ const AutorizacionSimple = () => {
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 10;
 
-    // Title
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("AUTORIZACIÓN DE SALIDA", pageWidth / 2, margin + 10, { align: "center" });
-    
-    // Content
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
+    const drawAuthorization = (startY: number) => {
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("INSTITUTO SAN JOSÉ", pageWidth / 2, startY + 10, { align: "center" });
+      
+      doc.setFontSize(14);
+      doc.text("AUTORIZACIÓN DE SALIDA", pageWidth / 2, startY + 20, { align: "center" });
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
 
-    // Grid layout for info
-    const col1X = margin + 5;
-    const col2X = pageWidth / 2;
-    const lineHeight = 8;
-    let currentY = margin + 25;
+      const contentY = startY + 30;
+      const col1X = margin + 5;
+      const col2X = pageWidth / 2;
+      const lineHeight = 7;
 
-    // Date and time info
-    doc.setFont("helvetica", "bold");
-    doc.text("Fecha:", col1X, currentY);
-    doc.setFont("helvetica", "normal");
-    doc.text(formattedDate, col1X + 20, currentY);
+      doc.setFont("helvetica", "bold");
+      doc.text("Fecha:", col1X, contentY);
+      doc.setFont("helvetica", "normal");
+      doc.text(formattedDate, col1X + 20, contentY);
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Hora de salida:", col2X, currentY);
-    doc.setFont("helvetica", "normal");
-    doc.text(data.horaSalida, col2X + 30, currentY);
+      doc.setFont("helvetica", "bold");
+      doc.text("Hora de salida:", col2X - 15, contentY);
+      doc.setFont("helvetica", "normal");
+      doc.text(data.horaSalida, col2X + 15, contentY);
 
-    currentY += lineHeight * 1.5;
+      doc.setFont("helvetica", "bold");
+      doc.text("Hora de regreso:", col1X, contentY + lineHeight);
+      doc.setFont("helvetica", "normal");
+      doc.text(data.horaRegreso, col1X + 35, contentY + lineHeight);
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Hora de regreso:", col1X, currentY);
-    doc.setFont("helvetica", "normal");
-    doc.text(data.horaRegreso, col1X + 35, currentY);
+      doc.setFont("helvetica", "bold");
+      doc.text("Lugar de salida:", col1X, contentY + lineHeight * 2);
+      doc.setFont("helvetica", "normal");
+      doc.text(data.lugarSalida, col1X + 35, contentY + lineHeight * 2);
 
-    currentY += lineHeight * 1.5;
+      const authText = "Por medio de la presente autorizo a mi hijo/a a participar de la salida detallada anteriormente:";
+      doc.text(authText, pageWidth / 2, contentY + lineHeight * 4, { align: "center" });
 
-    // Location info
-    doc.setFont("helvetica", "bold");
-    doc.text("Lugar de salida:", col1X, currentY);
-    doc.setFont("helvetica", "normal");
-    doc.text(data.lugarSalida, col1X + 35, currentY);
+      const signatureY = contentY + lineHeight * 6;
+      doc.text("_____________________________", col1X, signatureY);
+      doc.text("_____________________________", col2X, signatureY);
+      
+      doc.setFontSize(8);
+      doc.text("Firma del padre/madre/tutor", col1X + 15, signatureY + 5);
+      doc.text("Aclaración", col2X + 15, signatureY + 5);
 
-    currentY += lineHeight * 3;
+      const emergencyY = signatureY + lineHeight * 2;
+      doc.setFontSize(10);
+      doc.text("Teléfono de contacto para urgencias: _________________________________", col1X, emergencyY);
 
-    // Signature section
-    doc.text("Por medio de la presente autorizo la salida de mi hijo/a:", pageWidth / 2, currentY, { align: "center" });
-    
-    currentY += lineHeight * 2;
+      doc.setDrawColor(200);
+      doc.line(margin, startY + 85, pageWidth - margin, startY + 85);
+    };
 
-    // Signature fields
-    doc.text("Nombre del alumno/a: _________________________________", col1X, currentY);
-    currentY += lineHeight * 2;
-    
-    doc.text("Firma del padre/tutor: _______________________________", col1X, currentY);
-    doc.text("Aclaración: _______________________________________", col2X - 15, currentY);
-    currentY += lineHeight * 2;
-    
-    doc.text("Teléfono de contacto: _______________________________", col1X, currentY);
-    
+    drawAuthorization(margin);
+    drawAuthorization(pageHeight / 2);
+
     doc.save("autorizacion_simple.pdf");
   };
 
