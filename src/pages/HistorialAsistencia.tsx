@@ -340,6 +340,32 @@ const HistorialAsistencia = () => {
     );
   };
 
+  const updateAttendanceStatus = (attendanceRecord: Attendance) => {
+    const updatedAttendanceRecord = {
+      ...attendanceRecord,
+      students: {
+        ...attendanceRecord.students,
+        department: attendanceRecord.students?.departments?.name || '',
+        is_deleted: !!attendanceRecord.students?.deleted_at,
+        name: `${attendanceRecord.students?.first_name} ${attendanceRecord.students?.last_name}`,
+        gender: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      department_name: attendanceRecord.students?.departments?.name || '',
+      department: attendanceRecord.students?.departments?.name || '',
+      event_id: null
+    };
+
+    setEditRecords(prev => 
+      prev.map(record => 
+        record.id === attendanceRecord.id 
+          ? updatedAttendanceRecord 
+          : record
+      )
+    );
+  };
+
   const saveAttendanceChanges = async () => {
     setSavingAttendance(true);
     try {

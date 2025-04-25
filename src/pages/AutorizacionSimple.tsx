@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { jsPDF } from "jspdf";
 import { Calendar, Download } from "lucide-react";
-import { format } from "date-fns";
+import { format, parse as dateParse } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -52,7 +51,7 @@ const AutorizacionSimple = () => {
 
   const generatePDF = (data: FormValues) => {
     const formattedDate = data.fecha ? 
-      format(parse(data.fecha, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : 
+      format(dateParse(data.fecha, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : 
       '';
     
     const doc = new jsPDF("p", "mm", "a4");
