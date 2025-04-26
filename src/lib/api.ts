@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
 
@@ -40,7 +39,6 @@ export const getAttendance = async (
 
     if (error) throw error;
 
-    // Transform the data to include all required fields
     const formattedAttendances = attendances?.map(attendance => {
       const student = attendance.students;
       return {
@@ -50,7 +48,7 @@ export const getAttendance = async (
           department: student?.departments?.name || '',
           is_deleted: !!student?.deleted_at,
           name: `${student?.first_name} ${student?.last_name}`,
-          gender: 'masculino', // Add default values for required fields
+          gender: 'masculino',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         },
@@ -67,7 +65,6 @@ export const getAttendance = async (
   }
 };
 
-// Get Company function
 export const getCompany = async (id: number) => {
   try {
     const { data, error } = await supabase
@@ -84,7 +81,6 @@ export const getCompany = async (id: number) => {
   }
 };
 
-// Update Company function
 export const updateCompany = async (id: number, updates: any) => {
   try {
     const { data, error } = await supabase
@@ -102,7 +98,6 @@ export const updateCompany = async (id: number, updates: any) => {
   }
 };
 
-// Get Students function
 export const getStudents = async () => {
   try {
     const { data, error } = await supabase
@@ -121,7 +116,6 @@ export const getStudents = async () => {
   }
 };
 
-// Create Student function - Fixed type issue by specifying required fields
 export const createStudent = async (student: { first_name: string; gender: string } & Partial<Student>) => {
   try {
     const { data, error } = await supabase
@@ -138,7 +132,6 @@ export const createStudent = async (student: { first_name: string; gender: strin
   }
 };
 
-// Check if DNI exists function
 export const checkDniExists = async (dni: string) => {
   try {
     const { data, error, count } = await supabase
@@ -154,7 +147,6 @@ export const checkDniExists = async (dni: string) => {
   }
 };
 
-// Get Departments function
 export const getDepartments = async (): Promise<Department[]> => {
   try {
     const { data, error } = await supabase
@@ -170,7 +162,6 @@ export const getDepartments = async (): Promise<Department[]> => {
   }
 };
 
-// Update Department function
 export const updateDepartment = async (id: string, updates: Partial<Department>) => {
   try {
     const { data, error } = await supabase
@@ -188,7 +179,6 @@ export const updateDepartment = async (id: string, updates: Partial<Department>)
   }
 };
 
-// Create Department function
 export const createDepartment = async (department: {
   name: DepartmentType;
   description: string;
@@ -209,7 +199,6 @@ export const createDepartment = async (department: {
   }
 };
 
-// Delete Department function
 export const deleteDepartment = async (id: string) => {
   try {
     const { error } = await supabase
@@ -225,7 +214,6 @@ export const deleteDepartment = async (id: string) => {
   }
 };
 
-// Get Department by Name function
 export const getDepartmentByName = async (name: string) => {
   try {
     const { data, error } = await supabase
@@ -242,7 +230,6 @@ export const getDepartmentByName = async (name: string) => {
   }
 };
 
-// Mark Attendance function - updated with correct parameters
 export const markAttendance = async (attendanceData: {
   student_id: string;
   date: string;
@@ -252,7 +239,8 @@ export const markAttendance = async (attendanceData: {
   event_id?: string;
 }) => {
   try {
-    // Check if attendance record exists for this student and date
+    console.log("Saving attendance with data:", attendanceData);
+    
     const { data: existingAttendance, error: fetchError } = await supabase
       .from('attendance')
       .select('*')
@@ -265,10 +253,12 @@ export const markAttendance = async (attendanceData: {
     let result;
 
     if (existingAttendance) {
-      // Update existing record
       const { data, error } = await supabase
         .from('attendance')
-        .update({ status: attendanceData.status })
+        .update({ 
+          status: attendanceData.status,
+          assigned_class: attendanceData.assigned_class
+        })
         .eq('id', existingAttendance.id)
         .select()
         .single();
@@ -276,7 +266,6 @@ export const markAttendance = async (attendanceData: {
       if (error) throw error;
       result = data;
     } else {
-      // Create new record
       const { data, error } = await supabase
         .from('attendance')
         .insert({
@@ -294,6 +283,7 @@ export const markAttendance = async (attendanceData: {
       result = data;
     }
 
+    console.log("Attendance saved:", result);
     return result;
   } catch (error) {
     console.error('Error marking attendance:', error);
@@ -301,7 +291,6 @@ export const markAttendance = async (attendanceData: {
   }
 };
 
-// Events API functions
 export const getEvents = async () => {
   try {
     const { data, error } = await supabase
@@ -317,7 +306,6 @@ export const getEvents = async () => {
   }
 };
 
-// Fixed the type issue by ensuring title and date are included
 export const createEvent = async (event: { title: string; date: string } & Partial<Event>) => {
   try {
     const { data, error } = await supabase
@@ -366,10 +354,8 @@ export const deleteEvent = async (id: string) => {
   }
 };
 
-// Import students from Excel - Fixed for array handling
 export const importStudentsFromExcel = async (students: { first_name: string; gender: string }[]) => {
   try {
-    // Make sure each student has the required fields
     const validStudents = students.filter(student => 
       student.first_name && student.gender
     );

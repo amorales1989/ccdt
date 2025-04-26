@@ -237,12 +237,17 @@ const TomarAsistencia = () => {
 
       await Promise.all(
         Object.entries(finalAttendances).map(([studentId, status]) => {
-          console.log(`Marking student ${studentId} as ${status ? 'present' : 'absent'}`);
+          const student = students.find(s => s.id === studentId);
+          const studentClass = student?.assigned_class || userClass || "";
+          
+          console.log(`Marking student ${studentId} as ${status ? 'present' : 'absent'} with class ${studentClass}`);
+          
           return markAttendance({
             student_id: studentId,
             date: adjustedDate,
             status: status,
             department_id: departmentId || undefined,
+            assigned_class: studentClass, // Include the student's class or teacher's class
           });
         })
       );
