@@ -94,7 +94,7 @@ const ListarAlumnos = () => {
   const isMobile = useIsMobile();
   const profile = useAuth().profile;
   const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin';
-  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider';
+  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro';
 
   const { data: students, isLoading, isError, refetch } = useQuery({
     queryKey: ["students"],
