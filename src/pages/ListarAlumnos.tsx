@@ -37,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
 
 const updateStudent = async (id: string, data: any) => {
   const { error } = await supabase
@@ -96,6 +97,8 @@ const ListarAlumnos = () => {
   const profile = useAuth().profile;
   const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin';
   const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro';
+
+  const navigate = useNavigate();
 
   const { data: students, isLoading, isError, refetch } = useQuery({
     queryKey: ["students"],
@@ -470,15 +473,13 @@ const ListarAlumnos = () => {
                 Filtrar
               </Button>
             )}
-            {canManageStudents && (
-              <>
-                <Button onClick={() => setIsImportModalOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Importar
-                </Button>
-              </>
+            {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
+              <Button onClick={() => setIsImportModalOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Importar
+              </Button>
             )}
-            <Button onClick={() => setOpen(true)}>
+            <Button onClick={() => navigate('/agregar')}>
               Agregar Alumno
             </Button>
           </div>
@@ -841,7 +842,16 @@ const ListarAlumnos = () => {
                     <FormItem>
                       <FormLabel>Número de Documento</FormLabel>
                       <FormControl>
-                        <Input placeholder="Número de documento" {...field} />
+                        <Input 
+                          placeholder="Número de documento" 
+                          {...field} 
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            field.onChange(value);
+                          }}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
