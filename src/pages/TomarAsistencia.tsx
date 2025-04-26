@@ -334,20 +334,9 @@ const TomarAsistencia = () => {
                       <Button
                         variant={asistencias[student.id] ? "default" : "outline"}
                         size="icon"
-                        onClick={() => marcarAsistencia(student.id, true)}
+                        onClick={() => marcarAsistencia(student.id, !asistencias[student.id])}
                       >
                         <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant={
-                          asistencias[student.id] === false
-                            ? "destructive"
-                            : "outline"
-                        }
-                        size="icon"
-                        onClick={() => marcarAsistencia(student.id, false)}
-                      >
-                        <X className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
