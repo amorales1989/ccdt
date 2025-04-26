@@ -266,11 +266,16 @@ const AgregarAlumno = () => {
                 id="document_number"
                 value={formData.document_number}
                 onChange={(e) =>
-                  setFormData({ ...formData, document_number: e.target.value })
+                  setFormData({ 
+                    ...formData, 
+                    document_number: e.target.value.replace(/\D/g, '') 
+                  })
                 }
                 onBlur={handleDniBlur}
                 placeholder="Ingrese el DNI sin puntos"
                 error={!!dniError}
+                inputMode="numeric"
+                pattern="[0-9]*"
               />
               {dniError && (
                 <p className="text-sm font-medium text-destructive mt-1">{dniError}</p>
