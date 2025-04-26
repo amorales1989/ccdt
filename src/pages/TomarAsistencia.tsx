@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -222,14 +223,16 @@ const TomarAsistencia = () => {
       }
 
       const adjustedDate = format(addDays(new Date(selectedDate), 1), "yyyy-MM-dd");
-
+      
+      // Create a default attendance record for each student (all set to absent by default)
       const defaultAbsentAttendance: Record<string, boolean> = {};
       students.forEach(student => {
         defaultAbsentAttendance[student.id] = false;
       });
-
+      
+      // Only override the default with explicitly marked presence
       const finalAttendances = { ...defaultAbsentAttendance, ...asistencias };
-
+      
       console.log("Saving attendance data:", finalAttendances);
 
       await Promise.all(
