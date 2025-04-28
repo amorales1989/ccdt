@@ -40,6 +40,10 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const updateStudent = async (id: string, data: any) => {
+  if (data.authorization_id !== undefined) {
+    delete data.authorization_id;
+  }
+  
   const { error } = await supabase
     .from("students")
     .update(data)
@@ -163,7 +167,6 @@ const ListarAlumnos = () => {
       emergency_contact_phone: "",
       medical_information: "",
       department_id: "",
-      authorization_id: "",
     },
   });
 
@@ -198,7 +201,6 @@ const ListarAlumnos = () => {
       emergency_contact_phone: student.emergency_contact_phone || "",
       medical_information: student.medical_information || "",
       department_id: student.department_id || "",
-      authorization_id: student.authorization_id || "",
     });
     setIsEditModalOpen(true);
   };

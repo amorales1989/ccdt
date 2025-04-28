@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
 
@@ -118,6 +119,11 @@ export const getStudents = async () => {
 
 export const createStudent = async (student: { first_name: string; gender: string } & Partial<Student>) => {
   try {
+    // Remove authorization_id if it exists in the student object
+    if (student.authorization_id !== undefined) {
+      delete student.authorization_id;
+    }
+    
     const { data, error } = await supabase
       .from('students')
       .insert(student)
