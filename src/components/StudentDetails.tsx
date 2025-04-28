@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { format, parseISO, addDays } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Student } from "@/types/database";
 
@@ -17,11 +17,10 @@ export const StudentDetails = ({ student }: StudentDetailsProps) => {
   const formatBirthdate = (birthdate: string | null) => {
     if (!birthdate) return "";
     
-    // Parse the date and add one day
+    // Parse the date without adding an extra day
     const parsedDate = parseISO(birthdate);
-    const adjustedDate = addDays(parsedDate, 1);
     
-    return format(adjustedDate, "dd MMMM yyyy", { locale: es });
+    return format(parsedDate, "dd MMMM yyyy", { locale: es });
   };
 
   return (

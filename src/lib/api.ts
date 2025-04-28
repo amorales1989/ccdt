@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
 
@@ -153,7 +152,7 @@ export const createStudent = async (student: { first_name: string; gender: strin
 export const updateStudent = async (id: string, student: Partial<Student>) => {
   try {
     // Create a clean object with only fields that exist in the students table
-    const validFields = {
+    const validFields: Record<string, any> = {
       first_name: student.first_name,
       last_name: student.last_name,
       gender: student.gender,
