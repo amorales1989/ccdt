@@ -38,6 +38,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 const updateStudent = async (id: string, data: any) => {
   if (data.authorization_id !== undefined) {
@@ -47,6 +49,11 @@ const updateStudent = async (id: string, data: any) => {
   if (data.date_of_birth !== undefined) {
     data.birthdate = data.date_of_birth;
     delete data.date_of_birth;
+  }
+  
+  if (data.phone_number !== undefined) {
+    data.phone = data.phone_number;
+    delete data.phone_number;
   }
   
   console.log("Updating student with data:", data);
@@ -175,6 +182,23 @@ const ListarAlumnos = () => {
       medical_information: "",
       department_id: "",
     },
+    resolver: zodResolver(
+      z.object({
+        first_name: z.string().min(1, "El nombre es requerido"),
+        last_name: z.string().optional(),
+        gender: z.string(),
+        date_of_birth: z.date().optional(),
+        address: z.string().optional(),
+        phone_number: z.string().optional(),
+        email: z.string().email("Formato de email inválido").optional().or(z.string().length(0)),
+        document_type: z.string().optional(),
+        document_number: z.string().optional(),
+        emergency_contact_name: z.string().optional(),
+        emergency_contact_phone: z.string().optional(),
+        medical_information: z.string().optional(),
+        department_id: z.string().optional(),
+      })
+    ),
   });
 
   useEffect(() => {
@@ -195,10 +219,10 @@ const ListarAlumnos = () => {
   const handleEdit = (student: Student) => {
     setStudentToEdit(student);
     form.reset({
-      first_name: student.first_name,
-      last_name: student.last_name,
-      gender: student.gender,
-      date_of_birth: new Date(student.birthdate || student.date_of_birth || new Date()),
+      first_name: student.first_name || "",
+      last_name: student.last_name || "",
+      gender: student.gender || "masculino",
+      date_of_birth: student.birthdate || student.date_of_birth ? new Date(student.birthdate || student.date_of_birth || "") : new Date(),
       address: student.address || "",
       phone_number: student.phone || student.phone_number || "",
       email: student.email || "",
@@ -217,7 +241,7 @@ const ListarAlumnos = () => {
     try {
       const formattedValues = {
         ...values,
-        date_of_birth: format(values.date_of_birth, "yyyy-MM-dd")
+        date_of_birth: values.date_of_birth ? format(values.date_of_birth, "yyyy-MM-dd") : undefined
       };
       
       console.log("Submitting form values:", formattedValues);
@@ -769,7 +793,7 @@ const ListarAlumnos = () => {
                   name="first_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nombre</FormLabel>
+                      <FormLabel>Nombre*</FormLabel>
                       <FormControl>
                         <Input placeholder="Nombre" {...field} />
                       </FormControl>
@@ -777,6 +801,7 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={form.control}
                   name="last_name"

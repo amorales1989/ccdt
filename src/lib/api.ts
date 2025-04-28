@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
 
@@ -122,6 +121,18 @@ export const createStudent = async (student: { first_name: string; gender: strin
     // Remove authorization_id if it exists in the student object
     if (student.authorization_id !== undefined) {
       delete student.authorization_id;
+    }
+    
+    // Map date_of_birth to birthdate for database consistency
+    if (student.date_of_birth !== undefined) {
+      student.birthdate = student.date_of_birth;
+      delete student.date_of_birth;
+    }
+    
+    // Map phone_number to phone for database consistency
+    if (student.phone_number !== undefined) {
+      student.phone = student.phone_number;
+      delete student.phone_number;
     }
     
     const { data, error } = await supabase

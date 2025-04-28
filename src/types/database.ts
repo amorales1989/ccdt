@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   first_name: string;
@@ -30,7 +29,6 @@ export interface Student {
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
   medical_information?: string;
-  // Make authorization_id optional with ?
   authorization_id?: string;
   student_authorizations?: {
     name?: string;
