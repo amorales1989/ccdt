@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, differenceInYears, parse, isValid } from "date-fns";
+import { format, differenceInYears, parse, isValid, parseISO } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
 import { Department, Student } from "@/types/database";
@@ -166,12 +166,28 @@ const ListarAlumnos = () => {
     },
   });
 
+  const formSchema = z.object({
+    first_name: z.string().min(1, "El nombre es requerido"),
+    last_name: z.string().optional(),
+    gender: z.string(),
+    date_of_birth: z.any().optional(),
+    address: z.string().optional(),
+    phone_number: z.string().optional(),
+    email: z.string().email("Formato de email inválido").optional().or(z.string().length(0)),
+    document_type: z.string().optional(),
+    document_number: z.string().optional(),
+    emergency_contact_name: z.string().optional(),
+    emergency_contact_phone: z.string().optional(),
+    medical_information: z.string().optional(),
+    department_id: z.string().optional(),
+  });
+
   const form = useForm({
     defaultValues: {
       first_name: "",
       last_name: "",
       gender: "masculino",
-      date_of_birth: new Date(),
+      date_of_birth: "",
       address: "",
       phone_number: "",
       email: "",
@@ -182,23 +198,7 @@ const ListarAlumnos = () => {
       medical_information: "",
       department_id: "",
     },
-    resolver: zodResolver(
-      z.object({
-        first_name: z.string().min(1, "El nombre es requerido"),
-        last_name: z.string().optional(),
-        gender: z.string(),
-        date_of_birth: z.date().optional(),
-        address: z.string().optional(),
-        phone_number: z.string().optional(),
-        email: z.string().email("Formato de email inválido").optional().or(z.string().length(0)),
-        document_type: z.string().optional(),
-        document_number: z.string().optional(),
-        emergency_contact_name: z.string().optional(),
-        emergency_contact_phone: z.string().optional(),
-        medical_information: z.string().optional(),
-        department_id: z.string().optional(),
-      })
-    ),
+    resolver: zodResolver(formSchema),
   });
 
   useEffect(() => {
@@ -218,11 +218,21 @@ const ListarAlumnos = () => {
 
   const handleEdit = (student: Student) => {
     setStudentToEdit(student);
+    
+    let birthDate = "";
+    if (student.birthdate) {
+      birthDate = student.birthdate;
+    } else if (student.date_of_birth) {
+      birthDate = student.date_of_birth;
+    }
+    
+    console.log("Editing student with birthdate:", birthDate);
+    
     form.reset({
       first_name: student.first_name || "",
       last_name: student.last_name || "",
       gender: student.gender || "masculino",
-      date_of_birth: student.birthdate || student.date_of_birth ? new Date(student.birthdate || student.date_of_birth || "") : new Date(),
+      date_of_birth: birthDate,
       address: student.address || "",
       phone_number: student.phone || student.phone_number || "",
       email: student.email || "",
@@ -240,9 +250,16 @@ const ListarAlumnos = () => {
     if (!studentToEdit) return;
     try {
       const formattedValues = {
-        ...values,
-        date_of_birth: values.date_of_birth ? format(values.date_of_birth, "yyyy-MM-dd") : undefined
+        ...values
       };
+      
+      if (values.date_of_birth) {
+        if (typeof values.date_of_birth === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(values.date_of_birth)) {
+          formattedValues.date_of_birth = values.date_of_birth;
+        } else if (values.date_of_birth instanceof Date) {
+          formattedValues.date_of_birth = format(values.date_of_birth, "yyyy-MM-dd");
+        }
+      }
       
       console.log("Submitting form values:", formattedValues);
       
@@ -847,7 +864,7 @@ const ListarAlumnos = () => {
                         <Input
                           type="date"
                           {...field}
-                          value={format(field.value, "yyyy-MM-dd")}
+                          value={field.value || ''}
                         />
                       </FormControl>
                       <FormMessage />
