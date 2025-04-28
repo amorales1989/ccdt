@@ -43,6 +43,13 @@ const updateStudent = async (id: string, data: any) => {
   if (data.authorization_id !== undefined) {
     delete data.authorization_id;
   }
+
+  if (data.date_of_birth !== undefined) {
+    data.birthdate = data.date_of_birth;
+    delete data.date_of_birth;
+  }
+  
+  console.log("Updating student with data:", data);
   
   const { error } = await supabase
     .from("students")
@@ -208,7 +215,14 @@ const ListarAlumnos = () => {
   const handleUpdate = async (values: any) => {
     if (!studentToEdit) return;
     try {
-      await updateStudent(studentToEdit.id, values);
+      const formattedValues = {
+        ...values,
+        date_of_birth: format(values.date_of_birth, "yyyy-MM-dd")
+      };
+      
+      console.log("Submitting form values:", formattedValues);
+      
+      await updateStudent(studentToEdit.id, formattedValues);
       toast({
         title: "Alumno actualizado",
         description: "El alumno ha sido actualizado correctamente.",
