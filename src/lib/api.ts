@@ -152,28 +152,42 @@ export const createStudent = async (student: { first_name: string; gender: strin
 
 export const updateStudent = async (id: string, student: Partial<Student>) => {
   try {
-    // Remove authorization_id if it exists in the student object
-    if (student.authorization_id !== undefined) {
-      delete student.authorization_id;
-    }
+    // Create a clean object with only fields that exist in the students table
+    const validFields = {
+      first_name: student.first_name,
+      last_name: student.last_name,
+      gender: student.gender,
+      address: student.address,
+      department_id: student.department_id,
+      assigned_class: student.assigned_class,
+      document_number: student.document_number,
+      deleted_at: student.deleted_at
+    };
     
     // Map date_of_birth to birthdate for database consistency
     if (student.date_of_birth !== undefined) {
-      student.birthdate = student.date_of_birth;
-      delete student.date_of_birth;
+      validFields.birthdate = student.date_of_birth;
+    } else if (student.birthdate !== undefined) {
+      validFields.birthdate = student.birthdate;
     }
     
     // Map phone_number to phone for database consistency
     if (student.phone_number !== undefined) {
-      student.phone = student.phone_number;
-      delete student.phone_number;
+      validFields.phone = student.phone_number;
+    } else if (student.phone !== undefined) {
+      validFields.phone = student.phone;
     }
 
-    console.log("Updating student with formatted data:", student);
+    // Remove undefined values
+    const cleanData = Object.fromEntries(
+      Object.entries(validFields).filter(([_, value]) => value !== undefined)
+    );
+
+    console.log("Updating student with filtered data:", cleanData);
     
     const { data, error } = await supabase
       .from('students')
-      .update(student)
+      .update(cleanData)
       .eq('id', id)
       .select()
       .single();
