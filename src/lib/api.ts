@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
 
@@ -145,6 +146,42 @@ export const createStudent = async (student: { first_name: string; gender: strin
     return data;
   } catch (error) {
     console.error('Error creating student:', error);
+    throw error;
+  }
+};
+
+export const updateStudent = async (id: string, student: Partial<Student>) => {
+  try {
+    // Remove authorization_id if it exists in the student object
+    if (student.authorization_id !== undefined) {
+      delete student.authorization_id;
+    }
+    
+    // Map date_of_birth to birthdate for database consistency
+    if (student.date_of_birth !== undefined) {
+      student.birthdate = student.date_of_birth;
+      delete student.date_of_birth;
+    }
+    
+    // Map phone_number to phone for database consistency
+    if (student.phone_number !== undefined) {
+      student.phone = student.phone_number;
+      delete student.phone_number;
+    }
+
+    console.log("Updating student with formatted data:", student);
+    
+    const { data, error } = await supabase
+      .from('students')
+      .update(student)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating student:', error);
     throw error;
   }
 };

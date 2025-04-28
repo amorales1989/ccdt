@@ -21,7 +21,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "@/hooks/use-toast";
 import { StudentDetails } from "@/components/StudentDetails";
 import { Badge } from "@/components/ui/badge";
-import { importStudentsFromExcel } from "@/lib/api";
+import { importStudentsFromExcel, updateStudent } from "@/lib/api";
 import {
   Form,
   FormControl,
@@ -40,32 +40,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-
-const updateStudent = async (id: string, data: any) => {
-  if (data.authorization_id !== undefined) {
-    delete data.authorization_id;
-  }
-
-  if (data.date_of_birth !== undefined) {
-    data.birthdate = data.date_of_birth;
-    delete data.date_of_birth;
-  }
-  
-  if (data.phone_number !== undefined) {
-    data.phone = data.phone_number;
-    delete data.phone_number;
-  }
-  
-  console.log("Updating student with data:", data);
-  
-  const { error } = await supabase
-    .from("students")
-    .update(data)
-    .eq("id", id);
-  
-  if (error) throw error;
-  return { success: true };
-};
 
 const deleteStudent = async (id: string) => {
   const { error } = await supabase
@@ -249,21 +223,9 @@ const ListarAlumnos = () => {
   const handleUpdate = async (values: any) => {
     if (!studentToEdit) return;
     try {
-      const formattedValues = {
-        ...values
-      };
+      console.log("Raw form values:", values);
       
-      if (values.date_of_birth) {
-        if (typeof values.date_of_birth === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(values.date_of_birth)) {
-          formattedValues.date_of_birth = values.date_of_birth;
-        } else if (values.date_of_birth instanceof Date) {
-          formattedValues.date_of_birth = format(values.date_of_birth, "yyyy-MM-dd");
-        }
-      }
-      
-      console.log("Submitting form values:", formattedValues);
-      
-      await updateStudent(studentToEdit.id, formattedValues);
+      await updateStudent(studentToEdit.id, values);
       toast({
         title: "Alumno actualizado",
         description: "El alumno ha sido actualizado correctamente.",
