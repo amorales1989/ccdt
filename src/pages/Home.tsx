@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, CheckCircle2, Bell, BellRing } from "lucide-react";
+import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,14 +43,6 @@ const Home = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
-
-  // Verificar permisos de notificación al cargar el componente
-  useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
-  }, []);
 
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
@@ -74,160 +66,6 @@ const Home = () => {
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
-
-  // Función para solicitar permisos de notificación
-  const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      toast({
-        title: "No compatible",
-        description: "Tu navegador no soporta notificaciones",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      
-      if (permission === 'granted') {
-        toast({
-          title: "Permisos concedidos",
-          description: "Ahora puedes recibir notificaciones",
-        });
-      } else if (permission === 'denied') {
-        toast({
-          title: "Permisos denegados",
-          description: "No se pueden enviar notificaciones. Puedes habilitarlas en la configuración del navegador",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error al solicitar permisos de notificación:', error);
-      toast({
-        title: "Error",
-        description: "Hubo un error al solicitar permisos de notificación",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Función para enviar notificación push
-  const sendPushNotification = () => {
-    if (!('Notification' in window)) {
-      toast({
-        title: "No compatible",
-        description: "Tu navegador no soporta notificaciones",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (Notification.permission !== 'granted') {
-      toast({
-        title: "Permisos requeridos",
-        description: "Primero debes permitir las notificaciones",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Crear la notificación
-    const notification = new Notification('Sistema Escolar', {
-      body: '¡Notificación de prueba enviada exitosamente! 📚',
-      icon: '/favicon.ico', // Puedes cambiar por tu icono
-      badge: '/favicon.ico',
-      tag: 'test-notification',
-      requireInteraction: false,
-      silent: false,
-      timestamp: Date.now(),
-      data: {
-        url: window.location.origin,
-        timestamp: new Date().toISOString()
-      }
-    });
-
-    // Opcional: Manejar clicks en la notificación
-    notification.onclick = function(event) {
-      event.preventDefault();
-      window.focus();
-      notification.close();
-    };
-
-    // Auto-cerrar después de 5 segundos
-    setTimeout(() => {
-      notification.close();
-    }, 5000);
-
-    toast({
-      title: "Notificación enviada",
-      description: "La notificación ha sido enviada a tu dispositivo",
-    });
-  };
-
-  // Componente del botón de notificación
-  const NotificationButton = () => {
-    const getButtonContent = () => {
-      if (notificationPermission === 'denied') {
-        return {
-          icon: <Bell className="h-4 w-4" />,
-          text: isMobile ? "" : "Notificaciones Bloqueadas",
-          variant: "secondary" as const,
-          disabled: true
-        };
-      } else if (notificationPermission === 'granted') {
-        return {
-          icon: <BellRing className="h-4 w-4" />,
-          text: isMobile ? "" : "Enviar Notificación",
-          variant: "default" as const,
-          disabled: false
-        };
-      } else {
-        return {
-          icon: <Bell className="h-4 w-4" />,
-          text: isMobile ? "" : "Activar Notificaciones",
-          variant: "outline" as const,
-          disabled: false
-        };
-      }
-    };
-
-    const buttonConfig = getButtonContent();
-    
-    const handleClick = () => {
-      if (notificationPermission === 'granted') {
-        sendPushNotification();
-      } else if (notificationPermission === 'default') {
-        requestNotificationPermission();
-      }
-    };
-
-    return (
-      <Button
-        onClick={handleClick}
-        variant={buttonConfig.variant}
-        size={isMobile ? "sm" : "default"}
-        disabled={buttonConfig.disabled}
-        className={`
-          ${notificationPermission === 'granted' ? 'bg-green-600 hover:bg-green-700' : ''}
-          ${notificationPermission === 'denied' ? 'opacity-50 cursor-not-allowed' : ''}
-          transition-all duration-300
-        `}
-        title={
-          notificationPermission === 'denied' 
-            ? "Notificaciones bloqueadas en el navegador" 
-            : notificationPermission === 'granted'
-            ? "Enviar notificación de prueba"
-            : "Activar notificaciones push"
-        }
-      >
-        {buttonConfig.icon}
-        {!isMobile && buttonConfig.text && (
-          <span className="ml-2">{buttonConfig.text}</span>
-        )}
-      </Button>
-    );
-  };
 
   const handleDepartmentClick = (department: Department) => {
     setSelectedDepartment(department);
@@ -571,11 +409,6 @@ const Home = () => {
 
   return (
     <div>
-      {/* Botón de notificación flotante en la esquina superior derecha */}
-      <div className="fixed top-4 right-4 z-50">
-        <NotificationButton />
-      </div>
-
       {isAdminOrSecretary && !studentsLoading && (
         <StudentSearch students={students} />
       )}
@@ -585,46 +418,40 @@ const Home = () => {
       <Card className="bg-gradient-to-br from-white to-accent/10 border-accent/20 hover:shadow-xl animate-fade-in">
         <CardHeader className="flex-row justify-between items-center pb-2">
           <CardTitle>Calendario de Eventos</CardTitle>
-          <div className="flex gap-2 items-center">
-            {/* Botón de notificación adicional en el header para desktop */}
-            {!isMobile && (
-              <NotificationButton />
-            )}
-            {isAdminOrSecretary && (
-              <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button 
-                    className="bg-primary hover:bg-primary/90 transition-colors duration-300" 
-                    onClick={() => setSelectedEventForEdit(null)}
-                  >
-                    {isMobile ? (
-                      <Plus className="h-4 w-4" />
-                    ) : (
-                      <>
-                        <MapPin className="mr-2 h-4 w-4" />
-                        Agregar Evento
-                      </>
-                    )}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <EventForm 
-                    onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent} 
-                    initialData={selectedEventForEdit || undefined}
-                    onSuccess={() => {
-                      setEventDialogOpen(false);
-                      setSelectedEventForEdit(null);
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
+          {isAdminOrSecretary && (
+            <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
+              <DialogTrigger asChild>
+                <Button 
+                  className="bg-primary hover:bg-primary/90 transition-colors duration-300" 
+                  onClick={() => setSelectedEventForEdit(null)}
+                >
+                  {isMobile ? (
+                    <Plus className="h-4 w-4" />
+                  ) : (
+                    <>
+                      <MapPin className="mr-2 h-4 w-4" />
+                      Agregar Evento
+                    </>
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
+                  </DialogTitle>
+                </DialogHeader>
+                <EventForm 
+                  onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent} 
+                  initialData={selectedEventForEdit || undefined}
+                  onSuccess={() => {
+                    setEventDialogOpen(false);
+                    setSelectedEventForEdit(null);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
         </CardHeader>
         <CardContent>
           <div className="relative mb-6">
