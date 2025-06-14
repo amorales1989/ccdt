@@ -4,13 +4,13 @@ import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, Chec
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, isBefore, startOfToday } from "date-fns";
+import { addYears, differenceInDays, format, isBefore, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Event, DepartmentType, Student, Department } from "@/types/database";
+import type { Event, DepartmentType, Student, Department, EventWithBirthday } from "@/types/database";
 import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -64,6 +64,72 @@ const Home = () => {
     queryFn: getDepartments
   });
 
+  const studentsBasicInfo = useMemo(() => {
+    return students.map(student => ({
+      first_name: student.first_name,
+      last_name: student.last_name,
+      birthdate: student.birthdate
+    }));
+  }, [students]);
+
+const upcomingBirthdays = useMemo(() => {
+  const today = new Date();
+  const currentMonth = today.getMonth() + 1;
+  const currentDay = today.getDate();
+  const currentYear = today.getFullYear();
+  
+  const studentsWithDaysUntilBirthday = studentsBasicInfo
+    .filter(student => student.birthdate) 
+    .map(student => {
+      const cleanFirstName = student.first_name?.trim() || '';
+      const cleanLastName = student.last_name?.trim() || '';
+      
+      const [birthYear, birthMonth, birthDay] = student.birthdate.split('-').map(Number);
+      
+      const isBirthdayToday = birthMonth === currentMonth && birthDay === currentDay;
+      
+      let daysUntilBirthday;
+      let birthdayThisYear;
+      
+      if (isBirthdayToday) {
+        daysUntilBirthday = 0;
+        birthdayThisYear = `${String(currentDay).padStart(2, '0')}/${String(currentMonth).padStart(2, '0')}`;
+      } else {
+        let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay);
+        
+        if (birthdayDate < today) {
+          birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
+        }
+        
+        const timeDiff = birthdayDate.getTime() - today.getTime();
+        daysUntilBirthday = Math.ceil(timeDiff / (1000 * 3600 * 24));
+        
+        birthdayThisYear = `${String(birthDay).padStart(2, '0')}/${String(birthMonth).padStart(2, '0')}`;
+      }
+      
+      return {
+        first_name: cleanFirstName,
+        last_name: cleanLastName,
+        birthdate: student.birthdate,
+        daysUntilBirthday,
+        birthdayThisYear,
+        fullName: `${cleanFirstName} ${cleanLastName}`,
+        isBirthdayToday
+      };
+    })
+    .sort((a, b) => a.daysUntilBirthday - b.daysUntilBirthday);
+  
+  const birthdaysToday = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday === 0);
+  const upcomingOnly = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday > 0);
+  
+  const result = [
+    ...birthdaysToday,
+    ...upcomingOnly.slice(0, 2)
+  ];
+  
+  return result;
+}, [studentsBasicInfo]);
+
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
 
@@ -114,7 +180,6 @@ const Home = () => {
       };
       return acc;
     }, {} as DepartmentStatsMap);
-
     const formatDepartmentName = (name: string) => {
       return name.replace(/_/g, ' ').split(' ').map(word => 
         word.charAt(0).toUpperCase() + word.slice(1)
@@ -352,7 +417,8 @@ const Home = () => {
     setEventDialogOpen(true);
   };
 
-  const futureEvents = events
+const futureEvents = useMemo(() => {
+  const regularEvents = events
     .filter(event => !isBefore(new Date(event.date), startOfToday()))
     .filter(event => 
       !searchTerm || 
@@ -360,53 +426,90 @@ const Home = () => {
       (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
-  const renderActionButtons = (event: Event) => {
-    if (!isAdminOrSecretary) return null;
-    
-    if (isMobile) {
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-white">
-            <DropdownMenuItem onClick={() => handleEditEvent(event)}>
-              <Edit2 className="mr-2 h-4 w-4 text-white" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    }
-    
-    return (
-      <div className="flex justify-end space-x-2">
-        <Button 
-          variant="secondary" 
-          size="sm" 
-          onClick={() => handleEditEvent(event)}
-        >
-          <Edit2 className="h-4 w-4 text-white" />
-          <span className="sr-only">Editar</span>
-        </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => handleDeleteEvent(event.id)}
-        >
-          <Trash2 className="h-4 w-4" />
-          <span className="sr-only">Eliminar</span>
-        </Button>
-      </div>
-    );
-  };
+  const birthdayEvents = !isAdminOrSecretary ? upcomingBirthdays
+    .filter(birthday => 
+      !searchTerm || 
+      birthday.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      'cumpleaños'.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .map(birthday => {
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const [birthYear, birthMonth, birthDay] = birthday.birthdate.split('-').map(Number);
+      
+      let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay +1);
+      
+      if (isBefore(birthdayDate, startOfToday())) {
+        birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
+      }
 
+      return {
+        id: `birthday-${birthday.first_name}-${birthday.last_name}`, 
+        title: 'Cumpleaños',
+        date: birthdayDate.toISOString().split('T')[0], 
+        time: '',
+        description: birthday.fullName,
+        created_at: '',
+        updated_at: '',
+        isBirthday: true, 
+        daysUntilBirthday: birthday.daysUntilBirthday 
+      };
+    }) : [];
+
+  const allEvents = [...regularEvents, ...birthdayEvents];
+  return allEvents.sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateA.getTime() - dateB.getTime();
+  });
+}, [events, upcomingBirthdays, searchTerm, isAdminOrSecretary]); 
+
+const renderActionButtons = (event: EventWithBirthday) => {
+  if (event.isBirthday || !isAdminOrSecretary) return null;
+  
+  if (isMobile) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-white">
+          <DropdownMenuItem onClick={() => handleEditEvent(event)}>
+            <Edit2 className="mr-2 h-4 w-4 text-white" />
+            Editar
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Eliminar
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+  
+  return (
+    <div className="flex justify-end space-x-2">
+      <Button 
+        variant="secondary" 
+        size="sm" 
+        onClick={() => handleEditEvent(event)}
+      >
+        <Edit2 className="h-4 w-4 text-white" />
+        <span className="sr-only">Editar</span>
+      </Button>
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={() => handleDeleteEvent(event.id)}
+      >
+        <Trash2 className="h-4 w-4" />
+        <span className="sr-only">Eliminar</span>
+      </Button>
+    </div>
+  );
+};
   return (
     <div>
       {isAdminOrSecretary && !studentsLoading && (
