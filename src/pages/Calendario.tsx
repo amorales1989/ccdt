@@ -1,8 +1,7 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { getEvents, deleteEvent } from "@/lib/api";
+import { getEvents, deleteEvent, getStudents } from "@/lib/api";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -37,6 +36,7 @@ import { createEvent, updateEvent } from "@/lib/api";
 import type { Event } from "@/types/database";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Calendario() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -46,126 +46,73 @@ export default function Calendario() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const { data: events = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
     queryFn: getEvents
   });
 
-  useEffect(() => {
-    if (selectedDate && events.length > 0) {
-      const filtered = events
-        .filter(event => isSameMonth(new Date(event.date), selectedDate))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      
-      setCurrentMonthEvents(filtered);
-    }
-  }, [selectedDate, events]);
+  // Traer los estudiantes
+  const { data: students = [], isLoading: studentsLoading } = useQuery({
+    queryKey: ['students'],
+    queryFn: () => getStudents().then(data => {
+      return data.map(student => ({
+        ...student,
+        department: student.departments?.name || student.department
+      }));
+    })
+  });
 
-  const eventDates = events.reduce((acc: Record<string, any[]>, event) => {
-    const dateStr = format(new Date(event.date), 'yyyy-MM-dd');
-    if (!acc[dateStr]) {
-      acc[dateStr] = [];
-    }
-    acc[dateStr].push(event);
-    return acc;
-  }, {});
+  // CALCULAR PRÓXIMOS 2 CUMPLEAÑOS
+  function getUpcomingBirthdays() {
+    if (!students || students.length === 0) return [];
 
-  const handleCreateEvent = async (eventData: any) => {
-    try {
-      if (selectedEvent) {
-        // Make sure the ID is included when updating
-        await updateEvent(selectedEvent.id, {
-          ...eventData,
-          id: selectedEvent.id
-        });
-        toast({
-          title: "Evento actualizado",
-          description: "El evento se ha actualizado exitosamente.",
-        });
-      } else {
-        await createEvent(eventData);
-        toast({
-          title: "Evento creado",
-          description: "El evento se ha creado exitosamente.",
-        });
-      }
-      await refetch();
-      setDialogOpen(false);
-      setSelectedEvent(null);
-    } catch (error) {
-      console.error("Error creating/updating event:", error);
-      toast({
-        title: "Error",
-        description: selectedEvent 
-          ? "No se pudo actualizar el evento." 
-          : "No se pudo crear el evento.",
-        variant: "destructive",
+    // Determinar si hay que filtrar por departamento/clase
+    let filtered = students;
+    if (profile && ["maestro", "lider"].includes(profile.role)) {
+      // Solo cumpleaños del mismo departamento y clase (si existen asignados)
+      filtered = filtered.filter(student => {
+        let match = true;
+        if (profile.departments && profile.departments.length > 0) {
+          // student.department puede tener distintas formas
+          match = match && profile.departments.includes(student.department);
+        }
+        if (profile.assigned_class) {
+          match = match && (student.assigned_class === profile.assigned_class);
+        }
+        return match;
       });
     }
-  };
 
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setDialogOpen(true);
-  };
+    // Mapear a {student, nextBirthday: Date}
+    const today = new Date();
+    const birthdays = filtered
+      .filter(s => !!s.birthdate)
+      .map(s => {
+        const birth = new Date(s.birthdate);
+        const next = new Date(today);
+        next.setMonth(birth.getMonth());
+        next.setDate(birth.getDate());
+        // Si el cumple cayó este año pero ya pasó, ir al año que viene
+        if (
+          next.getMonth() < today.getMonth() ||
+          (next.getMonth() === today.getMonth() && next.getDate() < today.getDate())
+        ) {
+          next.setFullYear(today.getFullYear() + 1);
+        } else {
+          next.setFullYear(today.getFullYear());
+        }
+        return { student: s, nextBirthday: next };
+      })
+      // Ordenar por proximidad
+      .sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
 
-  const handleDeleteClick = (event: Event, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEventToDelete(event);
-    setDeleteDialogOpen(true);
-  };
+    // Solo los 2 primeros
+    return birthdays.slice(0, 2);
+  }
 
-  const confirmDelete = async () => {
-    if (!eventToDelete) return;
-    
-    try {
-      await deleteEvent(eventToDelete.id);
-      await refetch();
-      toast({
-        title: "Evento eliminado",
-        description: "El evento se ha eliminado exitosamente.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el evento.",
-        variant: "destructive",
-      });
-    } finally {
-      setDeleteDialogOpen(false);
-      setEventToDelete(null);
-    }
-  };
-
-  const modifiers = {
-    hasEvent: (date: Date) => {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      return dateStr in eventDates;
-    }
-  };
-
-  const modifiersStyles = {
-    hasEvent: {
-      backgroundColor: '#F2FCE2',
-      color: '#064e3b',
-      fontWeight: 'bold'
-    }
-  };
-
-  const getEventCardStyle = (eventDate: string) => {
-    const now = new Date();
-    const date = new Date(eventDate);
-    return isAfter(date, now) 
-      ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70" 
-      : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70";
-  };
-
-  const handleMonthChange = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date);
-    }
-  };
+  const nextBirthdays = getUpcomingBirthdays();
 
   if (isLoading) {
     return (
@@ -181,6 +128,30 @@ export default function Calendario() {
 
   return (
     <div className="container mx-auto p-6">
+      {/* Mostrar próximos 2 cumpleaños */}
+      {!studentsLoading && nextBirthdays.length > 0 && (
+        <Card className="mb-6 bg-gradient-to-br from-yellow-100 to-white border-yellow-300/70">
+          <CardHeader>
+            <CardTitle>Próximos Cumpleaños</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              {nextBirthdays.map(({ student, nextBirthday }) => (
+                <div key={student.id} className="flex items-center gap-2">
+                  <span className="font-medium">{student.first_name} {student.last_name}</span>
+                  <span className="text-muted-foreground text-sm">
+                    {nextBirthday.toLocaleDateString('es-AR', { day: '2-digit', month: 'long' })}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    ({student.assigned_class ? `Clase ${student.assigned_class}` : student.department})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Calendario de Eventos</CardTitle>
