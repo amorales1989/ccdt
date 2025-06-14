@@ -1,5 +1,10 @@
 
 import React, { useState, useEffect } from "react";
+import { getAuth, signInAnonymously } from "firebase/auth";
+import { messaging } from "../firebase.js";
+import { getToken, onMessage } from "firebase/messaging"
+import { error } from "console";
+import { toast } from "sonner";
 import {
   Sidebar,
   SidebarContent,
@@ -287,6 +292,26 @@ export function AppSidebar() {
     enabled: !!user
   });
 
+    const loguearse = () => {
+    signInAnonymously(getAuth()).then(usuario => console.log(usuario));
+  }
+
+  const activarMensajes = async () => {
+    const token = await getToken(messaging, {
+      vapidKey:
+      "BNgbx9Cq4GIoJTtikQWqMOqrv1sXllaj1LAnLOCx0Ei7Ik428aRfgRa-M3Q57yN_LRyoN3fKWJYqEqA5nlfxM9U"
+    }).catch(error => console.log("hubo error"));
+    if(token) console.log("tu token es:", token)
+    if(!token) console.log("no generó token")
+  }
+
+  React.useEffect(() => {
+    onMessage(messaging, message => {
+      console.log("tu mensaje:", message);
+      toast(message.notification.title);
+    })
+  },[])
+
   useEffect(() => {
     if (company) {
       if (company.name && company.show_name) {
@@ -375,6 +400,8 @@ export function AppSidebar() {
           )}
           <SidebarGroupContent>
             <NavigationMenu />
+            <button onClick={loguearse}>prueba</button>
+            <button onClick={activarMensajes}>token</button>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
