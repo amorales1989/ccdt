@@ -144,7 +144,10 @@ const upcomingBirthdays = useMemo(() => {
   };
 
   const renderStudentStats = () => {
-    if (!profile) return null;
+    if (!profile) {
+      window.location.href = '/';
+      return;
+    }
 
     const userDepartments = profile.departments || [];
     const userAssignedClass = profile.assigned_class;

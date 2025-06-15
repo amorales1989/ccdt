@@ -1,4 +1,3 @@
-import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -22,6 +21,7 @@ import Secretaria from "@/pages/Secretaria";
 import Notificaciones from "@/pages/Notificaciones";
 import AutorizacionesSalida from "@/pages/AutorizacionesSalida";
 import AutorizacionSimple from "@/pages/AutorizacionSimple";
+import AutorizacionCampamento from "./pages/AutorizacionCampamento";
 
 const queryClient = new QueryClient();
 
@@ -98,7 +98,7 @@ function App() {
                   },
                   {
                     path: "/autorizaciones/campamento",
-                    element: <AutorizacionSimple />,
+                    element: <AutorizacionCampamento />,
                   },
                   {
                     path: "/autorizaciones/simple",

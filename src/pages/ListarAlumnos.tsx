@@ -179,6 +179,12 @@ const ListarAlumnos = () => {
     refetch();
   }, [refetch]);
 
+  useEffect(() => {
+    if (!profile) {
+      navigate('/');
+    }
+  }, [profile, navigate]);
+
   const calculateAge = (dateOfBirth: string): number | null => {
     if (!dateOfBirth) return null;
     const parsedDate = parse(dateOfBirth, 'yyyy-MM-dd', new Date());

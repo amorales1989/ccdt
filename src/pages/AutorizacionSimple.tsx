@@ -12,17 +12,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 type FormValues = {
-  fecha: string;
+  fechaSalida: string;
   horaSalida: string;
+  fechaRegreso: string;
   horaRegreso: string;
   lugarSalida: string;
-  nombreResponsable: string;
-  dniResponsable: string;
-  nombreMenor: string;
-  dniMenor: string;
+  lugarDestino: string;
 };
 
-const AutorizacionSimple = () => {
+const AutorizacionCampamento = () => {
   const { profile } = useAuth();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const navigate = useNavigate();
@@ -48,88 +46,94 @@ const AutorizacionSimple = () => {
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
-      fecha: format(new Date(), "yyyy-MM-dd"),
+      fechaSalida: format(new Date(), "yyyy-MM-dd"),
       horaSalida: "",
+      fechaRegreso: "",
       horaRegreso: "",
       lugarSalida: "",
-      nombreResponsable: "",
-      dniResponsable: "",
-      nombreMenor: "",
-      dniMenor: "",
+      lugarDestino: ""
     }
   });
 
   const generatePDF = (data: FormValues) => {
-    const formattedDate = data.fecha ? 
-      format(parse(data.fecha, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : '';
+    const fechaSalidaFormatted = data.fechaSalida ? 
+      format(parse(data.fechaSalida, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : '';
+    const fechaRegresoFormatted = data.fechaRegreso ? 
+      format(parse(data.fechaRegreso, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : '';
     
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 10;
-
+    const authHeight = (pageHeight - margin * 2) / 2;
+    
     const drawAuthorization = (startY: number) => {
-      doc.setFontSize(14);
+      doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("AUTORIZACIÓN DE SALIDA RECREATIVA", pageWidth / 2, startY + 10, { align: "center" });
-      
-      doc.setFontSize(10);
-      doc.text("Comunidad Cristiana Don Torcuato", pageWidth / 2, startY + 17, { align: "center" });
+      doc.text("AUTORIZACIÓN DE CAMPAMENTO", pageWidth / 2, startY + 10, { align: "center" });
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       
-      let currentY = startY + 25;
-      const lineHeight = 6;
       const col1X = margin + 5;
-
-      doc.text("Yo, _____________________________________________,", col1X, currentY);
+      const col2X = pageWidth / 2;
+      const lineHeight = 8;
+      let currentY = startY + 25;
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Fecha de salida:", col1X, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.text(fechaSalidaFormatted, col1X + 25, currentY);
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Hora de salida:", col2X, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.text(data.horaSalida, col2X + 25, currentY);
+      
+      currentY += lineHeight * 1.5;
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Fecha de regreso:", col1X, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.text(fechaRegresoFormatted, col1X + 30, currentY);
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Hora de regreso:", col2X, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.text(data.horaRegreso, col2X + 25, currentY);
+      
+      currentY += lineHeight * 1.5;
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Lugar de salida:", col1X, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.text(data.lugarSalida, col1X + 25, currentY);
+      
       currentY += lineHeight;
       
-      doc.text("DNI Nº __________________, en calidad de adulto responsable del menor:", col1X, currentY);
-      currentY += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Lugar del campamento:", col1X, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.text(data.lugarDestino, col1X + 35, currentY);
       
-      doc.text("Nombre del menor: ________________________________________________", col1X, currentY);
-      currentY += lineHeight;
+      currentY += lineHeight * 2;
       
-      doc.text("DNI del menor: ____________________", col1X, currentY);
-      currentY += lineHeight;
-
-      const [day, month, year] = formattedDate.split('/');
-      doc.text(`Autorizo la salida recreativa del día ${day} / ${month} / ${year} con los siguientes detalles:`, col1X, currentY);
-      currentY += lineHeight;
-
-      doc.text(`- Hora de salida: ${data.horaSalida}`, col1X, currentY);
-      currentY += lineHeight;
+      const signatureY = currentY + 5;
+      doc.text("Nombre del alumno/a: _________________________________", col1X, signatureY);
+      doc.text("Teléfono de urgencias: _______________________________", col2X - 15, signatureY);
       
-      doc.text(`- Hora estimada de regreso: ${data.horaRegreso}`, col1X, currentY);
-      currentY += lineHeight;
+      doc.text("Firma del padre/tutor: _______________________________", col1X, signatureY + lineHeight * 2);
+      doc.text("Aclaración: _______________________________________", col2X - 15, signatureY + lineHeight * 2);
       
-      doc.text(`- Lugar de recreación: ${data.lugarSalida}`, col1X, currentY);
-      currentY += lineHeight;
-
-      const declarationText = "Declaro estar informado/a de la actividad que se realizará, y me hago responsable por cualquier";
-      doc.text(declarationText, col1X, currentY);
-      currentY += lineHeight;
-      doc.text("eventualidad que pudiera surgir durante el tiempo en que el/la menor se encuentre fuera.", col1X, currentY);
-      currentY += lineHeight;
-
-      doc.text("Firma del adulto responsable: _____________________________________", col1X, currentY);
-      currentY += lineHeight;
-      
-      doc.text("Aclaración: _________________________________________________", col1X, currentY);
-      currentY += lineHeight;
-      
-      doc.text("Teléfono de contacto: ______________________", col1X, currentY);
-
-      doc.setDrawColor(200);
-      doc.line(margin, startY + 100, pageWidth - margin, startY + 100);
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, startY, pageWidth - margin * 2, authHeight - 5);
     };
-
+    
     drawAuthorization(margin);
-    drawAuthorization(pageHeight / 2 + margin);
-
-    doc.save("autorizacion_simple.pdf");
+    drawAuthorization(margin + authHeight);
+    
+    doc.save("autorizacion_campamento.pdf");
   };
 
   const onSubmit = (data: FormValues) => {
@@ -144,26 +148,26 @@ const AutorizacionSimple = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-6">Autorización de Salida Simple</h1>
+      <h1 className="text-2xl font-bold mb-6">Autorización para salida</h1>
       
       <Card>
         <CardHeader>
-          <CardTitle>Datos de la Autorización</CardTitle>
+          <CardTitle>Datos de la salida</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="fecha">Fecha</Label>
+                <Label htmlFor="fechaSalida">Fecha de salida</Label>
                 <div className="relative">
                   <Input
-                    id="fecha"
+                    id="fechaSalida"
                     type="date"
-                    {...register("fecha", { required: "Este campo es requerido" })}
+                    {...register("fechaSalida", { required: "Este campo es requerido" })}
                   />
                   <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                 </div>
-                {errors.fecha && <p className="text-sm text-destructive">{errors.fecha.message}</p>}
+                {errors.fechaSalida && <p className="text-sm text-destructive">{errors.fechaSalida.message}</p>}
               </div>
               
               <div className="space-y-2">
@@ -180,6 +184,19 @@ const AutorizacionSimple = () => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="fechaRegreso">Fecha de regreso</Label>
+                <div className="relative">
+                  <Input
+                    id="fechaRegreso"
+                    type="date"
+                    {...register("fechaRegreso", { required: "Este campo es requerido" })}
+                  />
+                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                </div>
+                {errors.fechaRegreso && <p className="text-sm text-destructive">{errors.fechaRegreso.message}</p>}
+              </div>
+              
+              <div className="space-y-2">
                 <Label htmlFor="horaRegreso">Hora de regreso</Label>
                 <div className="relative">
                   <Input
@@ -193,7 +210,7 @@ const AutorizacionSimple = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lugarSalida">Lugar de recreación</Label>
+                <Label htmlFor="lugarSalida">Lugar de salida</Label>
                 <div className="relative">
                   <Input
                     id="lugarSalida"
@@ -202,6 +219,18 @@ const AutorizacionSimple = () => {
                   <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                 </div>
                 {errors.lugarSalida && <p className="text-sm text-destructive">{errors.lugarSalida.message}</p>}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="lugarDestino">Lugar del campamento</Label>
+                <div className="relative">
+                  <Input
+                    id="lugarDestino"
+                    {...register("lugarDestino", { required: "Este campo es requerido" })}
+                  />
+                  <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                </div>
+                {errors.lugarDestino && <p className="text-sm text-destructive">{errors.lugarDestino.message}</p>}
               </div>
             </div>
             
@@ -215,4 +244,4 @@ const AutorizacionSimple = () => {
   );
 };
 
-export default AutorizacionSimple;
+export default AutorizacionCampamento;

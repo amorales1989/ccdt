@@ -30,7 +30,8 @@ const AutorizacionesSalida = () => {
   }, [profile, navigate, toast]);
 
   if (!profile) {
-    return <div>Cargando...</div>;
+    window.location.href = '/';
+    return;
   }
 
   return (
@@ -40,13 +41,13 @@ const AutorizacionesSalida = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <AuthorizationOption
           title="Autorización de Campamento"
-          description="Genera autorizaciones para excursiones y campamentos"
+          description="Genera autorizaciones para campamentos"
           icon="tent"
           route="/autorizaciones/campamento"
         />
         <AuthorizationOption
-          title="Autorización de Salida Simple"
-          description="Genera autorizaciones para salidas simples"
+          title="Autorización de Salidas"
+          description="Genera autorizaciones para salidas"
           icon="signpost"
           route="/autorizaciones/simple"
         />
