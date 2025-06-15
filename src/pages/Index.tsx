@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,7 +23,7 @@ export default function Index() {
   const [logoPath, setLogoPath] = useState("/fire.png"); // Default logo
   const [companyName, setCompanyName] = useState("");
   const [showCompanyName, setShowCompanyName] = useState(false);
-  const { signIn, profile, loading, user, session } = useAuth(); // Agregar user y session
+  const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -50,8 +51,7 @@ export default function Index() {
       }
     }
 
-    // VERIFICACIÓN CLAVE: Solo proceder si hay una sesión activa Y un perfil válido
-    if (profile && user && session) {
+    if (profile) {
       if (profile.departments && profile.departments.length > 1) {
         setUserDepartments(profile.departments);
         setShowDepartmentSelect(true); // Mostrar selector si tiene más de un departamento
@@ -68,17 +68,8 @@ export default function Index() {
       } else {
         navigate("/home"); // Si no tiene departamentos, también procede al login
       }
-    } else if (!loading) {
-      // Si no hay loading y tampoco hay sesión válida, asegurarse de limpiar estados
-      setShowDepartmentSelect(false);
-      setUserDepartments([]);
-      setSelectedDepartment(null);
-      
-      // Limpiar localStorage por seguridad
-      localStorage.removeItem('selectedDepartment');
-      localStorage.removeItem('selectedDepartmentId');
     }
-  }, [profile, user, session, navigate, company, loading]); // Agregar user, session y loading
+  }, [profile, navigate, company]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,8 +139,7 @@ export default function Index() {
     return labels[dept] || dept;
   };
 
-  // Solo mostrar el selector si hay sesión activa Y profile válido
-  if (showDepartmentSelect && user && session && profile) {
+  if (showDepartmentSelect) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
         <Card className="w-full max-w-md">

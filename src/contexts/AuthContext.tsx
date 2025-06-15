@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -33,7 +34,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const INACTIVITY_TIMEOUT = 600000; // 10 minutes in milliseconds
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -41,8 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastActivity, setLastActivity] = useState(Date.now());
-  
-
 
   useEffect(() => {
     const handleActivity = () => {
@@ -57,9 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkInactivity = setInterval(() => {
       if (user && Date.now() - lastActivity > INACTIVITY_TIMEOUT) {
         console.log('User inactive for 10 minutes, logging out...');
-        signOutWithRedirect(); // Usar la nueva función que incluye redirección
+        signOut();
       }
-    }, 600000); // Check every minute (cambiado de 1000 a 60000)
+    }, 60000); // Check every minute
 
     return () => {
       window.removeEventListener('mousemove', handleActivity);
@@ -68,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('touchstart', handleActivity);
       clearInterval(checkInactivity);
     };
-  }, [user, lastActivity]); // Remover navigate de las dependencias
+  }, [user, lastActivity]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
@@ -159,14 +158,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Función original de sign out (sin redirección)
   async function signOut() {
     try {
       console.log("Starting sign out process");
       
       // Clear local storage first
       localStorage.removeItem('selectedDepartment');
-      localStorage.removeItem('selectedDepartmentId');
       
       // Reset state before attempting to sign out
       setUser(null);
@@ -186,18 +183,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Sign out completed");
     } catch (error) {
       console.error("Sign out process error:", error);
-    }
-  }
-
-  // Nueva función para sign out con redirección (para inactividad)
-  async function signOutWithRedirect() {
-    try {
-      await signOut(); // Llamar al sign out normal
-      window.location.href = '/'; // Redirigir al home usando window.location
-    } catch (error) {
-      console.error("Sign out with redirect error:", error);
-      // Incluso si hay error, redirigir para mayor seguridad
-      window.location.href = '/';
     }
   }
 
