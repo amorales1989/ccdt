@@ -164,15 +164,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Clear local storage first
       localStorage.removeItem('selectedDepartment');
+      localStorage.removeItem('selectedDepartmentId');
+      
+      // Clear all Supabase auth keys from localStorage
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
       
       // Reset state before attempting to sign out
       setUser(null);
       setProfile(null);
       setSession(null);
+      setLoading(false);
       
       try {
-        // Attempt to sign out from Supabase
-        const { error } = await supabase.auth.signOut();
+        // Attempt to sign out from Supabase with global scope
+        const { error } = await supabase.auth.signOut({ scope: 'global' });
         if (error) {
           console.warn("Supabase sign out warning:", error);
         }
@@ -180,9 +189,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn("Supabase sign out warning:", supabaseError);
       }
       
-      console.log("Sign out completed");
+      console.log("Sign out completed, redirecting to login");
+      
+      // Force a complete page refresh to ensure clean state
+      window.location.href = '/';
     } catch (error) {
       console.error("Sign out process error:", error);
+      // Even if there's an error, clear state and redirect
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      window.location.href = '/';
     }
   }
 

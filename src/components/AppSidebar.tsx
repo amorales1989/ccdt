@@ -110,8 +110,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
     try {
       console.log("Starting sign out from sidebar");
       await signOut();
-      console.log("Sign out successful, navigating to auth");
-      navigate("/auth");
+      console.log("Sign out successful");
       onItemClick?.();
     } catch (error: any) {
       console.error("Sign out error:", error);
@@ -120,6 +119,9 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
         description: "Por favor intenta nuevamente",
         variant: "destructive",
       });
+      // Even if there's an error, try to navigate to login
+      navigate("/");
+      onItemClick?.();
     }
   };
 
