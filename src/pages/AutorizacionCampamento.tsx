@@ -30,9 +30,9 @@ const AutorizacionCampamento = () => {
     horaSalida1: "17:00",
     horaSalida2: null,
     horaRegreso: "18:00",
-    liderDirector: "ALEJANDRO MORALES",
+    liderDirector: "",
     telefono: "",
-    elementos: elementosDefault // Nuevo campo para elementos
+    elementos: elementosDefault 
   });
 
   const handleInputChange = (e) => {
