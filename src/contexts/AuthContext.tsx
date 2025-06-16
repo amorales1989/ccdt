@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -34,7 +33,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
+const INACTIVITY_TIMEOUT = 1 * 60 * 1000; // 1 minute in milliseconds
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -52,19 +51,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('keydown', handleActivity);
     window.addEventListener('click', handleActivity);
     window.addEventListener('touchstart', handleActivity);
+    window.addEventListener('scroll', handleActivity);
 
     const checkInactivity = setInterval(() => {
       if (user && Date.now() - lastActivity > INACTIVITY_TIMEOUT) {
-        console.log('User inactive for 10 minutes, logging out...');
+        console.log('User inactive for 1 minute, logging out...');
         signOut();
       }
-    }, 60000); // Check every minute
+    }, 10000); // Check every 10 seconds for more responsive logout
 
     return () => {
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
       window.removeEventListener('click', handleActivity);
       window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
       clearInterval(checkInactivity);
     };
   }, [user, lastActivity]);
