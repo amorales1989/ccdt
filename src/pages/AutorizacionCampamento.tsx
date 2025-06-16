@@ -3,23 +3,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Calendar, MapPin, Users, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar, MapPin, Users, FileText, List } from "lucide-react";
 import { jsPDF } from "jspdf";
-
 
 const AutorizacionCampamento = () => {
   const [loading, setLoading] = useState(false);
+  
+  // Lista por defecto de elementos
+  const elementosDefault = `• Sábanas, frazadas
+• Ropa liviana
+• Un pullover o campera
+• Short / malla de baño (en el caso de las chicas solo se permite llevar
+  malla enteriza o short y remera) sin excepción
+• Ojotas y zapatillas
+• Gorro para el sol
+• Toalla y elementos de higiene (cepillo de dientes, dentífrico, jabón, peine, etc.).
+• Biblia`;
+
   const [formData, setFormData] = useState({
     fechaInicio: "2025-03-14",
     fechaFin: "2025-03-16",
-    lugar: "Sta. Ana 455, Toruguitas, Pcia. de Buenos Aires",
-    costo: "10000",
+    lugar: "",
+    costo: "10.000",
     fechaLimite: "2025-03-08",
     horaSalida1: "17:00",
     horaSalida2: null,
     horaRegreso: "18:00",
     liderDirector: "ALEJANDRO MORALES",
     telefono: "",
+    elementos: elementosDefault // Nuevo campo para elementos
   });
 
   const handleInputChange = (e) => {
@@ -31,10 +44,10 @@ const AutorizacionCampamento = () => {
   };
 
   const formatDate = (dateStr) => {
-  // Simplemente reorganizar el string sin crear objeto Date
-  const [year, month, day] = dateStr.split('-');
-  return `${day}/${month}/${year}`;
-};
+    // Simplemente reorganizar el string sin crear objeto Date
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
 
   const getCurrentDate = () => {
     const today = new Date();
@@ -77,9 +90,6 @@ const AutorizacionCampamento = () => {
     doc.text("C.U.I.T. N° 30-70792033-1", margin, currentY);
     currentY += 10;
 
-    // Fecha
-    
-
     // Saludo
     doc.text("Señores Padres:", margin, currentY);
     currentY += 10;
@@ -106,7 +116,6 @@ const AutorizacionCampamento = () => {
     const finFormatted = formatDate(formData.fechaFin);
     const mesNombre = getMonthName(finFormatted.split('/')[1]);
     const año = finFormatted.split('/')[2];
-console.log(formData.horaSalida2)
     doc.text(`El campamento se realizará los días ${inicioFormatted.split('/')[0]} al ${finFormatted.split('/')[0]} de ${mesNombre} del ${año}. Vamos`, margin, currentY);
     currentY += 4;
     doc.text(`a salir de la Iglesia el día viernes ${inicioFormatted.split('/')[0]}, a las ${formData.horaSalida1}hs${formData.horaSalida2 != null ? ` y ${formData.horaSalida2}hs` : ''}. y estaremos`, margin, currentY);
@@ -144,26 +153,19 @@ console.log(formData.horaSalida2)
     doc.text(`IMPORTANTE: último plazo para entregar los datos y autorización`, margin, currentY);
     currentY += 4;
     doc.text(`correspondiente ${formatDate(formData.fechaLimite).toUpperCase()}.`, margin, currentY);
-    currentY += 5;
-
-    doc.text(`SALIMOS EL: viernes ${formatDate(formData.fechaInicio)} a las ${formData.horaSalida1}hs${formData.horaSalida2 != null ? ` y ${formData.horaSalida2}hs` : ''}.`, margin, currentY);
-    currentY += 5;
-
-    // Lista de elementos a llevar
-    doc.text("CADA CAMPAMENTISTA DEBERÁ LLEVAR:", margin, currentY);
     currentY += 8;
 
-    const elementos = [
-      "• Sábanas, frazadas",
-      "• Ropa liviana",
-      "• Un pullover o campera",
-      "• Short / malla de baño (en el caso de las chicas solo se permite llevar",
-      "  malla enteriza o short y remera) sin excepción",
-      "• Ojotas y zapatillas",
-      "• Gorro para el sol",
-      "• Toalla y elementos de higiene (cepillo de dientes, dentífrico, jabón, peine, etc.).",
-      "• Biblia"
-    ];
+    doc.text(`SALIMOS EL: viernes ${formatDate(formData.fechaInicio)} a las ${formData.horaSalida1}hs${formData.horaSalida2 != null ? ` y ${formData.horaSalida2}hs` : ''}.`, margin, currentY);
+    currentY += 8;
+
+    // Lista de elementos a llevar (usando la lista del formulario)
+    doc.text("CADA CAMPAMENTISTA DEBERÁ LLEVAR:", margin, currentY);
+    currentY += 5;
+
+    // Convertir el texto del formulario en un array de líneas
+    const elementos = formData.elementos.trim() ? 
+      formData.elementos.split('\n').filter(linea => linea.trim()) : 
+      elementosDefault.split('\n').filter(linea => linea.trim());
 
     doc.setFont("helvetica", "normal");
     elementos.forEach(elemento => {
@@ -183,35 +185,35 @@ console.log(formData.horaSalida2)
     currentY += 4;
     doc.setFont("helvetica", "normal");
     doc.text("llevar elementos de valor, tales como reloj, etc.", margin + 5, currentY);
-    currentY += 5;
+    currentY += 7;
 
     doc.setFont("helvetica", "bold");
     doc.text("SUGERIMOS:", margin, currentY);
-    currentY += 4;
+    currentY += 5;
     doc.setFont("helvetica", "normal");
     doc.text("Que todos los elementos deberán estar correctamente identificados", margin + 5, currentY);
-    currentY += 4;
-    doc.text("con el nombre del adolescente.", margin + 5, currentY);
     currentY += 5;
+    doc.text("con el nombre del adolescente.", margin + 5, currentY);
+    currentY += 7;
 
     doc.setFont("helvetica", "bold");
     doc.text("ROGAMOS:", margin, currentY);
-    currentY += 4;
+    currentY += 5;
     doc.setFont("helvetica", "normal");
     doc.text("Que se indique si el adolescente necesita medicación (enviar copia de la", margin + 5, currentY);
-    currentY += 4;
+    currentY += 5;
     doc.text("receta médica escribiendo en el reverso la autorización correspondiente", margin + 5, currentY);
-    currentY += 4;
+    currentY += 5;
     doc.text("con firma y aclaración, indicando también los horarios en que se los", margin + 5, currentY);
-    currentY += 4;
+    currentY += 5;
     doc.text("deberá administrar), dieta alimentaría, o si necesita de algún cuidado", margin + 5, currentY);
-    currentY += 4;
+    currentY += 5;
     doc.text("especial (problemas pulmonares, cardíacos, etc.) o si es alérgico a", margin + 5, currentY);
-    currentY += 4;
+    currentY += 5;
     doc.text("alguna medicación. De forma que cada maestro pueda ocuparse correcta", margin + 5, currentY);
-    currentY += 4;
+    currentY += 5;
     doc.text("y personalmente del adolescente.", margin + 5, currentY);
-    currentY += 4;
+    currentY += 5;
     doc.text("Fotocopia del D.N.I y Carnet Obra Social.", margin + 5, currentY);
 
     // Nueva página para el formulario
@@ -236,7 +238,7 @@ console.log(formData.horaSalida2)
     currentY += 8;
     doc.text("D.N.I. N°: ............................................... NACIONALIDAD: .................................................", margin, currentY);
     currentY += 8;
-    doc.text("EDAD: ........años GRADO: ............ FECHA DE NACIMIENTO: ....../…./.....  ", margin, currentY);
+    doc.text("EDAD: ........años   FECHA DE NACIMIENTO: ....../…./.....  ", margin, currentY);
     currentY += 8;
     doc.text("DIRECCIÓN: Calle ......................................................................................... N° .................... ", margin, currentY);
     currentY += 8;
@@ -427,6 +429,26 @@ console.log(formData.horaSalida2)
                 />
               </div>
             </div>
+
+            {/* Nuevo campo para elementos */}
+            <div className="space-y-2">
+              <Label htmlFor="elementos" className="text-sm font-medium flex items-center gap-2">
+                <List className="h-4 w-4 text-blue-600" />
+                Lista de elementos que debe llevar cada campamentista
+              </Label>
+              <Textarea
+                id="elementos"
+                name="elementos"
+                value={formData.elementos}
+                onChange={handleInputChange}
+                placeholder="Escriba cada elemento en una línea separada..."
+                rows={10}
+                className="resize-vertical"
+              />
+              <p className="text-xs text-gray-500">
+                Escriba cada elemento en una línea separada. Si deja vacío, se usará la lista por defecto.
+              </p>
+            </div>
             
             <div className="flex justify-center pt-4">
               <Button 
@@ -448,7 +470,8 @@ console.log(formData.horaSalida2)
           <li>• El PDF generado incluye la carta informativa completa para los padres</li>
           <li>• Contiene el formulario de inscripción que deben completar</li>
           <li>• Incluye la autorización que debe ser firmada por el padre o tutor</li>
-          <li>• Lista todos los elementos que debe llevar cada campamentista</li>
+          <li>• La lista de elementos es personalizable - modifica el campo de texto según tus necesidades</li>
+          <li>• Si dejas el campo de elementos vacío, se usará la lista predeterminada</li>
         </ul>
       </div>
     </div>
