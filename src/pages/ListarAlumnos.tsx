@@ -95,24 +95,73 @@ const ListarAlumnos = () => {
   const { data: students, isLoading, isError, refetch } = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select(`
-          *,
-          departments (name)
-        `)
-        .order('first_name');
+      let baseStudents = [];
 
-      if (error) {
-        console.error("Error fetching students:", error);
-        throw error;
+      // Si es admin o secretaria, obtener todos los estudiantes
+      if (profile?.role === 'secretaria' || profile?.role === 'admin') {
+        const { data, error } = await supabase
+          .from("students")
+          .select(`
+            *,
+            departments (name)
+          `)
+          .order('first_name');
+
+        if (error) {
+          console.error("Error fetching students:", error);
+          throw error;
+        }
+
+        baseStudents = data || [];
+      } else {
+        // Para otros roles, obtener estudiantes del departamento y clase asignados
+        const { data, error } = await supabase
+          .from("students")
+          .select(`
+            *,
+            departments (name)
+          `)
+          .eq('department_id', profile?.department_id)
+          .eq('assigned_class', profile?.assigned_class)
+          .order('first_name');
+
+        if (error) {
+          console.error("Error fetching students:", error);
+          throw error;
+        }
+
+        baseStudents = data || [];
+
+        // Obtener estudiantes autorizados de otros departamentos
+        const { data: authorizedData, error: authError } = await supabase
+          .from("student_authorizations")
+          .select(`
+            student_id,
+            students!inner (
+              *,
+              departments (name)
+            )
+          `)
+          .eq('department_id', profile?.department_id)
+          .eq('class', profile?.assigned_class);
+
+        if (authError) {
+          console.error("Error fetching authorized students:", authError);
+        } else if (authorizedData) {
+          // Agregar estudiantes autorizados que no estén ya en la lista
+          const baseStudentIds = baseStudents.map(s => s.id);
+          const authorizedStudents = authorizedData
+            .map(auth => ({
+              ...auth.students,
+              isAuthorized: true
+            }))
+            .filter(student => !baseStudentIds.includes(student.id));
+
+          baseStudents = [...baseStudents, ...authorizedStudents];
+        }
       }
 
-      if (profile?.role !== 'secretaria' && profile?.role !== 'admin') {
-        return data?.filter(student => student.department_id === profile?.department_id && student.assigned_class === profile?.assigned_class) || [];
-      }
-
-      return data;
+      return baseStudents;
     },
   });
 
@@ -416,10 +465,7 @@ const ListarAlumnos = () => {
       const ageFromMatch = filters.ageFrom ? (age !== null && age >= parseInt(filters.ageFrom)) : true;
       const ageToMatch = filters.ageTo ? (age !== null && age <= parseInt(filters.ageTo)) : true;
 
-      const departmentMatch = student.department_id === profile?.department_id;
-      const classMatch = student.assigned_class === profile?.assigned_class;
-
-      return nameMatch && departmentMatch && classMatch && ageFromMatch && ageToMatch;
+      return nameMatch && ageFromMatch && ageToMatch;
     }
   });
 
@@ -605,8 +651,20 @@ const ListarAlumnos = () => {
               ) : (
                 filteredStudents?.map((student) => (
                   <React.Fragment key={student.id}>
-                    <TableRow className="cursor-pointer hover:bg-gray-50" onClick={() => handleStudentClick(student.id)}>
-                      <TableCell className="font-medium">{student.first_name} {student.last_name}</TableCell>
+                    <TableRow 
+                      className={`cursor-pointer hover:bg-gray-50 ${student.isAuthorized ? 'bg-green-50' : ''}`} 
+                      onClick={() => handleStudentClick(student.id)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {student.first_name} {student.last_name}
+                          {student.isAuthorized && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              Autorizado
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       {!isMobile && (
                         <TableCell>{student.departments?.name || 'Sin curso'}</TableCell>
                       )}
@@ -620,7 +678,7 @@ const ListarAlumnos = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {canManageStudents && (
+                            {canManageStudents && !student.isAuthorized && (
                               <>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(student); }}>
                                   <Pencil className="mr-2 h-4 w-4" /> Editar
