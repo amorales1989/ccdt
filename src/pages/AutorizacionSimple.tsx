@@ -47,7 +47,7 @@ const AutorizacionRhema = () => {
   };
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     
     if (!formData.fechaEvento) newErrors.fechaEvento = "Este campo es requerido";
     if (!formData.horaInicio) newErrors.horaInicio = "Este campo es requerido";
@@ -112,7 +112,7 @@ const AutorizacionRhema = () => {
       
       // Cuerpo de la carta
       doc.setFont("helvetica", "normal");
-      const parrafo1 = `Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que se está organizando una ${data.tipoEvento.toLowerCase()}. En esta oportunidad ${data.tipoEvento.toLowerCase()} se realizará en ${data.lugarEvento}.`;
+      const parrafo1 = `Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que se está organizando una ${data.tipoEvento.toLowerCase()}, que será en: ${data.lugarEvento}.`;
       
       // Dividir texto en líneas
       const lines1 = doc.splitTextToSize(parrafo1, pageWidth - margin * 2);
@@ -123,7 +123,7 @@ const AutorizacionRhema = () => {
       
       currentY += 5;
       
-      const parrafo2 = `${data.tipoEvento} se realizará el día ${fechaEventoFormatted}. La actividad comenzará a las ${data.horaInicio} hs., y terminará a las ${data.horaFin} hs.`;
+      const parrafo2 = `La salida se realizará el día ${fechaEventoFormatted}, a las ${data.horaInicio} hs., regresando aproximadamente a las ${data.horaFin} hs.`;
       
       const lines2 = doc.splitTextToSize(parrafo2, pageWidth - margin * 2);
       lines2.forEach((line) => {

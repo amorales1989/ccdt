@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ClassStats {
   male: number;
@@ -50,14 +51,70 @@ const Home = () => {
   });
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => getStudents().then(data => {
-      return data.map(student => ({
-        ...student,
-        department: student.departments?.name
-      })) as Student[];
-    })
-  });
+  queryKey: ['students'],
+  queryFn: async () => {
+    let baseStudents = [];
+
+    // Si es admin o secretaria, obtener todos los estudiantes
+    if (profile?.role === 'secretaria' || profile?.role === 'admin') {
+      const { data, error } = await supabase
+        .from("students")
+        .select(`
+          *,
+          departments (name)
+        `)
+        .order('first_name');
+
+      if (error) throw error;
+      baseStudents = data || [];
+    } else {
+      // Para otros roles, obtener estudiantes del departamento y clase asignados
+      const { data, error } = await supabase
+        .from("students")
+        .select(`
+          *,
+          departments (name)
+        `)
+        .eq('department_id', profile?.department_id)
+        .eq('assigned_class', profile?.assigned_class)
+        .order('first_name');
+
+      if (error) throw error;
+      baseStudents = data || [];
+
+      // Obtener estudiantes autorizados de otros departamentos
+      const { data: authorizedData, error: authError } = await supabase
+        .from("student_authorizations")
+        .select(`
+          student_id,
+          students!inner (
+            *,
+            departments (name)
+          )
+        `)
+        .eq('department_id', profile?.department_id)
+        .eq('class', profile?.assigned_class);
+
+      if (!authError && authorizedData) {
+        // Agregar estudiantes autorizados que no estén ya en la lista
+        const baseStudentIds = baseStudents.map(s => s.id);
+        const authorizedStudents = authorizedData
+          .map(auth => ({
+            ...auth.students,
+            isAuthorized: true
+          }))
+          .filter(student => !baseStudentIds.includes(student.id));
+
+        baseStudents = [...baseStudents, ...authorizedStudents];
+      }
+    }
+
+    return baseStudents.map(student => ({
+      ...student,
+      department: student.departments?.name
+    }));
+  }
+});
 
   const { data: departments = [], isLoading: departmentsLoading } = useQuery({
     queryKey: ['departments'],
@@ -68,7 +125,9 @@ const Home = () => {
     return students.map(student => ({
       first_name: student.first_name,
       last_name: student.last_name,
-      birthdate: student.birthdate
+      birthdate: student.birthdate,
+      department: student.departments?.name || student.department,
+      assigned_class: student.assigned_class
     }));
   }, [students]);
 
@@ -78,8 +137,34 @@ const upcomingBirthdays = useMemo(() => {
   const currentDay = today.getDate();
   const currentYear = today.getFullYear();
   
+  // Obtener departamentos y clase del usuario
+  const userDepartments = profile?.departments || [];
+  const userAssignedClass = profile?.assigned_class;
+  const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
+  const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
+  
   const studentsWithDaysUntilBirthday = studentsBasicInfo
-    .filter(student => student.birthdate) 
+    .filter(student => student.birthdate)
+    // Filtrar por departamento y clase según el perfil del usuario
+    .filter(student => {
+      if (isAdminOrSecretary) {
+        return false; // Los admin y secretarias no ven los cumpleaños
+      }
+      
+      // Para maestros y líderes, filtrar por departamento y clase
+      const studentDept = student.department;
+      const studentClass = student.assigned_class;
+      
+      // Verificar si el estudiante pertenece a los departamentos del usuario
+      const belongsToUserDepartment = userDepartments.includes(studentDept);
+      
+      // Si el usuario tiene una clase asignada, también verificar la clase
+      if (isTeacherOrLeader && userAssignedClass) {
+        return belongsToUserDepartment && studentClass === userAssignedClass;
+      }
+      
+      return belongsToUserDepartment;
+    })
     .map(student => {
       const cleanFirstName = student.first_name?.trim() || '';
       const cleanLastName = student.last_name?.trim() || '';
@@ -111,6 +196,8 @@ const upcomingBirthdays = useMemo(() => {
         first_name: cleanFirstName,
         last_name: cleanLastName,
         birthdate: student.birthdate,
+        department: student.department,
+        assigned_class: student.assigned_class,
         daysUntilBirthday,
         birthdayThisYear,
         fullName: `${cleanFirstName} ${cleanLastName}`,
@@ -123,12 +210,11 @@ const upcomingBirthdays = useMemo(() => {
   const upcomingOnly = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday > 0);
   
   const result = [
-    ...birthdaysToday,
-    ...upcomingOnly.slice(0, 2)
-  ];
-  
-  return result;
-}, [studentsBasicInfo]);
+      ...birthdaysToday,
+      ...upcomingOnly.slice(0, 4)
+    ];
+    return result;
+  }, [studentsBasicInfo, profile]);
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
@@ -153,8 +239,8 @@ const upcomingBirthdays = useMemo(() => {
     const userAssignedClass = profile.assigned_class;
 
     const filteredStudents = isTeacherOrLeader && userAssignedClass 
-      ? students.filter(s => s.assigned_class === userAssignedClass)
-      : students;
+    ? students.filter(s => s.assigned_class === userAssignedClass || s.isAuthorized)
+    : students;
 
     let departmentsToShow = [];
     
@@ -172,10 +258,9 @@ const upcomingBirthdays = useMemo(() => {
       }
 
       let deptStudents = filteredStudents.filter(s => {
-        const studentDept = s.departments && s.departments.name ? s.departments.name : s.department;
-        return studentDept === dept;
+        const studentDept = s.department && s.departments.name ? s.departments.name : s.department;
+        return studentDept === dept || s.isAuthorized;
       });
-
       acc[dept] = {
         male: deptStudents.filter(s => s.gender === "masculino").length,
         female: deptStudents.filter(s => s.gender === "femenino").length,
@@ -188,7 +273,6 @@ const upcomingBirthdays = useMemo(() => {
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
     };
-    
     const departmentsWithStats = Object.entries(studentsByDepartment);
     
     const isSingleCard = departmentsWithStats.length === 1;
@@ -429,11 +513,13 @@ const futureEvents = useMemo(() => {
       (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
-  const birthdayEvents = !isAdminOrSecretary ? upcomingBirthdays
+  const birthdayEvents = upcomingBirthdays
     .filter(birthday => 
       !searchTerm || 
       birthday.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      'cumpleaños'.toLowerCase().includes(searchTerm.toLowerCase())
+      'cumpleaños'.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (birthday.department && birthday.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (birthday.assigned_class && birthday.assigned_class.toLowerCase().includes(searchTerm.toLowerCase()))
     )
     .map(birthday => {
       const today = new Date();
@@ -446,18 +532,25 @@ const futureEvents = useMemo(() => {
         birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
       }
 
+      // Formatear el nombre del departamento
+      const formatDepartmentName = (name: string) => {
+        return name?.replace(/_/g, ' ').split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ') || '';
+      };
+
       return {
         id: `birthday-${birthday.first_name}-${birthday.last_name}`, 
         title: 'Cumpleaños',
         date: birthdayDate.toISOString().split('T')[0], 
         time: '',
-        description: birthday.fullName,
+        description: `${birthday.fullName}` || 'Sin clase',
         created_at: '',
         updated_at: '',
         isBirthday: true, 
         daysUntilBirthday: birthday.daysUntilBirthday 
       };
-    }) : [];
+    });
 
   const allEvents = [...regularEvents, ...birthdayEvents];
   return allEvents.sort((a, b) => {
@@ -465,7 +558,7 @@ const futureEvents = useMemo(() => {
     const dateB = new Date(b.date);
     return dateA.getTime() - dateB.getTime();
   });
-}, [events, upcomingBirthdays, searchTerm, isAdminOrSecretary]); 
+}, [events, upcomingBirthdays, searchTerm]); 
 
 const renderActionButtons = (event: EventWithBirthday) => {
   if (event.isBirthday || !isAdminOrSecretary) return null;

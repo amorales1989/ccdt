@@ -625,10 +625,10 @@ const ListarAlumnos = () => {
               <TableRow>
                 <TableCell className="font-medium">Nombre</TableCell>
                 {!isMobile && (
-                  <TableCell className="font-medium">Curso</TableCell>
+                  <TableCell className="font-medium">Departamento</TableCell>
                 )}
                 <TableCell className="font-medium">Edad</TableCell>
-                <TableCell className="relative w-[80px]"></TableCell>
+                <TableCell className="relative w-[80px]">Accion</TableCell>
               </TableRow>
               {isLoading ? (
                 <TableRow>
