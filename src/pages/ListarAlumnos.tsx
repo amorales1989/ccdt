@@ -46,7 +46,7 @@ const deleteStudent = async (id: string) => {
     .from("students")
     .delete()
     .eq("id", id);
-  
+
   if (error) throw error;
   return { success: true };
 };
@@ -80,8 +80,7 @@ const ListarAlumnos = () => {
   const [filters, setFilters] = useState({
     name: '',
     department: '',
-    ageFrom: '',
-    ageTo: '',
+    class: '',
   });
 
   const { user } = useAuth();
@@ -189,6 +188,52 @@ const ListarAlumnos = () => {
     },
   });
 
+  const { data: classes } = useQuery({
+    queryKey: ["classes", filters.department],
+    queryFn: async () => {
+      let query = supabase
+        .from("students")
+        .select("assigned_class, departments(name)")
+        .not("assigned_class", "is", null);
+
+      // Si hay un departamento seleccionado, filtrar por ese departamento
+      if (filters.department) {
+        // Primero necesitamos obtener el ID del departamento por su nombre
+        const { data: departmentData, error: deptError } = await supabase
+          .from("departments")
+          .select("id")
+          .eq("name", filters.department)
+          .single();
+
+        if (deptError) {
+          console.error("Error fetching department:", deptError);
+          return [];
+        }
+
+        if (departmentData) {
+          query = query.eq("department_id", departmentData.id);
+        }
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching classes:", error);
+        return [];
+      }
+
+      // Obtener clases únicas y filtrar valores nulos/vacíos
+      const uniqueClasses = [...new Set(data?.map(item => item.assigned_class).filter(Boolean))];
+      return uniqueClasses.sort();
+    },
+  });
+
+  useEffect(() => {
+    if (filters.department !== '') {
+      // Si se selecciona un departamento, limpiar la clase seleccionada
+      setFilters(prev => ({ ...prev, class: '' }));
+    }
+  }, [filters.department]);
   const formSchema = z.object({
     first_name: z.string().min(1, "El nombre es requerido"),
     last_name: z.string().optional(),
@@ -247,16 +292,16 @@ const ListarAlumnos = () => {
 
   const handleEdit = (student: Student) => {
     setStudentToEdit(student);
-    
+
     let birthDate = "";
     if (student.birthdate) {
       birthDate = student.birthdate;
     } else if (student.date_of_birth) {
       birthDate = student.date_of_birth;
     }
-    
+
     console.log("Editing student with birthdate:", birthDate);
-    
+
     form.reset({
       first_name: student.first_name || "",
       last_name: student.last_name || "",
@@ -279,7 +324,7 @@ const ListarAlumnos = () => {
     if (!studentToEdit) return;
     try {
       console.log("Raw form values:", values);
-      
+
       await updateStudent(studentToEdit.id, values);
       toast({
         title: "Alumno actualizado",
@@ -444,29 +489,16 @@ const ListarAlumnos = () => {
   };
 
   const filteredStudents = students?.filter(student => {
-    if (profile?.role === 'admin' || profile?.role === 'secretaria') {
-      const nameFilter = filters.name.toLowerCase();
-      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
-      const departmentFilter = filters.department;
-      const age = calculateAge(student.birthdate);
+    const nameFilter = filters.name.toLowerCase();
+    const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+    const departmentFilter = filters.department;
+    const classFilter = filters.class;
 
-      const nameMatch = fullName.includes(nameFilter);
-      const departmentMatch = departmentFilter ? student.departments?.name === departmentFilter : true;
-      const ageFromMatch = filters.ageFrom ? (age !== null && age >= parseInt(filters.ageFrom)) : true;
-      const ageToMatch = filters.ageTo ? (age !== null && age <= parseInt(filters.ageTo)) : true;
+    const nameMatch = fullName.includes(nameFilter);
+    const departmentMatch = departmentFilter ? student.departments?.name === departmentFilter : true;
+    const classMatch = classFilter ? student.assigned_class === classFilter : true;
 
-      return nameMatch && departmentMatch && ageFromMatch && ageToMatch;
-    } else {
-      const nameFilter = filters.name.toLowerCase();
-      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
-      const age = calculateAge(student.birthdate);
-
-      const nameMatch = fullName.includes(nameFilter);
-      const ageFromMatch = filters.ageFrom ? (age !== null && age >= parseInt(filters.ageFrom)) : true;
-      const ageToMatch = filters.ageTo ? (age !== null && age <= parseInt(filters.ageTo)) : true;
-
-      return nameMatch && ageFromMatch && ageToMatch;
-    }
+    return nameMatch && departmentMatch && classMatch;
   });
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -481,8 +513,7 @@ const ListarAlumnos = () => {
     setFilters({
       name: '',
       department: '',
-      ageFrom: '',
-      ageTo: '',
+      class: '',
     });
   };
 
@@ -524,8 +555,8 @@ const ListarAlumnos = () => {
     }
 
     const cleanedNumber = phoneNumber.replace(/\D/g, '').replace(/^0+/, '');
-    const whatsappNumber = cleanedNumber.startsWith('54') 
-      ? `+${cleanedNumber}` 
+    const whatsappNumber = cleanedNumber.startsWith('54')
+      ? `+${cleanedNumber}`
       : `+54${cleanedNumber}`;
 
     const whatsappUrl = `https://wa.me/${whatsappNumber}`;
@@ -563,7 +594,7 @@ const ListarAlumnos = () => {
                 Filtros <Filter className="ml-2 h-4 w-4" />
               </Button>
             </CollapsibleTrigger>
-            <CollapsibleContent className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <CollapsibleContent className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <div>
                 <Label htmlFor="name">Nombre</Label>
                 <Input
@@ -574,14 +605,18 @@ const ListarAlumnos = () => {
                   onChange={handleFilterChange}
                 />
               </div>
+
               <div>
                 <Label htmlFor="department">Curso</Label>
-                <Select onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))} defaultValue={filters.department}>
+                <Select
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value }))}
+                  defaultValue={filters.department || "all"}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccione un curso" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {departments?.map((department) => (
                       <SelectItem key={department.id} value={department.name}>
                         {department.name}
@@ -590,27 +625,29 @@ const ListarAlumnos = () => {
                   </SelectContent>
                 </Select>
               </div>
+
               <div>
-                <Label htmlFor="ageFrom">Edad Desde</Label>
-                <Input
-                  type="number"
-                  id="ageFrom"
-                  name="ageFrom"
-                  value={filters.ageFrom}
-                  onChange={handleFilterChange}
-                />
+                <Label htmlFor="class">Clase</Label>
+                <Select
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, class: value === "all" ? "" : value }))}
+                  value={filters.class || "all"}
+                  key={filters.department} // Forzar re-render cuando cambie el departamento
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccione una clase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {classes?.map((className) => (
+                      <SelectItem key={className} value={className}>
+                        {className}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <Label htmlFor="ageTo">Edad Hasta</Label>
-                <Input
-                  type="number"
-                  id="ageTo"
-                  name="ageTo"
-                  value={filters.ageTo}
-                  onChange={handleFilterChange}
-                />
-              </div>
-              <div className="md:col-span-4 flex justify-end">
+
+              <div className="md:col-span-3 flex justify-end">
                 <Button variant="secondary" size="sm" onClick={handleClearFilters}>
                   Limpiar Filtros
                 </Button>
@@ -651,8 +688,8 @@ const ListarAlumnos = () => {
               ) : (
                 filteredStudents?.map((student) => (
                   <React.Fragment key={student.id}>
-                    <TableRow 
-                      className={`cursor-pointer hover:bg-gray-50 ${student.isAuthorized ? 'bg-green-50' : ''}`} 
+                    <TableRow
+                      className={`cursor-pointer hover:bg-gray-50 ${student.isAuthorized ? 'bg-green-50' : ''}`}
                       onClick={() => handleStudentClick(student.id)}
                     >
                       <TableCell className="font-medium">
@@ -690,7 +727,7 @@ const ListarAlumnos = () => {
                             )}
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleWhatsAppClick(student.phone); }}>
                               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                               </svg>
                               WhatsApp
                             </DropdownMenuItem>
@@ -844,7 +881,7 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="last_name"
@@ -926,9 +963,9 @@ const ListarAlumnos = () => {
                     <FormItem>
                       <FormLabel>Número de Documento</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Número de documento" 
-                          {...field} 
+                        <Input
+                          placeholder="Número de documento"
+                          {...field}
                           onChange={(e) => {
                             const value = e.target.value.replace(/\D/g, '');
                             field.onChange(value);
@@ -986,8 +1023,8 @@ const ListarAlumnos = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Curso</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                         disabled={profile?.role === 'maestro'}
                       >
@@ -1015,7 +1052,7 @@ const ListarAlumnos = () => {
             </Form>
           </DialogContent>
         </Dialog>
-        
+
         <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
