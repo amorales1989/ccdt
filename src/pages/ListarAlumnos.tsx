@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears, parse, isValid, parseISO } from "date-fns";
@@ -39,6 +39,12 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import * as z from "zod";
 
 const deleteStudent = async (id: string) => {
@@ -229,9 +235,9 @@ const ListarAlumnos = () => {
   });
 
   useEffect(() => {
-  // Siempre limpiar la clase cuando cambie el departamento
-  setFilters(prev => ({ ...prev, class: '' }));
-}, [filters.department]);
+    // Siempre limpiar la clase cuando cambie el departamento
+    setFilters(prev => ({ ...prev, class: '' }));
+  }, [filters.department]);
 
   const formSchema = z.object({
     first_name: z.string().min(1, "El nombre es requerido"),
@@ -305,7 +311,7 @@ const ListarAlumnos = () => {
         'Documento Número': student.document_number || '',
         'Teléfono': student.phone || student.phone_number || '',
         'Dirección': student.address || '',
-        'Departamento': student.departments?.name || 'Sin curso',
+        'Departamento': student.departments?.name || 'Sin departamento',
         'Clase/anexo': student.assigned_class || ''
       }));
 
@@ -439,7 +445,7 @@ const ListarAlumnos = () => {
     if (studentsToPromote.length === 0 || !selectedDepartment) {
       toast({
         title: "Error",
-        description: "Por favor, seleccione al menos un alumno y un curso.",
+        description: "Por favor, seleccione al menos un alumno y un departamento.",
         variant: "destructive",
       });
       return;
@@ -610,33 +616,149 @@ const ListarAlumnos = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  // Función para renderizar las acciones según si es móvil o no
+  const renderActionButtons = (student: Student) => {
+    if (isMobile) {
+      // En móvil, mantener el menú desplegable
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {canManageStudents && !student.isAuthorized && (
+              <>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(student); }}>
+                  <Pencil className="mr-2 h-4 w-4" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleWhatsAppClick(student.phone); }}>
+              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+              WhatsApp
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    } else {
+      // En desktop, mostrar botones directamente
+      return (
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          {canManageStudents && !student.isAuthorized && (
+            <>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0"
+                      onClick={(e) => { e.stopPropagation(); handleEdit(student); }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Editar</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Eliminar</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </>
+          )}
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                  onClick={(e) => { e.stopPropagation(); handleWhatsAppClick(student.phone); }}
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                  </svg>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>WhatsApp</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      );
+    }
+  };
+
   return (
     <Card className="w-full">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Listado de Alumnos</h2>
-          <div className="flex items-center space-x-2">
-            {canFilter && (
-              <Button variant="outline" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-                <Filter className="h-4 w-4" />
-              </Button>
-            )}
-            {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
-            <Button variant="outline" onClick={exportToExcel}>
-              <FileDown className="h-4 w-4" />
-            </Button>
-            )}
-            {/* 
-            {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
-              <Button onClick={() => setIsImportModalOpen(true)}>
-                <Upload className="h-4 w-4" />
-              </Button>
-            )}
-            */}
-            <Button onClick={() => navigate('/agregar')}>
-              <UserPlus className="h-4 w-4" />  
-            </Button>
-          </div>
+          <TooltipProvider>
+            <div className="flex items-center space-x-2">
+              {canFilter && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                      <Filter className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Filtrar alumnos</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" onClick={exportToExcel}>
+                      <FileDown className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Exportar a Excel</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={() => navigate('/agregar')}>
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Agregar nuevo</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
 
         {canFilter && (
@@ -652,7 +774,7 @@ const ListarAlumnos = () => {
                   defaultValue={filters.department || "all"}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccione un curso" />
+                    <SelectValue placeholder="Seleccione un departamento" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
@@ -704,7 +826,7 @@ const ListarAlumnos = () => {
                   <TableCell className="font-medium">Departamento</TableCell>
                 )}
                 <TableCell className="font-medium">Edad</TableCell>
-                <TableCell className="relative w-[80px]">Accion</TableCell>
+                <TableCell className={`flex justify-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>Acciones</TableCell>
               </TableRow>
               {isLoading ? (
                 <TableRow>
@@ -733,7 +855,12 @@ const ListarAlumnos = () => {
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          {student.first_name} {student.last_name}
+                          {expandedStudentId === student.id ? (
+                            <CircleChevronUp className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <CircleChevronDown className="h-4 w-4 text-gray-500" />
+                          )}
+                          <span>{student.first_name} {student.last_name}</span>
                           {student.isAuthorized && (
                             <Badge variant="secondary" className="bg-green-100 text-green-800">
                               Autorizado
@@ -742,36 +869,11 @@ const ListarAlumnos = () => {
                         </div>
                       </TableCell>
                       {!isMobile && (
-                        <TableCell>{student.departments?.name || 'Sin curso'}</TableCell>
+                        <TableCell>{student.departments?.name || 'Sin departamento'}</TableCell>
                       )}
-                      <TableCell>{calculateAge(student.birthdate) || 'Desconocida'}</TableCell>
+                      <TableCell>{calculateAge(student.birthdate) || 'N/A'}</TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {canManageStudents && !student.isAuthorized && (
-                              <>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(student); }}>
-                                  <Pencil className="mr-2 h-4 w-4" /> Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}>
-                                  <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleWhatsAppClick(student.phone); }}>
-                              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                              </svg>
-                              WhatsApp
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {renderActionButtons(student)}
                       </TableCell>
                     </TableRow>
                     {expandedStudentId === student.id && (
@@ -793,17 +895,17 @@ const ListarAlumnos = () => {
             <DialogHeader>
               <DialogTitle>Promover Alumnos</DialogTitle>
               <DialogDescription>
-                Seleccione el curso al que desea promover los alumnos seleccionados.
+                Seleccione el departamento al que desea promover los alumnos seleccionados.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="department" className="text-right">
-                  Curso
+                  Departamento
                 </Label>
                 <Select onValueChange={setSelectedDepartment} defaultValue={selectedDepartment ?? ""}>
                   <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Seleccione un curso" />
+                    <SelectValue placeholder="Seleccione un departamento" />
                   </SelectTrigger>
                   <SelectContent>
                     {departments?.map((department) => (
@@ -1061,7 +1163,7 @@ const ListarAlumnos = () => {
                   name="department_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Curso</FormLabel>
+                      <FormLabel>Departamento</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -1069,7 +1171,7 @@ const ListarAlumnos = () => {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un curso" />
+                            <SelectValue placeholder="Seleccione un departamento" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
