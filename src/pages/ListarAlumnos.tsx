@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2 } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears, parse, isValid, parseISO } from "date-fns";
@@ -229,11 +229,10 @@ const ListarAlumnos = () => {
   });
 
   useEffect(() => {
-    if (filters.department !== '') {
-      // Si se selecciona un departamento, limpiar la clase seleccionada
-      setFilters(prev => ({ ...prev, class: '' }));
-    }
-  }, [filters.department]);
+  // Siempre limpiar la clase cuando cambie el departamento
+  setFilters(prev => ({ ...prev, class: '' }));
+}, [filters.department]);
+
   const formSchema = z.object({
     first_name: z.string().min(1, "El nombre es requerido"),
     last_name: z.string().optional(),
@@ -258,13 +257,7 @@ const ListarAlumnos = () => {
       date_of_birth: "",
       address: "",
       phone_number: "",
-      email: "",
-      document_type: "DNI",
-      document_number: "",
-      emergency_contact_name: "",
-      emergency_contact_phone: "",
-      medical_information: "",
-      department_id: "",
+      document_number: ""
     },
     resolver: zodResolver(formSchema),
   });
@@ -288,6 +281,60 @@ const ListarAlumnos = () => {
     }
 
     return differenceInYears(new Date(), parsedDate);
+  };
+
+  // NUEVA FUNCIÓN DE EXPORTAR
+  const exportToExcel = () => {
+    if (!filteredStudents || filteredStudents.length === 0) {
+      toast({
+        title: "Sin datos",
+        description: "No hay alumnos para exportar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Preparar los datos para exportar
+      const dataToExport = filteredStudents.map(student => ({
+        'Nombre': student.first_name || '',
+        'Apellido': student.last_name || '',
+        'Género': student.gender || '',
+        'Fecha de Nacimiento': student.birthdate || student.date_of_birth || '',
+        'Edad': calculateAge(student.birthdate || student.date_of_birth || '') || '',
+        'Documento Número': student.document_number || '',
+        'Teléfono': student.phone || student.phone_number || '',
+        'Dirección': student.address || '',
+        'Departamento': student.departments?.name || 'Sin curso',
+        'Clase/anexo': student.assigned_class || ''
+      }));
+
+      // Crear el libro de trabajo
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Alumnos');
+
+      // Generar el nombre del archivo con fecha
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const fileName = `alumnos_${dateStr}.xlsx`;
+
+      // Descargar el archivo
+      XLSX.writeFile(workbook, fileName);
+
+      toast({
+        title: "Exportación exitosa",
+        description: `Se exportaron ${filteredStudents.length} alumnos a ${fileName}`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error al exportar:", error);
+      toast({
+        title: "Error al exportar",
+        description: "Hubo un error al generar el archivo Excel.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEdit = (student: Student) => {
@@ -571,18 +618,22 @@ const ListarAlumnos = () => {
           <div className="flex items-center space-x-2">
             {canFilter && (
               <Button variant="outline" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-                <Filter className="mr-2 h-4 w-4" />
-                Filtrar
+                <Filter className="h-4 w-4" />
               </Button>
+            )}
+            {/* NUEVO BOTÓN DE EXPORTAR */}
+            {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
+            <Button variant="outline" onClick={exportToExcel}>
+              <FileDown className="h-4 w-4" />
+            </Button>
             )}
             {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
               <Button onClick={() => setIsImportModalOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Importar
+                <Upload className="h-4 w-4" />
               </Button>
             )}
             <Button onClick={() => navigate('/agregar')}>
-              Agregar Alumno
+              <UserPlus className="h-4 w-4" />  
             </Button>
           </div>
         </div>
@@ -590,24 +641,11 @@ const ListarAlumnos = () => {
         {canFilter && (
           <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="mt-2 w-full justify-start">
-                Filtros <Filter className="ml-2 h-4 w-4" />
-              </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div>
-                <Label htmlFor="name">Nombre</Label>
-                <Input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={filters.name}
-                  onChange={handleFilterChange}
-                />
-              </div>
 
               <div>
-                <Label htmlFor="department">Curso</Label>
+                <Label htmlFor="department">Departamento</Label>
                 <Select
                   onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value }))}
                   defaultValue={filters.department || "all"}
@@ -627,7 +665,7 @@ const ListarAlumnos = () => {
               </div>
 
               <div>
-                <Label htmlFor="class">Clase</Label>
+                <Label htmlFor="class">Anexo/Clase</Label>
                 <Select
                   onValueChange={(value) => setFilters(prev => ({ ...prev, class: value === "all" ? "" : value }))}
                   value={filters.class || "all"}
@@ -648,7 +686,7 @@ const ListarAlumnos = () => {
               </div>
 
               <div className="md:col-span-3 flex justify-end">
-                <Button variant="secondary" size="sm" onClick={handleClearFilters}>
+                <Button className="text-white" variant="secondary" size="sm" onClick={handleClearFilters}>
                   Limpiar Filtros
                 </Button>
               </div>

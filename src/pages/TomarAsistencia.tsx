@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Check, X, UserCheck } from "lucide-react";
+import { Check, X, UserCheck, UserX } from "lucide-react"; 
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -35,6 +35,7 @@ const TomarAsistencia = () => {
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
   const currentDepartment = profile?.departments?.[0];
   const userClass = profile?.assigned_class;
+
 
   useEffect(() => {
     const fetchDepartmentId = async () => {
@@ -178,7 +179,12 @@ const TomarAsistencia = () => {
     },
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(departmentId)),
   });
-
+    // Cálculo de estadísticas de asistencia
+  const attendanceStats = {
+    present: Object.values(asistencias).filter(status => status).length,
+    absent: students.length - Object.values(asistencias).filter(status => status).length
+  };
+  console.log(attendanceStats)
   const getFullName = (student: any): string => {
     if (student.last_name) {
       return `${student.first_name} ${student.last_name}`;
@@ -318,6 +324,16 @@ const TomarAsistencia = () => {
             className="border p-2 rounded w-full [&::-webkit-datetime-edit]:-ml-0.5 [&::-webkit-calendar-picker-indicator]:opacity-100"
             style={{ WebkitAppearance: 'textfield' }}
           />
+          <div className="flex justify-center items-center gap-4">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-green-500" />
+                <span>Presentes: {attendanceStats.present}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <UserX className="h-5 w-5 text-red-500" />
+                <span>Ausentes: {attendanceStats.absent}</span>
+              </div>
+            </div>
           <Table>
             <TableHeader>
               <TableRow>
