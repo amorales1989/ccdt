@@ -621,17 +621,18 @@ const ListarAlumnos = () => {
                 <Filter className="h-4 w-4" />
               </Button>
             )}
-            {/* NUEVO BOTÓN DE EXPORTAR */}
             {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
             <Button variant="outline" onClick={exportToExcel}>
               <FileDown className="h-4 w-4" />
             </Button>
             )}
+            {/* 
             {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
               <Button onClick={() => setIsImportModalOpen(true)}>
                 <Upload className="h-4 w-4" />
               </Button>
             )}
+            */}
             <Button onClick={() => navigate('/agregar')}>
               <UserPlus className="h-4 w-4" />  
             </Button>
