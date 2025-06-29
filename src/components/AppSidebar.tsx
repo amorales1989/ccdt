@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +24,9 @@ import { STORAGE_URL } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProfileEditor } from "@/components/ProfileEditor";
 
-const getItems = (role: string | undefined) => {
+const getItems = (role: string | undefined, profile: any) => {
+  const selectedDepartment = localStorage.getItem('selectedDepartment');
+  
   const baseItems = [
     {
       title: "Inicio",
@@ -49,6 +51,17 @@ const getItems = (role: string | undefined) => {
       url: "/asistencia",
       icon: ClipboardList,
     });
+  }
+
+  if (role === "lider") {
+    const userDepartment = profile?.departments?.[0] || selectedDepartment;
+    if (userDepartment === "adolescentes") {
+      baseItems.push({
+        title: "Autorizaciones",
+        url: "/autorizaciones",
+        icon: FileOutput,
+      });
+    }
   }
 
   baseItems.push({
@@ -101,7 +114,9 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const items = getItems(profile?.role);
+  const items = useMemo(() => {
+  return getItems(profile?.role, profile);
+}, [profile?.role, profile?.departments]);
   const selectedDepartment = localStorage.getItem('selectedDepartment');
   const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);

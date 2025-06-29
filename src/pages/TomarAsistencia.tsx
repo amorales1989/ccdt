@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Check, X, UserCheck, UserX } from "lucide-react"; 
+import { UserCheck, UserX } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -46,14 +45,13 @@ const TomarAsistencia = () => {
             .select("id")
             .eq("name", currentDepartment)
             .single();
-          
+
           if (error) {
             console.error("Error fetching department ID:", error);
             return;
           }
-          
+
           if (data) {
-            console.log("Found department ID:", data.id, "for department:", currentDepartment);
             setDepartmentId(data.id);
           }
         } catch (error) {
@@ -61,7 +59,7 @@ const TomarAsistencia = () => {
         }
       }
     };
-    
+
     fetchDepartmentId();
   }, [currentDepartment]);
 
@@ -73,12 +71,12 @@ const TomarAsistencia = () => {
             .from("student_authorizations")
             .select("student_id")
             .eq("department_id", departmentId);
-          
+
           if (error) {
             console.error("Error fetching authorized students:", error);
             return;
           }
-          
+
           const authStudents: Record<string, boolean> = {};
           if (data) {
             data.forEach((auth: any) => {
@@ -87,36 +85,33 @@ const TomarAsistencia = () => {
               }
             });
           }
-          
+
           setAuthorizedStudents(authStudents);
         } catch (error) {
           console.error("Error in fetchAuthorizedStudents:", error);
         }
       }
     };
-    
+
     fetchAuthorizedStudents();
   }, [departmentId]);
 
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: ["students-attendance", departmentId, userClass],
     queryFn: async () => {
-      console.log("Fetching students for attendance...", { departmentId, userClass });
-      
+
       let departmentQuery = supabase
         .from("students")
         .select("*, departments:department_id(name, id)");
 
       if (!isAdminOrSecretaria) {
         if (!departmentId) {
-          console.log("No department ID available");
           return [];
         }
-        
+
         departmentQuery = departmentQuery.eq("department_id", departmentId);
-        
+
         if (userClass) {
-          console.log("Filtering by class:", userClass);
           departmentQuery = departmentQuery.eq("assigned_class", userClass);
         }
       }
@@ -126,15 +121,15 @@ const TomarAsistencia = () => {
         console.error("Error fetching students for attendance:", error);
         throw error;
       }
-      
+
       let allStudents = [...departmentStudents];
-      
+
       if (!isAdminOrSecretaria && departmentId) {
         const { data: authorizedData, error: authError } = await supabase
           .from("student_authorizations")
           .select("*, student:student_id(*)")
           .eq("department_id", departmentId);
-        
+
         if (authError) {
           console.error("Error fetching authorized students:", authError);
         } else if (authorizedData) {
@@ -145,46 +140,44 @@ const TomarAsistencia = () => {
               ...a.student,
               is_authorized: true
             }));
-            
+
           allStudents = [...departmentStudents, ...authorizedStudents];
         }
       }
-      
+
       allStudents.sort((a, b) => {
         const genderA = (a.gender || '').toLowerCase();
         const genderB = (b.gender || '').toLowerCase();
-        
+
         if (genderA !== genderB) {
           if (genderA === "femenino") return -1;
           if (genderB === "femenino") return 1;
           return genderA.localeCompare(genderB);
         }
-        
+
         // Now sorting by first name first, then last name if needed
         const firstNameA = (a.first_name || '').toLowerCase();
         const firstNameB = (b.first_name || '').toLowerCase();
-        
+
         if (firstNameA !== firstNameB) {
           return firstNameA.localeCompare(firstNameB);
         }
-        
+
         // If first names are the same, sort by last name
         const lastNameA = (a.last_name || '').toLowerCase();
         const lastNameB = (b.last_name || '').toLowerCase();
         return lastNameA.localeCompare(lastNameB);
       });
 
-      console.log("Fetched students for attendance:", allStudents);
       return allStudents;
     },
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(departmentId)),
   });
-    // Cálculo de estadísticas de asistencia
+  // Cálculo de estadísticas de asistencia
   const attendanceStats = {
     present: Object.values(asistencias).filter(status => status).length,
     absent: students.length - Object.values(asistencias).filter(status => status).length
   };
-  console.log(attendanceStats)
   const getFullName = (student: any): string => {
     if (student.last_name) {
       return `${student.first_name} ${student.last_name}`;
@@ -195,12 +188,10 @@ const TomarAsistencia = () => {
 
   const checkExistingAttendance = async (date: string) => {
     try {
-      console.log("Checking attendance for date:", date, "departmentId:", departmentId);
-      
+
       const attendanceData = await getAttendance(date, date, undefined, departmentId);
       const hasAttendance = attendanceData && attendanceData.length > 0;
-      
-      console.log("Checking attendance for date:", date, "departmentId:", departmentId, "exists:", hasAttendance);
+
       return hasAttendance;
     } catch (error) {
       console.error("Error checking existing attendance:", error);
@@ -221,7 +212,7 @@ const TomarAsistencia = () => {
     setIsLoading(true);
     try {
       const hasExistingAttendance = await checkExistingAttendance(selectedDate);
-      
+
       if (hasExistingAttendance) {
         setShowAlert(true);
         setIsLoading(false);
@@ -229,31 +220,29 @@ const TomarAsistencia = () => {
       }
 
       const adjustedDate = format(addDays(new Date(selectedDate), 1), "yyyy-MM-dd");
-      
+
       // Create a default attendance record for each student (all set to absent by default)
       const defaultAbsentAttendance: Record<string, boolean> = {};
       students.forEach(student => {
         defaultAbsentAttendance[student.id] = false;
       });
-      
+
       // Only override the default with explicitly marked presence
       const finalAttendances = { ...defaultAbsentAttendance, ...asistencias };
-      
+
       console.log("Saving attendance data:", finalAttendances);
 
       await Promise.all(
         Object.entries(finalAttendances).map(([studentId, status]) => {
           const student = students.find(s => s.id === studentId);
           const studentClass = student?.assigned_class || userClass || "";
-          
-          console.log(`Marking student ${studentId} as ${status ? 'present' : 'absent'} with class ${studentClass}`);
-          
+
           return markAttendance({
             student_id: studentId,
             date: adjustedDate,
             status: status,
             department_id: departmentId || undefined,
-            assigned_class: studentClass, // Include the student's class or teacher's class
+            assigned_class: studentClass,
           });
         })
       );
@@ -278,7 +267,6 @@ const TomarAsistencia = () => {
   };
 
   const marcarAsistencia = (id: string, presente: boolean) => {
-    console.log(`Marcando estudiante ${id} como ${presente ? 'presente' : 'ausente'}`);
     setAsistencias((prev) => ({ ...prev, [id]: presente }));
   };
 
@@ -325,18 +313,18 @@ const TomarAsistencia = () => {
             style={{ WebkitAppearance: 'textfield' }}
           />
           <div className="flex justify-center items-center gap-4">
-              <div className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-green-500" />
-                <span>Presentes: {attendanceStats.present}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <UserX className="h-5 w-5 text-red-500" />
-                <span>Ausentes: {attendanceStats.absent}</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-green-500" />
+              <span>Presentes: {attendanceStats.present}</span>
             </div>
+            <div className="flex items-center gap-2">
+              <UserX className="h-5 w-5 text-red-500" />
+              <span>Ausentes: {attendanceStats.absent}</span>
+            </div>
+          </div>
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="text-black">
                 <TableHead>Nombre</TableHead>
                 <TableHead>Asistencia</TableHead>
               </TableRow>
@@ -356,11 +344,15 @@ const TomarAsistencia = () => {
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
-                        variant={asistencias[student.id] ? "default" : "outline"}
+                        variant="outline"
                         size="icon"
                         onClick={() => marcarAsistencia(student.id, !asistencias[student.id])}
+                        className={`font-bold ${asistencias[student.id]
+                          ? "bg-green-500 hover:bg-green-600 text-white border-green-500"
+                          : "bg-red-500 hover:bg-red-600 text-white border-red-500"
+                          }`}
                       >
-                        <Check className="h-4 w-4" />
+                        {asistencias[student.id] ? "P" : "A"}
                       </Button>
                     </div>
                   </TableCell>
@@ -368,8 +360,8 @@ const TomarAsistencia = () => {
               ))}
             </TableBody>
           </Table>
-          <Button 
-            onClick={handleSaveAttendance} 
+          <Button
+            onClick={handleSaveAttendance}
             className="w-full"
             disabled={isLoading || !selectedDate || students.length === 0}
           >
@@ -383,7 +375,7 @@ const TomarAsistencia = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Asistencia ya registrada</AlertDialogTitle>
             <AlertDialogDescription>
-              Ya existe un registro de asistencia para la fecha {format(addDays(new Date(selectedDate), 1), "dd/MM/yyyy")} en este departamento. 
+              Ya existe un registro de asistencia para la fecha {format(addDays(new Date(selectedDate), 1), "dd/MM/yyyy")} en este departamento.
               Por favor, seleccione otra fecha o consulte el historial de asistencia.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -14,7 +14,7 @@ const AutorizacionesSalida = () => {
   
   useEffect(() => {
     if (profile) {
-      const authorized = profile.role === 'admin' || profile.role === 'secretaria';
+      const authorized = profile.role === 'admin' || profile.role === 'secretaria' || profile.role === 'lider';
       setIsAuthorized(authorized);
       
       if (!authorized) {

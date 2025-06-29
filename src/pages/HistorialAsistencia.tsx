@@ -36,10 +36,10 @@ const departments = [
 ];
 
 const getFullName = (student: any): string => {
-  if (!student) return "Alumno eliminado"; 
-  
-  return student.last_name 
-    ? `${student.first_name} ${student.last_name}` 
+  if (!student) return "Alumno eliminado";
+
+  return student.last_name
+    ? `${student.first_name} ${student.last_name}`
     : student.first_name;
 };
 
@@ -54,11 +54,11 @@ const HistorialAsistencia = () => {
   const { profile } = useAuth();
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  
+
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [singleDateOpen, setSingleDateOpen] = useState(false);
-  
+
   const [isEditMode, setIsEditMode] = useState(false);
   const [editDate, setEditDate] = useState<Date>(new Date());
   const [editDateOpen, setEditDateOpen] = useState(false);
@@ -66,7 +66,7 @@ const HistorialAsistencia = () => {
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
+
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const userDepartment = profile?.departments?.[0];
   const userDepartmentId = profile?.department_id;
@@ -97,7 +97,7 @@ const HistorialAsistencia = () => {
   const handleDateRangeChange = (value: string) => {
     setSelectedRange(value);
     const today = new Date();
-    
+
     switch (value) {
       case "today":
         setStartDate(today);
@@ -127,13 +127,13 @@ const HistorialAsistencia = () => {
   const handleStartDateSelect = (date: Date | undefined) => {
     if (date) {
       setStartDate(date);
-      
+
       if (date > endDate) {
         setEndDate(date);
       }
-      
+
       setStartDateOpen(false);
-      
+
       setTimeout(() => {
         setEndDateOpen(true);
       }, 100);
@@ -143,11 +143,11 @@ const HistorialAsistencia = () => {
   const handleEndDateSelect = (date: Date | undefined) => {
     if (date) {
       setEndDate(date);
-      
+
       if (date < startDate) {
         setStartDate(date);
       }
-      
+
       setEndDateOpen(false);
     }
   };
@@ -169,10 +169,9 @@ const HistorialAsistencia = () => {
 
       const formattedStartDate = format(actualStartDate, "yyyy-MM-dd");
       const formattedEndDate = format(actualEndDate, "yyyy-MM-dd");
-            
-      let departmentToUse = "";
+
       let departmentIdToUse = null;
-      
+
       if (isAdminOrSecretaria) {
         if (selectedDepartment !== "all") {
           const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
@@ -183,27 +182,18 @@ const HistorialAsistencia = () => {
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
       }
-      
-      console.log("Fetching attendance with params:", {
+
+      const attendanceData = await getAttendance(
         formattedStartDate,
         formattedEndDate,
-        departmentIdToUse,
-        selectedClass
-      });
-      
-      const attendanceData = await getAttendance(
-        formattedStartDate, 
-        formattedEndDate, 
-        "", 
+        "",
         departmentIdToUse
       );
-      
-      console.log("Received attendance data:", attendanceData);
-      
+
       if (selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
       }
-      
+
       return attendanceData;
     },
   });
@@ -212,11 +202,11 @@ const HistorialAsistencia = () => {
     queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", userDepartmentId, userClass, selectedDepartment, selectedClass],
     queryFn: async () => {
       if (!editDate) return [];
-      
+
       const formattedDate = format(editDate, "yyyy-MM-dd");
-      
+
       let departmentIdToUse = null;
-      
+
       if (isAdminOrSecretaria && selectedDepartment !== "all") {
         const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
         if (departmentData && departmentData.id) {
@@ -225,15 +215,15 @@ const HistorialAsistencia = () => {
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
       }
-      
+
       const attendanceData = await getAttendance(formattedDate, formattedDate, "", departmentIdToUse);
-      
+
       if (isAdminOrSecretaria && selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
       } else if (!isAdminOrSecretaria && userClass) {
         return attendanceData.filter(record => record.assigned_class === userClass);
       }
-      
+
       return attendanceData;
     },
     enabled: isEditMode && !!editDate
@@ -243,7 +233,7 @@ const HistorialAsistencia = () => {
     queryKey: ["students-for-attendance", userDepartmentId, selectedDepartment, selectedClass],
     queryFn: async () => {
       let departmentIdToUse = null;
-      
+
       if (isAdminOrSecretaria && selectedDepartment !== "all") {
         const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
         if (departmentData && departmentData.id) {
@@ -252,26 +242,26 @@ const HistorialAsistencia = () => {
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
       }
-      
+
       if (!departmentIdToUse) return [];
-      
+
       let query = supabase
         .from('students')
         .select('*, departments:department_id(name)')
         .eq('department_id', departmentIdToUse);
-      
+
       if ((isAdminOrSecretaria && selectedClass !== "all") || (!isAdminOrSecretaria && userClass)) {
         const classFilter = (isAdminOrSecretaria && selectedClass !== "all") ? selectedClass : userClass;
         query = query.eq('assigned_class', classFilter);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) {
         console.error("Error fetching students:", error);
         return [];
       }
-      
+
       return data || [];
     },
     enabled: isEditMode && Boolean(userDepartmentId || (isAdminOrSecretaria && selectedDepartment !== "all"))
@@ -289,13 +279,13 @@ const HistorialAsistencia = () => {
       dateAttendance.forEach(record => {
         attendanceMap.set(record.student_id, record);
       });
-      
+
       const fullAttendanceRecords = [...dateAttendance];
-      
+
       allStudents.forEach(student => {
         if (!attendanceMap.has(student.id)) {
           const currentDate = new Date().toISOString();
-          
+
           const newRecord: Attendance = {
             id: `new-${student.id}`,
             student_id: student.id,
@@ -317,7 +307,7 @@ const HistorialAsistencia = () => {
           fullAttendanceRecords.push(newRecord);
         }
       });
-      
+
       setEditRecords(fullAttendanceRecords);
     }
   }, [dateAttendance, allStudents, isEditMode, editDate]);
@@ -331,36 +321,10 @@ const HistorialAsistencia = () => {
   };
 
   const toggleAttendanceStatus = (id: string) => {
-    setEditRecords(prev => 
-      prev.map(record => 
-        record.id === id 
-          ? { ...record, status: !record.status } 
-          : record
-      )
-    );
-  };
-
-  const updateAttendanceStatus = (attendanceRecord: Attendance) => {
-    const updatedAttendanceRecord = {
-      ...attendanceRecord,
-      students: {
-        ...attendanceRecord.students,
-        department: attendanceRecord.students?.departments?.name || '',
-        is_deleted: !!attendanceRecord.students?.deleted_at,
-        name: `${attendanceRecord.students?.first_name} ${attendanceRecord.students?.last_name}`,
-        gender: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      department_name: attendanceRecord.students?.departments?.name || '',
-      department: attendanceRecord.students?.departments?.name || '',
-      event_id: null
-    };
-
-    setEditRecords(prev => 
-      prev.map(record => 
-        record.id === attendanceRecord.id 
-          ? updatedAttendanceRecord 
+    setEditRecords(prev =>
+      prev.map(record =>
+        record.id === id
+          ? { ...record, status: !record.status }
           : record
       )
     );
@@ -371,7 +335,7 @@ const HistorialAsistencia = () => {
     try {
       const promises = editRecords.map(record => {
         const isNewRecord = record.id.toString().startsWith('new-');
-        
+
         return markAttendance({
           student_id: record.student_id,
           date: record.date,
@@ -381,17 +345,17 @@ const HistorialAsistencia = () => {
           ...(record.event_id && { event_id: record.event_id })
         });
       });
-      
+
       await Promise.all(promises);
-      
+
       toast({
         title: "Asistencia actualizada",
         description: "Los cambios han sido guardados exitosamente.",
       });
-      
+
       setIsEditMode(false);
       setRefreshTrigger(prev => prev + 1);
-      
+
       await refetchDateAttendance();
       await refetchAttendance();
     } catch (error) {
@@ -408,16 +372,13 @@ const HistorialAsistencia = () => {
 
   const filteredAttendance = attendance.filter(record => {
     if (searchQuery === "") return true;
-    
-    // Check if student exists or has been deleted
+
     if (!record.students) {
-      // If searching for "eliminado" or similar terms, include this record
       return "alumno eliminado".includes(searchQuery.toLowerCase());
     }
-    
-    // Normal search by student name
+
     return record.students.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           record.students.last_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      record.students.last_name?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const attendanceStats = {
@@ -430,8 +391,8 @@ const HistorialAsistencia = () => {
       Nombre: record.students ? `${record.students.first_name} ${record.students.last_name || ''}` : "Alumno eliminado",
       Estado: record.status ? "Presente" : "Ausente",
       Fecha: adjustDateForDisplay(record.date),
-      Departamento: record.students?.departments?.name 
-        ? record.students.departments.name.replace(/_/g, ' ') 
+      Departamento: record.students?.departments?.name
+        ? record.students.departments.name.replace(/_/g, ' ')
         : (record.department ? record.department.replace(/_/g, ' ') : 'Sin departamento'),
       Clase: record.assigned_class || 'Sin asignar'
     }));
@@ -494,16 +455,16 @@ const HistorialAsistencia = () => {
                     </PopoverContent>
                   </Popover>
                 </div>
-                
+
                 <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                  <Button 
-                    variant="outline" 
-                    className="w-full" 
+                  <Button
+                    variant="outline"
+                    className="w-full"
                     onClick={exitEditMode}
                   >
                     Cancelar
                   </Button>
-                  <Button 
+                  <Button
                     className="w-full"
                     onClick={saveAttendanceChanges}
                     disabled={savingAttendance || editRecords.length === 0}
@@ -544,8 +505,8 @@ const HistorialAsistencia = () => {
 
                       <div>
                         <label className="text-sm font-medium mb-2 block">Clase</label>
-                        <Select 
-                          value={selectedClass} 
+                        <Select
+                          value={selectedClass}
                           onValueChange={setSelectedClass}
                           disabled={selectedDepartment === "all"}
                         >
@@ -702,9 +663,9 @@ const HistorialAsistencia = () => {
         <Card>
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle className="text-lg md:text-xl">
-              {isEditMode 
-                ? `Editar Asistencia del ${format(editDate, "dd/MM/yyyy")}` 
-                : isAdminOrSecretaria 
+              {isEditMode
+                ? `Editar Asistencia del ${format(editDate, "dd/MM/yyyy")}`
+                : isAdminOrSecretaria
                   ? `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`
                   : selectedRange === "custom"
                     ? `Asistencia del ${format(selectedDate, "dd/MM/yyyy")}`
@@ -747,21 +708,24 @@ const HistorialAsistencia = () => {
                         <TableRow key={record.id}>
                           <TableCell className="font-medium">{getFullName(record.students)}</TableCell>
                           <TableCell>
-                            <span className={`flex items-center gap-2 ${record.status ? "text-green-500" : "text-red-500"}`}>
+                            <span className={`flex justify-center gap-2 ${record.status ? "text-green-500" : "text-red-500"}`}>
                               {record.status ? (
-                                <UserCheck className="h-4 w-4" />
+                                <UserCheck className="h-6 w-6" />
                               ) : (
-                                <UserX className="h-4 w-4" />
+                                <UserX className="h-6 w-6" />
                               )}
                               {!isMobile && (record.status ? "Presente" : "Ausente")}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="flex justify-center">
                             <Button
-                              variant={record.status ? "destructive" : "default"}
+                              variant="outline"
                               size="sm"
                               onClick={() => toggleAttendanceStatus(record.id)}
-                              className="whitespace-nowrap"
+                              className={`whitespace-nowrap ${record.status
+                                  ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
+                                  : "bg-green-500 hover:bg-green-600 text-white border-green-500"
+                                }`}
                             >
                               {record.status ? (
                                 <>

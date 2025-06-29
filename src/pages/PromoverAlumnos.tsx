@@ -54,7 +54,6 @@ const PromoverAlumnos = () => {
           }
           
           if (data) {
-            console.log("Found department ID:", data.id, "for department:", userDepartment);
             setSelectedDepartmentId(data.id);
           }
         } catch (error) {
@@ -139,7 +138,6 @@ const PromoverAlumnos = () => {
       const { data, error } = await query;
       if (error) throw error;
       
-      console.log("Fetched students:", data);
       
       const processedData = (data || [])
         .map(student => ({
@@ -235,7 +233,6 @@ const PromoverAlumnos = () => {
       }
       
       if (data) {
-        console.log("Found department ID:", data.id, "for department:", departmentName);
         setSelectedDepartmentId(data.id);
       }
     } catch (error) {
@@ -268,7 +265,6 @@ const PromoverAlumnos = () => {
       }
       
       if (data) {
-        console.log("Found target department ID:", data.id, "for department:", departmentName);
         setTargetDepartmentId(data.id);
       }
     } catch (error) {
@@ -326,7 +322,6 @@ const PromoverAlumnos = () => {
     }
 
     try {
-      // Update student department information
       const { error } = await supabase
         .from("students")
         .update({
@@ -346,8 +341,6 @@ const PromoverAlumnos = () => {
         return;
       }
 
-      // Now, for each promoted student, check if they had an authorization for the target department
-      // and remove it as they are now officially part of that department
       const deletePromises = selectedStudents.map(async (studentId) => {
         try {
           const { error: deleteError } = await supabase
@@ -366,7 +359,6 @@ const PromoverAlumnos = () => {
         }
       });
 
-      // Wait for all deletion operations to complete
       await Promise.all(deletePromises);
 
       toast({
@@ -540,9 +532,6 @@ const PromoverAlumnos = () => {
     );
   };
 
-  const isStudentAuthorized = (studentId: string, departmentName: string) => {
-    return authorizedStudents[studentId]?.includes(departmentName);
-  };
 
   const getStudentAuthorizedDepartments = (studentId: string) => {
     return authorizedStudents[studentId] || [];

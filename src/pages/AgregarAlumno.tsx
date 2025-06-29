@@ -366,11 +366,12 @@ const AgregarAlumno = () => {
                   <span className="text-sm text-gray-500">+</span>
                   <Input
                     id="phoneCode"
-                    value={formData.phoneCode}
+                    value="54"
                     onChange={(e) =>
                       setFormData({ ...formData, phoneCode: e.target.value })
                     }
                     placeholder="54"
+                    disabled
                   />
                 </div>
                 <Input
