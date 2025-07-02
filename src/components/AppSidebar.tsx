@@ -26,7 +26,7 @@ import { ProfileEditor } from "@/components/ProfileEditor";
 
 const getItems = (role: string | undefined, profile: any) => {
   const selectedDepartment = localStorage.getItem('selectedDepartment');
-  
+
   const baseItems = [
     {
       title: "Inicio",
@@ -115,12 +115,12 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const items = useMemo(() => {
-  return getItems(profile?.role, profile);
-}, [profile?.role, profile?.departments]);
+    return getItems(profile?.role, profile);
+  }, [profile?.role, profile?.departments]);
   const selectedDepartment = localStorage.getItem('selectedDepartment');
   const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  
+
   const handleSignOut = async () => {
     try {
       console.log("Starting sign out from sidebar");
@@ -152,8 +152,8 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
           <p className="text-sm text-muted-foreground">
             Por favor selecciona un departamento en la página de inicio de sesión para acceder al menú
           </p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => navigate("/auth")}
             className="mt-2"
           >
@@ -196,7 +196,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
         </div>
       );
     }
-    
+
     if (isAdminOrSecretary) {
       return basicInfo;
     }
@@ -225,7 +225,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
       <SidebarMenu className="flex-grow">
         <SidebarMenuItem className="mb-4">
           <div className="flex flex-col gap-2 p-2 rounded-md bg-accent/30">
-            <div 
+            <div
               className="flex items-center gap-2 cursor-pointer hover:bg-accent/50 p-1 rounded-md transition-colors"
               onClick={() => setProfileDialogOpen(true)}
             >
@@ -312,7 +312,7 @@ export function AppSidebar() {
       } else {
         setShowCongregationName(false);
       }
-      
+
       if (company.logo_url) {
         if (company.logo_url.startsWith('logos/')) {
           setLogoPath(`${STORAGE_URL}/${company.logo_url}`);
@@ -331,7 +331,10 @@ export function AppSidebar() {
 
   if (isMobile) {
     return (
-      <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+      <div
+        className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4"
+        style={{ backgroundColor: "rgb(37 99 235 / var(--tw-bg-opacity, 0.7))" }}
+      >
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="hover:bg-accent/50">
