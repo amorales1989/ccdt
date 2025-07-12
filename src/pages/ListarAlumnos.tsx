@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears, parse, isValid, parseISO } from "date-fns";
@@ -343,6 +343,31 @@ const ListarAlumnos = () => {
     }
   };
 
+  const handleMarkAsOld = async (studentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("students")
+        .update({ nuevo: false })
+        .eq("id", studentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Alumno actualizado",
+        description: "El alumno ya no está marcado como nuevo.",
+        variant: "success",
+      });
+      refetch();
+    } catch (error: any) {
+      console.error("Error updating student:", error);
+      toast({
+        title: "Error al actualizar",
+        description: error.message || "Hubo un error al actualizar el alumno.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleEdit = (student: Student) => {
     setStudentToEdit(student);
 
@@ -554,6 +579,11 @@ const ListarAlumnos = () => {
     return nameMatch && departmentMatch && classMatch;
   });
 
+  // Separar alumnos en dos grupos: normales y nuevos
+  const regularStudents = filteredStudents?.filter(student => !student.nuevo) || [];
+  const newStudents = filteredStudents?.filter(student => student.nuevo === true) || [];
+  const hasNewStudents = newStudents.length > 0;
+
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({
@@ -616,6 +646,47 @@ const ListarAlumnos = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  // Función para renderizar una fila de alumno
+  const renderStudentRow = (student: Student) => (
+    <React.Fragment key={student.id}>
+      <TableRow
+        className={`cursor-pointer hover:bg-gray-50 ${student.isAuthorized ? 'bg-green-50' : ''} ${student.nuevo ? 'bg-blue-50' : ''}`}
+        onClick={() => handleStudentClick(student.id)}
+      >
+        <TableCell className="font-medium">
+          <div className="flex items-center gap-2">
+            {expandedStudentId === student.id ? (
+              <CircleChevronUp className="h-4 w-4 text-gray-500" />
+            ) : (
+              <CircleChevronDown className="h-4 w-4 text-gray-500" />
+            )}
+            <span>{student.first_name} {student.last_name}</span>
+            {student.isAuthorized && (
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                Autorizado
+              </Badge>
+            )}
+            
+          </div>
+        </TableCell>
+        {!isMobile && (
+          <TableCell>{student.departments?.name || 'Sin departamento'}</TableCell>
+        )}
+        <TableCell>{calculateAge(student.birthdate) || 'N/A'}</TableCell>
+        <TableCell className="text-right">
+          {renderActionButtons(student)}
+        </TableCell>
+      </TableRow>
+      {expandedStudentId === student.id && (
+        <TableRow>
+          <TableCell colSpan={4} className="bg-gray-50">
+            <StudentDetails student={student} />
+          </TableCell>
+        </TableRow>
+      )}
+    </React.Fragment>
+  );
+
   // Función para renderizar las acciones según si es móvil o no
   const renderActionButtons = (student: Student) => {
     if (isMobile) {
@@ -645,6 +716,11 @@ const ListarAlumnos = () => {
               </svg>
               WhatsApp
             </DropdownMenuItem>
+            {student.nuevo && (
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}>
+                <Check className="mr-2 h-4 w-4" /> Marcar como no nuevo
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -691,7 +767,6 @@ const ListarAlumnos = () => {
               </TooltipProvider>
             </>
           )}
-          
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -711,6 +786,27 @@ const ListarAlumnos = () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          
+          {student.nuevo && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                    onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Marcar como no nuevo</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
         </div>
       );
     }
@@ -840,51 +936,35 @@ const ListarAlumnos = () => {
                     Error al cargar los alumnos.
                   </TableCell>
                 </TableRow>
-              ) : filteredStudents?.length === 0 ? (
+              ) : (regularStudents.length === 0 && newStudents.length === 0) ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center">
                     No hay alumnos registrados.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredStudents?.map((student) => (
-                  <React.Fragment key={student.id}>
-                    <TableRow
-                      className={`cursor-pointer hover:bg-gray-50 ${student.isAuthorized ? 'bg-green-50' : ''}`}
-                      onClick={() => handleStudentClick(student.id)}
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {expandedStudentId === student.id ? (
-                            <CircleChevronUp className="h-4 w-4 text-gray-500" />
-                          ) : (
-                            <CircleChevronDown className="h-4 w-4 text-gray-500" />
-                          )}
-                          <span>{student.first_name} {student.last_name}</span>
-                          {student.isAuthorized && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                              Autorizado
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      {!isMobile && (
-                        <TableCell>{student.departments?.name || 'Sin departamento'}</TableCell>
-                      )}
-                      <TableCell>{calculateAge(student.birthdate) || 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                        {renderActionButtons(student)}
-                      </TableCell>
-                    </TableRow>
-                    {expandedStudentId === student.id && (
+                <>
+                  {/* Renderizar alumnos regulares */}
+                  {regularStudents.map((student) => renderStudentRow(student))}
+                  
+                  {/* Línea separadora y alumnos nuevos */}
+                  {hasNewStudents && (
+                    <>
                       <TableRow>
-                        <TableCell colSpan={4} className="bg-gray-50">
-                          <StudentDetails student={student} />
+                        <TableCell colSpan={4} className="py-4">
+                          <div className="flex items-center justify-center">
+                            <div className="flex-grow border-t border-gray-300"></div>
+                            <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                              Nuevos Alumnos
+                            </span>
+                            <div className="flex-grow border-t border-gray-300"></div>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </React.Fragment>
-                ))
+                      {newStudents.map((student) => renderStudentRow(student))}
+                    </>
+                  )}
+                </>
               )}
             </TableBody>
           </Table>

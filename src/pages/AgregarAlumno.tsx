@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { createStudent, getDepartments, checkDniExists } from "@/lib/api";
@@ -33,6 +34,7 @@ const AgregarAlumno = () => {
     department: null as DepartmentType | null,
     department_id: "",
     assigned_class: "",
+    nuevo: true, // Por defecto marcado como nuevo
   });
 
   const { data: departments = [] } = useQuery({
@@ -195,11 +197,12 @@ const AgregarAlumno = () => {
         department: formData.department || null,
         department_id: formData.department_id || undefined,
         assigned_class: formData.assigned_class || null,
+        nuevo: formData.nuevo, // Incluir el valor del checkbox
       });
       
       toast({
         title: "Alumno agregado",
-        description: "El alumno ha sido agregado exitosamente",
+        description: `El alumno ha sido agregado exitosamente${formData.nuevo ? ' y marcado como nuevo' : ''}`,
         variant: "success",
       });
       navigate("/");
@@ -395,6 +398,24 @@ const AgregarAlumno = () => {
                 }
               />
             </div>
+
+            {/* Checkbox para marcar como nuevo */}
+            <div className="flex items-center space-x-2 pt-4 pb-4 border-b">
+              <Checkbox
+                id="nuevo"
+                checked={formData.nuevo}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, nuevo: checked as boolean })
+                }
+              />
+              <Label 
+                htmlFor="nuevo" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Marcar alumno como nuevo
+              </Label>
+            </div>
+
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Agregando..." : "Agregar Alumno"}
             </Button>

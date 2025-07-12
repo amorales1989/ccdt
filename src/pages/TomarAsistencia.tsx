@@ -173,11 +173,18 @@ const TomarAsistencia = () => {
     },
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(departmentId)),
   });
+
+  // Separar alumnos en dos grupos: normales y nuevos
+  const regularStudents = students?.filter(student => !student.nuevo) || [];
+  const newStudents = students?.filter(student => student.nuevo === true) || [];
+  const hasNewStudents = newStudents.length > 0;
+
   // Cálculo de estadísticas de asistencia
   const attendanceStats = {
     present: Object.values(asistencias).filter(status => status).length,
     absent: students.length - Object.values(asistencias).filter(status => status).length
   };
+  
   const getFullName = (student: any): string => {
     if (student.last_name) {
       return `${student.first_name} ${student.last_name}`;
@@ -274,6 +281,51 @@ const TomarAsistencia = () => {
     setSelectedDate(e.target.value);
   };
 
+  const isAuthorizedStudent = (student: any) => {
+    return student.is_authorized || authorizedStudents[student.id];
+  };
+
+  // Función para renderizar una fila de alumno
+  const renderStudentRow = (student: any) => (
+    <TableRow 
+      key={student.id} 
+      className={`
+        ${isAuthorizedStudent(student) ? "bg-green-50" : ""} 
+        ${student.nuevo ? "bg-blue-50" : ""}
+      `}
+    >
+      <TableCell className="flex items-center gap-2">
+        {getFullName(student)}
+        {isAuthorizedStudent(student) && (
+          <Badge variant="outline" className="bg-green-50 text-green-700 ml-2 flex items-center gap-1">
+            <UserCheck className="h-3 w-3" />
+            Autorizado
+          </Badge>
+        )}
+        {student.nuevo && (
+          <Badge variant="outline" className="bg-blue-100 text-blue-800 ml-2">
+            Nuevo
+          </Badge>
+        )}
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => marcarAsistencia(student.id, !asistencias[student.id])}
+            className={`font-bold ${asistencias[student.id]
+              ? "bg-green-500 hover:bg-green-600 text-white border-green-500"
+              : "bg-red-500 hover:bg-red-600 text-white border-red-500"
+              }`}
+          >
+            {asistencias[student.id] ? "P" : "A"}
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
   if (!isAdminOrSecretaria && !currentDepartment) {
     return (
       <div className="p-6">
@@ -291,10 +343,6 @@ const TomarAsistencia = () => {
   if (isLoadingStudents) {
     return <div className="p-6">Cargando alumnos...</div>;
   }
-
-  const isAuthorizedStudent = (student: any) => {
-    return student.is_authorized || authorizedStudents[student.id];
-  };
 
   return (
     <div className="p-6">
@@ -330,34 +378,26 @@ const TomarAsistencia = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {students?.map((student) => (
-                <TableRow key={student.id} className={isAuthorizedStudent(student) ? "bg-green-50" : ""}>
-                  <TableCell className="flex items-center gap-2">
-                    {getFullName(student)}
-                    {isAuthorizedStudent(student) && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 ml-2 flex items-center gap-1">
-                        <UserCheck className="h-3 w-3" />
-                        Autorizado
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => marcarAsistencia(student.id, !asistencias[student.id])}
-                        className={`font-bold ${asistencias[student.id]
-                          ? "bg-green-500 hover:bg-green-600 text-white border-green-500"
-                          : "bg-red-500 hover:bg-red-600 text-white border-red-500"
-                          }`}
-                      >
-                        {asistencias[student.id] ? "P" : "A"}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {/* Renderizar alumnos regulares */}
+              {regularStudents.map((student) => renderStudentRow(student))}
+              
+              {/* Línea separadora y alumnos nuevos */}
+              {hasNewStudents && (
+                <>
+                  <TableRow>
+                    <TableCell colSpan={2} className="py-4">
+                      <div className="flex items-center justify-center">
+                        <div className="flex-grow border-t border-gray-300"></div>
+                        <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                          Nuevos Alumnos
+                        </span>
+                        <div className="flex-grow border-t border-gray-300"></div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {newStudents.map((student) => renderStudentRow(student))}
+                </>
+              )}
             </TableBody>
           </Table>
           <Button
