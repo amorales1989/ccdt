@@ -166,6 +166,7 @@ export default function Register() {
                   <SelectItem value="lider">Líder</SelectItem>
                   <SelectItem value="director">Director</SelectItem>
                   <SelectItem value="secretaria">Secretaria</SelectItem>
+                  <SelectItem value="secr.-calendario">Secr.-calendario</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>

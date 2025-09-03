@@ -92,13 +92,10 @@ export interface Company {
 }
 
 export type DepartmentType = 
-  | "escuelita_central" 
-  | "pre_adolescentes" 
+  | "escuelita"  
   | "adolescentes" 
   | "jovenes" 
-  | "jovenes_adultos" 
   | "adultos"
-  | "Examen Físico_Rev1" 
   | string;
 
 export interface Profile {
@@ -112,7 +109,7 @@ export interface Profile {
   assigned_class?: string;
 }
 
-export type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria";
+export type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria" | "secr.-calendario";
 
 export interface StudentAuthorization {
   id: string;

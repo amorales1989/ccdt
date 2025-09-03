@@ -22,6 +22,7 @@ import Notificaciones from "@/pages/Notificaciones";
 import AutorizacionesSalida from "@/pages/AutorizacionesSalida";
 import AutorizacionSimple from "@/pages/AutorizacionSimple";
 import AutorizacionCampamento from "./pages/AutorizacionCampamento";
+import Solicitudes from "./pages/solicitudes";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,10 @@ function App() {
                   {
                     path: "/calendario",
                     element: <Calendario />,
+                  },
+                  {
+                    path: "/solicitudes",
+                    element: <Solicitudes />
                   },
                   {
                     path: "/register",

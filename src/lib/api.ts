@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
+import { da } from "date-fns/locale";
 
 export const getAttendance = async (
   startDate?: string,
@@ -182,7 +183,6 @@ export const updateStudent = async (id: string, student: Partial<Student>) => {
       Object.entries(validFields).filter(([_, value]) => value !== undefined)
     );
 
-    console.log("Updating student with filtered data:", cleanData);
     
     const { data, error } = await supabase
       .from('students')
@@ -306,7 +306,6 @@ export const markAttendance = async (attendanceData: {
   event_id?: string;
 }) => {
   try {
-    console.log("Saving attendance with data:", attendanceData);
     
     const { data: existingAttendance, error: fetchError } = await supabase
       .from('attendance')
@@ -350,7 +349,6 @@ export const markAttendance = async (attendanceData: {
       result = data;
     }
 
-    console.log("Attendance saved:", result);
     return result;
   } catch (error) {
     console.error('Error marking attendance:', error);
@@ -364,7 +362,6 @@ export const getEvents = async () => {
       .from('events')
       .select('*')
       .order('date');
-
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -459,3 +456,16 @@ export const importStudentsFromExcel = async (students: { first_name: string; ge
     };
   }
 };
+
+export async function getUsers() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*');
+  
+  if (error) {
+    console.error('Error fetching users:', error);
+    throw error;
+  }
+  
+  return data;
+}

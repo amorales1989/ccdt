@@ -45,83 +45,91 @@ const Home = () => {
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null);
 
+  // Detectar si el departamento es calendario
+  const selectedDepartmentStorage = localStorage.getItem('selectedDepartment');
+  const isCalendarDepartment = selectedDepartmentStorage === 'calendario' || profile?.departments?.[0] === 'calendario';
+
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
     queryFn: getEvents
   });
 
+  // Solo cargar estudiantes si NO es departamento calendario
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-  queryKey: ['students'],
-  queryFn: async () => {
-    let baseStudents = [];
+    queryKey: ['students'],
+    queryFn: async () => {
+      let baseStudents = [];
 
-    // Si es admin o secretaria, obtener todos los estudiantes
-    if (profile?.role === 'secretaria' || profile?.role === 'admin') {
-      const { data, error } = await supabase
-        .from("students")
-        .select(`
-          *,
-          departments (name)
-        `)
-        .order('first_name');
-
-      if (error) throw error;
-      baseStudents = data || [];
-    } else {
-      // Para otros roles, obtener estudiantes del departamento y clase asignados
-      const { data, error } = await supabase
-        .from("students")
-        .select(`
-          *,
-          departments (name)
-        `)
-        .eq('department_id', profile?.department_id)
-        .eq('assigned_class', profile?.assigned_class)
-        .order('first_name');
-
-      if (error) throw error;
-      baseStudents = data || [];
-
-      // Obtener estudiantes autorizados de otros departamentos
-      const { data: authorizedData, error: authError } = await supabase
-        .from("student_authorizations")
-        .select(`
-          student_id,
-          students!inner (
+      // Si es admin o secretaria, obtener todos los estudiantes
+      if (profile?.role === 'secretaria' || profile?.role === 'admin') {
+        const { data, error } = await supabase
+          .from("students")
+          .select(`
             *,
             departments (name)
-          )
-        `)
-        .eq('department_id', profile?.department_id)
-        .eq('class', profile?.assigned_class);
+          `)
+          .order('first_name');
 
-      if (!authError && authorizedData) {
-        // Agregar estudiantes autorizados que no estén ya en la lista
-        const baseStudentIds = baseStudents.map(s => s.id);
-        const authorizedStudents = authorizedData
-          .map(auth => ({
-            ...auth.students,
-            isAuthorized: true
-          }))
-          .filter(student => !baseStudentIds.includes(student.id));
+        if (error) throw error;
+        baseStudents = data || [];
+      } else {
+        // Para otros roles, obtener estudiantes del departamento y clase asignados
+        const { data, error } = await supabase
+          .from("students")
+          .select(`
+            *,
+            departments (name)
+          `)
+          .eq('department_id', profile?.department_id)
+          .eq('assigned_class', profile?.assigned_class)
+          .order('first_name');
 
-        baseStudents = [...baseStudents, ...authorizedStudents];
+        if (error) throw error;
+        baseStudents = data || [];
+
+        // Obtener estudiantes autorizados de otros departamentos
+        const { data: authorizedData, error: authError } = await supabase
+          .from("student_authorizations")
+          .select(`
+            student_id,
+            students!inner (
+              *,
+              departments (name)
+            )
+          `)
+          .eq('department_id', profile?.department_id)
+          .eq('class', profile?.assigned_class);
+
+        if (!authError && authorizedData) {
+          // Agregar estudiantes autorizados que no estén ya en la lista
+          const baseStudentIds = baseStudents.map(s => s.id);
+          const authorizedStudents = authorizedData
+            .map(auth => ({
+              ...auth.students,
+              isAuthorized: true
+            }))
+            .filter(student => !baseStudentIds.includes(student.id));
+
+          baseStudents = [...baseStudents, ...authorizedStudents];
+        }
       }
-    }
 
-    return baseStudents.map(student => ({
-      ...student,
-      department: student.departments?.name
-    }));
-  }
-});
+      return baseStudents.map(student => ({
+        ...student,
+        department: student.departments?.name
+      }));
+    },
+    enabled: !isCalendarDepartment // Solo ejecutar si NO es departamento calendario
+  });
 
   const { data: departments = [], isLoading: departmentsLoading } = useQuery({
     queryKey: ['departments'],
-    queryFn: getDepartments
+    queryFn: getDepartments,
+    enabled: !isCalendarDepartment // Solo ejecutar si NO es departamento calendario
   });
 
   const studentsBasicInfo = useMemo(() => {
+    if (isCalendarDepartment) return []; // Retornar array vacío si es calendario
     return students.map(student => ({
       first_name: student.first_name,
       last_name: student.last_name,
@@ -129,94 +137,96 @@ const Home = () => {
       department: student.departments?.name || student.department,
       assigned_class: student.assigned_class
     }));
-  }, [students]);
+  }, [students, isCalendarDepartment]);
 
-const upcomingBirthdays = useMemo(() => {
-  const today = new Date();
-  const currentMonth = today.getMonth() + 1;
-  const currentDay = today.getDate();
-  const currentYear = today.getFullYear();
-  
-  // Obtener departamentos y clase del usuario
-  const userDepartments = profile?.departments || [];
-  const userAssignedClass = profile?.assigned_class;
-  const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
-  const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
-  
-  const studentsWithDaysUntilBirthday = studentsBasicInfo
-    .filter(student => student.birthdate)
-    // Filtrar por departamento y clase según el perfil del usuario
-    .filter(student => {
-      if (isAdminOrSecretary) {
-        return false; // Los admin y secretarias no ven los cumpleaños
-      }
-      
-      // Para maestros y líderes, filtrar por departamento y clase
-      const studentDept = student.department;
-      const studentClass = student.assigned_class;
-      
-      // Verificar si el estudiante pertenece a los departamentos del usuario
-      const belongsToUserDepartment = userDepartments.includes(studentDept);
-      
-      // Si el usuario tiene una clase asignada, también verificar la clase
-      if (isTeacherOrLeader && userAssignedClass) {
-        return belongsToUserDepartment && studentClass === userAssignedClass;
-      }
-      
-      return belongsToUserDepartment;
-    })
-    .map(student => {
-      const cleanFirstName = student.first_name?.trim() || '';
-      const cleanLastName = student.last_name?.trim() || '';
-      
-      const [birthYear, birthMonth, birthDay] = student.birthdate.split('-').map(Number);
-      
-      const isBirthdayToday = birthMonth === currentMonth && birthDay === currentDay;
-      
-      let daysUntilBirthday;
-      let birthdayThisYear;
-      
-      if (isBirthdayToday) {
-        daysUntilBirthday = 0;
-        birthdayThisYear = `${String(currentDay).padStart(2, '0')}/${String(currentMonth).padStart(2, '0')}`;
-      } else {
-        let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay);
-        
-        if (birthdayDate < today) {
-          birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
+  const upcomingBirthdays = useMemo(() => {
+    if (isCalendarDepartment) return []; // No mostrar cumpleaños si es calendario
+    
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1;
+    const currentDay = today.getDate();
+    const currentYear = today.getFullYear();
+    
+    // Obtener departamentos y clase del usuario
+    const userDepartments = profile?.departments || [];
+    const userAssignedClass = profile?.assigned_class;
+    const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
+    const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
+    
+    const studentsWithDaysUntilBirthday = studentsBasicInfo
+      .filter(student => student.birthdate)
+      // Filtrar por departamento y clase según el perfil del usuario
+      .filter(student => {
+        if (isAdminOrSecretary) {
+          return false; // Los admin y secretarias no ven los cumpleaños
         }
         
-        const timeDiff = birthdayDate.getTime() - today.getTime();
-        daysUntilBirthday = Math.ceil(timeDiff / (1000 * 3600 * 24));
+        // Para maestros y líderes, filtrar por departamento y clase
+        const studentDept = student.department;
+        const studentClass = student.assigned_class;
         
-        birthdayThisYear = `${String(birthDay).padStart(2, '0')}/${String(birthMonth).padStart(2, '0')}`;
-      }
-      
-      return {
-        first_name: cleanFirstName,
-        last_name: cleanLastName,
-        birthdate: student.birthdate,
-        department: student.department,
-        assigned_class: student.assigned_class,
-        daysUntilBirthday,
-        birthdayThisYear,
-        fullName: `${cleanFirstName} ${cleanLastName}`,
-        isBirthdayToday
-      };
-    })
-    .sort((a, b) => a.daysUntilBirthday - b.daysUntilBirthday);
-  
-  const birthdaysToday = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday === 0);
-  const upcomingOnly = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday > 0);
-  
-  const result = [
-      ...birthdaysToday,
-      ...upcomingOnly.slice(0, 4)
-    ];
-    return result;
-  }, [studentsBasicInfo, profile]);
+        // Verificar si el estudiante pertenece a los departamentos del usuario
+        const belongsToUserDepartment = userDepartments.includes(studentDept);
+        
+        // Si el usuario tiene una clase asignada, también verificar la clase
+        if (isTeacherOrLeader && userAssignedClass) {
+          return belongsToUserDepartment && studentClass === userAssignedClass;
+        }
+        
+        return belongsToUserDepartment;
+      })
+      .map(student => {
+        const cleanFirstName = student.first_name?.trim() || '';
+        const cleanLastName = student.last_name?.trim() || '';
+        
+        const [birthYear, birthMonth, birthDay] = student.birthdate.split('-').map(Number);
+        
+        const isBirthdayToday = birthMonth === currentMonth && birthDay === currentDay;
+        
+        let daysUntilBirthday;
+        let birthdayThisYear;
+        
+        if (isBirthdayToday) {
+          daysUntilBirthday = 0;
+          birthdayThisYear = `${String(currentDay).padStart(2, '0')}/${String(currentMonth).padStart(2, '0')}`;
+        } else {
+          let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay);
+          
+          if (birthdayDate < today) {
+            birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
+          }
+          
+          const timeDiff = birthdayDate.getTime() - today.getTime();
+          daysUntilBirthday = Math.ceil(timeDiff / (1000 * 3600 * 24));
+          
+          birthdayThisYear = `${String(birthDay).padStart(2, '0')}/${String(birthMonth).padStart(2, '0')}`;
+        }
+        
+        return {
+          first_name: cleanFirstName,
+          last_name: cleanLastName,
+          birthdate: student.birthdate,
+          department: student.department,
+          assigned_class: student.assigned_class,
+          daysUntilBirthday,
+          birthdayThisYear,
+          fullName: `${cleanFirstName} ${cleanLastName}`,
+          isBirthdayToday
+        };
+      })
+      .sort((a, b) => a.daysUntilBirthday - b.daysUntilBirthday);
+    
+    const birthdaysToday = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday === 0);
+    const upcomingOnly = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday > 0);
+    
+    const result = [
+        ...birthdaysToday,
+        ...upcomingOnly.slice(0, 4)
+      ];
+      return result;
+    }, [studentsBasicInfo, profile, isCalendarDepartment]);
 
-  const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
+  const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria" || profile?.role === "secr.-calendario";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
 
   const handleDepartmentClick = (department: Department) => {
@@ -268,11 +278,13 @@ const upcomingBirthdays = useMemo(() => {
       };
       return acc;
     }, {} as DepartmentStatsMap);
+    
     const formatDepartmentName = (name: string) => {
       return name.replace(/_/g, ' ').split(' ').map(word => 
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
     };
+    
     const departmentsWithStats = Object.entries(studentsByDepartment);
     
     const isSingleCard = departmentsWithStats.length === 1;
@@ -504,108 +516,259 @@ const upcomingBirthdays = useMemo(() => {
     setEventDialogOpen(true);
   };
 
-const futureEvents = useMemo(() => {
-  const regularEvents = events
-    .filter(event => !isBefore(new Date(event.date), startOfToday()))
-    .filter(event => 
-      !searchTerm || 
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+  const futureEvents = useMemo(() => {
+    const regularEvents = events
+      .filter(event => !isBefore(new Date(event.date), startOfToday()))
+      .filter(event => {
+        const esSolicitud = (event as any).solicitud === true || (event as any).solicitud === 'true';
+        return !esSolicitud;
+      })
+      .filter(event => 
+        !searchTerm || 
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
 
-  const birthdayEvents = upcomingBirthdays
-    .filter(birthday => 
-      !searchTerm || 
-      birthday.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      'cumpleaños'.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (birthday.department && birthday.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (birthday.assigned_class && birthday.assigned_class.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .map(birthday => {
-      const today = new Date();
-      const currentYear = today.getFullYear();
-      const [birthYear, birthMonth, birthDay] = birthday.birthdate.split('-').map(Number);
-      
-      let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay +1);
-      
-      if (isBefore(birthdayDate, startOfToday())) {
-        birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
-      }
+    if (isCalendarDepartment) {
+      return regularEvents.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateA.getTime() - dateB.getTime();
+      });
+    }
 
-      // Formatear el nombre del departamento
-      const formatDepartmentName = (name: string) => {
-        return name?.replace(/_/g, ' ').split(' ').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ') || '';
-      };
+    const birthdayEvents = upcomingBirthdays
+      .filter(birthday => 
+        !searchTerm || 
+        birthday.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        'cumpleaños'.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (birthday.department && birthday.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (birthday.assigned_class && birthday.assigned_class.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
+      .map(birthday => {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const [birthYear, birthMonth, birthDay] = birthday.birthdate.split('-').map(Number);
+        
+        let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay +1);
+        
+        if (isBefore(birthdayDate, startOfToday())) {
+          birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
+        }
 
-      return {
-        id: `birthday-${birthday.first_name}-${birthday.last_name}`, 
-        title: 'Cumpleaños',
-        date: birthdayDate.toISOString().split('T')[0], 
-        time: '',
-        description: `${birthday.fullName}` || 'Sin clase',
-        created_at: '',
-        updated_at: '',
-        isBirthday: true, 
-        daysUntilBirthday: birthday.daysUntilBirthday 
-      };
+        const formatDepartmentName = (name: string) => {
+          return name?.replace(/_/g, ' ').split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ') || '';
+        };
+
+        return {
+          id: `birthday-${birthday.first_name}-${birthday.last_name}`, 
+          title: 'Cumpleaños',
+          date: birthdayDate.toISOString().split('T')[0], 
+          time: '',
+          description: `${birthday.fullName}` || 'Sin clase',
+          created_at: '',
+          updated_at: '',
+          isBirthday: true, 
+          daysUntilBirthday: birthday.daysUntilBirthday 
+        };
+      });
+
+    const allEvents = [...regularEvents, ...birthdayEvents];
+    return allEvents.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateA.getTime() - dateB.getTime();
     });
+  }, [events, upcomingBirthdays, searchTerm, isCalendarDepartment]);
 
-  const allEvents = [...regularEvents, ...birthdayEvents];
-  return allEvents.sort((a, b) => {
-    const dateA = new Date(a.date);
-    const dateB = new Date(b.date);
-    return dateA.getTime() - dateB.getTime();
-  });
-}, [events, upcomingBirthdays, searchTerm]); 
-
-const renderActionButtons = (event: EventWithBirthday) => {
-  if (event.isBirthday || !isAdminOrSecretary) return null;
-  
-  if (isMobile) {
+  const renderActionButtons = (event: EventWithBirthday) => {
+    if (event.isBirthday || !isAdminOrSecretary) return null;
+    
+    if (isMobile) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white">
+            <DropdownMenuItem onClick={() => handleEditEvent(event)}>
+              <Edit2 className="mr-2 h-4 w-4 text-white" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+    
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="bg-white">
-          <DropdownMenuItem onClick={() => handleEditEvent(event)}>
-            <Edit2 className="mr-2 h-4 w-4 text-white" />
-            Editar
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Eliminar
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex justify-end space-x-2">
+        <Button 
+          variant="secondary" 
+          size="sm" 
+          onClick={() => handleEditEvent(event)}
+        >
+          <Edit2 className="h-4 w-4 text-white" />
+          <span className="sr-only">Editar</span>
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => handleDeleteEvent(event.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="sr-only">Eliminar</span>
+        </Button>
+      </div>
+    );
+  };
+
+  // Renderizar el calendario de eventos
+  const renderCalendar = () => (
+    <Card className="bg-gradient-to-br from-white to-accent/10 border-accent/20 hover:shadow-xl animate-fade-in">
+      <CardHeader className="flex-row justify-between items-center pb-2">
+        <CardTitle>Calendario de Eventos</CardTitle>
+        {isAdminOrSecretary && (
+          <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                className="bg-primary hover:bg-primary/90 transition-colors duration-300" 
+                onClick={() => setSelectedEventForEdit(null)}
+              >
+                {isMobile ? (
+                  <Plus className="h-4 w-4" />
+                ) : (
+                  <>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Agregar Evento
+                  </>
+                )}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
+                </DialogTitle>
+              </DialogHeader>
+              <EventForm 
+                onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent} 
+                initialData={selectedEventForEdit || undefined}
+                onSuccess={() => {
+                  setEventDialogOpen(false);
+                  setSelectedEventForEdit(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div className="relative mb-6">
+          <div className="relative rounded-lg overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 border border-accent">
+            <Input
+              placeholder="Buscar eventos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border-0 bg-white/50 backdrop-blur-sm pr-10 focus-visible:ring-0 pl-10 py-6 text-base"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            {searchTerm && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                onClick={() => setSearchTerm("")}
+              >
+                <span className="sr-only">Clear search</span>
+                ×
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {eventsLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-pulse flex space-x-4">
+              <div className="flex-1 space-y-4 py-1">
+                <div className="h-4 bg-accent/50 rounded w-3/4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-accent/30 rounded"></div>
+                  <div className="h-4 bg-accent/30 rounded w-5/6"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : futureEvents.length === 0 ? (
+          <div className="text-center py-12 bg-white/50 backdrop-blur-sm rounded-lg">
+            <p className="text-lg text-muted-foreground">No hay eventos próximos programados</p>
+            {isAdminOrSecretary && (
+              <p className="text-sm text-muted-foreground mt-2">Haga clic en "Agregar Evento" para crear uno nuevo</p>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-md border animate-fade-in">
+            <ScrollArea className="h-[300px]">
+              <Table>
+                <TableHeader className="bg-primary/10">
+                  <TableRow>
+                    <TableHead className="font-semibold text-primary">Título</TableHead>
+                    <TableHead className="font-semibold text-primary">Fecha</TableHead>
+                    <TableHead className="font-semibold text-primary">Hora</TableHead>
+                    <TableHead className="font-semibold text-primary">Descripción</TableHead>
+                    {isAdminOrSecretary && <TableHead className="text-right text-primary">Acciones</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {futureEvents.map((event) => (
+                    <TableRow key={event.id} className="hover:bg-accent/20 transition-colors duration-200">
+                      <TableCell className="font-medium">{event.title}</TableCell>
+                      <TableCell>
+                        {format(new Date(event.date), "dd/MM", { locale: es })}
+                      </TableCell>
+                      <TableCell>
+                        {event.time && (
+                          <span>{event.time}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <div className="max-h-16 overflow-y-auto">
+                          {event.description || <span className="text-muted-foreground text-sm italic">Sin descripción</span>}
+                        </div>
+                      </TableCell>
+                      {isAdminOrSecretary && (
+                        <TableCell className="text-right">
+                          {renderActionButtons(event)}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  // Si es departamento calendario, solo mostrar el calendario
+  if (isCalendarDepartment) {
+    return (
+      <div>
+        {renderCalendar()}
+      </div>
     );
   }
-  
-  return (
-    <div className="flex justify-end space-x-2">
-      <Button 
-        variant="secondary" 
-        size="sm" 
-        onClick={() => handleEditEvent(event)}
-      >
-        <Edit2 className="h-4 w-4 text-white" />
-        <span className="sr-only">Editar</span>
-      </Button>
-      <Button
-        variant="destructive"
-        size="sm"
-        onClick={() => handleDeleteEvent(event.id)}
-      >
-        <Trash2 className="h-4 w-4" />
-        <span className="sr-only">Eliminar</span>
-      </Button>
-    </div>
-  );
-};
+
+  // Renderizar la página completa para otros departamentos
   return (
     <div>
       {isAdminOrSecretary && !studentsLoading && (
@@ -613,132 +776,7 @@ const renderActionButtons = (event: EventWithBirthday) => {
       )}
       
       {renderStudentStats()}
-
-      <Card className="bg-gradient-to-br from-white to-accent/10 border-accent/20 hover:shadow-xl animate-fade-in">
-        <CardHeader className="flex-row justify-between items-center pb-2">
-          <CardTitle>Calendario de Eventos</CardTitle>
-          {isAdminOrSecretary && (
-            <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  className="bg-primary hover:bg-primary/90 transition-colors duration-300" 
-                  onClick={() => setSelectedEventForEdit(null)}
-                >
-                  {isMobile ? (
-                    <Plus className="h-4 w-4" />
-                  ) : (
-                    <>
-                      <MapPin className="mr-2 h-4 w-4" />
-                      Agregar Evento
-                    </>
-                  )}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
-                  </DialogTitle>
-                </DialogHeader>
-                <EventForm 
-                  onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent} 
-                  initialData={selectedEventForEdit || undefined}
-                  onSuccess={() => {
-                    setEventDialogOpen(false);
-                    setSelectedEventForEdit(null);
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="relative mb-6">
-            <div className="relative rounded-lg overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 border border-accent">
-              <Input
-                placeholder="Buscar eventos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-0 bg-white/50 backdrop-blur-sm pr-10 focus-visible:ring-0 pl-10 py-6 text-base"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              {searchTerm && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                  onClick={() => setSearchTerm("")}
-                >
-                  <span className="sr-only">Clear search</span>
-                  ×
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {eventsLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-pulse flex space-x-4">
-                <div className="flex-1 space-y-4 py-1">
-                  <div className="h-4 bg-accent/50 rounded w-3/4"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-accent/30 rounded"></div>
-                    <div className="h-4 bg-accent/30 rounded w-5/6"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : futureEvents.length === 0 ? (
-            <div className="text-center py-12 bg-white/50 backdrop-blur-sm rounded-lg">
-              <p className="text-lg text-muted-foreground">No hay eventos próximos programados</p>
-              {isAdminOrSecretary && (
-                <p className="text-sm text-muted-foreground mt-2">Haga clic en "Agregar Evento" para crear uno nuevo</p>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-md border animate-fade-in">
-              <ScrollArea className="h-[300px]">
-                <Table>
-                  <TableHeader className="bg-primary/10">
-                    <TableRow>
-                      <TableHead className="font-semibold text-primary">Título</TableHead>
-                      <TableHead className="font-semibold text-primary">Fecha</TableHead>
-                      <TableHead className="font-semibold text-primary">Hora</TableHead>
-                      <TableHead className="font-semibold text-primary">Descripción</TableHead>
-                      {isAdminOrSecretary && <TableHead className="text-right text-primary">Acciones</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {futureEvents.map((event) => (
-                      <TableRow key={event.id} className="hover:bg-accent/20 transition-colors duration-200">
-                        <TableCell className="font-medium">{event.title}</TableCell>
-                        <TableCell>
-                          {format(new Date(event.date), "dd/MM", { locale: es })}
-                        </TableCell>
-                        <TableCell>
-                          {event.time && (
-                            <span>{event.time}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="max-w-xs">
-                          <div className="max-h-16 overflow-y-auto">
-                            {event.description || <span className="text-muted-foreground text-sm italic">Sin descripción</span>}
-                          </div>
-                        </TableCell>
-                        {isAdminOrSecretary && (
-                          <TableCell className="text-right">
-                            {renderActionButtons(event)}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {renderCalendar()}
     </div>
   );
 };

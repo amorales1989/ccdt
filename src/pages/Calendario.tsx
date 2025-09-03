@@ -1,8 +1,8 @@
-
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { getEvents, deleteEvent } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { getEvents, deleteEvent, updateEvent } from "@/lib/api";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -30,13 +30,14 @@ import {
 import { format, isBefore, startOfDay, isSameMonth, isAfter, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { CalendarPlus, Trash2 } from "lucide-react";
+import { CalendarPlus, Trash2, Calendar as CalendarIcon, Check, X } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { useToast } from "@/components/ui/use-toast";
-import { createEvent, updateEvent } from "@/lib/api";
+import { createEvent } from "@/lib/api";
 import type { Event } from "@/types/database";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Calendario() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -46,10 +47,34 @@ export default function Calendario() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
-  const { data: events = [], isLoading, refetch } = useQuery({
+  // Determinar si el usuario puede crear eventos
+  const selectedDepartmentStorage = localStorage.getItem('selectedDepartment');
+  const isCalendarDepartment = selectedDepartmentStorage === 'calendario' || profile?.departments?.[0] === 'calendario';
+  const isSecretaria = profile?.role === 'secretaria';
+  const isAdmin = profile?.role === 'admin';
+  const isSecrCalendario = profile?.role === 'secr.-calendario';
+  const canCreateEvents = isSecretaria || isAdmin || isSecrCalendario;
+  
+  const queryClient = useQueryClient();
+
+  const { data: allEvents = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
     queryFn: getEvents
+  });
+
+  // Filtrar eventos según el rol del usuario
+  const events = allEvents.filter(event => {
+    // Si no puede gestionar solicitudes, no mostrar eventos con solicitud: true
+    if (!canCreateEvents && (event as any).solicitud === true) {
+      return false;
+    }
+    // No mostrar solicitudes rechazadas para ningún rol
+    if ((event as any).estado === 'rechazada') {
+      return false;
+    }
+    return true;
   });
 
   useEffect(() => {
@@ -72,38 +97,52 @@ export default function Calendario() {
   }, {});
 
   const handleCreateEvent = async (eventData: any) => {
-    try {
-      if (selectedEvent) {
-        // Make sure the ID is included when updating
-        await updateEvent(selectedEvent.id, {
-          ...eventData,
-          id: selectedEvent.id
-        });
-        toast({
-          title: "Evento actualizado",
-          description: "El evento se ha actualizado exitosamente.",
-        });
-      } else {
-        await createEvent(eventData);
-        toast({
-          title: "Evento creado",
-          description: "El evento se ha creado exitosamente.",
-        });
-      }
-      await refetch();
-      setDialogOpen(false);
-      setSelectedEvent(null);
-    } catch (error) {
-      console.error("Error creating/updating event:", error);
+  try {
+    if (selectedEvent) {
+      // Make sure the ID is included when updating
+      await updateEvent(selectedEvent.id, {
+        ...eventData,
+        id: selectedEvent.id
+      });
       toast({
-        title: "Error",
-        description: selectedEvent 
-          ? "No se pudo actualizar el evento." 
-          : "No se pudo crear el evento.",
-        variant: "destructive",
+        title: (isSecretaria || isAdmin || isSecrCalendario) ? "Evento actualizado" : "Solicitud actualizada",
+        description: (isSecretaria || isAdmin || isSecrCalendario) 
+          ? "El evento se ha actualizado exitosamente." 
+          : "La solicitud se ha actualizado exitosamente.",
+      });
+    } else {
+      // Preparar los datos para crear el evento/solicitud
+      const dataToSend = {
+        ...eventData
+      };
+
+      // Si no puede crear eventos directamente (es una solicitud), agregar el profile.id
+      if (!canCreateEvents && profile?.id) {
+        dataToSend.solicitante = profile.id;
+      }
+
+      await createEvent(dataToSend);
+      toast({
+        title: (isSecretaria || isAdmin || isSecrCalendario) ? "Evento creado" : "Solicitud enviada",
+        description: (isSecretaria || isAdmin || isSecrCalendario) 
+          ? "El evento se ha creado exitosamente." 
+          : "La solicitud de fecha se ha enviado exitosamente.",
       });
     }
-  };
+    await refetch();
+    setDialogOpen(false);
+    setSelectedEvent(null);
+  } catch (error) {
+    console.error("Error creating/updating event:", error);
+    toast({
+      title: "Error",
+      description: selectedEvent 
+        ? ((isSecretaria || isAdmin || isSecrCalendario) ? "No se pudo actualizar el evento." : "No se pudo actualizar la solicitud.")
+        : ((isSecretaria || isAdmin || isSecrCalendario) ? "No se pudo crear el evento." : "No se pudo enviar la solicitud."),
+      variant: "destructive",
+    });
+  }
+};
 
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
@@ -123,19 +162,99 @@ export default function Calendario() {
       await deleteEvent(eventToDelete.id);
       await refetch();
       toast({
-        title: "Evento eliminado",
-        description: "El evento se ha eliminado exitosamente.",
+        title: (isSecretaria || isAdmin || isSecrCalendario) ? "Evento eliminado" : "Solicitud eliminada",
+        description: (isSecretaria || isAdmin || isSecrCalendario) 
+          ? "El evento se ha eliminado exitosamente."
+          : "La solicitud se ha eliminado exitosamente.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudo eliminar el evento.",
+        description: (isSecretaria || isAdmin || isSecrCalendario) 
+          ? "No se pudo eliminar el evento."
+          : "No se pudo eliminar la solicitud.",
         variant: "destructive",
       });
     } finally {
       setDeleteDialogOpen(false);
       setEventToDelete(null);
     }
+  };
+
+  // Mutaciones para aprobar y rechazar solicitudes
+  const { mutate: approveRequest } = useMutation({
+    mutationFn: async (eventId: string) => {
+      return updateEvent(eventId, {
+        solicitud: false,
+        estado: 'aprobada'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Solicitud aprobada",
+        description: "La solicitud ha sido aprobada y ahora es visible para todos.",
+      });
+      setDialogOpen(false);
+      setSelectedEvent(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo aprobar la solicitud.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const { mutate: rejectRequest } = useMutation({
+    mutationFn: async (eventId: string) => {
+      return updateEvent(eventId, {
+        estado: 'rechazada'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Solicitud rechazada",
+        description: "La solicitud ha sido rechazada.",
+      });
+      setDialogOpen(false);
+      setSelectedEvent(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo rechazar la solicitud.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleApproveRequest = (eventId: string) => {
+    approveRequest(eventId);
+  };
+
+  const handleRejectRequest = (eventId: string) => {
+    rejectRequest(eventId);
+  };
+
+  // Función para obtener el badge de estado
+  const getStatusBadge = (event: any) => {
+    if (!canCreateEvents || !event.solicitud) return null;
+    
+    const estado = event.estado || 'pendiente';
+    const variants: { [key: string]: string } = {
+      'pendiente': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      'aprobada': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      'rechazada': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+    };
+
+    return (
+      <Badge className={`ml-2 ${variants[estado] || variants['pendiente']}`}>
+        {estado.charAt(0).toUpperCase() + estado.slice(1)}
+      </Badge>
+    );
   };
 
   const modifiers = {
@@ -193,25 +312,103 @@ export default function Calendario() {
           >
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90">
-                <CalendarPlus className="mr-2 h-4 w-4" />
-                Agregar Evento
+                {canCreateEvents ? (
+                  <>
+                    <CalendarPlus className="mr-2 h-4 w-4" />
+                    Agregar Evento
+                  </>
+                ) : (
+                  <>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    Solicitar Fecha
+                  </>
+                )}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>
-                  {selectedEvent ? "Editar Evento" : "Crear Nuevo Evento"}
+                <DialogTitle className="flex items-center">
+                  {selectedEvent 
+                    ? (canCreateEvents ? "Editar Evento" : "Editar Solicitud")
+                    : (canCreateEvents ? "Crear Nuevo Evento" : "Solicitar Nueva Fecha")
+                  }
+                  {selectedEvent && getStatusBadge(selectedEvent)}
                 </DialogTitle>
               </DialogHeader>
-              <EventForm 
-                onSubmit={handleCreateEvent} 
-                initialData={selectedEvent || undefined}
-                onSuccess={() => {
-                  setDialogOpen(false);
-                  setSelectedEvent(null);
-                }}
-              />
-              {selectedEvent && (
+              
+              {/* Mostrar información de la solicitud si es aplicable */}
+              {selectedEvent && canCreateEvents && (selectedEvent as any).solicitud && (
+                <div className="mb-4 p-3 bg-muted/50 rounded-md">
+                  <h4 className="font-semibold text-sm mb-2">Información de la Solicitud:</h4>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Departamento:</strong> {(selectedEvent as any).departamento || 'No especificado'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Estado:</strong> {(selectedEvent as any).estado || 'Pendiente'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Fecha:</strong> {format(new Date(selectedEvent.date), "dd/MM/yyyy", { locale: es })}
+                  </p>
+                  {selectedEvent.time && (
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Hora:</strong> {selectedEvent.time}
+                    </p>
+                  )}
+                  {selectedEvent.description && (
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Descripción:</strong> {selectedEvent.description}
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              {/* Solo mostrar el formulario si no es una solicitud rechazada */}
+              {!(selectedEvent && (selectedEvent as any).estado === 'rechazada') && (
+                <EventForm 
+                  onSubmit={handleCreateEvent} 
+                  initialData={selectedEvent || undefined}
+                  isRequestMode={!(isSecretaria || isAdmin || isSecrCalendario)}
+                  onSuccess={() => {
+                    setDialogOpen(false);
+                    setSelectedEvent(null);
+                  }}
+                />
+              )}
+              
+              {/* Mensaje para solicitudes rechazadas */}
+              {selectedEvent && (selectedEvent as any).estado === 'rechazada' && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md text-center">
+                  <p className="text-red-800 font-medium">Esta solicitud ha sido rechazada y no puede ser modificada.</p>
+                </div>
+              )}
+              
+              {/* Botones para gestionar solicitudes */}
+              {selectedEvent && canCreateEvents && (selectedEvent as any).solicitud && 
+                ((selectedEvent as any).estado === 'pendiente' || !(selectedEvent as any).estado) && (
+                <DialogFooter className="mt-4 flex justify-between gap-2">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="default"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => handleApproveRequest(selectedEvent.id)}
+                    >
+                      <Check className="mr-2 h-4 w-4" />
+                      Aprobar
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      onClick={() => handleRejectRequest(selectedEvent.id)}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Rechazar
+                    </Button>
+                  </div>
+                </DialogFooter>
+              )}
+              
+              {/* Botón de eliminar para eventos/solicitudes (no rechazadas) */}
+              {selectedEvent && canCreateEvents && !(canCreateEvents && (selectedEvent as any).solicitud) && 
+                (selectedEvent as any).estado !== 'rechazada' && (
                 <DialogFooter className="mt-4 flex justify-between">
                   <Button 
                     variant="destructive" 
@@ -221,6 +418,20 @@ export default function Calendario() {
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Eliminar Evento
+                  </Button>
+                </DialogFooter>
+              )}
+              
+              {selectedEvent && !canCreateEvents && (selectedEvent as any).estado !== 'rechazada' && (
+                <DialogFooter className="mt-4 flex justify-between">
+                  <Button 
+                    variant="destructive" 
+                    type="button"
+                    onClick={(e) => handleDeleteClick(selectedEvent, e)}
+                    className="flex items-center"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar Solicitud
                   </Button>
                 </DialogFooter>
               )}
@@ -279,16 +490,28 @@ export default function Calendario() {
                                   }`}
                                   onClick={() => handleEventClick(event)}
                                 >
-                                  <div className="flex justify-between items-center">
-                                    <h4 className="font-semibold dark:text-white">{event.title}</h4>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      className="h-7 w-7 p-0" 
-                                      onClick={(e) => handleDeleteClick(event, e)}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
-                                    </Button>
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <div className="flex items-center">
+                                        <h4 className="font-semibold dark:text-white">{event.title}</h4>
+                                        {getStatusBadge(event)}
+                                      </div>
+                                      {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          Solicitado por: {(event as any).departamento}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {(isSecretaria || isAdmin || isSecrCalendario) && (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="h-7 w-7 p-0 ml-2" 
+                                        onClick={(e) => handleDeleteClick(event, e)}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
+                                      </Button>
+                                    )}
                                   </div>
                                   <p className="text-sm text-muted-foreground whitespace-pre-line dark:text-gray-300">{event.description}</p>
                                 </div>
@@ -304,7 +527,7 @@ export default function Calendario() {
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold mb-4 dark:text-white">
-                Eventos del mes {format(selectedDate || new Date(), 'MMMM yyyy', { locale: es })}
+                {(isSecretaria || isAdmin || isSecrCalendario) ? "Eventos" : "Fechas solicitadas"} del mes {format(selectedDate || new Date(), 'MMMM yyyy', { locale: es })}
               </h3>
               <div className="space-y-2">
                 {currentMonthEvents.length > 0 ? (
@@ -316,7 +539,7 @@ export default function Calendario() {
                             <TableHead className="font-semibold text-primary w-16">Fecha</TableHead>
                             <TableHead className="font-semibold text-primary">Título</TableHead>
                             <TableHead className="font-semibold text-primary w-16">Hora</TableHead>
-                            <TableHead className="font-semibold text-primary w-10"></TableHead>
+                            {(isSecretaria || isAdmin || isSecrCalendario) && <TableHead className="font-semibold text-primary w-10"></TableHead>}
                           </TableRow>
                         </TableHeader>
                       </Table>
@@ -337,20 +560,32 @@ export default function Calendario() {
                               <TableCell className="font-medium w-16">
                                 {format(new Date(event.date), 'dd/MM')}
                               </TableCell>
-                              <TableCell>{event.title}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  <span>{event.title}</span>
+                                  {getStatusBadge(event)}
+                                </div>
+                                {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Solicitado por: {(event as any).departamento}
+                                  </p>
+                                )}
+                              </TableCell>
                               <TableCell className="w-16">
                                 {event.time || "-"}
                               </TableCell>
-                              <TableCell className="w-10">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-7 w-7 p-0" 
-                                  onClick={(e) => handleDeleteClick(event, e)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
-                                </Button>
-                              </TableCell>
+                              {(isSecretaria || isAdmin || isSecrCalendario) && (
+                                <TableCell className="w-10">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-7 w-7 p-0" 
+                                    onClick={(e) => handleDeleteClick(event, e)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
+                                  </Button>
+                                </TableCell>
+                              )}
                             </TableRow>
                           ))}
                         </TableBody>
@@ -358,7 +593,9 @@ export default function Calendario() {
                     </ScrollArea>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground dark:text-gray-400">No hay eventos este mes</p>
+                  <p className="text-muted-foreground dark:text-gray-400">
+                    {(isSecretaria || isAdmin || isSecrCalendario) ? "No hay eventos este mes" : "No hay fechas solicitadas este mes"}
+                  </p>
                 )}
               </div>
             </div>
@@ -371,7 +608,7 @@ export default function Calendario() {
           <AlertDialogHeader>
             <AlertDialogTitle className="dark:text-white">Confirmar eliminación</AlertDialogTitle>
             <AlertDialogDescription className="dark:text-gray-300">
-              ¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar {(isSecretaria || isAdmin || isSecrCalendario) ? "este evento" : "esta solicitud"}? Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

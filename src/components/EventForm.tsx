@@ -1,27 +1,69 @@
-
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getDepartments } from "@/lib/api";
 import type { Event } from "@/types/database";
 import { format, parseISO, addDays } from "date-fns";
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { Clock } from "lucide-react";
 
-type EventFormData = Omit<Event, "id" | "created_at" | "updated_at">;
+type EventFormData = Omit<Event, "id" | "created_at" | "updated_at"> & {
+  departamento?: string;
+  solicitud?: boolean;
+};
 
 interface EventFormProps {
   onSubmit: (data: EventFormData) => void;
   initialData?: Event;
+  isRequestMode?: boolean; // Nueva prop para determinar si se está solicitando
   onSuccess?: () => void;
 }
 
-export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) {
+export function EventForm({ onSubmit, initialData, isRequestMode = false, onSuccess }: EventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isCustomDepartment, setIsCustomDepartment] = useState(false);
+  const [customDepartmentValue, setCustomDepartmentValue] = useState('');
   const timeZone = 'America/Argentina/Buenos_Aires';
+  
+  // Obtener departamentos para el selector (excluyendo calendario)
+  const { data: allDepartments = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: getDepartments,
+    enabled: isRequestMode // Solo cargar cuando sea modo solicitud
+  });
+
+  // Filtrar departamentos excluyendo calendario
+  const availableDepartments = allDepartments.filter(dept => dept.name !== 'calendario');
+
+  // Verificar si el valor inicial es un departamento personalizado
+  const initialDepartment = (initialData as any)?.departamento || "";
+  const isInitialCustom = initialDepartment && !availableDepartments.some(dept => dept.name === initialDepartment);
+  
+  // Inicializar estado para departamento personalizado
+  useEffect(() => {
+    if (isInitialCustom) {
+      setIsCustomDepartment(true);
+      setCustomDepartmentValue(initialDepartment);
+      form.setValue('departamento', 'otro');
+    }
+  }, [isInitialCustom, initialDepartment]);
+
+  // Manejar cambio de departamento
+  const handleDepartmentChange = (value: string) => {
+    if (value === 'otro') {
+      setIsCustomDepartment(true);
+      setCustomDepartmentValue('');
+    } else {
+      setIsCustomDepartment(false);
+      setCustomDepartmentValue('');
+    }
+  };
   
   // Parse initial time value if available
   const initialTimeValue = initialData?.time || "09:00";
@@ -48,7 +90,9 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
       title: initialData?.title || "",
       date: initialData?.date ? format(toZonedTime(parseISO(initialData.date), timeZone), 'yyyy-MM-dd') : "",
       time: initialTimeValue,
-      description: initialData?.description || ""
+      description: initialData?.description || "",
+      departamento: isInitialCustom ? 'otro' : ((initialData as any)?.departamento || ""),
+      solicitud: isRequestMode
     }
   });
 
@@ -73,9 +117,18 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
       const dateWithAddedDay = addDays(localDate, 1);
       const utcDate = fromZonedTime(dateWithAddedDay, timeZone);
       
+      // Determinar el departamento final a enviar
+      const finalDepartment = isRequestMode && isCustomDepartment ? customDepartmentValue : data.departamento;
+      
       const formattedData = {
         ...data,
-        date: format(utcDate, 'yyyy-MM-dd')
+        date: format(utcDate, 'yyyy-MM-dd'),
+        // Agregar campos específicos para solicitudes
+        ...(isRequestMode && {
+          departamento: finalDepartment,
+          solicitud: true,
+          estado: 'solicitud'
+        })
       };
       
       if (initialData) {
@@ -91,6 +144,8 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
       
       if (!initialData) {
         form.reset();
+        setIsCustomDepartment(false);
+        setCustomDepartmentValue('');
       }
       
       // Call onSuccess callback to close modal if provided
@@ -125,6 +180,19 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
   // Format time for display
   const displayTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 
+  // Determinar el texto del botón según el modo y si se está editando
+  const getButtonText = () => {
+    if (isSubmitting) {
+      return "Guardando...";
+    }
+    
+    if (initialData) {
+      return isRequestMode ? "Actualizar Solicitud" : "Actualizar Evento";
+    }
+    
+    return isRequestMode ? "Solicitar Evento" : "Crear Evento";
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -134,14 +202,75 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Título del Evento</FormLabel>
+              <FormLabel>{isRequestMode ? "Título de la Solicitud" : "Título del Evento"}</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Ingrese el título del evento" />
+                <Input {...field} placeholder={isRequestMode ? "Ingrese el título de la solicitud" : "Ingrese el título del evento"} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {/* Department field - solo para modo solicitud */}
+        {isRequestMode && (
+          <>
+            <FormField
+              control={form.control}
+              name="departamento"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Departamento que solicita</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      handleDepartmentChange(value);
+                    }} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione el departamento" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableDepartments.map((department) => (
+                        <SelectItem 
+                          key={department.id} 
+                          value={department.name || ''}
+                        >
+                          {department.name?.replace(/_/g, ' ').split(' ').map(word => 
+                            word.charAt(0).toUpperCase() + word.slice(1)
+                          ).join(' ')}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="otro">
+                        Otro (especificar)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Campo personalizado de departamento - aparece cuando se selecciona "Otro" */}
+            {isCustomDepartment && (
+              <FormItem>
+                <FormLabel>Especificar departamento</FormLabel>
+                <FormControl>
+                  <Input 
+                    value={customDepartmentValue}
+                    onChange={(e) => setCustomDepartmentValue(e.target.value)}
+                    placeholder="Ingrese el nombre del departamento"
+                  />
+                </FormControl>
+                {!customDepartmentValue.trim() && (
+                  <p className="text-sm text-destructive">Este campo es obligatorio</p>
+                )}
+              </FormItem>
+            )}
+          </>
+        )}
 
         {/* Date field */}
         <FormField
@@ -267,7 +396,7 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
               <FormControl>
                 <Textarea 
                   {...field} 
-                  placeholder="Ingrese la descripción del evento"
+                  placeholder={isRequestMode ? "Ingrese la descripción de la solicitud" : "Ingrese la descripción del evento"}
                   className="min-h-[100px]"
                 />
               </FormControl>
@@ -277,7 +406,7 @@ export function EventForm({ onSubmit, initialData, onSuccess }: EventFormProps) 
         />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Guardando..." : initialData ? "Actualizar Evento" : "Crear Evento"}
+          {getButtonText()}
         </Button>
       </form>
     </Form>

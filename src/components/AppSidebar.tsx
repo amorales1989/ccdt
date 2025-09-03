@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Sidebar,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon, FolderUp, Settings, FileOutput } from "lucide-react";
+import { Users, UserPlus, ClipboardList, History, Home, Menu, FileText, LogOut, UserPlus2, UserRound, FolderIcon, FolderUp, Settings, FileOutput, ClipboardCheck } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +25,32 @@ import { ProfileEditor } from "@/components/ProfileEditor";
 
 const getItems = (role: string | undefined, profile: any) => {
   const selectedDepartment = localStorage.getItem('selectedDepartment');
+  // Si el departamento es calendario, solo mostrar el calendario y solicitudes
+  if (selectedDepartment === 'calendario' || profile?.departments?.[0] === 'calendario') {
+    const calendarItems = [
+      {
+        title: "Inicio",
+        url: "/",
+        icon: Home,
+      },
+      {
+        title: "Calendario",
+        url: "/calendario",
+        icon: FileText,
+      }
+    ];
+
+    // Agregar solicitudes para roles autorizados
+    if (role === "admin" || role === "secretaria" || role === "secr.-calendario"  || role === "lider") {
+      calendarItems.push({
+        title: "Solicitudes",
+        url: "/solicitudes",
+        icon: ClipboardCheck,
+      });
+    }
+
+    return calendarItems;
+  }
 
   const baseItems = [
     {
@@ -84,6 +109,11 @@ const getItems = (role: string | undefined, profile: any) => {
         icon: FileText,
       },
       {
+        title: "Solicitudes",
+        url: "/solicitudes",
+        icon: ClipboardCheck,
+      },
+      {
         title: "Autorizaciones",
         url: "/autorizaciones",
         icon: FileOutput,
@@ -123,9 +153,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
 
   const handleSignOut = async () => {
     try {
-      console.log("Starting sign out from sidebar");
       await signOut();
-      console.log("Sign out successful");
       onItemClick?.();
     } catch (error: any) {
       console.error("Sign out error:", error);

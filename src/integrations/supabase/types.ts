@@ -480,13 +480,11 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "lider" | "director" | "maestro" | "secretaria"
+      app_role: "admin" | "lider" | "director" | "maestro" | "secretaria" | "secr.-calendario"
       department_type:
-        | "escuelita_central"
-        | "pre_adolescentes"
+        | "escuelita"
         | "adolescentes"
         | "jovenes"
-        | "jovenes_adultos"
         | "adultos"
     }
     CompositeTypes: {
