@@ -24,7 +24,6 @@ import {
   Clock4,
   FileText,
   User,
-  Eye,
   CheckCircle,
   XCircle,
   AlertCircle
@@ -359,10 +358,7 @@ export default function Solicitudes() {
                       )}
                     </div>
 
-                    {/* Botón de ver detalles */}
-                    <Button variant="outline" size="sm" className="ml-4">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    
                   </div>
                 </CardContent>
               </Card>
