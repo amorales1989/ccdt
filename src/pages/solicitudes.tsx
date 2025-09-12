@@ -145,9 +145,17 @@ export default function Solicitudes() {
       });
     }
     
-    return filtered.sort((a, b) => 
+    // Ordenar por fecha de creación (más recientes primero)
+    const sorted = filtered.sort((a, b) => 
       new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
     );
+    
+    // Para usuarios regulares, limitar a los últimos 10 registros
+    if (!canManageRequests) {
+      return sorted.slice(0, 10);
+    }
+    
+    return sorted;
   }, [allEvents, canManageRequests, profile?.id]);
 
   // Mutaciones para aprobar y rechazar solicitudes (solo para gestores)
@@ -247,7 +255,7 @@ export default function Solicitudes() {
   
   const pageDescription = canManageRequests 
     ? "Gestiona las solicitudes de eventos pendientes de aprobación"
-    : "Revisa el estado de tus solicitudes de eventos";
+    : "Revisa el estado de tus últimas 10 solicitudes de eventos";
 
   const emptyStateTitle = canManageRequests 
     ? "No hay solicitudes pendientes"
@@ -268,6 +276,7 @@ export default function Solicitudes() {
             <Badge variant="secondary" className="ml-2">
               {filteredRequests.length}
             </Badge>
+            
           </CardTitle>
           <p className="text-muted-foreground">{pageDescription}</p>
         </CardHeader>

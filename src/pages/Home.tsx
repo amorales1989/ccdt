@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, CheckCircle2 } from "lucide-react";
+import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, CheckCircle2, Bell } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 interface ClassStats {
   male: number;
@@ -139,6 +140,16 @@ const Home = () => {
     }));
   }, [students, isCalendarDepartment]);
 
+  // Calcular solicitudes pendientes
+  const pendingRequests = useMemo(() => {
+    return events.filter(event => {
+      const esSolicitud = (event as any).solicitud === true || (event as any).solicitud === 'true';
+      const estado = (event as any).estado;
+      const esPendiente = !estado || estado === 'solicitud';
+      return esSolicitud && esPendiente;
+    });
+  }, [events]);
+
   const upcomingBirthdays = useMemo(() => {
     if (isCalendarDepartment) return []; // No mostrar cumpleaños si es calendario
     
@@ -239,6 +250,10 @@ const Home = () => {
     navigate(`/listar?department=${departmentName}&class=${className}`);
   };
 
+  const handlePendingRequestsClick = () => {
+    navigate("/solicitudes");
+  };
+
   const renderStudentStats = () => {
     if (!profile) {
       window.location.href = '/';
@@ -320,9 +335,29 @@ const Home = () => {
 
     return (
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold mb-4 text-center">
-          {statsTitle}
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-semibold">
+            {statsTitle}
+          </h2>
+          
+          {/* Botón de solicitudes pendientes */}
+          {isAdminOrSecretary && pendingRequests.length > 0 && (
+            <Button
+              onClick={handlePendingRequestsClick}
+              variant="outline"
+              className="bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700 hover:text-orange-800 transition-all duration-200"
+            >
+              <Bell className="mr-2 h-4 w-4" />
+              <span className="mr-2">
+                Solicitud{pendingRequests.length !== 1 ? 'es' : ''} Pendiente{pendingRequests.length !== 1 ? 's' : ''}
+              </span>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                {pendingRequests.length}
+              </Badge>
+            </Button>
+          )}
+        </div>
+        
         <div className={`grid gap-4 ${isSingleCard ? 'place-items-center' : 'grid-cols-2 lg:grid-cols-3'}`}>
           {departmentsWithStats.map(([dept, stats]) => {
             const departmentObj = departments.find(d => d.name === dept);
@@ -759,10 +794,37 @@ const Home = () => {
     </Card>
   );
 
-  // Si es departamento calendario, solo mostrar el calendario
+  // Si es departamento calendario, solo mostrar el calendario y el botón de solicitudes si hay
   if (isCalendarDepartment) {
     return (
       <div>
+        {/* Botón de solicitudes pendientes para calendario */}
+        {isAdminOrSecretary && (
+          <div className="mb-6 flex justify-end">
+            <Button
+              onClick={handlePendingRequestsClick}
+              variant="outline"
+              className={`transition-all duration-200 ${
+                pendingRequests.length > 0 
+                  ? "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700 hover:text-orange-800"
+                  : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-700"
+              }`}
+            >
+              <Bell className="mr-2 h-4 w-4" />
+              <span className="mr-2">
+                {pendingRequests.length > 0 
+                  ? `Solicitud${pendingRequests.length !== 1 ? 'es' : ''} Pendiente${pendingRequests.length !== 1 ? 's' : ''}`
+                  : "Gestionar Solicitudes"
+                }
+              </span>
+              {pendingRequests.length > 0 && (
+                <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                  {pendingRequests.length}
+                </Badge>
+              )}
+            </Button>
+          </div>
+        )}
         {renderCalendar()}
       </div>
     );
