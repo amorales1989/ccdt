@@ -26,11 +26,14 @@ import {
   User,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  BellOff
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import type { Event } from "@/types/database";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
 
 // Tipo para el usuario
 interface User {
@@ -52,6 +55,16 @@ export default function Solicitudes() {
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Hook de notificaciones
+  const {
+    isEnabled: notificationsEnabled,
+    permissionStatus,
+    requestPermission,
+    sendNewRequestNotification,
+    sendStatusUpdateNotification,
+    isLoading: notificationsLoading
+  } = useNotifications();
 
   // Verificar permisos
   const canManageRequests = profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'secr.-calendario';
@@ -59,16 +72,15 @@ export default function Solicitudes() {
   const { data: allEvents = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
     queryFn: getEvents,
-    refetchOnWindowFocus: true, // Actualizar cuando el usuario vuelva a la pantalla
-    staleTime: 0 // Considerar los datos como obsoletos inmediatamente
+    refetchOnWindowFocus: true,
+    staleTime: 0
   });
 
-  // Obtener todos los usuarios para poder mostrar nombres
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ['users'],
     queryFn: getUsers,
     refetchOnWindowFocus: true,
-    staleTime: 5 * 60 * 1000 // Los usuarios cambian menos frecuentemente (5 minutos)
+    staleTime: 5 * 60 * 1000
   });
 
   // Función para obtener el nombre del usuario por ID
@@ -127,29 +139,24 @@ export default function Solicitudes() {
     let filtered;
     
     if (canManageRequests) {
-      // Para gestores: solo mostrar solicitudes PENDIENTES (solicitud: true)
       filtered = allEvents.filter(event => {
         const esSolicitud = (event as any).solicitud === true && (event as any).estado === 'solicitud';
-        return esSolicitud; // Solo solicitudes pendientes
+        return esSolicitud;
       });
     } else {
-      // Para usuarios regulares: mostrar TODAS sus solicitudes (pendientes, aprobadas, rechazadas)
       filtered = allEvents.filter(event => {
         const solicitanteId = (event as any).solicitante;
         const esSolicitud = (event as any).solicitud === true && (event as any).estado === 'solicitud';
         const tieneEstado = (event as any).estado === 'aprobada' || (event as any).estado === 'rechazada';
         
-        // Incluir si es del usuario y es una solicitud O tiene estado de aprobación/rechazo
         return solicitanteId === profile?.id && (esSolicitud || tieneEstado);
       });
     }
     
-    // Ordenar por fecha de creación (más recientes primero)
     const sorted = filtered.sort((a, b) => 
       new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
     );
     
-    // Para usuarios regulares, limitar a los últimos 10 registros
     if (!canManageRequests) {
       return sorted.slice(0, 10);
     }
@@ -157,7 +164,7 @@ export default function Solicitudes() {
     return sorted;
   }, [allEvents, canManageRequests, profile?.id]);
 
-  // Mutaciones para aprobar y rechazar solicitudes (solo para gestores)
+  // Mutación para aprobar solicitudes con notificación
   const { mutate: approveRequest } = useMutation({
     mutationFn: async (eventId: string) => {
       return updateEvent(eventId, {
@@ -165,24 +172,50 @@ export default function Solicitudes() {
         estado: 'aprobada'
       });
     },
-    onSuccess: () => {
+    onSuccess: async (_, eventId) => {
+      // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      
+      // Buscar la solicitud aprobada para enviar notificación
+      const approvedRequest = selectedRequest;
+      if (approvedRequest) {
+        const solicitanteId = (approvedRequest as any).solicitante;
+        
+        // Enviar notificación al solicitante
+        if (solicitanteId) {
+          try {
+            await sendStatusUpdateNotification(
+              {
+                title: approvedRequest.title,
+                status: 'approved'
+              },
+              solicitanteId
+            );
+            console.log('Notificación de aprobación enviada');
+          } catch (error) {
+            console.error('Error enviando notificación de aprobación:', error);
+          }
+        }
+      }
+      
       toast({
-        title: "Solicitud aceptada",
-        description: "La solicitud ha sido aceptada y ahora es visible en el calendario.",
+        title: "✅ Solicitud aceptada",
+        description: "La solicitud ha sido aceptada y ahora es visible en el calendario. Se ha notificado al solicitante.",
       });
+      
       setDetailsDialogOpen(false);
       setSelectedRequest(null);
     },
     onError: () => {
       toast({
-        title: "Error",
+        title: "❌ Error",
         description: "No se pudo aceptar la solicitud.",
         variant: "destructive",
       });
     }
   });
 
+  // Mutación para rechazar solicitudes con notificación
   const { mutate: rejectRequest } = useMutation({
     mutationFn: async ({ eventId, reason }: { eventId: string; reason: string }) => {
       return updateEvent(eventId, {
@@ -190,20 +223,46 @@ export default function Solicitudes() {
         motivoRechazo: reason
       });
     },
-    onSuccess: () => {
+    onSuccess: async (_, { eventId, reason }) => {
+      // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      
+      // Buscar la solicitud rechazada para enviar notificación
+      const rejectedRequest = selectedRequest;
+      if (rejectedRequest) {
+        const solicitanteId = (rejectedRequest as any).solicitante;
+        
+        // Enviar notificación al solicitante
+        if (solicitanteId) {
+          try {
+            await sendStatusUpdateNotification(
+              {
+                title: rejectedRequest.title,
+                status: 'rejected',
+                reason: reason
+              },
+              solicitanteId
+            );
+            console.log('Notificación de rechazo enviada');
+          } catch (error) {
+            console.error('Error enviando notificación de rechazo:', error);
+          }
+        }
+      }
+      
       toast({
-        title: "Solicitud rechazada",
-        description: "La solicitud ha sido rechazada.",
+        title: "❌ Solicitud rechazada",
+        description: "La solicitud ha sido rechazada. Se ha notificado al solicitante.",
       });
+      
       setDetailsDialogOpen(false);
       setRejectDialogOpen(false);
       setSelectedRequest(null);
-      setRejectReason("Fecha no disponible"); // Reset reason
+      setRejectReason("Fecha no disponible");
     },
     onError: () => {
       toast({
-        title: "Error",
+        title: "❌ Error",
         description: "No se pudo rechazar la solicitud.",
         variant: "destructive",
       });
@@ -231,6 +290,33 @@ export default function Solicitudes() {
     if (selectedRequest && rejectReason.trim()) {
       rejectRequest({ eventId: selectedRequest.id, reason: rejectReason.trim() });
     }
+  };
+
+  // Componente de estado de notificaciones
+  const NotificationStatus = () => {
+    if (!canManageRequests) return null; // Solo mostrar a gestores
+    
+    return (
+      <div className="flex items-center gap-2 ml-auto">
+        {notificationsEnabled ? (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+            <Bell className="h-3 w-3" />
+            Notificaciones ON
+          </Badge>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={requestPermission}
+            disabled={notificationsLoading}
+            className="flex items-center gap-1"
+          >
+            <BellOff className="h-3 w-3" />
+            {notificationsLoading ? 'Configurando...' : 'Habilitar Notificaciones'}
+          </Button>
+        )}
+      </div>
+    );
   };
 
   const isLoading = eventsLoading || usersLoading;
@@ -269,15 +355,19 @@ export default function Solicitudes() {
       {/* Header */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck className="h-6 w-6" />
-            {pageTitle}
-            <Badge variant="secondary" className="ml-2">
-              {filteredRequests.length}
-            </Badge>
-            
-          </CardTitle>
-          <p className="text-muted-foreground">{pageDescription}</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardCheck className="h-6 w-6" />
+                {pageTitle}
+                <Badge variant="secondary" className="ml-2">
+                  {filteredRequests.length}
+                </Badge>
+              </CardTitle>
+              <p className="text-muted-foreground mt-2">{pageDescription}</p>
+            </div>
+            <NotificationStatus />
+          </div>
         </CardHeader>
       </Card>
 
@@ -291,6 +381,21 @@ export default function Solicitudes() {
               <p className="text-muted-foreground">
                 {emptyStateDescription}
               </p>
+              {canManageRequests && !notificationsEnabled && (
+                <div className="mt-6">
+                  <Button 
+                    onClick={requestPermission}
+                    disabled={notificationsLoading}
+                    className="flex items-center gap-2"
+                  >
+                    <Bell className="h-4 w-4" />
+                    {notificationsLoading ? 'Configurando Notificaciones...' : 'Habilitar Notificaciones'}
+                  </Button>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Recibe notificaciones cuando lleguen nuevas solicitudes
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -357,8 +462,6 @@ export default function Solicitudes() {
                         </div>
                       )}
                     </div>
-
-                    
                   </div>
                 </CardContent>
               </Card>
