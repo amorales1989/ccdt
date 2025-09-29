@@ -67,7 +67,8 @@ export default function Register() {
     }
 
     try {
-      // Find the department ID based on the selected department name
+      const { data: currentSessionData } = await supabase.auth.getSession();
+      const adminSession = currentSessionData.session;
       const departmentObj = departments.find(d => d.name === selectedDepartment);
       const department_id = departmentObj?.id || "";
       
@@ -81,12 +82,29 @@ export default function Register() {
       };
 
       await signUp(email, password, profileData);
+      await supabase.auth.signOut();
+      
+      if (adminSession) {
+        await supabase.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token
+        });
+      }
       
       toast({
         title: "Registro exitoso",
         description: "El usuario ha sido registrado exitosamente.",
       });
-      navigate("/secretaria");
+      
+      setEmail("");
+      setPassword("");
+      setFirstName("");
+      setLastName("");
+      setRole("maestro");
+      setSelectedDepartment(null);
+      setSelectedClass("");
+      setAvailableClasses([]);
+
     } catch (error: any) {
       console.error("Register error:", error);
       
