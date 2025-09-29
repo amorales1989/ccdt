@@ -21,7 +21,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "@/hooks/use-toast";
 import { StudentDetails } from "@/components/StudentDetails";
 import { Badge } from "@/components/ui/badge";
-import { importStudentsFromExcel, updateStudent } from "@/lib/api";
+import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments } from "@/lib/api";
 import {
   Form,
   FormControl,
@@ -46,16 +46,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import * as z from "zod";
-
-const deleteStudent = async (id: string) => {
-  const { error } = await supabase
-    .from("students")
-    .delete()
-    .eq("id", id);
-
-  if (error) throw error;
-  return { success: true };
-};
 
 const ListarAlumnos = () => {
   const [importModalState, setImportModalState] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -97,91 +87,50 @@ const ListarAlumnos = () => {
 
   const navigate = useNavigate();
 
-  const { data: students, isLoading, isError, refetch } = useQuery({
+  // ============ CONSULTA PRINCIPAL DE ESTUDIANTES USANDO BACKEND API ============
+  const { data: allStudents, isLoading, isError, refetch } = useQuery({
     queryKey: ["students"],
-    queryFn: async () => {
-      let baseStudents = [];
-
-      // Si es admin o secretaria, obtener todos los estudiantes
-      if (profile?.role === 'secretaria' || profile?.role === 'admin') {
-        const { data, error } = await supabase
-          .from("students")
-          .select(`
-            *,
-            departments (name)
-          `)
-          .order('first_name');
-
-        if (error) {
-          console.error("Error fetching students:", error);
-          throw error;
-        }
-
-        baseStudents = data || [];
-      } else {
-        // Para otros roles, obtener estudiantes del departamento y clase asignados
-        const { data, error } = await supabase
-          .from("students")
-          .select(`
-            *,
-            departments (name)
-          `)
-          .eq('department_id', profile?.department_id)
-          .eq('assigned_class', profile?.assigned_class)
-          .order('first_name');
-
-        if (error) {
-          console.error("Error fetching students:", error);
-          throw error;
-        }
-
-        baseStudents = data || [];
-
-        // Obtener estudiantes autorizados de otros departamentos
-        const { data: authorizedData, error: authError } = await supabase
-          .from("student_authorizations")
-          .select(`
-            student_id,
-            students!inner (
-              *,
-              departments (name)
-            )
-          `)
-          .eq('department_id', profile?.department_id)
-          .eq('class', profile?.assigned_class);
-
-        if (authError) {
-          console.error("Error fetching authorized students:", authError);
-        } else if (authorizedData) {
-          // Agregar estudiantes autorizados que no estén ya en la lista
-          const baseStudentIds = baseStudents.map(s => s.id);
-          const authorizedStudents = authorizedData
-            .map(auth => ({
-              ...auth.students,
-              isAuthorized: true
-            }))
-            .filter(student => !baseStudentIds.includes(student.id));
-
-          baseStudents = [...baseStudents, ...authorizedStudents];
-        }
-      }
-
-      return baseStudents;
-    },
+    queryFn: getStudents,
   });
 
+  // Filtrar estudiantes según el rol y permisos del usuario
+  const students = React.useMemo(() => {
+    if (!allStudents?.length) return [];
+
+    let filteredStudents = allStudents;
+
+    // Si es admin o secretaria, mostrar todos los estudiantes
+    if (profile?.role === 'secretaria' || profile?.role === 'admin') {
+      return filteredStudents.map(student => ({
+        ...student,
+        department: student.departments?.name || student.department
+      }));
+    }
+
+    // Para otros roles, filtrar por departamento y clase
+    if (profile?.department_id && profile?.assigned_class) {
+      filteredStudents = allStudents.filter(student => 
+        student.department_id === profile.department_id && 
+        student.assigned_class === profile.assigned_class
+      );
+    }
+
+    // TODO: Aquí puedes agregar lógica para estudiantes autorizados de otros departamentos
+    // cuando implementes ese endpoint en tu backend
+
+    return filteredStudents.map(student => ({
+      ...student,
+      department: student.departments?.name || student.department
+    }));
+  }, [allStudents, profile]);
+
+  // ============ CONSULTA DE DEPARTAMENTOS USANDO BACKEND API ============
   const { data: departments } = useQuery({
     queryKey: ["departments"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("departments").select("*");
-      if (error) {
-        console.error("Error fetching departments:", error);
-        return [];
-      }
-      return data || [];
-    },
+    queryFn: getDepartments,
   });
 
+  // ============ CONSULTA DE AUTORIZACIONES - MANTENER SUPABASE POR AHORA ============
   const { data: authorizations } = useQuery({
     queryKey: ["authorizations"],
     queryFn: async () => {
@@ -194,44 +143,32 @@ const ListarAlumnos = () => {
     },
   });
 
+  // ============ CONSULTA DE CLASES - USAR STUDENTS DEL BACKEND ============
   const { data: classes } = useQuery({
     queryKey: ["classes", filters.department],
     queryFn: async () => {
-      let query = supabase
-        .from("students")
-        .select("assigned_class, departments(name)")
-        .not("assigned_class", "is", null);
+      if (!allStudents) return [];
+      
+      let studentsToAnalyze = allStudents;
 
       // Si hay un departamento seleccionado, filtrar por ese departamento
       if (filters.department) {
-        // Primero necesitamos obtener el ID del departamento por su nombre
-        const { data: departmentData, error: deptError } = await supabase
-          .from("departments")
-          .select("id")
-          .eq("name", filters.department)
-          .single();
-
-        if (deptError) {
-          console.error("Error fetching department:", deptError);
-          return [];
-        }
-
-        if (departmentData) {
-          query = query.eq("department_id", departmentData.id);
-        }
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching classes:", error);
-        return [];
+        studentsToAnalyze = allStudents.filter(student => 
+          student.departments?.name === filters.department ||
+          student.department === filters.department
+        );
       }
 
       // Obtener clases únicas y filtrar valores nulos/vacíos
-      const uniqueClasses = [...new Set(data?.map(item => item.assigned_class).filter(Boolean))];
+      const uniqueClasses = [...new Set(
+        studentsToAnalyze
+          .map(student => student.assigned_class)
+          .filter(Boolean)
+      )];
+      
       return uniqueClasses.sort();
     },
+    enabled: !!allStudents,
   });
 
   useEffect(() => {
@@ -311,7 +248,7 @@ const ListarAlumnos = () => {
         'Documento Número': student.document_number || '',
         'Teléfono': student.phone || student.phone_number || '',
         'Dirección': student.address || '',
-        'Departamento': student.departments?.name || 'Sin departamento',
+        'Departamento': student.departments?.name || student.department || 'Sin departamento',
         'Clase/anexo': student.assigned_class || ''
       }));
 
@@ -343,14 +280,10 @@ const ListarAlumnos = () => {
     }
   };
 
+  // ============ FUNCIÓN PARA MARCAR COMO NO NUEVO USANDO BACKEND API ============
   const handleMarkAsOld = async (studentId: string) => {
     try {
-      const { error } = await supabase
-        .from("students")
-        .update({ nuevo: false })
-        .eq("id", studentId);
-
-      if (error) throw error;
+      await updateStudent(studentId, { nuevo: false });
 
       toast({
         title: "Alumno actualizado",
@@ -398,6 +331,7 @@ const ListarAlumnos = () => {
     setIsEditModalOpen(true);
   };
 
+  // ============ FUNCIÓN PARA ACTUALIZAR USANDO BACKEND API ============
   const handleUpdate = async (values: any) => {
     if (!studentToEdit) return;
     try {
@@ -425,6 +359,7 @@ const ListarAlumnos = () => {
     setDeleteAlertOpen(true);
   };
 
+  // ============ FUNCIÓN PARA ELIMINAR USANDO BACKEND API ============
   const confirmDelete = async () => {
     if (!studentToDelete) return;
     try {
@@ -466,6 +401,7 @@ const ListarAlumnos = () => {
     }
   };
 
+  // ============ FUNCIÓN PARA PROMOVER USANDO BACKEND API ============
   const promoteStudents = async () => {
     if (studentsToPromote.length === 0 || !selectedDepartment) {
       toast({
@@ -517,6 +453,7 @@ const ListarAlumnos = () => {
     setExcelFile(file);
   };
 
+  // ============ FUNCIÓN PARA IMPORTAR USANDO BACKEND API ============
   const handleImport = async () => {
     if (!excelFile) {
       setExcelError("Por favor, seleccione un archivo.");
@@ -573,7 +510,8 @@ const ListarAlumnos = () => {
     const classFilter = filters.class;
 
     const nameMatch = fullName.includes(nameFilter);
-    const departmentMatch = departmentFilter ? student.departments?.name === departmentFilter : true;
+    const departmentMatch = departmentFilter ? 
+      (student.departments?.name === departmentFilter || student.department === departmentFilter) : true;
     const classMatch = classFilter ? student.assigned_class === classFilter : true;
 
     return nameMatch && departmentMatch && classMatch;
@@ -670,7 +608,7 @@ const ListarAlumnos = () => {
           </div>
         </TableCell>
         {!isMobile && (
-          <TableCell>{student.departments?.name || 'Sin departamento'}</TableCell>
+          <TableCell>{student.departments?.name || student.department || 'Sin departamento'}</TableCell>
         )}
         <TableCell>{calculateAge(student.birthdate) || 'N/A'}</TableCell>
         <TableCell className="text-right">
