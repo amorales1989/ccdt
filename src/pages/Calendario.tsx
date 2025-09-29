@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { getEvents, deleteEvent, updateEvent } from "@/lib/api";
+import { getEvents, deleteEvent, updateEvent, notifyNewRequest } from "@/lib/api";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -103,10 +103,14 @@ export default function Calendario() {
     return (event as any).solicitante === profile?.id;
   };
 
-  const handleCreateEvent = async (eventData: any) => {
+// Reemplazar la función handleCreateEvent en calendario.tsx
+// También agregar el import de notifyNewRequest al inicio del archivo:
+// import { getEvents, deleteEvent, updateEvent, createEvent, notifyNewRequest } from "@/lib/api";
+
+const handleCreateEvent = async (eventData: any) => {
   try {
     if (selectedEvent) {
-      // Make sure the ID is included when updating
+      // Actualizar evento existente
       await updateEvent(selectedEvent.id, {
         ...eventData,
         id: selectedEvent.id
@@ -118,24 +122,58 @@ export default function Calendario() {
           : "La solicitud se ha actualizado exitosamente.",
       });
     } else {
-      // Preparar los datos para crear el evento/solicitud
+      // Crear nuevo evento/solicitud
       const dataToSend = {
         ...eventData
       };
 
-      // Si no puede crear eventos directamente (es una solicitud), agregar el profile.id
+      // Si no puede crear eventos directamente (es una solicitud)
       if (!canCreateEvents && profile?.id) {
         dataToSend.solicitante = profile.id;
       }
 
-      await createEvent(dataToSend);
-      toast({
-        title: (isSecretaria || isAdmin || isSecrCalendario) ? "Evento creado" : "Solicitud enviada",
-        description: (isSecretaria || isAdmin || isSecrCalendario) 
-          ? "El evento se ha creado exitosamente." 
-          : "La solicitud de fecha se ha enviado exitosamente.",
-      });
+      // Crear el evento/solicitud
+      const newEvent = await createEvent(dataToSend);
+
+      // Si es una solicitud (usuario sin permisos), enviar notificación por email
+      if (!canCreateEvents && profile) {
+        try {
+          const requesterName = profile.first_name && profile.last_name 
+            ? `${profile.first_name} ${profile.last_name}`.trim()
+            : profile.email || 'Usuario no identificado';
+
+          await notifyNewRequest({
+            eventTitle: eventData.title,
+            eventDate: eventData.date,
+            eventTime: eventData.time,
+            department: eventData.departamento,
+            requesterName: requesterName,
+            description: eventData.description,
+            // adminEmails: ['admin@tudominio.com'] // Opcional: personalizar destinatarios
+          });
+
+          toast({
+            title: "Solicitud enviada",
+            description: "Tu solicitud ha sido enviada exitosamente. Los administradores han sido notificados por email.",
+          });
+        } catch (emailError) {
+          console.error('Error sending notification email:', emailError);
+          // No fallar la creación del evento por error de email
+          toast({
+            title: "Solicitud creada",
+            description: "La solicitud se ha creado, pero no se pudo enviar la notificación por email.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Para administradores/secretarias (evento directo)
+        toast({
+          title: "Evento creado",
+          description: "El evento se ha creado exitosamente.",
+        });
+      }
     }
+
     await refetch();
     setDialogOpen(false);
     setSelectedEvent(null);
