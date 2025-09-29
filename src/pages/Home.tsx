@@ -4,7 +4,7 @@ import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, Chec
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +21,7 @@ import {
   DropdownMenuItem 
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
+import { redirect, useLocation, useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +45,7 @@ const Home = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null);
-
+  const location = useLocation();
   // Detectar si el departamento es calendario
   const selectedDepartmentStorage = localStorage.getItem('selectedDepartment');
   const isCalendarDepartment = selectedDepartmentStorage === 'calendario' || profile?.departments?.[0] === 'calendario';
@@ -55,6 +55,18 @@ const Home = () => {
     queryFn: getEvents
   });
 
+useEffect(() => {
+  // Esperar a que el profile esté cargado
+  if (!profile) return;
+  
+  const hasRedirectedThisSession = sessionStorage.getItem('calendarAutoRedirected');
+  
+  if (isCalendarDepartment && 
+      !hasRedirectedThisSession) {
+    sessionStorage.setItem('calendarAutoRedirected', 'true');
+    navigate("/calendario", { replace: true });
+  }
+}, [isCalendarDepartment, navigate, location.pathname, profile]); 
   // Solo cargar estudiantes si NO es departamento calendario
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students'],
