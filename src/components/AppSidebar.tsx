@@ -67,7 +67,17 @@ const getItems = (role: string | undefined, profile: any) => {
       title: "Agregar Alumno",
       url: "/agregar",
       icon: UserPlus,
-    }
+    },
+    {
+      title: "Calendario",
+      url: "/calendario",
+      icon: FileText,
+    },
+    {
+        title: "Solicitudes",
+        url: "/solicitudes",
+        icon: ClipboardCheck,
+      },
   ];
 
   if (role !== "secretaria") {
@@ -89,6 +99,7 @@ const getItems = (role: string | undefined, profile: any) => {
     }
   }
 
+  
   baseItems.push({
     title: "Promover Alumnos",
     url: "/promover",
@@ -153,6 +164,9 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
 
   const handleSignOut = async () => {
     try {
+      // Limpiar el flag ANTES de cerrar sesión (en el flujo exitoso)
+      sessionStorage.removeItem('calendarAutoRedirected');
+      
       await signOut();
       onItemClick?.();
     } catch (error: any) {
@@ -162,7 +176,8 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
         description: "Por favor intenta nuevamente",
         variant: "destructive",
       });
-      // Even if there's an error, try to navigate to login
+      // También limpiar en caso de error
+      sessionStorage.removeItem('calendarAutoRedirected');
       navigate("/");
       onItemClick?.();
     }
