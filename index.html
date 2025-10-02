@@ -1,13 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es-AR">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Language" content="es-AR" />
+  <meta name="language" content="Spanish" />
   <title>ccdt App</title>
-  <meta name="description" content="Lovable Generated Project" />
-  <meta name="author" content="Lovable" />
+  <meta name="description" content="Sistema de gestión CCDT" />
+  <meta name="author" content="CCDT" />
   <link rel="icon" href="/fire.png" type="image/png" />
+  
+  <!-- Configuración de zona horaria -->
+  <script>
+    // Forzar zona horaria de Argentina
+    if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+      // Establecer la zona horaria por defecto para la aplicación
+      window.__TIMEZONE__ = 'America/Argentina/Buenos_Aires';
+    }
+  </script>
 </head>
 
 <body>

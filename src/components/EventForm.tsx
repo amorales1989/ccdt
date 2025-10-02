@@ -85,16 +85,18 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
   // Obtener la fecha actual en formato YYYY-MM-DD en la zona horaria de Argentina
   const today = format(toZonedTime(new Date(), timeZone), 'yyyy-MM-dd');
 
-  const form = useForm<EventFormData>({
-    defaultValues: {
-      title: initialData?.title || "",
-      date: initialData?.date ? format(toZonedTime(parseISO(initialData.date), timeZone), 'yyyy-MM-dd') : "",
-      time: initialTimeValue,
-      description: initialData?.description || "",
-      departamento: isInitialCustom ? 'otro' : ((initialData as any)?.departamento || ""),
-      solicitud: isRequestMode
-    }
-  });
+const form = useForm<EventFormData>({
+  defaultValues: {
+    title: initialData?.title || "",
+    date: initialData?.date 
+      ? format(toZonedTime(addDays(parseISO(initialData.date), -1), timeZone), 'yyyy-MM-dd') 
+      : "",
+    time: initialTimeValue,
+    description: initialData?.description || "",
+    departamento: isInitialCustom ? 'otro' : ((initialData as any)?.departamento || ""),
+    solicitud: isRequestMode
+  }
+});
 
   // Function to format the time in 24-hour format for form submission
   const formatTimeFor24Hour = () => {
