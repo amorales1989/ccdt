@@ -7,24 +7,24 @@
  // const API_BASE_URL = 'http://localhost:3001';
 
   // Función helper para hacer llamadas a la API
-  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-    debugger
-    const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
+const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+    signal: AbortSignal.timeout(60000), // 60 segundos timeout
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Network error' }));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  }
 
-    return response.json();
-  };
+  return response.json();
+};
 
   export const getAttendance = async (
     startDate?: string,
@@ -505,7 +505,7 @@ export const notifyNewRequest = async (requestData: {
   adminEmails?: string[];
 }) => {
   try {
-    const response = await apiCall('/notify-new-request', {
+    const response = await apiCall('/api/events/notify-new-request', {
       method: 'POST',
       body: JSON.stringify(requestData),
     });
@@ -528,7 +528,7 @@ export const notifyRequestResponse = async (requestData: {
   description?: string;
 }) => {
   try {
-    const response = await apiCall('/notify-request-response', {
+    const response = await apiCall('/api/events/notify-request-response', {
       method: 'POST',
       body: JSON.stringify(requestData),
     });
