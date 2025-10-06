@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -12,6 +11,7 @@ type Profile = {
   departments: DepartmentType[] | null;
   department_id: string | null;
   assigned_class: string | null;
+  email: string | null;
 };
 
 type AuthContextType = {
@@ -95,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function getProfile(userId: string) {
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -103,12 +104,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       
-      // Ensure departments is correctly typed as DepartmentType[]
       if (data) {
         const typedProfile: Profile = {
           ...data,
           departments: data.departments as DepartmentType[] || [],
-          department_id: data.department_id || null
+          department_id: data.department_id || null,
+          email: authUser?.email || null  // Agregar el email del usuario autenticado
         };
         setProfile(typedProfile);
       }
