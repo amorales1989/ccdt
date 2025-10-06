@@ -1,10 +1,10 @@
   import { supabase } from "@/integrations/supabase/client";
   import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
-  import { debug } from "console";
-  import { da } from "date-fns/locale";
+
 
   // Configuración de la API base
-  const API_BASE_URL = 'http://localhost:3001' || 'https://ccdt-back.onrender.com';
+  const API_BASE_URL = 'https://ccdt-back.onrender.com';
+ // const API_BASE_URL = 'http://localhost:3001';
 
   // Función helper para hacer llamadas a la API
   const apiCall = async (endpoint: string, options: RequestInit = {}) => {
