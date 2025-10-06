@@ -505,7 +505,7 @@ export const notifyNewRequest = async (requestData: {
   adminEmails?: string[];
 }) => {
   try {
-    const response = await apiCall('/api/events/notify-new-request', {
+    const response = await apiCall('/notify-new-request', {
       method: 'POST',
       body: JSON.stringify(requestData),
     });
@@ -528,7 +528,7 @@ export const notifyRequestResponse = async (requestData: {
   description?: string;
 }) => {
   try {
-    const response = await apiCall('/api/events/notify-request-response', {
+    const response = await apiCall('/notify-request-response', {
       method: 'POST',
       body: JSON.stringify(requestData),
     });
