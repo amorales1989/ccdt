@@ -495,27 +495,6 @@
     return data;
   }
 
- // Agregar estas funciones al final de tu archivo api.ts
-
-export const sendEmail = async (emailData: {
-  to: string;
-  subject: string;
-  text: string;
-  html: string;
-}) => {
-  console.log("entro a la API")
-  try {
-    const response = await apiCall('/events/send-email', {
-      method: 'POST',
-      body: JSON.stringify(emailData),
-    });
-    return response.data || response;
-  } catch (error) {
-    console.error('Error sending email:', error);
-    throw error;
-  }
-};
-
 export const notifyNewRequest = async (requestData: {
   eventTitle: string;
   eventDate: string;
@@ -530,10 +509,32 @@ export const notifyNewRequest = async (requestData: {
       method: 'POST',
       body: JSON.stringify(requestData),
     });
-    console.log(response)
     return response.data || response;
   } catch (error) {
     console.error('Error notifying new request:', error);
+    throw error;
+  }
+};
+
+export const notifyRequestResponse = async (requestData: {
+  eventTitle: string;
+  eventDate: string;
+  eventTime?: string;
+  department?: string;
+  requesterName: string;
+  requesterEmail: string;
+  estado: 'aprobado' | 'rechazado';
+  adminMessage?: string;
+  description?: string;
+}) => {
+  try {
+    const response = await apiCall('/api/events/notify-request-response', {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error notifying request response:', error);
     throw error;
   }
 };

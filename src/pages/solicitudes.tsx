@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { getEvents, updateEvent, getUsers } from "@/lib/api";
+import { getEvents, updateEvent, getUsers, notifyRequestResponse } from "@/lib/api";
 import { useState, useMemo } from "react";
 import {
   Dialog,
@@ -41,6 +41,7 @@ interface User {
   assigned_class: string;
   departments: string[];
   department_id: string;
+  email: string;
 }
 
 export default function Solicitudes() {
@@ -159,56 +160,115 @@ export default function Solicitudes() {
 
   // Mutaciones para aprobar y rechazar solicitudes (solo para gestores)
   const { mutate: approveRequest } = useMutation({
-    mutationFn: async (eventId: string) => {
-      return updateEvent(eventId, {
-        solicitud: false,
-        estado: 'aprobada'
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      toast({
-        title: "Solicitud aceptada",
-        description: "La solicitud ha sido aceptada y ahora es visible en el calendario.",
-      });
-      setDetailsDialogOpen(false);
-      setSelectedRequest(null);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "No se pudo aceptar la solicitud.",
-        variant: "destructive",
-      });
+  mutationFn: async (eventId: string) => {
+    return updateEvent(eventId, {
+      solicitud: false,
+      estado: 'aprobada'
+    });
+  },
+  onSuccess: async (_, eventId) => {
+    // Obtener el evento actualizado
+    const event = allEvents.find(e => e.id === eventId);
+    
+    if (event) {
+      const solicitanteId = (event as any).solicitante;
+      const user = users.find((u: User) => u.id === solicitanteId);
+      
+      if (user && user.email) {
+        try {
+          const requesterName = `${user.first_name.trim()} ${user.last_name.trim()}`.trim();
+          
+          await notifyRequestResponse({
+            eventTitle: event.title,
+            eventDate: event.date,
+            eventTime: event.time || undefined,
+            department: (event as any).departamento,
+            requesterName: requesterName,
+            requesterEmail: user.email,
+            estado: 'aprobado',
+            description: event.description || undefined,
+            adminMessage: 'Tu solicitud ha sido aprobada. El evento ahora es visible en el calendario para todos.'
+          });
+          
+        } catch (emailError) {
+          console.error('Error enviando email de aprobación:', emailError);
+        }
+      }
     }
-  });
+    
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+    toast({
+      title: "Solicitud aceptada",
+      description: "La solicitud ha sido aceptada y el solicitante ha sido notificado por email.",
+    });
+    setDetailsDialogOpen(false);
+    setSelectedRequest(null);
+  },
+  onError: () => {
+    toast({
+      title: "Error",
+      description: "No se pudo aceptar la solicitud.",
+      variant: "destructive",
+    });
+  }
+});
+
 
   const { mutate: rejectRequest } = useMutation({
-    mutationFn: async ({ eventId, reason }: { eventId: string; reason: string }) => {
-      return updateEvent(eventId, {
-        estado: 'rechazada',
-        motivoRechazo: reason
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      toast({
-        title: "Solicitud rechazada",
-        description: "La solicitud ha sido rechazada.",
-      });
-      setDetailsDialogOpen(false);
-      setRejectDialogOpen(false);
-      setSelectedRequest(null);
-      setRejectReason("Fecha no disponible"); // Reset reason
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "No se pudo rechazar la solicitud.",
-        variant: "destructive",
-      });
+  mutationFn: async ({ eventId, reason }: { eventId: string; reason: string }) => {
+    return updateEvent(eventId, {
+      estado: 'rechazada',
+      motivoRechazo: reason
+    });
+  },
+  onSuccess: async (_, { eventId, reason }) => {
+    const event = allEvents.find(e => e.id === eventId);
+    
+    if (event) {
+      const solicitanteId = (event as any).solicitante;
+      const user = users.find((u: User) => u.id === solicitanteId);
+      
+      if (user && user.email) {
+        console.log(user)
+        try {
+          const requesterName = `${user.first_name.trim()} ${user.last_name.trim()}`.trim();
+          
+          await notifyRequestResponse({
+            eventTitle: event.title,
+            eventDate: event.date,
+            eventTime: event.time || undefined,
+            department: (event as any).departamento,
+            requesterName: requesterName,
+            requesterEmail: user.email,
+            estado: 'rechazado',
+            description: event.description || undefined,
+            adminMessage: reason 
+          });
+          
+        } catch (emailError) {
+          console.error('Error enviando email de rechazo:', emailError);
+        }
+      }
     }
-  });
+    
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+    toast({
+      title: "Solicitud rechazada",
+      description: "La solicitud ha sido rechazada y el solicitante ha sido notificado por email.",
+    });
+    setDetailsDialogOpen(false);
+    setRejectDialogOpen(false);
+    setSelectedRequest(null);
+    setRejectReason("Fecha no disponible"); 
+  },
+  onError: () => {
+    toast({
+      title: "Error",
+      description: "No se pudo rechazar la solicitud.",
+      variant: "destructive",
+    });
+  }
+});
 
   const handleViewDetails = (request: Event) => {
     setSelectedRequest(request);

@@ -149,7 +149,14 @@ const handleCreateEvent = async (eventData: any) => {
             department: eventData.departamento,
             requesterName: requesterName,
             description: eventData.description,
-            // adminEmails: ['admin@tudominio.com'] // Opcional: personalizar destinatarios
+            adminEmails: [
+              'a19morales89@gmail.com',
+              //'wmaldonado1987@hotmail.com',
+              //'daniela.s.galarza86@gmail.com',
+              //'amonima115@hotmail.com',
+              //'marcelaponceabril@gmail.com',
+              //'comunidadcristianadontorcuato@gmail.com'
+            ]
           });
 
           toast({
