@@ -162,7 +162,7 @@ const handleCreateEvent = async (eventData: any) => {
 
           toast({
             title: "Solicitud enviada",
-            description: "Tu solicitud ha sido enviada exitosamente. Los administradores han sido notificados por email.",
+            description: "Tu solicitud ha sido enviada exitosamente.",
           });
         } catch (emailError) {
           console.error('Error sending notification email:', emailError);
