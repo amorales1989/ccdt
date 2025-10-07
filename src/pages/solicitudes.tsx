@@ -199,7 +199,7 @@ export default function Solicitudes() {
     queryClient.invalidateQueries({ queryKey: ['events'] });
     toast({
       title: "Solicitud aceptada",
-      description: "La solicitud ha sido aceptada y el solicitante ha sido notificado por email.",
+      description: "La solicitud ha sido aceptada.",
     });
     setDetailsDialogOpen(false);
     setSelectedRequest(null);
@@ -254,7 +254,7 @@ export default function Solicitudes() {
     queryClient.invalidateQueries({ queryKey: ['events'] });
     toast({
       title: "Solicitud rechazada",
-      description: "La solicitud ha sido rechazada y el solicitante ha sido notificado por email.",
+      description: "La solicitud ha sido rechazada.",
     });
     setDetailsDialogOpen(false);
     setRejectDialogOpen(false);
