@@ -151,13 +151,11 @@ const handleCreateEvent = async (eventData: any) => {
             description: eventData.description,
             adminEmails: [
               'a19morales89@gmail.com',
-              'ceci200813@gmail.com',
-              'davi.morales1987@gmail.com',
-              //'wmaldonado1987@hotmail.com',
-              //'daniela.s.galarza86@gmail.com',
-              //'amonima115@hotmail.com',
-              //'marcelaponceabril@gmail.com',
-              //'comunidadcristianadontorcuato@gmail.com'
+              'wmaldonado1987@hotmail.com',
+              'daniela.s.galarza86@gmail.com',
+              'amonima115@hotmail.com',
+              'marcelaponceabril@gmail.com',
+              'comunidadcristianadontorcuato@gmail.com'
             ]
           });
 
