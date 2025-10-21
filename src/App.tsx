@@ -123,7 +123,7 @@ function App() {
             ])}
           />
           <Toaster />
-          <InstallPWA /> {/* 👈 Agregar aquí */}
+          <InstallPWA />
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
