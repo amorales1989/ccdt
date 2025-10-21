@@ -3,8 +3,8 @@
 
 
   // Configuración de la API base
-  const API_BASE_URL = 'https://ccdt-back.onrender.com';
- // const API_BASE_URL = 'http://localhost:3001';
+  //const API_BASE_URL = 'https://ccdt-back.onrender.com';
+  const API_BASE_URL = 'http://localhost:3001/api'
 
   // Función helper para hacer llamadas a la API
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
@@ -126,7 +126,6 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   // ============ FUNCIONES DE ESTUDIANTES ACTUALIZADAS PARA USAR EL BACKEND ============
 
   export const getStudents = async () => {
-    console.log('Entro')
     try {
       const response = await apiCall('/students');
       return response.data || response;
@@ -505,7 +504,7 @@ export const notifyNewRequest = async (requestData: {
   adminEmails?: string[];
 }) => {
   try {
-    const response = await apiCall('/api/events/notify-new-request', {
+    const response = await apiCall('/events/notify-new-request', {
       method: 'POST',
       body: JSON.stringify(requestData),
     });
@@ -528,7 +527,7 @@ export const notifyRequestResponse = async (requestData: {
   description?: string;
 }) => {
   try {
-    const response = await apiCall('/api/events/notify-request-response', {
+    const response = await apiCall('/events/notify-request-response', {
       method: 'POST',
       body: JSON.stringify(requestData),
     });

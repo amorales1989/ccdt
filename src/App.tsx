@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Layout } from "@/components/Layout";
+import { InstallPWA } from "@/components/InstallPWA"; // 👈 Importar
 import Index from "@/pages/Index";
 import Home from "@/pages/Home";
 import ListarAlumnos from "@/pages/ListarAlumnos";
@@ -122,6 +123,7 @@ function App() {
             ])}
           />
           <Toaster />
+          <InstallPWA /> {/* 👈 Agregar aquí */}
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>

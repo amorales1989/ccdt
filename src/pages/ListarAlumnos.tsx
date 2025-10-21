@@ -109,8 +109,8 @@ const ListarAlumnos = () => {
 
     // Para otros roles, filtrar por departamento y clase
     if (profile?.department_id && profile?.assigned_class) {
-      filteredStudents = allStudents.filter(student => 
-        student.department_id === profile.department_id && 
+      filteredStudents = allStudents.filter(student =>
+        student.department_id === profile.department_id &&
         student.assigned_class === profile.assigned_class
       );
     }
@@ -148,12 +148,12 @@ const ListarAlumnos = () => {
     queryKey: ["classes", filters.department],
     queryFn: async () => {
       if (!allStudents) return [];
-      
+
       let studentsToAnalyze = allStudents;
 
       // Si hay un departamento seleccionado, filtrar por ese departamento
       if (filters.department) {
-        studentsToAnalyze = allStudents.filter(student => 
+        studentsToAnalyze = allStudents.filter(student =>
           student.departments?.name === filters.department ||
           student.department === filters.department
         );
@@ -165,7 +165,7 @@ const ListarAlumnos = () => {
           .map(student => student.assigned_class)
           .filter(Boolean)
       )];
-      
+
       return uniqueClasses.sort();
     },
     enabled: !!allStudents,
@@ -177,33 +177,29 @@ const ListarAlumnos = () => {
   }, [filters.department]);
 
   const formSchema = z.object({
-    first_name: z.string().min(1, "El nombre es requerido"),
-    last_name: z.string().optional(),
-    gender: z.string(),
-    date_of_birth: z.any().optional(),
-    address: z.string().optional(),
-    phone_number: z.string().optional(),
-    email: z.string().email("Formato de email inválido").optional().or(z.string().length(0)),
-    document_type: z.string().optional(),
-    document_number: z.string().optional(),
-    emergency_contact_name: z.string().optional(),
-    emergency_contact_phone: z.string().optional(),
-    medical_information: z.string().optional(),
-    department_id: z.string().optional(),
-  });
+  first_name: z.string().min(1, "El nombre es requerido"),
+  last_name: z.string().optional(),
+  gender: z.string(),
+  birthdate: z.any().optional(),
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  document_number: z.string().optional(),
+  department_id: z.string().optional(),
+});
 
-  const form = useForm({
-    defaultValues: {
-      first_name: "",
-      last_name: "",
-      gender: "masculino",
-      date_of_birth: "",
-      address: "",
-      phone_number: "",
-      document_number: ""
-    },
-    resolver: zodResolver(formSchema),
-  });
+// ========== ACTUALIZAR DEFAULT VALUES (línea ~124) ==========
+const form = useForm({
+  defaultValues: {
+    first_name: "",
+    last_name: "",
+    gender: "masculino",
+    birthdate: "",
+    address: "",
+    phone: "",
+    document_number: ""
+  },
+  resolver: zodResolver(formSchema),
+});
 
   useEffect(() => {
     refetch();
@@ -238,31 +234,27 @@ const ListarAlumnos = () => {
     }
 
     try {
-      // Preparar los datos para exportar
       const dataToExport = filteredStudents.map(student => ({
         'Nombre': student.first_name || '',
         'Apellido': student.last_name || '',
         'Género': student.gender || '',
-        'Fecha de Nacimiento': student.birthdate || student.date_of_birth || '',
-        'Edad': calculateAge(student.birthdate || student.date_of_birth || '') || '',
+        'Fecha de Nacimiento': student.birthdate || '', // ⭐ Solo birthdate
+        'Edad': calculateAge(student.birthdate || '') || '', // ⭐ Solo birthdate
         'Documento Número': student.document_number || '',
-        'Teléfono': student.phone || student.phone_number || '',
+        'Teléfono': student.phone || '', // ⭐ Solo phone
         'Dirección': student.address || '',
         'Departamento': student.departments?.name || student.department || 'Sin departamento',
         'Clase/anexo': student.assigned_class || ''
       }));
 
-      // Crear el libro de trabajo
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Alumnos');
 
-      // Generar el nombre del archivo con fecha
       const now = new Date();
-      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const dateStr = now.toISOString().split('T')[0];
       const fileName = `alumnos_${dateStr}.xlsx`;
 
-      // Descargar el archivo
       XLSX.writeFile(workbook, fileName);
 
       toast({
@@ -302,34 +294,21 @@ const ListarAlumnos = () => {
   };
 
   const handleEdit = (student: Student) => {
-    setStudentToEdit(student);
+  setStudentToEdit(student);
+  const birthDate = student.birthdate || "";
 
-    let birthDate = "";
-    if (student.birthdate) {
-      birthDate = student.birthdate;
-    } else if (student.date_of_birth) {
-      birthDate = student.date_of_birth;
-    }
-
-    console.log("Editing student with birthdate:", birthDate);
-
-    form.reset({
-      first_name: student.first_name || "",
-      last_name: student.last_name || "",
-      gender: student.gender || "masculino",
-      date_of_birth: birthDate,
-      address: student.address || "",
-      phone_number: student.phone || student.phone_number || "",
-      email: student.email || "",
-      document_type: student.document_type || "DNI",
-      document_number: student.document_number || "",
-      emergency_contact_name: student.emergency_contact_name || "",
-      emergency_contact_phone: student.emergency_contact_phone || "",
-      medical_information: student.medical_information || "",
-      department_id: student.department_id || "",
-    });
-    setIsEditModalOpen(true);
-  };
+  form.reset({
+    first_name: student.first_name || "",
+    last_name: student.last_name || "",
+    gender: student.gender || "masculino",
+    birthdate: birthDate,
+    address: student.address || "",
+    phone: student.phone || "",
+    document_number: student.document_number || "",
+    department_id: student.department_id || "",
+  });
+  setIsEditModalOpen(true);
+};
 
   // ============ FUNCIÓN PARA ACTUALIZAR USANDO BACKEND API ============
   const handleUpdate = async (values: any) => {
@@ -510,7 +489,7 @@ const ListarAlumnos = () => {
     const classFilter = filters.class;
 
     const nameMatch = fullName.includes(nameFilter);
-    const departmentMatch = departmentFilter ? 
+    const departmentMatch = departmentFilter ?
       (student.departments?.name === departmentFilter || student.department === departmentFilter) : true;
     const classMatch = classFilter ? student.assigned_class === classFilter : true;
 
@@ -604,7 +583,7 @@ const ListarAlumnos = () => {
                 Autorizado
               </Badge>
             )}
-            
+
           </div>
         </TableCell>
         {!isMobile && (
@@ -671,9 +650,9 @@ const ListarAlumnos = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-8 w-8 p-0"
                       onClick={(e) => { e.stopPropagation(); handleEdit(student); }}
                     >
@@ -685,13 +664,13 @@ const ListarAlumnos = () => {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                       onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}
                     >
@@ -708,9 +687,9 @@ const ListarAlumnos = () => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
                   onClick={(e) => { e.stopPropagation(); handleWhatsAppClick(student.phone); }}
                 >
@@ -724,14 +703,14 @@ const ListarAlumnos = () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
+
           {student.nuevo && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
                     onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}
                   >
@@ -744,7 +723,7 @@ const ListarAlumnos = () => {
               </Tooltip>
             </TooltipProvider>
           )}
-          
+
         </div>
       );
     }
@@ -884,7 +863,7 @@ const ListarAlumnos = () => {
                 <>
                   {/* Renderizar alumnos regulares */}
                   {regularStudents.map((student) => renderStudentRow(student))}
-                  
+
                   {/* Línea separadora y alumnos nuevos */}
                   {hasNewStudents && (
                     <>
@@ -1054,6 +1033,7 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="gender"
@@ -1076,9 +1056,10 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
-                  name="date_of_birth"
+                  name="birthdate"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Fecha de Nacimiento</FormLabel>
@@ -1093,28 +1074,7 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="document_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Documento</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione el tipo de documento" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="DNI">DNI</SelectItem>
-                          <SelectItem value="Pasaporte">Pasaporte</SelectItem>
-                          <SelectItem value="Otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+
                 <FormField
                   control={form.control}
                   name="document_number"
@@ -1137,9 +1097,11 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
+
+                {/* ⭐ ACTUALIZADO: phone en lugar de phone_number */}
                 <FormField
                   control={form.control}
-                  name="phone_number"
+                  name="phone"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Teléfono</FormLabel>
@@ -1150,6 +1112,7 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="email"
@@ -1163,6 +1126,7 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="address"
@@ -1176,6 +1140,7 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="department_id"
@@ -1204,6 +1169,7 @@ const ListarAlumnos = () => {
                     </FormItem>
                   )}
                 />
+
                 <div className="flex justify-end">
                   <Button type="submit">Guardar</Button>
                 </div>

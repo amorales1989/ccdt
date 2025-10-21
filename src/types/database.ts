@@ -1,4 +1,5 @@
 export interface Student {
+  // Campos básicos que existen en la tabla
   id: string;
   first_name: string;
   last_name?: string;
@@ -10,30 +11,27 @@ export interface Student {
   department_id?: string;
   assigned_class?: string;
   document_number?: string;
+  nuevo?: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string;
+  
+  // Relaciones
   departments?: { 
     name?: DepartmentType;
     id?: string;
   };
-  is_authorized?: boolean;
-  is_deleted?: boolean;
-  name?: string; // Add this for convenience
-  
-  // Add missing properties
-  date_of_birth?: string; // Alternative to birthdate
-  phone_number?: string; // Alternative to phone
-  email?: string;
-  document_type?: string;
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  medical_information?: string;
-  authorization_id?: string;
   student_authorizations?: {
     name?: string;
     id?: string;
   };
+  
+  // Campos computados (solo para el frontend)
+  is_authorized?: boolean;
+  isAuthorized?: boolean;
+  is_deleted?: boolean;
+  name?: string;
+  authorization_id?: string;
 }
 
 export interface Event {
@@ -62,7 +60,7 @@ export interface Attendance {
   assigned_class?: string;
   created_at: string;
   updated_at: string;
-  students?: Student | any; // Making this more flexible
+  students?: Student | any;
   department_name?: string;
 }
 
@@ -120,5 +118,5 @@ export interface StudentAuthorization {
   updated_at: string;
   student?: Student;
   department?: Department;
-  name?: string; // Add this property
+  name?: string;
 }

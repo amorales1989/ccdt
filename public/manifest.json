@@ -1,0 +1,28 @@
+{
+  "name": "CCDT - Sistema de Gestión",
+  "short_name": "CCDT",
+  "description": "Sistema de gestión educativa CCDT",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ef4444",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/fire.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/fire.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["education", "productivity"],
+  "lang": "es-AR"
+}
