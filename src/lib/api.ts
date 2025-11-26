@@ -3,8 +3,8 @@
 
 
   // Configuración de la API base
-  //const API_BASE_URL = 'https://ccdt-back.onrender.com/api';
-  const API_BASE_URL = 'http://localhost:3001/api'
+  const API_BASE_URL = 'https://ccdt-back.onrender.com/api';
+  //const API_BASE_URL = 'http://localhost:3001/api'
 
   // Función helper para hacer llamadas a la API
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
