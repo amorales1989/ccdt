@@ -3,15 +3,21 @@
 
 
   // Configuración de la API base
-  const API_BASE_URL = 'https://ccdt-back.onrender.com/api';
-  //const API_BASE_URL = 'http://localhost:3001/api'
+  //const API_BASE_URL = 'https://ccdt-back.onrender.com/api';
+  const API_BASE_URL = 'http://localhost:3001/api'
 
   // Función helper para hacer llamadas a la API
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
+  
+  // Obtener el token de autenticación de Supabase
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }), // ← AGREGADO
       ...options.headers,
     },
     ...options,
@@ -525,6 +531,7 @@ export const notifyRequestResponse = async (requestData: {
   estado: 'aprobado' | 'rechazado';
   adminMessage?: string;
   description?: string;
+  solicitante_id?: any;
 }) => {
   try {
     const response = await apiCall('/events/notify-request-response', {
@@ -534,6 +541,70 @@ export const notifyRequestResponse = async (requestData: {
     return response.data || response;
   } catch (error) {
     console.error('Error notifying request response:', error);
+    throw error;
+  }
+};
+// ============ FUNCIONES DE FCM (FIREBASE CLOUD MESSAGING) ============
+
+export const registrarTokenFcm = async (tokenData: {
+  token: string;
+  ua: string;
+  plataforma: string;
+  idLocal?: string | null;
+}) => {
+  try {
+    const response = await apiCall('/tokens/registrar', {
+      method: 'POST',
+      body: JSON.stringify(tokenData),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error registrando token FCM:', error);
+    throw error;
+  }
+};
+
+export const eliminarTokenFcm = async (token: string) => {
+  try {
+    const response = await apiCall('/tokens/eliminar', {
+      method: 'DELETE',
+      body: JSON.stringify({ token }),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error eliminando token FCM:', error);
+    throw error;
+  }
+};
+
+export const suscribirATema = async (tokenData: {
+  tokens: string[];
+  tema: string;
+}) => {
+  try {
+    const response = await apiCall('/fcm/temas/suscribir', {
+      method: 'POST',
+      body: JSON.stringify(tokenData),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error suscribiendo a tema:', error);
+    throw error;
+  }
+};
+
+export const desuscribirDeTema = async (tokenData: {
+  tokens: string[];
+  tema: string;
+}) => {
+  try {
+    const response = await apiCall('/fcm/temas/desuscribir', {
+      method: 'POST',
+      body: JSON.stringify(tokenData),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error desuscribiendo de tema:', error);
     throw error;
   }
 };

@@ -187,6 +187,7 @@ export default function Solicitudes() {
             requesterEmail: user.email,
             estado: 'aprobado',
             description: event.description || undefined,
+            solicitante_id: solicitanteId,
             adminMessage: 'Tu solicitud ha sido aprobada. El evento ahora es visible en el calendario para todos.'
           });
           
@@ -229,7 +230,6 @@ export default function Solicitudes() {
       const user = users.find((u: User) => u.id === solicitanteId);
       
       if (user && user.email) {
-        console.log(user)
         try {
           const requesterName = `${user.first_name.trim()} ${user.last_name.trim()}`.trim();
           
@@ -242,7 +242,8 @@ export default function Solicitudes() {
             requesterEmail: user.email,
             estado: 'rechazado',
             description: event.description || undefined,
-            adminMessage: reason 
+            adminMessage: reason,
+            solicitante_id: solicitanteId,
           });
           
         } catch (emailError) {

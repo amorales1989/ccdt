@@ -24,6 +24,7 @@ import AutorizacionesSalida from "@/pages/AutorizacionesSalida";
 import AutorizacionSimple from "@/pages/AutorizacionSimple";
 import AutorizacionCampamento from "./pages/AutorizacionCampamento";
 import Solicitudes from "./pages/solicitudes";
+import { NotificationHandler } from '@/components/NotificationHandler';
 
 const queryClient = new QueryClient();
 
@@ -122,6 +123,7 @@ function App() {
               },
             ])}
           />
+          <NotificationHandler />
           <Toaster />
           <InstallPWA />
         </ThemeProvider>

@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useFcm } from "@/hooks/useFcm";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -25,6 +26,7 @@ export default function Auth() {
   const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+    const { inicializarFcm, configurarFcmPostLogin } = useFcm();
 
   const { data: company } = useQuery({
     queryKey: ['company'],
@@ -71,14 +73,37 @@ export default function Auth() {
     }
   }, [profile, navigate, company]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await signIn(email, password); // Intentar iniciar sesión
 
-      // Si el perfil tiene más de un departamento, no debemos continuar hasta que se seleccione uno
+      // 🔔 SOLICITAR PERMISOS Y CONFIGURAR FCM DESPUÉS DEL LOGIN
+      console.log("Login exitoso, configurando notificaciones...");
+      
+      // Esperar un momento para que el perfil se cargue
+      setTimeout(async () => {
+        try {
+          // Inicializar FCM (esto solicita permisos)
+          const { soportado, token } = await inicializarFcm();
+          
+          if (soportado && token) {
+            // Configurar FCM con datos del usuario
+            await configurarFcmPostLogin({
+              empresaId: profile?.department_id || 1,
+              localId: profile?.departments|| 1,
+            });
+            console.log("✅ Notificaciones configuradas correctamente");
+          }
+        } catch (fcmError) {
+          console.error("Error configurando FCM:", fcmError);
+          // No mostramos error al usuario, las notificaciones son opcionales
+        }
+      }, 1500);
+
+      // Si el perfil tiene más de un departamento, no continuamos
       if (profile?.departments && profile.departments.length > 1) {
-        return; // No continuamos con el inicio de sesión si tiene más de un departamento
+        return;
       }
 
       console.log("Login exitoso, verificando departamentos:", profile?.departments);
