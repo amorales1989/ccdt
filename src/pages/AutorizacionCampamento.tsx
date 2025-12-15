@@ -155,7 +155,7 @@ const AutorizacionCampamento = () => {
     doc.text(`correspondiente ${formatDate(formData.fechaLimite).toUpperCase()}.`, margin, currentY);
     currentY += 8;
 
-    doc.text(`SALIMOS EL: viernes ${formatDate(formData.fechaInicio)} a las ${formData.horaSalida1}hs${formData.horaSalida2 != null ? ` y ${formData.horaSalida2}hs` : ''}.`, margin, currentY);
+    doc.text(`SALIMOS EL: ${formatDate(formData.fechaInicio)} a las ${formData.horaSalida1}hs${formData.horaSalida2 != null ? ` y ${formData.horaSalida2}hs` : ''}.`, margin, currentY);
     currentY += 8;
 
     // Lista de elementos a llevar (usando la lista del formulario)
@@ -225,7 +225,7 @@ const AutorizacionCampamento = () => {
     doc.setFont("helvetica", "bold");
     doc.text("DATOS PERSONALES PARA INSCRIPCIÓN", pageWidth / 2, currentY, { align: "center" });
     currentY += 8;
-    doc.text("CAMPAMENTO DE ADOLESCENTES – MARZO 2025", pageWidth / 2, currentY, { align: "center" });
+    doc.text(`CAMPAMENTO DE ADOLESCENTES – ${mesNombre.toUpperCase()} ${año.toUpperCase()}`, pageWidth / 2, currentY, { align: "center" });
     currentY += 15;
 
     doc.setFontSize(10);
@@ -238,7 +238,7 @@ const AutorizacionCampamento = () => {
     currentY += 8;
     doc.text("D.N.I. N°: ............................................... NACIONALIDAD: .................................................", margin, currentY);
     currentY += 8;
-    doc.text("EDAD: ........años   FECHA DE NACIMIENTO: ....../…./.....  ", margin, currentY);
+    doc.text("EDAD: ........años   FECHA DE NACIMIENTO: ....../.../.....  ", margin, currentY);
     currentY += 8;
     doc.text("DIRECCIÓN: Calle ......................................................................................... N° .................... ", margin, currentY);
     currentY += 8;
@@ -255,7 +255,7 @@ const AutorizacionCampamento = () => {
     doc.setFont("helvetica", "normal");
     doc.text("Autorizo a mi hijo/a ..................................................................................................... a", margin, currentY);
     currentY += 8;
-    doc.text(`concurrir los días ${inicioFormatted.split('/')[0]} al ${finFormatted.split('/')[0]} de marzo del 2025 al Campamento para Adolescentes que`, margin, currentY);
+    doc.text(`concurrir los días ${inicioFormatted.split('/')[0]} al ${finFormatted.split('/')[0]} de ${mesNombre} del ${año} al Campamento para Adolescentes que`, margin, currentY);
     currentY += 8;
     doc.text("organiza la \"ASOCIACIÓN DE BENEFICIENCIA Y EDUCACIÓN RHEMA\", en el predio con", margin, currentY);
     currentY += 8;
