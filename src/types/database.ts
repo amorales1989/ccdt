@@ -15,9 +15,9 @@ export interface Student {
   created_at: string;
   updated_at: string;
   deleted_at?: string;
-  
+
   // Relaciones
-  departments?: { 
+  departments?: {
     name?: DepartmentType;
     id?: string;
   };
@@ -25,7 +25,7 @@ export interface Student {
     name?: string;
     id?: string;
   };
-  
+
   // Campos computados (solo para el frontend)
   is_authorized?: boolean;
   isAuthorized?: boolean;
@@ -42,6 +42,11 @@ export interface Event {
   description?: string;
   created_at: string;
   updated_at: string;
+  solicitud?: boolean | string;
+  estado?: 'solicitud' | 'aprobada' | 'rechazada' | string;
+  solicitante?: string;
+  departamento?: string;
+  motivoRechazo?: string;
 }
 
 export interface EventWithBirthday extends Event {
@@ -60,7 +65,7 @@ export interface Attendance {
   assigned_class?: string;
   created_at: string;
   updated_at: string;
-  students?: Student | any;
+  students?: Student;
   department_name?: string;
 }
 
@@ -89,10 +94,10 @@ export interface Company {
   show_name?: boolean;
 }
 
-export type DepartmentType = 
-  | "escuelita"  
-  | "adolescentes" 
-  | "jovenes" 
+export type DepartmentType =
+  | "escuelita"
+  | "adolescentes"
+  | "jovenes"
   | "adultos"
   | string;
 

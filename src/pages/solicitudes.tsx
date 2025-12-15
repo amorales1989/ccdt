@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getEvents, updateEvent, getUsers, notifyRequestResponse } from "@/lib/api";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -14,12 +15,12 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { 
-  Check, 
-  X, 
-  Calendar, 
-  Clock, 
-  Building, 
+import {
+  Check,
+  X,
+  Calendar,
+  Clock,
+  Building,
   ClipboardCheck,
   Clock4,
   FileText,
@@ -29,29 +30,26 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import type { Event } from "@/types/database";
+import type { Event, Profile } from "@/types/database";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Tipo para el usuario
-interface User {
-  id: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  assigned_class: string;
-  departments: string[];
-  department_id: string;
-  email: string;
-}
+
 
 export default function Solicitudes() {
   const [selectedRequest, setSelectedRequest] = useState<Event | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("Fecha no disponible");
-  
+
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !profile) {
+      navigate("/", { replace: true });
+    }
+  }, [profile, loading, navigate]);
   const queryClient = useQueryClient();
 
   // Verificar permisos
@@ -74,20 +72,20 @@ export default function Solicitudes() {
 
   // Función para obtener el nombre del usuario por ID
   const getUserName = (userId: string): string => {
-    const user = users.find((u: User) => u.id === userId);
+    const user = users.find((u: Profile) => u.id === userId);
     if (!user) return 'Usuario no encontrado';
     return `${user.first_name.trim()} ${user.last_name.trim()}`.trim();
   };
 
   // Función para obtener el usuario completo por ID
-  const getUser = (userId: string): User | null => {
-    return users.find((u: User) => u.id === userId) || null;
+  const getUser = (userId: string): Profile | null => {
+    return users.find((u: Profile) => u.id === userId) || null;
   };
 
   // Función para obtener el badge de estado
   const getStatusBadge = (request: Event) => {
-    const estado = (request as any).estado;
-    const esSolicitud = (request as any).solicitud === true && (request as any).estado === 'solicitud';
+    const estado = request.estado;
+    const esSolicitud = request.solicitud === true && request.estado === 'solicitud';
     if (esSolicitud) {
       return (
         <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 flex items-center gap-1">
@@ -126,150 +124,150 @@ export default function Solicitudes() {
   // Filtrar solicitudes según permisos
   const filteredRequests = useMemo(() => {
     let filtered;
-    
+
     if (canManageRequests) {
       // Para gestores: solo mostrar solicitudes PENDIENTES (solicitud: true)
       filtered = allEvents.filter(event => {
-        const esSolicitud = (event as any).solicitud === true && (event as any).estado === 'solicitud';
+        const esSolicitud = event.solicitud === true && event.estado === 'solicitud';
         return esSolicitud; // Solo solicitudes pendientes
       });
     } else {
       // Para usuarios regulares: mostrar TODAS sus solicitudes (pendientes, aprobadas, rechazadas)
       filtered = allEvents.filter(event => {
-        const solicitanteId = (event as any).solicitante;
-        const esSolicitud = (event as any).solicitud === true && (event as any).estado === 'solicitud';
-        const tieneEstado = (event as any).estado === 'aprobada' || (event as any).estado === 'rechazada';
-        
+        const solicitanteId = event.solicitante;
+        const esSolicitud = event.solicitud === true && event.estado === 'solicitud';
+        const tieneEstado = event.estado === 'aprobada' || event.estado === 'rechazada';
+
         // Incluir si es del usuario y es una solicitud O tiene estado de aprobación/rechazo
         return solicitanteId === profile?.id && (esSolicitud || tieneEstado);
       });
     }
-    
+
     // Ordenar por fecha de creación (más recientes primero)
-    const sorted = filtered.sort((a, b) => 
+    const sorted = filtered.sort((a, b) =>
       new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
     );
-    
+
     // Para usuarios regulares, limitar a los últimos 10 registros
     if (!canManageRequests) {
       return sorted.slice(0, 10);
     }
-    
+
     return sorted;
   }, [allEvents, canManageRequests, profile?.id]);
 
   // Mutaciones para aprobar y rechazar solicitudes (solo para gestores)
   const { mutate: approveRequest } = useMutation({
-  mutationFn: async (eventId: string) => {
-    return updateEvent(eventId, {
-      solicitud: false,
-      estado: 'aprobada'
-    });
-  },
-  onSuccess: async (_, eventId) => {
-    // Obtener el evento actualizado
-    const event = allEvents.find(e => e.id === eventId);
-    
-    if (event) {
-      const solicitanteId = (event as any).solicitante;
-      const user = users.find((u: User) => u.id === solicitanteId);
-      
-      if (user && user.email) {
-        try {
-          const requesterName = `${user.first_name.trim()} ${user.last_name.trim()}`.trim();
-          
-          await notifyRequestResponse({
-            eventTitle: event.title,
-            eventDate: event.date,
-            eventTime: event.time || undefined,
-            department: (event as any).departamento,
-            requesterName: requesterName,
-            requesterEmail: user.email,
-            estado: 'aprobado',
-            description: event.description || undefined,
-            solicitante_id: solicitanteId,
-            adminMessage: 'Tu solicitud ha sido aprobada. El evento ahora es visible en el calendario para todos.'
-          });
-          
-        } catch (emailError) {
-          console.error('Error enviando email de aprobación:', emailError);
+    mutationFn: async (eventId: string) => {
+      return updateEvent(eventId, {
+        solicitud: false,
+        estado: 'aprobada'
+      });
+    },
+    onSuccess: async (_, eventId) => {
+      // Obtener el evento actualizado
+      const event = allEvents.find(e => e.id === eventId);
+
+      if (event) {
+        const solicitanteId = event.solicitante;
+        const user = users.find((u: Profile) => u.id === solicitanteId);
+
+        if (user && user.email) {
+          try {
+            const requesterName = `${user.first_name.trim()} ${user.last_name.trim()}`.trim();
+
+            await notifyRequestResponse({
+              eventTitle: event.title,
+              eventDate: event.date,
+              eventTime: event.time || undefined,
+              department: event.departamento,
+              requesterName: requesterName,
+              requesterEmail: user.email,
+              estado: 'aprobado',
+              description: event.description || undefined,
+              solicitante_id: solicitanteId,
+              adminMessage: 'Tu solicitud ha sido aprobada. El evento ahora es visible en el calendario para todos.'
+            });
+
+          } catch (emailError) {
+            console.error('Error enviando email de aprobación:', emailError);
+          }
         }
       }
+
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Solicitud aceptada",
+        description: "La solicitud ha sido aceptada.",
+      });
+      setDetailsDialogOpen(false);
+      setSelectedRequest(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo aceptar la solicitud.",
+        variant: "destructive",
+      });
     }
-    
-    queryClient.invalidateQueries({ queryKey: ['events'] });
-    toast({
-      title: "Solicitud aceptada",
-      description: "La solicitud ha sido aceptada.",
-    });
-    setDetailsDialogOpen(false);
-    setSelectedRequest(null);
-  },
-  onError: () => {
-    toast({
-      title: "Error",
-      description: "No se pudo aceptar la solicitud.",
-      variant: "destructive",
-    });
-  }
-});
+  });
 
 
   const { mutate: rejectRequest } = useMutation({
-  mutationFn: async ({ eventId, reason }: { eventId: string; reason: string }) => {
-    return updateEvent(eventId, {
-      estado: 'rechazada',
-      motivoRechazo: reason
-    });
-  },
-  onSuccess: async (_, { eventId, reason }) => {
-    const event = allEvents.find(e => e.id === eventId);
-    
-    if (event) {
-      const solicitanteId = (event as any).solicitante;
-      const user = users.find((u: User) => u.id === solicitanteId);
-      
-      if (user && user.email) {
-        try {
-          const requesterName = `${user.first_name.trim()} ${user.last_name.trim()}`.trim();
-          
-          await notifyRequestResponse({
-            eventTitle: event.title,
-            eventDate: event.date,
-            eventTime: event.time || undefined,
-            department: (event as any).departamento,
-            requesterName: requesterName,
-            requesterEmail: user.email,
-            estado: 'rechazado',
-            description: event.description || undefined,
-            adminMessage: reason,
-            solicitante_id: solicitanteId,
-          });
-          
-        } catch (emailError) {
-          console.error('Error enviando email de rechazo:', emailError);
+    mutationFn: async ({ eventId, reason }: { eventId: string; reason: string }) => {
+      return updateEvent(eventId, {
+        estado: 'rechazada',
+        motivoRechazo: reason
+      });
+    },
+    onSuccess: async (_, { eventId, reason }) => {
+      const event = allEvents.find(e => e.id === eventId);
+
+      if (event) {
+        const solicitanteId = event.solicitante;
+        const user = users.find((u: Profile) => u.id === solicitanteId);
+
+        if (user && user.email) {
+          try {
+            const requesterName = `${user.first_name.trim()} ${user.last_name.trim()}`.trim();
+
+            await notifyRequestResponse({
+              eventTitle: event.title,
+              eventDate: event.date,
+              eventTime: event.time || undefined,
+              department: event.departamento,
+              requesterName: requesterName,
+              requesterEmail: user.email,
+              estado: 'rechazado',
+              description: event.description || undefined,
+              adminMessage: reason,
+              solicitante_id: solicitanteId,
+            });
+
+          } catch (emailError) {
+            console.error('Error enviando email de rechazo:', emailError);
+          }
         }
       }
+
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Solicitud rechazada",
+        description: "La solicitud ha sido rechazada.",
+      });
+      setDetailsDialogOpen(false);
+      setRejectDialogOpen(false);
+      setSelectedRequest(null);
+      setRejectReason("Fecha no disponible");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo rechazar la solicitud.",
+        variant: "destructive",
+      });
     }
-    
-    queryClient.invalidateQueries({ queryKey: ['events'] });
-    toast({
-      title: "Solicitud rechazada",
-      description: "La solicitud ha sido rechazada.",
-    });
-    setDetailsDialogOpen(false);
-    setRejectDialogOpen(false);
-    setSelectedRequest(null);
-    setRejectReason("Fecha no disponible"); 
-  },
-  onError: () => {
-    toast({
-      title: "Error",
-      description: "No se pudo rechazar la solicitud.",
-      variant: "destructive",
-    });
-  }
-});
+  });
 
   const handleViewDetails = (request: Event) => {
     setSelectedRequest(request);
@@ -309,19 +307,19 @@ export default function Solicitudes() {
   }
 
   // Título y descripción según permisos
-  const pageTitle = canManageRequests 
-    ? "Solicitudes Pendientes" 
+  const pageTitle = canManageRequests
+    ? "Solicitudes Pendientes"
     : "Mis Solicitudes";
-  
-  const pageDescription = canManageRequests 
+
+  const pageDescription = canManageRequests
     ? "Gestiona las solicitudes de eventos pendientes de aprobación"
     : "Revisa el estado de tus últimas 10 solicitudes de eventos";
 
-  const emptyStateTitle = canManageRequests 
+  const emptyStateTitle = canManageRequests
     ? "No hay solicitudes pendientes"
     : "No tienes solicitudes";
 
-  const emptyStateDescription = canManageRequests 
+  const emptyStateDescription = canManageRequests
     ? "Todas las solicitudes han sido procesadas o no hay nuevas solicitudes por revisar."
     : "Aún no has realizado ninguna solicitud de evento. Puedes crear una nueva solicitud desde el calendario.";
 
@@ -336,7 +334,7 @@ export default function Solicitudes() {
             <Badge variant="secondary" className="ml-2">
               {filteredRequests.length}
             </Badge>
-            
+
           </CardTitle>
           <p className="text-muted-foreground">{pageDescription}</p>
         </CardHeader>
@@ -356,12 +354,12 @@ export default function Solicitudes() {
           </Card>
         ) : (
           filteredRequests.map((request) => {
-            const solicitanteId = (request as any).solicitante;
+            const solicitanteId = request.solicitante;
             const nombreSolicitante = solicitanteId ? getUserName(solicitanteId) : 'No especificado';
-            
+
             return (
-              <Card 
-                key={request.id} 
+              <Card
+                key={request.id}
                 className="cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/50"
                 onClick={() => handleViewDetails(request)}
               >
@@ -380,19 +378,19 @@ export default function Solicitudes() {
                           <Calendar className="h-4 w-4" />
                           {format(new Date(request.date), "dd/MM/yyyy", { locale: es })}
                         </div>
-                        
+
                         {request.time && (
                           <div className="flex items-center gap-1">
                             <Clock className="h-4 w-4" />
                             {request.time}
                           </div>
                         )}
-                        
+
                         <div className="flex items-center gap-1">
                           <Building className="h-4 w-4" />
                           <span>Departamento:</span>
                           <span className="font-medium">
-                            {(request as any).departamento || 'No especificado'}
+                            {request.departamento || 'No especificado'}
                           </span>
                         </div>
 
@@ -419,7 +417,7 @@ export default function Solicitudes() {
                       )}
                     </div>
 
-                    
+
                   </div>
                 </CardContent>
               </Card>
@@ -437,7 +435,7 @@ export default function Solicitudes() {
               {canManageRequests ? "Detalles de la Solicitud" : "Detalles de mi Solicitud"}
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedRequest && (
             <div className="space-y-6">
               {/* Estado */}
@@ -459,14 +457,14 @@ export default function Solicitudes() {
                     <div className="flex items-center gap-2 mt-1">
                       <User className="h-4 w-4 text-primary" />
                       <span className="font-medium text-lg">
-                        {(selectedRequest as any).solicitante 
-                          ? getUserName((selectedRequest as any).solicitante)
+                        {selectedRequest.solicitante
+                          ? getUserName(selectedRequest.solicitante)
                           : 'No especificado'
                         }
                       </span>
                       {/* Mostrar rol del usuario si está disponible */}
-                      {(selectedRequest as any).solicitante && (() => {
-                        const user = getUser((selectedRequest as any).solicitante);
+                      {selectedRequest.solicitante && (() => {
+                        const user = getUser(selectedRequest.solicitante);
                         return user ? (
                           <Badge variant="outline" className="ml-2 capitalize">
                             {user.role}
@@ -487,7 +485,7 @@ export default function Solicitudes() {
                       </span>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Hora</label>
                     <div className="flex items-center gap-2 mt-1">
@@ -503,7 +501,7 @@ export default function Solicitudes() {
                     <div className="flex items-center gap-2 mt-1">
                       <Building className="h-4 w-4 text-primary" />
                       <span className="font-medium capitalize">
-                        {(selectedRequest as any).departamento || 'No especificado'}
+                        {selectedRequest.departamento || 'No especificado'}
                       </span>
                     </div>
                   </div>
@@ -520,12 +518,12 @@ export default function Solicitudes() {
                 )}
 
                 {/* Motivo de rechazo (si existe) */}
-                {(selectedRequest as any).motivoRechazo && (
+                {selectedRequest.motivoRechazo && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Motivo de rechazo</label>
                     <div className="mt-2 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                       <p className="text-red-800 dark:text-red-200 leading-relaxed">
-                        {(selectedRequest as any).motivoRechazo}
+                        {selectedRequest.motivoRechazo}
                       </p>
                     </div>
                   </div>
@@ -546,9 +544,9 @@ export default function Solicitudes() {
           )}
 
           {/* Botones de acción - solo para gestores y solicitudes pendientes */}
-          {canManageRequests && selectedRequest && ((selectedRequest as any).solicitud === true && (selectedRequest as any).estado === 'solicitud') && (
+          {canManageRequests && selectedRequest && (selectedRequest.solicitud === true && selectedRequest.estado === 'solicitud') && (
             <DialogFooter className="flex justify-center gap-4 pt-6 border-t">
-              <Button 
+              <Button
                 variant="default"
                 size="lg"
                 className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 min-w-[140px]"
@@ -557,7 +555,7 @@ export default function Solicitudes() {
                 <Check className="h-5 w-5" />
                 Aprobar Solicitud
               </Button>
-              <Button 
+              <Button
                 variant="destructive"
                 size="lg"
                 className="flex items-center gap-2 min-w-[140px]"
@@ -580,7 +578,7 @@ export default function Solicitudes() {
               Motivo de Rechazo
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-2 block">
@@ -611,7 +609,7 @@ export default function Solicitudes() {
           </div>
 
           <DialogFooter className="flex justify-center gap-3 pt-4">
-            <Button 
+            <Button
               variant="outline"
               onClick={() => {
                 setRejectDialogOpen(false);
@@ -620,7 +618,7 @@ export default function Solicitudes() {
             >
               Cancelar
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               onClick={handleConfirmReject}
               disabled={!rejectReason.trim()}

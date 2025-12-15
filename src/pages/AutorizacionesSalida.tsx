@@ -11,33 +11,33 @@ const AutorizacionesSalida = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   useEffect(() => {
     if (profile) {
       const authorized = profile.role === 'admin' || profile.role === 'secretaria' || profile.role === 'lider';
       setIsAuthorized(authorized);
-      
+
       if (!authorized) {
-        console.log("User not authorized:", profile.role);
+
         toast({
           title: "Acceso restringido",
           description: "No tienes permisos para acceder a esta sección",
           variant: "destructive"
         });
-        navigate("/");
+        navigate("/", { replace: true });
       }
     }
   }, [profile, navigate, toast]);
 
   if (!profile) {
-    window.location.href = '/';
+    window.location.replace('/');
     return;
   }
 
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-2xl font-bold mb-6">Autorizaciones</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <AuthorizationOption
           title="Autorización de Campamento"

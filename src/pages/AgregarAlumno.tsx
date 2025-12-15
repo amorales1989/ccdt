@@ -17,11 +17,17 @@ import { format } from "date-fns";
 const AgregarAlumno = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [dniError, setDniError] = useState<string | null>(null);
   const [isValidatingDni, setIsValidatingDni] = useState(false);
-  
+
+  useEffect(() => {
+    if (!loading && !profile) {
+      navigate("/", { replace: true });
+    }
+  }, [profile, loading, navigate]);
+
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -45,8 +51,8 @@ const AgregarAlumno = () => {
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const isMaestro = profile?.role === 'maestro';
 
-  const availableDepartments = isAdminOrSecretaria 
-    ? departments 
+  const availableDepartments = isAdminOrSecretaria
+    ? departments
     : departments.filter(dept => profile?.departments?.includes(dept.name as DepartmentType));
 
   const availableClasses = formData.department
@@ -60,23 +66,23 @@ const AgregarAlumno = () => {
       let department = null;
       let departmentId = "";
       let assignedClass = "";
-      
+
       if (profile.departments?.[0]) {
         department = profile.departments[0] as DepartmentType;
         departmentId = profile.department_id || "";
       }
-      
+
       if (profile.assigned_class) {
         assignedClass = profile.assigned_class;
       }
-      
+
       setFormData(prev => ({
         ...prev,
         department,
         department_id: departmentId,
         assigned_class: assignedClass
       }));
-      
+
       if (department && !departmentId) {
         const fetchDepartmentId = async () => {
           try {
@@ -85,21 +91,21 @@ const AgregarAlumno = () => {
               .select("id")
               .eq("name", department)
               .single();
-            
+
             if (error) {
               console.error("Error fetching department ID:", error);
               return;
             }
-            
+
             if (data) {
-              console.log("Found department ID:", data.id, "for department:", department);
+
               setFormData(prev => ({ ...prev, department_id: data.id }));
             }
           } catch (error) {
             console.error("Error in fetchDepartmentId:", error);
           }
         };
-        
+
         fetchDepartmentId();
       }
     }
@@ -110,7 +116,7 @@ const AgregarAlumno = () => {
       setDniError(null);
       return true;
     }
-    
+
     setIsValidatingDni(true);
     try {
       const exists = await checkDniExists(dni);
@@ -141,25 +147,25 @@ const AgregarAlumno = () => {
     if (!phoneNumber) return null;
 
     let cleanNumber = phoneNumber.replace(/\D/g, "");
-    
+
     if (cleanNumber.startsWith("0")) {
       cleanNumber = cleanNumber.substring(1);
     }
-    
+
     if (cleanNumber.startsWith("15")) {
       cleanNumber = cleanNumber.substring(2);
     }
-    
+
     if (phoneCode === "54") {
       return phoneCode + "9" + cleanNumber;
     }
-    
+
     return phoneCode + cleanNumber;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.document_number && formData.document_number.trim() !== '') {
       const isValid = await validateDni(formData.document_number);
       if (!isValid) {
@@ -199,7 +205,7 @@ const AgregarAlumno = () => {
         assigned_class: formData.assigned_class || null,
         nuevo: formData.nuevo, // Incluir el valor del checkbox
       });
-      
+
       toast({
         title: "Alumno agregado",
         description: `El alumno ha sido agregado exitosamente${formData.nuevo ? ' y marcado como nuevo' : ''}`,
@@ -269,9 +275,9 @@ const AgregarAlumno = () => {
                 id="document_number"
                 value={formData.document_number}
                 onChange={(e) =>
-                  setFormData({ 
-                    ...formData, 
-                    document_number: e.target.value.replace(/\D/g, '') 
+                  setFormData({
+                    ...formData,
+                    document_number: e.target.value.replace(/\D/g, '')
                   })
                 }
                 onBlur={handleDniBlur}
@@ -318,11 +324,11 @@ const AgregarAlumno = () => {
                 value={formData.department || undefined}
                 onValueChange={(value) => {
                   const selectedDept = departments.find(d => d.name === value);
-                  setFormData({ 
-                    ...formData, 
+                  setFormData({
+                    ...formData,
                     department: value as DepartmentType,
                     department_id: selectedDept?.id || "",
-                    assigned_class: "" 
+                    assigned_class: ""
                   });
                 }}
                 disabled={isMaestro}
@@ -408,8 +414,8 @@ const AgregarAlumno = () => {
                   setFormData({ ...formData, nuevo: checked as boolean })
                 }
               />
-              <Label 
-                htmlFor="nuevo" 
+              <Label
+                htmlFor="nuevo"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Marcar alumno como nuevo

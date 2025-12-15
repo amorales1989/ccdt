@@ -28,14 +28,15 @@ serve(async (req) => {
     console.log('Received request:', { action, userId, userData })
 
     switch (action) {
-      case 'list':
+      case 'list': {
         const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers()
         if (listError) throw listError
         return new Response(JSON.stringify({ users }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
+      }
 
-      case 'create':
+      case 'create': {
         // Get department_id from the department name if provided
         let departmentId = null;
         if (userData.departments && userData.departments.length > 0) {
@@ -69,8 +70,9 @@ serve(async (req) => {
         return new Response(JSON.stringify(createData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
+      }
 
-      case 'update':
+      case 'update': {
         // Get department_id from the department name if provided
         let updatedDepartmentId = null;
         if (userData.departments && userData.departments.length > 0) {
@@ -114,8 +116,9 @@ serve(async (req) => {
         return new Response(JSON.stringify(updateData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
+      }
 
-      case 'delete':
+      case 'delete': {
         const { data: deleteData, error: deleteError } = await supabaseClient.auth.admin.deleteUser(
           userId
         )
@@ -123,13 +126,21 @@ serve(async (req) => {
         return new Response(JSON.stringify(deleteData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
+      }
 
-      case 'updateDepartmentIds':
+      case 'updateDepartmentIds': {
         // This action will update department_ids for all users
         const { data: allUsers, error: allUsersError } = await supabaseClient.auth.admin.listUsers()
         if (allUsersError) throw allUsersError
+        
+        // Define a type for the results
+        interface UpdateResult {
+          userId: string;
+          success: boolean;
+          error?: string;
+        }
 
-        const results = [];
+        const results: UpdateResult[] = [];
         
         for (const user of allUsers.users) {
           const departments = user.user_metadata?.departments;
@@ -178,6 +189,7 @@ serve(async (req) => {
         return new Response(JSON.stringify({ results }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
 
       default:
         throw new Error(`Unsupported action: ${action}`)

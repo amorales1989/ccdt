@@ -58,15 +58,15 @@ export default function Index() {
       } else if (profile.departments && profile.departments.length === 1) {
         const dept = profile.departments[0];
         localStorage.setItem('selectedDepartment', dept);
-        
+
         // Set department_id in localStorage if available
         if (profile.department_id) {
           localStorage.setItem('selectedDepartmentId', profile.department_id);
         }
-        
-        navigate("/home"); // Si solo tiene un departamento, proceder al login automáticamente
+
+        navigate("/home", { replace: true }); // Si solo tiene un departamento, proceder al login automáticamente
       } else {
-        navigate("/home"); // Si no tiene departamentos, también procede al login
+        navigate("/home", { replace: true }); // Si no tiene departamentos, también procede al login
       }
     }
   }, [profile, navigate, company]);
@@ -81,7 +81,7 @@ export default function Index() {
         return; // No continuamos con el inicio de sesión si tiene más de un departamento
       }
 
-      console.log("Login exitoso, verificando departamentos:", profile?.departments);
+
     } catch (error: any) {
       console.error("Error de autenticación:", error);
       let errorMessage = "Ha ocurrido un error";
@@ -103,9 +103,9 @@ export default function Index() {
   };
 
   const handleDepartmentSelect = async (value: string) => {
-    console.log("Departamento seleccionado:", value);
+
     setSelectedDepartment(value as DepartmentType);
-    
+
     // Get department_id for the selected department
     try {
       const { data, error } = await supabase
@@ -113,7 +113,7 @@ export default function Index() {
         .select("id")
         .eq("name", value)
         .single();
-      
+
       if (error) {
         console.error("Error fetching department ID:", error);
       } else if (data) {
@@ -123,10 +123,10 @@ export default function Index() {
     } catch (err) {
       console.error("Error in department select:", err);
     }
-    
+
     // Guardamos el departamento seleccionado en el almacenamiento local
     localStorage.setItem('selectedDepartment', value);
-    navigate("/home"); // Procedemos al login después de seleccionar el departamento
+    navigate("/home", { replace: true }); // Procedemos al login después de seleccionar el departamento
   };
 
   const getDepartmentLabel = (dept: string) => {

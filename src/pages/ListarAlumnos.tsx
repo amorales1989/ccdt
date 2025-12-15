@@ -1,5 +1,4 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, Fragment, ChangeEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,9 +78,8 @@ const ListarAlumnos = () => {
     class: '',
   });
 
-  const { user } = useAuth();
+  const { user, profile, loading } = useAuth();
   const isMobile = useIsMobile();
-  const profile = useAuth().profile;
   const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin';
   const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro';
 
@@ -94,7 +92,7 @@ const ListarAlumnos = () => {
   });
 
   // Filtrar estudiantes según el rol y permisos del usuario
-  const students = React.useMemo(() => {
+  const students = useMemo(() => {
     if (!allStudents?.length) return [];
 
     let filteredStudents = allStudents;
@@ -177,39 +175,40 @@ const ListarAlumnos = () => {
   }, [filters.department]);
 
   const formSchema = z.object({
-  first_name: z.string().min(1, "El nombre es requerido"),
-  last_name: z.string().optional(),
-  gender: z.string(),
-  birthdate: z.any().optional(),
-  address: z.string().optional(),
-  phone: z.string().optional(),
-  document_number: z.string().optional(),
-  department_id: z.string().optional(),
-});
+    first_name: z.string().min(1, "El nombre es requerido"),
+    last_name: z.string().optional(),
+    gender: z.string(),
+    birthdate: z.any().optional(),
+    address: z.string().optional(),
+    phone: z.string().optional(),
+    document_number: z.string().optional(),
+    department_id: z.string().optional(),
+  });
 
-// ========== ACTUALIZAR DEFAULT VALUES (línea ~124) ==========
-const form = useForm({
-  defaultValues: {
-    first_name: "",
-    last_name: "",
-    gender: "masculino",
-    birthdate: "",
-    address: "",
-    phone: "",
-    document_number: ""
-  },
-  resolver: zodResolver(formSchema),
-});
+  // ========== ACTUALIZAR DEFAULT VALUES (línea ~124) ==========
+  const form = useForm({
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      gender: "masculino",
+      birthdate: "",
+      address: "",
+      phone: "",
+      document_number: "",
+      department_id: ""
+    },
+    resolver: zodResolver(formSchema),
+  });
 
   useEffect(() => {
     refetch();
   }, [refetch]);
 
   useEffect(() => {
-    if (!profile) {
-      navigate('/');
+    if (!loading && !profile) {
+      navigate('/', { replace: true });
     }
-  }, [profile, navigate]);
+  }, [profile, loading, navigate]);
 
   const calculateAge = (dateOfBirth: string): number | null => {
     if (!dateOfBirth) return null;
@@ -283,38 +282,39 @@ const form = useForm({
         variant: "success",
       });
       refetch();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating student:", error);
+      const errorMessage = error instanceof Error ? error.message : "Hubo un error al actualizar el alumno.";
       toast({
         title: "Error al actualizar",
-        description: error.message || "Hubo un error al actualizar el alumno.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
   };
 
   const handleEdit = (student: Student) => {
-  setStudentToEdit(student);
-  const birthDate = student.birthdate || "";
+    setStudentToEdit(student);
+    const birthDate = student.birthdate || "";
 
-  form.reset({
-    first_name: student.first_name || "",
-    last_name: student.last_name || "",
-    gender: student.gender || "masculino",
-    birthdate: birthDate,
-    address: student.address || "",
-    phone: student.phone || "",
-    document_number: student.document_number || "",
-    department_id: student.department_id || "",
-  });
-  setIsEditModalOpen(true);
-};
+    form.reset({
+      first_name: student.first_name || "",
+      last_name: student.last_name || "",
+      gender: student.gender || "masculino",
+      birthdate: birthDate,
+      address: student.address || "",
+      phone: student.phone || "",
+      document_number: student.document_number || "",
+      department_id: student.department_id || "",
+    });
+    setIsEditModalOpen(true);
+  };
 
   // ============ FUNCIÓN PARA ACTUALIZAR USANDO BACKEND API ============
-  const handleUpdate = async (values: any) => {
+  const handleUpdate = async (values: Partial<Student>) => {
     if (!studentToEdit) return;
     try {
-      console.log("Raw form values:", values);
+
 
       await updateStudent(studentToEdit.id, values);
       toast({
@@ -324,10 +324,11 @@ const form = useForm({
       });
       setIsEditModalOpen(false);
       refetch();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Hubo un error al actualizar el alumno.";
       toast({
         title: "Error al actualizar",
-        description: error.message || "Hubo un error al actualizar el alumno.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -351,10 +352,11 @@ const form = useForm({
       setDeleteAlertOpen(false);
       setStudentToDelete(null);
       refetch();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Hubo un error al eliminar el alumno.";
       toast({
         title: "Error al eliminar",
-        description: error.message || "Hubo un error al eliminar el alumno.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -405,10 +407,11 @@ const form = useForm({
       setStudentsToPromote([]);
       setSelectedDepartment(null);
       refetch();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Hubo un error al promover los alumnos.";
       toast({
         title: "Error al promover",
-        description: error.message || "Hubo un error al promover los alumnos.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -416,7 +419,7 @@ const form = useForm({
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setExcelError(null);
     const file = event.target.files?.[0];
     if (!file) {
@@ -443,26 +446,29 @@ const form = useForm({
     setExcelError(null);
 
     const reader = new FileReader();
-    reader.onload = async (e: any) => {
-      const binaryStr = e.target.result;
+    reader.onload = async (e: ProgressEvent<FileReader>) => {
+      const binaryStr = e.target?.result;
+      if (!binaryStr) return;
+
       const wb = XLSX.read(binaryStr, { type: 'binary' });
       const wsname = wb.SheetNames[0];
       const ws = wb.Sheets[wsname];
       const data = XLSX.utils.sheet_to_json(ws);
 
       try {
-        const result = await importStudentsFromExcel(data as any[]);
+        const result = await importStudentsFromExcel(data as { first_name: string; gender: string }[]);
         handleImportResult(result);
-      } catch (error: any) {
+      } catch (error: unknown) {
         setImportModalState("error");
+        const errorMessage = error instanceof Error ? error.message : "Error desconocido al importar desde Excel.";
         setImportResults({
           failed: data.length,
           successful: 0,
-          errors: [error.message || "Error desconocido al importar desde Excel."]
+          errors: [errorMessage]
         });
         toast({
           title: "Error al importar",
-          description: error.message || "Hubo un error al importar desde Excel.",
+          description: errorMessage,
           variant: "destructive",
         });
         console.error("Error importing students from Excel:", error);
@@ -501,7 +507,7 @@ const form = useForm({
   const newStudents = filteredStudents?.filter(student => student.nuevo === true) || [];
   const hasNewStudents = newStudents.length > 0;
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleFilterChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({
       ...prev,
@@ -517,7 +523,7 @@ const form = useForm({
     });
   };
 
-  const handleImportResult = (result: any) => {
+  const handleImportResult = (result: { failed: number; successful: number; errors: string[] }) => {
     if (result) {
       setImportModalState("success");
       setImportResults({
@@ -565,7 +571,7 @@ const form = useForm({
 
   // Función para renderizar una fila de alumno
   const renderStudentRow = (student: Student) => (
-    <React.Fragment key={student.id}>
+    <Fragment key={student.id}>
       <TableRow
         className={`cursor-pointer hover:bg-gray-50 ${student.isAuthorized ? 'bg-green-50' : ''} ${student.nuevo ? 'bg-blue-50' : ''}`}
         onClick={() => handleStudentClick(student.id)}
@@ -601,7 +607,7 @@ const form = useForm({
           </TableCell>
         </TableRow>
       )}
-    </React.Fragment>
+    </Fragment>
   );
 
   // Función para renderizar las acciones según si es móvil o no
@@ -1113,19 +1119,7 @@ const form = useForm({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+
 
                 <FormField
                   control={form.control}

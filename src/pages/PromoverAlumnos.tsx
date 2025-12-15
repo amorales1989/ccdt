@@ -16,9 +16,17 @@ import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 const PromoverAlumnos = () => {
-  const { profile } = useAuth();
+  const { profile, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !profile) {
+      navigate("/", { replace: true });
+    }
+  }, [profile, loading, navigate]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | "">("");
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
@@ -39,7 +47,7 @@ const PromoverAlumnos = () => {
   useEffect(() => {
     if (!isAdminOrSecretaria && userDepartment) {
       setSelectedDepartment(userDepartment);
-      
+
       const fetchDepartmentId = async () => {
         try {
           const { data, error } = await supabase
@@ -47,12 +55,12 @@ const PromoverAlumnos = () => {
             .select("id")
             .eq("name", userDepartment)
             .single();
-          
+
           if (error) {
             console.error("Error fetching department ID:", error);
             return;
           }
-          
+
           if (data) {
             setSelectedDepartmentId(data.id);
           }
@@ -60,9 +68,9 @@ const PromoverAlumnos = () => {
           console.error("Error in fetchDepartmentId:", error);
         }
       };
-      
+
       fetchDepartmentId();
-      
+
       if (userClass) {
         setSelectedClass(userClass);
       }
@@ -75,11 +83,11 @@ const PromoverAlumnos = () => {
       const { data, error } = await (supabase
         .from("student_authorizations") as any)
         .select("*, student:student_id(id, first_name, last_name), department:department_id(id, name)");
-      
+
       if (error) throw error;
-      
+
       const authorizations: Record<string, string[]> = {};
-      data?.forEach((auth: any) => {
+      data?.forEach((auth: StudentAuthorization) => {
         if (auth.student && auth.student.id) {
           if (!authorizations[auth.student.id]) {
             authorizations[auth.student.id] = [];
@@ -89,7 +97,7 @@ const PromoverAlumnos = () => {
           }
         }
       });
-      
+
       setAuthorizedStudents(authorizations);
       return data || [];
     }
@@ -102,17 +110,17 @@ const PromoverAlumnos = () => {
         .from("departments")
         .select("*")
         .order('name');
-      
+
       if (error) throw error;
       return data as Department[];
     },
   });
 
-  const availableClasses = selectedDepartment 
+  const availableClasses = selectedDepartment
     ? departments.find(d => d.name === selectedDepartment)?.classes || []
     : [];
 
-  const targetAvailableClasses = targetDepartment 
+  const targetAvailableClasses = targetDepartment
     ? departments.find(d => d.name === targetDepartment)?.classes || []
     : [];
 
@@ -126,19 +134,19 @@ const PromoverAlumnos = () => {
       }
 
       let query = supabase.from("students").select("*, departments:department_id(name, id)");
-      
+
       if (selectedDepartmentId) {
         query = query.eq("department_id", selectedDepartmentId);
-        
+
         if (selectedClass) {
           query = query.eq("assigned_class", selectedClass);
         }
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
-      
-      
+
+
       const processedData = (data || [])
         .map(student => ({
           ...student,
@@ -149,7 +157,7 @@ const PromoverAlumnos = () => {
           const nameB = `${b.first_name} ${b.last_name || ''}`;
           return nameA.localeCompare(nameB);
         }) as Student[];
-      
+
       return processedData;
     },
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(selectedDepartmentId)),
@@ -159,7 +167,7 @@ const PromoverAlumnos = () => {
     queryKey: ["authorized-students", profile?.department_id],
     queryFn: async () => {
       if (!profile?.department_id) return [];
-      
+
       const { data, error } = await (supabase
         .from("student_authorizations") as any)
         .select(`
@@ -177,10 +185,10 @@ const PromoverAlumnos = () => {
           )
         `)
         .eq("department_id", profile.department_id);
-      
+
       if (error) throw error;
-      
-      return data?.map((auth: any) => ({
+
+      return data?.map((auth: StudentAuthorization) => ({
         ...auth.student,
         department: auth.student?.departments?.name,
         authorized: true,
@@ -208,9 +216,9 @@ const PromoverAlumnos = () => {
     return dept.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const getFullName = (student: any): string => {
-    return student.last_name 
-      ? `${student.first_name} ${student.last_name}` 
+  const getFullName = (student: Student): string => {
+    return student.last_name
+      ? `${student.first_name} ${student.last_name}`
       : student.first_name;
   };
 
@@ -219,26 +227,26 @@ const PromoverAlumnos = () => {
     setSelectedDepartment(departmentName);
     setSelectAll(false);
     setSelectedStudents([]);
-    
+
     try {
       const { data, error } = await supabase
         .from("departments")
         .select("id")
         .eq("name", departmentName)
         .single();
-      
+
       if (error) {
         console.error("Error fetching department ID:", error);
         return;
       }
-      
+
       if (data) {
         setSelectedDepartmentId(data.id);
       }
     } catch (error) {
       console.error("Error in handleDepartmentChange:", error);
     }
-    
+
     setSelectedClass(null);
   };
 
@@ -251,26 +259,26 @@ const PromoverAlumnos = () => {
   const handleTargetDepartmentChange = async (value: string) => {
     const departmentName = value as DepartmentType;
     setTargetDepartment(departmentName);
-    
+
     try {
       const { data, error } = await supabase
         .from("departments")
         .select("id")
         .eq("name", departmentName)
         .single();
-      
+
       if (error) {
         console.error("Error fetching target department ID:", error);
         return;
       }
-      
+
       if (data) {
         setTargetDepartmentId(data.id);
       }
     } catch (error) {
       console.error("Error in handleTargetDepartmentChange:", error);
     }
-    
+
     setTargetClass(null);
   };
 
@@ -348,13 +356,13 @@ const PromoverAlumnos = () => {
             .delete()
             .eq("student_id", studentId)
             .eq("department_id", targetDepartmentId);
-          
+
           if (deleteError) {
             console.error("Error al eliminar autorización:", deleteError);
           } else {
-            console.log(`Eliminada autorización para estudiante ${studentId} en departamento ${targetDepartmentId}`);
+
           }
-        } catch (e) {
+        } catch (e: unknown) {
           console.error("Error al procesar eliminación de autorización:", e);
         }
       });
@@ -372,8 +380,8 @@ const PromoverAlumnos = () => {
       setSelectAll(false);
       refetch();
       refetchAuthorizations();
-      
-    } catch (error) {
+
+    } catch (error: unknown) {
       console.error("Error al promover alumnos:", error);
       toast({
         title: "Error",
@@ -434,8 +442,8 @@ const PromoverAlumnos = () => {
       refetchAuthorizations();
       setSelectedStudents([]);
       setSelectAll(false);
-      
-    } catch (error) {
+
+    } catch (error: unknown) {
       console.error("Error al autorizar alumnos:", error);
       toast({
         title: "Error",
@@ -470,8 +478,8 @@ const PromoverAlumnos = () => {
 
       refetchAuthorizations();
       refetchAuthorizedStudents();
-      
-    } catch (error) {
+
+    } catch (error: unknown) {
       console.error("Error al remover autorización:", error);
       toast({
         title: "Error",
@@ -548,7 +556,7 @@ const PromoverAlumnos = () => {
           <TabsTrigger value="promote">Promover Alumnos</TabsTrigger>
           <TabsTrigger value="authorize">Autorizar Alumnos</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="promote">
           {renderFilters()}
 
@@ -572,7 +580,7 @@ const PromoverAlumnos = () => {
                   </p>
                 </div>
               )}
-              
+
               {isAdminOrSecretaria && selectedDepartment && (
                 <div className="bg-muted/30 p-4 rounded-lg mb-6">
                   <p className="text-sm text-muted-foreground">
@@ -583,7 +591,7 @@ const PromoverAlumnos = () => {
                   </p>
                 </div>
               )}
-              
+
               <Card className="p-4 md:p-6 mb-6">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
@@ -663,7 +671,7 @@ const PromoverAlumnos = () => {
 
               <Card className="p-4 md:p-6 mb-6">
                 <h3 className="text-lg font-semibold mb-4">Opciones de Promoción</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -672,7 +680,7 @@ const PromoverAlumnos = () => {
                         {formatDepartment(selectedDepartment)}
                       </div>
                     </div>
-                    
+
                     {selectedClass && (
                       <div className="space-y-2">
                         <Label>Clase actual</Label>
@@ -682,7 +690,7 @@ const PromoverAlumnos = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Promover a departamento</Label>
@@ -702,7 +710,7 @@ const PromoverAlumnos = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     {targetDepartmentHasClasses && (
                       <div className="space-y-2">
                         <Label>Promover a clase</Label>
@@ -725,13 +733,13 @@ const PromoverAlumnos = () => {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="mt-6 flex justify-end">
-                  <Button 
+                  <Button
                     onClick={handlePromote}
                     disabled={
-                      selectedStudents.length === 0 || 
-                      !targetDepartment || 
+                      selectedStudents.length === 0 ||
+                      !targetDepartment ||
                       (targetDepartmentHasClasses && !targetClass)
                     }
                   >
@@ -743,10 +751,10 @@ const PromoverAlumnos = () => {
             </>
           )}
         </TabsContent>
-        
+
         <TabsContent value="authorize">
           {renderFilters()}
-          
+
           {isAdminOrSecretaria && !selectedDepartmentId ? (
             <Card className="p-6 text-center">
               <UserCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -849,7 +857,7 @@ const PromoverAlumnos = () => {
 
               <Card className="p-4 md:p-6 mb-6">
                 <h3 className="text-lg font-semibold mb-4">Opciones de Autorización</h3>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Autorizar para departamento</Label>
@@ -869,7 +877,7 @@ const PromoverAlumnos = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {targetDepartmentHasClasses && (
                     <div className="space-y-2">
                       <Label>Clase específica (opcional)</Label>
@@ -890,9 +898,9 @@ const PromoverAlumnos = () => {
                       </Select>
                     </div>
                   )}
-                  
+
                   <div className="mt-6 flex justify-end">
-                    <Button 
+                    <Button
                       onClick={handleAuthorize}
                       disabled={selectedStudents.length === 0 || !targetDepartment}
                     >
@@ -902,11 +910,11 @@ const PromoverAlumnos = () => {
                   </div>
                 </div>
               </Card>
-              
+
               {!isAdminOrSecretaria && (
                 <Card className="p-4 md:p-6 mb-6">
                   <h3 className="text-lg font-semibold mb-4">Alumnos autorizados en tu departamento</h3>
-                  
+
                   <div className="overflow-x-auto">
                     <Table className="w-full">
                       <TableHeader>

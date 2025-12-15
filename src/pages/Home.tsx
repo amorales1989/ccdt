@@ -14,14 +14,14 @@ import type { Event, DepartmentType, Student, Department, EventWithBirthday } fr
 import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
-  DropdownMenuContent, 
-  DropdownMenuItem 
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { redirect, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -55,18 +55,18 @@ const Home = () => {
     queryFn: getEvents
   });
 
-useEffect(() => {
-  // Esperar a que el profile esté cargado
-  if (!profile) return;
-  
-  const hasRedirectedThisSession = sessionStorage.getItem('calendarAutoRedirected');
-  
-  if (isCalendarDepartment && 
+  useEffect(() => {
+    // Esperar a que el profile esté cargado
+    if (!profile) return;
+
+    const hasRedirectedThisSession = sessionStorage.getItem('calendarAutoRedirected');
+
+    if (isCalendarDepartment &&
       !hasRedirectedThisSession) {
-    sessionStorage.setItem('calendarAutoRedirected', 'true');
-    navigate("/calendario", { replace: true });
-  }
-}, [isCalendarDepartment, navigate, location.pathname, profile]); 
+      sessionStorage.setItem('calendarAutoRedirected', 'true');
+      navigate("/calendario", { replace: true });
+    }
+  }, [isCalendarDepartment, navigate, location.pathname, profile]);
   // Solo cargar estudiantes si NO es departamento calendario
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students'],
@@ -155,8 +155,8 @@ useEffect(() => {
   // Calcular solicitudes pendientes
   const pendingRequests = useMemo(() => {
     return events.filter(event => {
-      const esSolicitud = (event as any).solicitud === true || (event as any).solicitud === 'true';
-      const estado = (event as any).estado;
+      const esSolicitud = (event as unknown as { solicitud: boolean | string }).solicitud === true || (event as unknown as { solicitud: boolean | string }).solicitud === 'true';
+      const estado = (event as unknown as { estado: string }).estado;
       const esPendiente = !estado || estado === 'solicitud';
       return esSolicitud && esPendiente;
     });
@@ -164,18 +164,18 @@ useEffect(() => {
 
   const upcomingBirthdays = useMemo(() => {
     if (isCalendarDepartment) return []; // No mostrar cumpleaños si es calendario
-    
+
     const today = new Date();
     const currentMonth = today.getMonth() + 1;
     const currentDay = today.getDate();
     const currentYear = today.getFullYear();
-    
+
     // Obtener departamentos y clase del usuario
     const userDepartments = profile?.departments || [];
     const userAssignedClass = profile?.assigned_class;
     const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
     const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
-    
+
     const studentsWithDaysUntilBirthday = studentsBasicInfo
       .filter(student => student.birthdate)
       // Filtrar por departamento y clase según el perfil del usuario
@@ -183,48 +183,48 @@ useEffect(() => {
         if (isAdminOrSecretary) {
           return false; // Los admin y secretarias no ven los cumpleaños
         }
-        
+
         // Para maestros y líderes, filtrar por departamento y clase
         const studentDept = student.department;
         const studentClass = student.assigned_class;
-        
+
         // Verificar si el estudiante pertenece a los departamentos del usuario
         const belongsToUserDepartment = userDepartments.includes(studentDept);
-        
+
         // Si el usuario tiene una clase asignada, también verificar la clase
         if (isTeacherOrLeader && userAssignedClass) {
           return belongsToUserDepartment && studentClass === userAssignedClass;
         }
-        
+
         return belongsToUserDepartment;
       })
       .map(student => {
         const cleanFirstName = student.first_name?.trim() || '';
         const cleanLastName = student.last_name?.trim() || '';
-        
+
         const [birthYear, birthMonth, birthDay] = student.birthdate.split('-').map(Number);
-        
+
         const isBirthdayToday = birthMonth === currentMonth && birthDay === currentDay;
-        
+
         let daysUntilBirthday;
         let birthdayThisYear;
-        
+
         if (isBirthdayToday) {
           daysUntilBirthday = 0;
           birthdayThisYear = `${String(currentDay).padStart(2, '0')}/${String(currentMonth).padStart(2, '0')}`;
         } else {
           let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay);
-          
+
           if (birthdayDate < today) {
             birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
           }
-          
+
           const timeDiff = birthdayDate.getTime() - today.getTime();
           daysUntilBirthday = Math.ceil(timeDiff / (1000 * 3600 * 24));
-          
+
           birthdayThisYear = `${String(birthDay).padStart(2, '0')}/${String(birthMonth).padStart(2, '0')}`;
         }
-        
+
         return {
           first_name: cleanFirstName,
           last_name: cleanLastName,
@@ -238,16 +238,16 @@ useEffect(() => {
         };
       })
       .sort((a, b) => a.daysUntilBirthday - b.daysUntilBirthday);
-    
+
     const birthdaysToday = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday === 0);
     const upcomingOnly = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday > 0);
-    
+
     const result = [
-        ...birthdaysToday,
-        ...upcomingOnly.slice(0, 4)
-      ];
-      return result;
-    }, [studentsBasicInfo, profile, isCalendarDepartment]);
+      ...birthdaysToday,
+      ...upcomingOnly.slice(0, 4)
+    ];
+    return result;
+  }, [studentsBasicInfo, profile, isCalendarDepartment]);
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria" || profile?.role === "secr.-calendario";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
@@ -268,23 +268,23 @@ useEffect(() => {
 
   const renderStudentStats = () => {
     if (!profile) {
-      window.location.href = '/';
+      window.location.replace('/');
       return;
     }
 
     const userDepartments = profile.departments || [];
     const userAssignedClass = profile.assigned_class;
 
-    const filteredStudents = isTeacherOrLeader && userAssignedClass 
-    ? students.filter(s => s.assigned_class === userAssignedClass || s.isAuthorized)
-    : students;
+    const filteredStudents = isTeacherOrLeader && userAssignedClass
+      ? students.filter(s => s.assigned_class === userAssignedClass || s.isAuthorized)
+      : students;
 
     let departmentsToShow = [];
-    
+
     if (isAdminOrSecretary) {
       departmentsToShow = departments.map(dept => dept.name as DepartmentType).filter(Boolean);
     } else {
-      departmentsToShow = userDepartments.filter(dept => 
+      departmentsToShow = userDepartments.filter(dept =>
         departments.some(d => d.name === dept)
       ) as DepartmentType[];
     }
@@ -294,7 +294,7 @@ useEffect(() => {
         return acc;
       }
 
-      let deptStudents = filteredStudents.filter(s => {
+      const deptStudents = filteredStudents.filter(s => {
         const studentDept = s.department && s.departments.name ? s.departments.name : s.department;
         return studentDept === dept || s.isAuthorized;
       });
@@ -305,15 +305,15 @@ useEffect(() => {
       };
       return acc;
     }, {} as DepartmentStatsMap);
-    
+
     const formatDepartmentName = (name: string) => {
-      return name.replace(/_/g, ' ').split(' ').map(word => 
+      return name.replace(/_/g, ' ').split(' ').map(word =>
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
     };
-    
+
     const departmentsWithStats = Object.entries(studentsByDepartment);
-    
+
     const isSingleCard = departmentsWithStats.length === 1;
 
     const showClassLabel = isTeacherOrLeader && userAssignedClass;
@@ -351,7 +351,7 @@ useEffect(() => {
           <h2 className="text-2xl font-semibold">
             {statsTitle}
           </h2>
-          
+
           {/* Botón de solicitudes pendientes */}
           {isAdminOrSecretary && pendingRequests.length > 0 && (
             <Button
@@ -369,15 +369,15 @@ useEffect(() => {
             </Button>
           )}
         </div>
-        
+
         <div className={`grid gap-4 ${isSingleCard ? 'place-items-center' : 'grid-cols-2 lg:grid-cols-3'}`}>
           {departmentsWithStats.map(([dept, stats]) => {
             const departmentObj = departments.find(d => d.name === dept);
             const hasClasses = departmentObj?.classes?.length > 0;
-            
+
             return (
-              <div 
-                key={dept} 
+              <div
+                key={dept}
                 className={`bg-gradient-to-br from-white to-accent/30 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border border-accent/20 ${isSingleCard ? 'w-full max-w-sm' : ''} ${isAdminOrSecretary && hasClasses ? 'cursor-pointer' : ''}`}
                 onClick={() => isAdminOrSecretary && hasClasses ? handleDepartmentClick(departmentObj) : null}
               >
@@ -426,15 +426,15 @@ useEffect(() => {
                   Estadísticas por Clase: {formatDepartmentName(selectedDepartment.name || '')}
                 </DialogTitle>
               </DialogHeader>
-              
+
               <div className="mt-4">
                 {selectedDepartment.classes && selectedDepartment.classes.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {selectedDepartment.classes.map(className => {
                       const classStats = getStatsForClass(selectedDepartment.name || '', className);
                       return (
-                        <Card 
-                          key={className} 
+                        <Card
+                          key={className}
                           className="bg-accent/10 cursor-pointer hover:shadow-md transition-shadow"
                           onClick={() => handleClassClick(selectedDepartment.name || '', className)}
                         >
@@ -547,11 +547,11 @@ useEffect(() => {
     createEventMutate(event);
   };
 
-  const handleUpdateEvent = (event: any) => {
+  const handleUpdateEvent = (event: Event) => {
     if (!event.id && selectedEventForEdit) {
       event.id = selectedEventForEdit.id;
     }
-    updateEventMutate(event as Event);
+    updateEventMutate(event);
   };
 
   const handleDeleteEvent = (id: string) => {
@@ -567,11 +567,11 @@ useEffect(() => {
     const regularEvents = events
       .filter(event => !isBefore(new Date(event.date), startOfToday()))
       .filter(event => {
-        const esSolicitud = (event as any).solicitud === true || (event as any).solicitud === 'true';
+        const esSolicitud = (event as unknown as { solicitud: boolean | string }).solicitud === true || (event as unknown as { solicitud: boolean | string }).solicitud === 'true';
         return !esSolicitud;
       })
-      .filter(event => 
-        !searchTerm || 
+      .filter(event =>
+        !searchTerm ||
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
@@ -585,8 +585,8 @@ useEffect(() => {
     }
 
     const birthdayEvents = upcomingBirthdays
-      .filter(birthday => 
-        !searchTerm || 
+      .filter(birthday =>
+        !searchTerm ||
         birthday.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         'cumpleaños'.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (birthday.department && birthday.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -596,29 +596,29 @@ useEffect(() => {
         const today = new Date();
         const currentYear = today.getFullYear();
         const [birthYear, birthMonth, birthDay] = birthday.birthdate.split('-').map(Number);
-        
-        let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay +1);
-        
+
+        let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay + 1);
+
         if (isBefore(birthdayDate, startOfToday())) {
           birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
         }
 
         const formatDepartmentName = (name: string) => {
-          return name?.replace(/_/g, ' ').split(' ').map(word => 
+          return name?.replace(/_/g, ' ').split(' ').map(word =>
             word.charAt(0).toUpperCase() + word.slice(1)
           ).join(' ') || '';
         };
 
         return {
-          id: `birthday-${birthday.first_name}-${birthday.last_name}`, 
+          id: `birthday-${birthday.first_name}-${birthday.last_name}`,
           title: 'Cumpleaños',
-          date: birthdayDate.toISOString().split('T')[0], 
+          date: birthdayDate.toISOString().split('T')[0],
           time: '',
           description: `${birthday.fullName}` || 'Sin clase',
           created_at: '',
           updated_at: '',
-          isBirthday: true, 
-          daysUntilBirthday: birthday.daysUntilBirthday 
+          isBirthday: true,
+          daysUntilBirthday: birthday.daysUntilBirthday
         };
       });
 
@@ -632,7 +632,7 @@ useEffect(() => {
 
   const renderActionButtons = (event: EventWithBirthday) => {
     if (event.isBirthday || !isAdminOrSecretary) return null;
-    
+
     if (isMobile) {
       return (
         <DropdownMenu>
@@ -654,12 +654,12 @@ useEffect(() => {
         </DropdownMenu>
       );
     }
-    
+
     return (
       <div className="flex justify-end space-x-2">
-        <Button 
-          variant="secondary" 
-          size="sm" 
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => handleEditEvent(event)}
         >
           <Edit2 className="h-4 w-4 text-white" />
@@ -685,8 +685,8 @@ useEffect(() => {
         {isAdminOrSecretary && (
           <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
             <DialogTrigger asChild>
-              <Button 
-                className="bg-primary hover:bg-primary/90 transition-colors duration-300" 
+              <Button
+                className="bg-primary hover:bg-primary/90 transition-colors duration-300"
                 onClick={() => setSelectedEventForEdit(null)}
               >
                 {isMobile ? (
@@ -705,8 +705,8 @@ useEffect(() => {
                   {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
                 </DialogTitle>
               </DialogHeader>
-              <EventForm 
-                onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent} 
+              <EventForm
+                onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent}
                 initialData={selectedEventForEdit || undefined}
                 onSuccess={() => {
                   setEventDialogOpen(false);
@@ -728,9 +728,9 @@ useEffect(() => {
             />
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             {searchTerm && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
                 onClick={() => setSearchTerm("")}
               >
@@ -816,15 +816,14 @@ useEffect(() => {
             <Button
               onClick={handlePendingRequestsClick}
               variant="outline"
-              className={`transition-all duration-200 ${
-                pendingRequests.length > 0 
-                  ? "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700 hover:text-orange-800"
-                  : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-700"
-              }`}
+              className={`transition-all duration-200 ${pendingRequests.length > 0
+                ? "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700 hover:text-orange-800"
+                : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-700"
+                }`}
             >
               <Bell className="mr-2 h-4 w-4" />
               <span className="mr-2">
-                {pendingRequests.length > 0 
+                {pendingRequests.length > 0
                   ? `Solicitud${pendingRequests.length !== 1 ? 'es' : ''} Pendiente${pendingRequests.length !== 1 ? 's' : ''}`
                   : "Gestionar Solicitudes"
                 }
@@ -848,7 +847,7 @@ useEffect(() => {
       {isAdminOrSecretary && !studentsLoading && (
         <StudentSearch students={students} />
       )}
-      
+
       {renderStudentStats()}
       {renderCalendar()}
     </div>
