@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany } from "@/lib/api";
 import { Loader2, Moon, Sun, Upload, X } from "lucide-react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
+import { FcmDebug } from "@/components/FcmDebug";
 
 export default function Configuration() {
   const { profile } = useAuth();
@@ -25,14 +26,14 @@ export default function Configuration() {
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  
+
   const [generalSettings, setGeneralSettings] = useState({
     darkMode: false,
     autoSave: true,
     notifications: true,
     showName: true,
   });
-  
+
   const [displaySettings, setDisplaySettings] = useState({
     showAttendanceHistory: true,
     compactView: false,
@@ -67,7 +68,7 @@ export default function Configuration() {
     if (!company) return;
 
     setCongregationName(company.congregation_name || company.name || '');
-    
+
     if (company.logo_url) {
       if (company.logo_url.startsWith('logos/')) {
         setLogoPreview(`${STORAGE_URL}/logos/${company.logo_url.split('logos/')[1]}`);
@@ -94,7 +95,7 @@ export default function Configuration() {
 
   const handleGeneralSettingChange = (setting: keyof typeof generalSettings) => {
     const newValue = !generalSettings[setting];
-    
+
     setGeneralSettings(prev => ({
       ...prev,
       [setting]: newValue
@@ -110,15 +111,15 @@ export default function Configuration() {
     if (setting === 'darkMode') {
       toggleTheme();
     } else {
-      updateCompanyMutate({ 
-        [settingMap[setting]]: newValue 
+      updateCompanyMutate({
+        [settingMap[setting]]: newValue
       });
     }
   };
 
   const handleDisplaySettingChange = (setting: keyof typeof displaySettings) => {
     const newValue = !displaySettings[setting];
-    
+
     setDisplaySettings(prev => ({
       ...prev,
       [setting]: newValue
@@ -130,8 +131,8 @@ export default function Configuration() {
       showProfileImages: 'show_profile_images'
     };
 
-    updateCompanyMutate({ 
-      [settingMap[setting]]: newValue 
+    updateCompanyMutate({
+      [settingMap[setting]]: newValue
     });
   };
 
@@ -139,7 +140,7 @@ export default function Configuration() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setLogoFile(file);
-      
+
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target && event.target.result) {
@@ -157,38 +158,38 @@ export default function Configuration() {
 
   const handleUploadLogo = async () => {
     if (!logoFile) return;
-    
+
     try {
       setIsUploading(true);
-      
+
       const fileExt = logoFile.name.split('.').pop();
       const fileName = `logo_${Date.now()}.${fileExt}`;
       const filePath = `logos/${fileName}`;
-      
+
       const { data, error } = await supabase.storage
         .from('logos')
         .upload(filePath, logoFile, {
           cacheControl: '3600',
           upsert: true
         });
-      
+
       if (error) throw error;
-      
+
       const { data: publicUrlData } = supabase.storage
         .from('logos')
         .getPublicUrl(filePath);
-      
+
       const publicUrl = publicUrlData.publicUrl;
-      
-      await updateCompanyMutate({ 
-        logo_url: publicUrl 
+
+      await updateCompanyMutate({
+        logo_url: publicUrl
       });
-      
+
       toast({
         title: "Logo subido",
         description: "El logo ha sido subido y guardado correctamente",
       });
-      
+
     } catch (error) {
       console.error("Error uploading logo:", error);
       toast({
@@ -203,13 +204,13 @@ export default function Configuration() {
 
   const handleClearLogo = async () => {
     try {
-      await updateCompanyMutate({ 
-        logo_url: null 
+      await updateCompanyMutate({
+        logo_url: null
       });
-      
+
       setLogoPreview('/fire.png');
       setLogoFile(null);
-      
+
       toast({
         title: "Logo eliminado",
         description: "Se ha restaurado el logo por defecto",
@@ -229,9 +230,9 @@ export default function Configuration() {
       const updates: any = {
         congregation_name: congregationName
       };
-      
+
       updateCompanyMutate(updates);
-      
+
       toast({
         title: "Configuración guardada",
         description: "Los cambios han sido aplicados exitosamente",
@@ -253,7 +254,7 @@ export default function Configuration() {
   const handleClearCongregationName = () => {
     setCongregationName('');
     updateCompanyMutate({ congregation_name: '' });
-    
+
     toast({
       title: "Nombre eliminado",
       description: "El nombre de la congregación ha sido eliminado",
@@ -287,14 +288,15 @@ export default function Configuration() {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Configuración</h1>
-      
+
       <Tabs defaultValue="general">
         <TabsList className="mb-4">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="display">Visualización</TabsTrigger>
+          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
           <TabsTrigger value="system">Sistema</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="general">
           <Card>
             <CardHeader>
@@ -306,7 +308,7 @@ export default function Configuration() {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Personalización</h3>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="congregation-name">Nombre de la Congregación</Label>
@@ -318,9 +320,9 @@ export default function Configuration() {
                         onChange={handleCongregationNameChange}
                         className="flex-1"
                       />
-                      <Button 
-                        variant="outline" 
-                        type="button" 
+                      <Button
+                        variant="outline"
+                        type="button"
                         onClick={handleClearCongregationName}
                       >
                         Eliminar
@@ -330,7 +332,7 @@ export default function Configuration() {
                       Este nombre se mostrará en la parte superior del menú lateral y en la página de inicio de sesión.
                     </p>
                   </div>
-                  
+
                   <div className="flex items-center justify-between mt-2">
                     <Label htmlFor="show-name" className="flex flex-col">
                       <span>Mostrar Nombre de Congregación</span>
@@ -338,13 +340,13 @@ export default function Configuration() {
                         Determina si se muestra el nombre de la congregación en el menú lateral y en la página de inicio.
                       </span>
                     </Label>
-                    <Switch 
-                      id="show-name" 
+                    <Switch
+                      id="show-name"
                       checked={generalSettings.showName}
                       onCheckedChange={() => handleGeneralSettingChange('showName')}
                     />
                   </div>
-                  
+
                   <div className="space-y-2 border p-4 rounded-md">
                     <Label htmlFor="logo-upload">Logo</Label>
                     <div className="flex flex-col sm:flex-row gap-4">
@@ -411,7 +413,7 @@ export default function Configuration() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="border-t pt-4">
                 <h3 className="text-lg font-medium mb-4">Otras Configuraciones</h3>
                 <div className="flex items-center justify-between">
@@ -427,14 +429,14 @@ export default function Configuration() {
                     ) : (
                       <Moon className="h-5 w-5 text-indigo-300" />
                     )}
-                    <Switch 
-                      id="dark-mode" 
+                    <Switch
+                      id="dark-mode"
                       checked={generalSettings.darkMode}
                       onCheckedChange={() => handleGeneralSettingChange('darkMode')}
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between mt-4">
                   <Label htmlFor="auto-save" className="flex flex-col">
                     <span>Autoguardado</span>
@@ -442,13 +444,13 @@ export default function Configuration() {
                       Guarda automáticamente los cambios realizados.
                     </span>
                   </Label>
-                  <Switch 
-                    id="auto-save" 
+                  <Switch
+                    id="auto-save"
                     checked={generalSettings.autoSave}
                     onCheckedChange={() => handleGeneralSettingChange('autoSave')}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between mt-4">
                   <Label htmlFor="notifications" className="flex flex-col">
                     <span>Notificaciones</span>
@@ -456,8 +458,8 @@ export default function Configuration() {
                       Habilita las notificaciones de la aplicación.
                     </span>
                   </Label>
-                  <Switch 
-                    id="notifications" 
+                  <Switch
+                    id="notifications"
                     checked={generalSettings.notifications}
                     onCheckedChange={() => handleGeneralSettingChange('notifications')}
                   />
@@ -466,7 +468,7 @@ export default function Configuration() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="display">
           <Card>
             <CardHeader>
@@ -483,13 +485,13 @@ export default function Configuration() {
                     Muestra el historial de asistencia en la página de alumnos.
                   </span>
                 </Label>
-                <Switch 
-                  id="attendance-history" 
+                <Switch
+                  id="attendance-history"
                   checked={displaySettings.showAttendanceHistory}
                   onCheckedChange={() => handleDisplaySettingChange('showAttendanceHistory')}
                 />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <Label htmlFor="compact-view" className="flex flex-col">
                   <span>Vista Compacta</span>
@@ -497,13 +499,13 @@ export default function Configuration() {
                     Muestra más información en menos espacio.
                   </span>
                 </Label>
-                <Switch 
-                  id="compact-view" 
+                <Switch
+                  id="compact-view"
                   checked={displaySettings.compactView}
                   onCheckedChange={() => handleDisplaySettingChange('compactView')}
                 />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <Label htmlFor="profile-images" className="flex flex-col">
                   <span>Mostrar Imágenes de Perfil</span>
@@ -511,8 +513,8 @@ export default function Configuration() {
                     Muestra las imágenes de perfil de los alumnos en las listas.
                   </span>
                 </Label>
-                <Switch 
-                  id="profile-images" 
+                <Switch
+                  id="profile-images"
                   checked={displaySettings.showProfileImages}
                   onCheckedChange={() => handleDisplaySettingChange('showProfileImages')}
                 />
@@ -520,7 +522,11 @@ export default function Configuration() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
+        <TabsContent value="notifications">
+          <FcmDebug />
+        </TabsContent>
+
         <TabsContent value="system">
           <Card>
             <CardHeader>
@@ -540,7 +546,7 @@ export default function Configuration() {
                   <Button variant="outline">Restaurar Datos</Button>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">Borrar Datos</h3>
                 <p className="text-sm text-muted-foreground">
@@ -555,7 +561,7 @@ export default function Configuration() {
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       <div className="mt-6 flex justify-end">
         <Button onClick={handleSaveSettings}>Guardar Configuración</Button>
       </div>

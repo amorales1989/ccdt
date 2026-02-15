@@ -15,9 +15,9 @@ export interface Student {
   created_at: string;
   updated_at: string;
   deleted_at?: string;
-  
+
   // Relaciones
-  departments?: { 
+  departments?: {
     name?: DepartmentType;
     id?: string;
   };
@@ -25,7 +25,7 @@ export interface Student {
     name?: string;
     id?: string;
   };
-  
+
   // Campos computados (solo para el frontend)
   is_authorized?: boolean;
   isAuthorized?: boolean;
@@ -89,10 +89,10 @@ export interface Company {
   show_name?: boolean;
 }
 
-export type DepartmentType = 
-  | "escuelita"  
-  | "adolescentes" 
-  | "jovenes" 
+export type DepartmentType =
+  | "escuelita"
+  | "adolescentes"
+  | "jovenes"
   | "adultos"
   | string;
 
@@ -104,6 +104,7 @@ export interface Profile {
   departments: DepartmentType[];
   department_id?: string;
   email?: string;
+  phone?: string;
   assigned_class?: string;
 }
 

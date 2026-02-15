@@ -12,6 +12,7 @@ type Profile = {
   department_id: string | null;
   assigned_class: string | null;
   email: string | null;
+  phone: string | null;
 };
 
 type AuthContextType = {
@@ -20,9 +21,9 @@ type AuthContextType = {
   loading: boolean;
   session: Session | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, userData: { 
-    first_name: string; 
-    last_name: string; 
+  signUp: (email: string, password: string, userData: {
+    first_name: string;
+    last_name: string;
     role: Profile["role"];
     departments: Profile["departments"];
     department_id: Profile["department_id"];
@@ -103,13 +104,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) throw error;
-      
+
       if (data) {
         const typedProfile: Profile = {
           ...data,
           departments: data.departments as DepartmentType[] || [],
           department_id: data.department_id || null,
-          email: authUser?.email || null  // Agregar el email del usuario autenticado
+          email: authUser?.email || null,  // Agregar el email del usuario autenticado
+          phone: data.phone || null
         };
         setProfile(typedProfile);
       }
@@ -130,17 +132,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLastActivity(Date.now());
   }
 
-  async function signUp(email: string, password: string, userData: { 
-    first_name: string; 
-    last_name: string; 
+  async function signUp(email: string, password: string, userData: {
+    first_name: string;
+    last_name: string;
     role: Profile["role"];
     departments: Profile["departments"];
     department_id: Profile["department_id"];
     assigned_class: Profile["assigned_class"];
   }) {
     console.log("Attempting sign up with data:", { email, ...userData });
-    
-    const formattedDepartments = userData.departments?.map(dept => 
+
+    const formattedDepartments = userData.departments?.map(dept =>
       dept as DepartmentType
     ) || [];
 
@@ -164,24 +166,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signOut() {
     try {
       console.log("Starting sign out process");
-      
+
       // Clear local storage first
       localStorage.removeItem('selectedDepartment');
       localStorage.removeItem('selectedDepartmentId');
-      
+
       // Clear all Supabase auth keys from localStorage
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
           localStorage.removeItem(key);
         }
       });
-      
+
       // Reset state before attempting to sign out
       setUser(null);
       setProfile(null);
       setSession(null);
       setLoading(false);
-      
+
       try {
         // Attempt to sign out from Supabase with global scope
         const { error } = await supabase.auth.signOut({ scope: 'global' });
@@ -191,9 +193,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (supabaseError) {
         console.warn("Supabase sign out warning:", supabaseError);
       }
-      
+
       console.log("Sign out completed, redirecting to login");
-      
+
       // Force a complete page refresh to ensure clean state
       window.location.href = '/';
     } catch (error) {
