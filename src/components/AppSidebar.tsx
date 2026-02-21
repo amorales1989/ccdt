@@ -41,7 +41,7 @@ const getItems = (role: string | undefined, profile: any) => {
     ];
 
     // Agregar solicitudes para roles autorizados
-    if (role === "admin" || role === "secretaria" || role === "secr.-calendario"  || role === "lider") {
+    if (role === "admin" || role === "secretaria" || role === "secr.-calendario" || role === "lider") {
       calendarItems.push({
         title: "Solicitudes",
         url: "/solicitudes",
@@ -74,10 +74,10 @@ const getItems = (role: string | undefined, profile: any) => {
       icon: FileText,
     },
     {
-        title: "Solicitudes",
-        url: "/solicitudes",
-        icon: ClipboardCheck,
-      },
+      title: "Solicitudes",
+      url: "/solicitudes",
+      icon: ClipboardCheck,
+    },
   ];
 
   if (role !== "secretaria") {
@@ -99,7 +99,7 @@ const getItems = (role: string | undefined, profile: any) => {
     }
   }
 
-  
+
   baseItems.push({
     title: "Promover Alumnos",
     url: "/promover",
@@ -114,16 +114,6 @@ const getItems = (role: string | undefined, profile: any) => {
 
   if (role === "admin" || role === "secretaria") {
     baseItems.push(
-      {
-        title: "Calendario",
-        url: "/calendario",
-        icon: FileText,
-      },
-      {
-        title: "Solicitudes",
-        url: "/solicitudes",
-        icon: ClipboardCheck,
-      },
       {
         title: "Autorizaciones",
         url: "/autorizaciones",
@@ -166,7 +156,7 @@ const NavigationMenu = ({ onItemClick }: { onItemClick?: () => void }) => {
     try {
       // Limpiar el flag ANTES de cerrar sesión (en el flujo exitoso)
       sessionStorage.removeItem('calendarAutoRedirected');
-      
+
       await signOut();
       onItemClick?.();
     } catch (error: any) {
