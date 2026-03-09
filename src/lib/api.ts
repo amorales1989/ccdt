@@ -3,7 +3,14 @@ import type { Attendance, Student, Department, DepartmentType, Event } from "@/t
 
 
 // Configuración de la API base
-const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://ccdt-back.onrender.com/api';
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:3001/api';
+  }
+  return import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://ccdt-back.onrender.com/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Función helper para hacer llamadas a la API
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
@@ -620,6 +627,57 @@ export const desuscribirDeTema = async (tokenData: {
     return response.data || response;
   } catch (error) {
     console.error('Error desuscribiendo de tema:', error);
+    throw error;
+  }
+};
+
+// ============ FUNCIONES DE WHATSAPP ============
+
+export const getWhatsappStatus = async (companyId: string | number) => {
+  try {
+    const response = await apiCall(`/whatsapp/estado?companyId=${companyId}`);
+    return response;
+  } catch (error) {
+    console.error('Error fetching WhatsApp status:', error);
+    throw error;
+  }
+};
+
+export const connectWhatsapp = async (companyId: string | number) => {
+  try {
+    const response = await apiCall('/whatsapp/conectar', {
+      method: 'POST',
+      body: JSON.stringify({ companyId }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Error connecting WhatsApp:', error);
+    throw error;
+  }
+};
+
+export const disconnectWhatsapp = async (companyId: string | number) => {
+  try {
+    const response = await apiCall('/whatsapp/desconectar', {
+      method: 'POST',
+      body: JSON.stringify({ companyId }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Error disconnecting WhatsApp:', error);
+    throw error;
+  }
+};
+
+export const testWhatsappMessage = async (companyId: string | number, phoneNumber: string, message: string) => {
+  try {
+    const response = await apiCall('/whatsapp/test', {
+      method: 'POST',
+      body: JSON.stringify({ companyId, phoneNumber, message }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Error sending test WhatsApp message:', error);
     throw error;
   }
 };

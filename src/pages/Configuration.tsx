@@ -10,8 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCompany, updateCompany } from "@/lib/api";
-import { Loader2, Moon, Sun, Upload, X } from "lucide-react";
+import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage } from "@/lib/api";
+import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
 
@@ -26,6 +26,11 @@ export default function Configuration() {
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [whatsappInfo, setWhatsappInfo] = useState<{ status: string; qr: string | null }>({ status: 'disconnected', qr: null });
+  const [isConnectingWhatsapp, setIsConnectingWhatsapp] = useState(false);
+  const [testPhoneNumber, setTestPhoneNumber] = useState("");
+  const [testMessage, setTestMessage] = useState("¡Hola! Mensaje de prueba de WhatsApp.");
+  const [isSendingTest, setIsSendingTest] = useState(false);
 
   const [generalSettings, setGeneralSettings] = useState({
     darkMode: false,
@@ -92,6 +97,87 @@ export default function Configuration() {
       showProfileImages: company.show_profile_images !== false
     });
   }, [company]);
+
+  // Polling para el estado de WhatsApp
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await getWhatsappStatus(1); // Usando id 1 como en el resto de la página
+        if (res.success) {
+          setWhatsappInfo({ status: res.status, qr: res.qr });
+        }
+      } catch (err) {
+        console.error("Error polling WhatsApp status:", err);
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleConnectWhatsapp = async () => {
+    try {
+      setIsConnectingWhatsapp(true);
+      await connectWhatsapp(1);
+      toast({
+        title: "Conectando...",
+        description: "Iniciando proceso de conexión de WhatsApp",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "No se pudo iniciar la conexión",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnectingWhatsapp(false);
+    }
+  };
+
+  const handleDisconnectWhatsapp = async () => {
+    try {
+      await disconnectWhatsapp(1);
+      toast({
+        title: "WhatsApp",
+        description: "Se ha solicitado la desconexión",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "No se pudo desconectar",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendTestMessage = async () => {
+    if (!testPhoneNumber) {
+      toast({
+        title: "Campo requerido",
+        description: "Por favor ingresa un número de teléfono",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSendingTest(true);
+      await testWhatsappMessage(1, testPhoneNumber, testMessage);
+      toast({
+        title: "Mensaje enviado",
+        description: "El mensaje de prueba se ha enviado exitosamente",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "No se pudo enviar el mensaje. Verifica la conexión.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
 
   const handleGeneralSettingChange = (setting: keyof typeof generalSettings) => {
     const newValue = !generalSettings[setting];
@@ -294,6 +380,7 @@ export default function Configuration() {
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="display">Visualización</TabsTrigger>
           <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           <TabsTrigger value="system">Sistema</TabsTrigger>
         </TabsList>
 
@@ -525,6 +612,99 @@ export default function Configuration() {
 
         <TabsContent value="notifications">
           <FcmDebug />
+        </TabsContent>
+
+        <TabsContent value="whatsapp">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-6 w-6" />
+                Vinculación de WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Vincula tu dispositivo mediante código QR para automatizar el envío de mensajes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <div className={`h-3 w-3 rounded-full ${whatsappInfo.status === 'connected' ? 'bg-green-500 animate-pulse' :
+                      whatsappInfo.status === 'qr' ? 'bg-yellow-500' : 'bg-red-500'
+                    }`} />
+                  <div>
+                    <p className="font-medium">
+                      Estado: {
+                        whatsappInfo.status === 'connected' ? 'Conectado' :
+                          whatsappInfo.status === 'qr' ? 'Esperando escaneo' : 'Desconectado'
+                      }
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {whatsappInfo.status === 'connected' ? 'El servicio está operativo.' : 'Vincule su cuenta para comenzar.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {whatsappInfo.status === 'disconnected' && (
+                    <Button onClick={handleConnectWhatsapp} disabled={isConnectingWhatsapp}>
+                      {isConnectingWhatsapp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      Vincular
+                    </Button>
+                  )}
+                  {whatsappInfo.status !== 'disconnected' && (
+                    <Button variant="outline" onClick={handleDisconnectWhatsapp} className="text-destructive border-destructive">
+                      <X className="h-4 w-4 mr-2" />
+                      Desconectar
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {whatsappInfo.status === 'qr' && whatsappInfo.qr && (
+                <div className="flex flex-col items-center justify-center p-6 border rounded-lg bg-white">
+                  <p className="mb-4 text-sm font-medium text-black">Escanee el código QR con su aplicación de WhatsApp</p>
+                  <img src={whatsappInfo.qr} alt="WhatsApp QR" className="w-64 h-64" />
+                  <p className="mt-4 text-xs text-muted-foreground text-center">
+                    Vaya a Configuración &gt; Dispositivos vinculados &gt; Vincular un dispositivo
+                  </p>
+                </div>
+              )}
+
+              {whatsappInfo.status === 'connected' && (
+                <div className="space-y-4 border p-4 rounded-lg">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    Prueba de Envío
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="test-phone">Número de Teléfono</Label>
+                      <Input
+                        id="test-phone"
+                        placeholder="Ej: 54911..."
+                        value={testPhoneNumber}
+                        onChange={(e) => setTestPhoneNumber(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="test-msg">Mensaje</Label>
+                      <Input
+                        id="test-msg"
+                        value={testMessage}
+                        onChange={(e) => setTestMessage(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={handleSendTestMessage}
+                    disabled={isSendingTest}
+                  >
+                    {isSendingTest ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : "Enviar Mensaje de Prueba"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="system">
