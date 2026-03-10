@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { StudentObservation } from "@/types/database";
 import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
 
 
@@ -447,7 +448,7 @@ export const markAttendance = async (attendanceData: {
   }
 };
 
-export const getEvents = async () => {
+export const getEvents = async (): Promise<Event[]> => {
   try {
     const { data, error } = await supabase
       .from('events')
@@ -509,18 +510,20 @@ export const deleteEvent = async (id: string) => {
   }
 };
 
-export async function getUsers() {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*');
+export const getUsers = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*');
 
-  if (error) {
+    if (error) throw error;
+
+    return data;
+  } catch (error) {
     console.error('Error fetching users:', error);
     throw error;
   }
-
-  return data;
-}
+};
 
 export const notifyNewRequest = async (requestData: {
   eventTitle: string;
@@ -678,6 +681,50 @@ export const testWhatsappMessage = async (companyId: string | number, phoneNumbe
     return response;
   } catch (error) {
     console.error('Error sending test WhatsApp message:', error);
+    throw error;
+  }
+};
+
+// ============ FUNCIONES DE OBSERVACIONES DE ALUMNOS ============
+
+export const getObservations = async (studentId: string): Promise<StudentObservation[]> => {
+  try {
+    const { data, error } = await (supabase as any)
+      .from('student_observations')
+      .select(`
+        *,
+        profiles (
+          first_name,
+          last_name
+        )
+      `)
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data as any) || [];
+  } catch (error) {
+    console.error('Error fetching observations:', error);
+    throw error;
+  }
+};
+
+export const addObservation = async (observation: {
+  student_id: string;
+  observation: string;
+  created_by: string;
+}) => {
+  try {
+    const { data, error } = await (supabase as any)
+      .from('student_observations')
+      .insert([observation])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error adding observation:', error);
     throw error;
   }
 };

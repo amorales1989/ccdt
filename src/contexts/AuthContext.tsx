@@ -78,6 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(currentSession?.user ?? null);
       if (currentSession?.user) {
         getProfile(currentSession.user.id);
+      } else {
+        setLoading(false);
       }
     });
 

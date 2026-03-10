@@ -1,3 +1,15 @@
+export interface StudentObservation {
+  id: string;
+  student_id: string;
+  observation: string;
+  created_at: string;
+  created_by?: string;
+  profiles?: {
+    first_name: string;
+    last_name: string;
+  };
+}
+
 export interface Student {
   // Campos básicos que existen en la tabla
   id: string;
@@ -25,6 +37,7 @@ export interface Student {
     name?: string;
     id?: string;
   };
+  observations?: StudentObservation[];
 
   // Campos computados (solo para el frontend)
   is_authorized?: boolean;
@@ -42,6 +55,7 @@ export interface Event {
   description?: string;
   created_at: string;
   updated_at: string;
+  isBirthday?: boolean;
 }
 
 export interface EventWithBirthday extends Event {

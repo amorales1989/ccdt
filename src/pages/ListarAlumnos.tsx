@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears, parse, isValid, parseISO } from "date-fns";
@@ -177,29 +177,29 @@ const ListarAlumnos = () => {
   }, [filters.department]);
 
   const formSchema = z.object({
-  first_name: z.string().min(1, "El nombre es requerido"),
-  last_name: z.string().optional(),
-  gender: z.string(),
-  birthdate: z.any().optional(),
-  address: z.string().optional(),
-  phone: z.string().optional(),
-  document_number: z.string().optional(),
-  department_id: z.string().optional(),
-});
+    first_name: z.string().min(1, "El nombre es requerido"),
+    last_name: z.string().optional(),
+    gender: z.string(),
+    birthdate: z.any().optional(),
+    address: z.string().optional(),
+    phone: z.string().optional(),
+    document_number: z.string().optional(),
+    department_id: z.string().optional(),
+  });
 
-// ========== ACTUALIZAR DEFAULT VALUES (línea ~124) ==========
-const form = useForm({
-  defaultValues: {
-    first_name: "",
-    last_name: "",
-    gender: "masculino",
-    birthdate: "",
-    address: "",
-    phone: "",
-    document_number: ""
-  },
-  resolver: zodResolver(formSchema),
-});
+  // ========== ACTUALIZAR DEFAULT VALUES (línea ~124) ==========
+  const form = useForm({
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      gender: "masculino",
+      birthdate: "",
+      address: "",
+      phone: "",
+      document_number: ""
+    },
+    resolver: zodResolver(formSchema),
+  });
 
   useEffect(() => {
     refetch();
@@ -294,21 +294,21 @@ const form = useForm({
   };
 
   const handleEdit = (student: Student) => {
-  setStudentToEdit(student);
-  const birthDate = student.birthdate || "";
+    setStudentToEdit(student);
+    const birthDate = student.birthdate || "";
 
-  form.reset({
-    first_name: student.first_name || "",
-    last_name: student.last_name || "",
-    gender: student.gender || "masculino",
-    birthdate: birthDate,
-    address: student.address || "",
-    phone: student.phone || "",
-    document_number: student.document_number || "",
-    department_id: student.department_id || "",
-  });
-  setIsEditModalOpen(true);
-};
+    form.reset({
+      first_name: student.first_name || "",
+      last_name: student.last_name || "",
+      gender: student.gender || "masculino",
+      birthdate: birthDate,
+      address: student.address || "",
+      phone: student.phone || "",
+      document_number: student.document_number || "",
+      department_id: student.department_id || "",
+    });
+    setIsEditModalOpen(true);
+  };
 
   // ============ FUNCIÓN PARA ACTUALIZAR USANDO BACKEND API ============
   const handleUpdate = async (values: any) => {
@@ -638,6 +638,9 @@ const form = useForm({
                 <Check className="mr-2 h-4 w-4" /> Marcar como no nuevo
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setExpandedStudentId(student.id); }}>
+              <MessageSquare className="mr-2 h-4 w-4" /> Observaciones
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -723,6 +726,24 @@ const form = useForm({
               </Tooltip>
             </TooltipProvider>
           )}
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-primary hover:text-primary/80"
+                  onClick={(e) => { e.stopPropagation(); setExpandedStudentId(student.id); }}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Ver/Agregar Observaciones</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
         </div>
       );

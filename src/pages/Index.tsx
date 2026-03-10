@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 
 export default function Index() {
   const [email, setEmail] = useState("");
@@ -23,13 +24,15 @@ export default function Index() {
   const [logoPath, setLogoPath] = useState("/fire.png"); // Default logo
   const [companyName, setCompanyName] = useState("");
   const [showCompanyName, setShowCompanyName] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const { data: company } = useQuery({
     queryKey: ['company'],
-    queryFn: () => getCompany(1)
+    queryFn: () => getCompany(1),
+    staleTime: 1000 * 60 * 30, // 30 minutes
   });
 
   useEffect(() => {
@@ -58,12 +61,12 @@ export default function Index() {
       } else if (profile.departments && profile.departments.length === 1) {
         const dept = profile.departments[0];
         localStorage.setItem('selectedDepartment', dept);
-        
+
         // Set department_id in localStorage if available
         if (profile.department_id) {
           localStorage.setItem('selectedDepartmentId', profile.department_id);
         }
-        
+
         navigate("/home"); // Si solo tiene un departamento, proceder al login automáticamente
       } else {
         navigate("/home"); // Si no tiene departamentos, también procede al login
@@ -73,16 +76,17 @@ export default function Index() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       await signIn(email, password); // Intentar iniciar sesión
 
       // Si el perfil tiene más de un departamento, no debemos continuar hasta que se seleccione uno
       if (profile?.departments && profile.departments.length > 1) {
+        setIsSubmitting(false);
         return; // No continuamos con el inicio de sesión si tiene más de un departamento
       }
-
-      console.log("Login exitoso, verificando departamentos:", profile?.departments);
     } catch (error: any) {
+      setIsSubmitting(false);
       console.error("Error de autenticación:", error);
       let errorMessage = "Ha ocurrido un error";
 
@@ -105,7 +109,7 @@ export default function Index() {
   const handleDepartmentSelect = async (value: string) => {
     console.log("Departamento seleccionado:", value);
     setSelectedDepartment(value as DepartmentType);
-    
+
     // Get department_id for the selected department
     try {
       const { data, error } = await supabase
@@ -113,7 +117,7 @@ export default function Index() {
         .select("id")
         .eq("name", value)
         .single();
-      
+
       if (error) {
         console.error("Error fetching department ID:", error);
       } else if (data) {
@@ -123,7 +127,7 @@ export default function Index() {
     } catch (err) {
       console.error("Error in department select:", err);
     }
-    
+
     // Guardamos el departamento seleccionado en el almacenamiento local
     localStorage.setItem('selectedDepartment', value);
     navigate("/home"); // Procedemos al login después de seleccionar el departamento
@@ -184,6 +188,7 @@ export default function Index() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
+      {isSubmitting && <LoadingOverlay message="Iniciando sesión..." />}
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

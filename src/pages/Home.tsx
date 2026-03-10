@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, CheckCircle2, Bell } from "lucide-react";
+import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, CheckCircle2, Bell, Calendar, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,14 +14,14 @@ import type { Event, DepartmentType, Student, Department, EventWithBirthday } fr
 import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
-  DropdownMenuContent, 
-  DropdownMenuItem 
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { redirect, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,12 @@ type DepartmentStatsMap = Record<DepartmentType, ClassStats>;
 const Home = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
+  const { profile, user, loading } = useAuth();
+
+  // Redirigir si no hay sesión activa y terminó de cargar
+  if (!loading && !user) {
+    return <Navigate to="/" replace />;
+  }
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,21 +57,22 @@ const Home = () => {
 
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ['events'],
-    queryFn: getEvents
+    queryFn: getEvents,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-useEffect(() => {
-  // Esperar a que el profile esté cargado
-  if (!profile) return;
-  
-  const hasRedirectedThisSession = sessionStorage.getItem('calendarAutoRedirected');
-  
-  if (isCalendarDepartment && 
+  useEffect(() => {
+    // Esperar a que el profile esté cargado
+    if (!profile) return;
+
+    const hasRedirectedThisSession = sessionStorage.getItem('calendarAutoRedirected');
+
+    if (isCalendarDepartment &&
       !hasRedirectedThisSession) {
-    sessionStorage.setItem('calendarAutoRedirected', 'true');
-    navigate("/calendario", { replace: true });
-  }
-}, [isCalendarDepartment, navigate, location.pathname, profile]); 
+      sessionStorage.setItem('calendarAutoRedirected', 'true');
+      navigate("/calendario", { replace: true });
+    }
+  }, [isCalendarDepartment, navigate, location.pathname, profile]);
   // Solo cargar estudiantes si NO es departamento calendario
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students'],
@@ -132,13 +138,15 @@ useEffect(() => {
         department: student.departments?.name
       }));
     },
-    enabled: !isCalendarDepartment // Solo ejecutar si NO es departamento calendario
+    enabled: !isCalendarDepartment && !!profile?.id, // Solo ejecutar si NO es departamento calendario y hay perfil cargado
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
   const { data: departments = [], isLoading: departmentsLoading } = useQuery({
     queryKey: ['departments'],
     queryFn: getDepartments,
-    enabled: !isCalendarDepartment // Solo ejecutar si NO es departamento calendario
+    enabled: !isCalendarDepartment && !!profile?.id, // Solo ejecutar si NO es departamento calendario y hay perfil cargado
+    staleTime: 1000 * 60 * 15, // 15 minutos (datos estáticos)
   });
 
   const studentsBasicInfo = useMemo(() => {
@@ -164,18 +172,18 @@ useEffect(() => {
 
   const upcomingBirthdays = useMemo(() => {
     if (isCalendarDepartment) return []; // No mostrar cumpleaños si es calendario
-    
+
     const today = new Date();
     const currentMonth = today.getMonth() + 1;
     const currentDay = today.getDate();
     const currentYear = today.getFullYear();
-    
+
     // Obtener departamentos y clase del usuario
     const userDepartments = profile?.departments || [];
     const userAssignedClass = profile?.assigned_class;
     const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
     const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
-    
+
     const studentsWithDaysUntilBirthday = studentsBasicInfo
       .filter(student => student.birthdate)
       // Filtrar por departamento y clase según el perfil del usuario
@@ -183,48 +191,48 @@ useEffect(() => {
         if (isAdminOrSecretary) {
           return false; // Los admin y secretarias no ven los cumpleaños
         }
-        
+
         // Para maestros y líderes, filtrar por departamento y clase
         const studentDept = student.department;
         const studentClass = student.assigned_class;
-        
+
         // Verificar si el estudiante pertenece a los departamentos del usuario
         const belongsToUserDepartment = userDepartments.includes(studentDept);
-        
+
         // Si el usuario tiene una clase asignada, también verificar la clase
         if (isTeacherOrLeader && userAssignedClass) {
           return belongsToUserDepartment && studentClass === userAssignedClass;
         }
-        
+
         return belongsToUserDepartment;
       })
       .map(student => {
         const cleanFirstName = student.first_name?.trim() || '';
         const cleanLastName = student.last_name?.trim() || '';
-        
+
         const [birthYear, birthMonth, birthDay] = student.birthdate.split('-').map(Number);
-        
+
         const isBirthdayToday = birthMonth === currentMonth && birthDay === currentDay;
-        
+
         let daysUntilBirthday;
         let birthdayThisYear;
-        
+
         if (isBirthdayToday) {
           daysUntilBirthday = 0;
           birthdayThisYear = `${String(currentDay).padStart(2, '0')}/${String(currentMonth).padStart(2, '0')}`;
         } else {
           let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay);
-          
+
           if (birthdayDate < today) {
             birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
           }
-          
+
           const timeDiff = birthdayDate.getTime() - today.getTime();
           daysUntilBirthday = Math.ceil(timeDiff / (1000 * 3600 * 24));
-          
+
           birthdayThisYear = `${String(birthDay).padStart(2, '0')}/${String(birthMonth).padStart(2, '0')}`;
         }
-        
+
         return {
           first_name: cleanFirstName,
           last_name: cleanLastName,
@@ -238,16 +246,16 @@ useEffect(() => {
         };
       })
       .sort((a, b) => a.daysUntilBirthday - b.daysUntilBirthday);
-    
+
     const birthdaysToday = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday === 0);
     const upcomingOnly = studentsWithDaysUntilBirthday.filter(student => student.daysUntilBirthday > 0);
-    
+
     const result = [
-        ...birthdaysToday,
-        ...upcomingOnly.slice(0, 4)
-      ];
-      return result;
-    }, [studentsBasicInfo, profile, isCalendarDepartment]);
+      ...birthdaysToday,
+      ...upcomingOnly.slice(0, 4)
+    ];
+    return result;
+  }, [studentsBasicInfo, profile, isCalendarDepartment]);
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria" || profile?.role === "secr.-calendario";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
@@ -275,17 +283,19 @@ useEffect(() => {
     const userDepartments = profile.departments || [];
     const userAssignedClass = profile.assigned_class;
 
-    const filteredStudents = isTeacherOrLeader && userAssignedClass 
-    ? students.filter(s => s.assigned_class === userAssignedClass || s.isAuthorized)
-    : students;
+    const filteredStudents = isTeacherOrLeader && userAssignedClass
+      ? students.filter(s => s.assigned_class === userAssignedClass || s.isAuthorized)
+      : students;
 
     let departmentsToShow = [];
-    
+
     if (isAdminOrSecretary) {
-      departmentsToShow = departments.map(dept => dept.name as DepartmentType).filter(Boolean);
+      departmentsToShow = departments
+        .map(dept => dept.name as DepartmentType)
+        .filter(name => name && name !== 'calendario');
     } else {
-      departmentsToShow = userDepartments.filter(dept => 
-        departments.some(d => d.name === dept)
+      departmentsToShow = userDepartments.filter(dept =>
+        dept !== 'calendario' && departments.some(d => d.name === dept)
       ) as DepartmentType[];
     }
 
@@ -305,15 +315,15 @@ useEffect(() => {
       };
       return acc;
     }, {} as DepartmentStatsMap);
-    
+
     const formatDepartmentName = (name: string) => {
-      return name.replace(/_/g, ' ').split(' ').map(word => 
+      return name.replace(/_/g, ' ').split(' ').map(word =>
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
     };
-    
+
     const departmentsWithStats = Object.entries(studentsByDepartment);
-    
+
     const isSingleCard = departmentsWithStats.length === 1;
 
     const showClassLabel = isTeacherOrLeader && userAssignedClass;
@@ -346,73 +356,113 @@ useEffect(() => {
     };
 
     return (
-      <div className="mb-6">
-        <div className="flex justify-center items-center mb-4">
-          <h2 className="text-2xl font-semibold">
-            {statsTitle}
-          </h2>
-          
+      <div className="mb-12 animate-fade-in">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-2">
+          <div className="text-center md:text-left">
+            <h2 className="text-3xl font-bold tracking-tight text-primary">
+              {statsTitle}
+            </h2>
+            <p className="text-muted-foreground text-sm">Resumen general y distribución por género</p>
+          </div>
+
           {/* Botón de solicitudes pendientes */}
           {isAdminOrSecretary && pendingRequests.length > 0 && (
             <Button
               onClick={handlePendingRequestsClick}
               variant="outline"
-              className="bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700 hover:text-orange-800 transition-all duration-200"
+              className="bg-orange-50/50 border-orange-200 hover:bg-orange-100 text-orange-700 hover:text-orange-800 transition-all duration-300 shadow-sm hover:shadow-md animate-bounce-slow"
             >
               <Bell className="mr-2 h-4 w-4" />
               <span className="mr-2">
                 Solicitud{pendingRequests.length !== 1 ? 'es' : ''} Pendiente{pendingRequests.length !== 1 ? 's' : ''}
               </span>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+              <Badge variant="secondary" className="bg-orange-200 text-orange-800 font-bold px-2 py-0.5 rounded-full">
                 {pendingRequests.length}
               </Badge>
             </Button>
           )}
         </div>
-        
-        <div className={`grid gap-4 ${isSingleCard ? 'place-items-center' : 'grid-cols-2 lg:grid-cols-3'}`}>
-          {departmentsWithStats.map(([dept, stats]) => {
+
+        <div className={`grid gap-6 ${isSingleCard ? 'place-items-center' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+          {departmentsWithStats.map(([dept, stats], index) => {
             const departmentObj = departments.find(d => d.name === dept);
             const hasClasses = departmentObj?.classes?.length > 0;
-            
+            const malePercent = stats.total > 0 ? (stats.male / stats.total) * 100 : 0;
+            const femalePercent = stats.total > 0 ? (stats.female / stats.total) * 100 : 0;
+
             return (
-              <div 
-                key={dept} 
-                className={`bg-gradient-to-br from-white to-accent/30 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border border-accent/20 ${isSingleCard ? 'w-full max-w-sm' : ''} ${isAdminOrSecretary && hasClasses ? 'cursor-pointer' : ''}`}
+              <div
+                key={dept}
+                className={`glass-card group relative p-6 cursor-pointer hover:border-primary/50 transition-all duration-500 hover:-translate-y-1 animate-slide-in ${isSingleCard ? 'w-full max-w-md' : ''}`}
+                style={{ animationDelay: `${index * 0.1}s` }}
                 onClick={() => isAdminOrSecretary && hasClasses ? handleDepartmentClick(departmentObj) : null}
               >
-                <div className="bg-primary p-3 text-center">
-                  <h3 className="font-semibold text-white text-sm sm:text-base">
-                    {formatDepartmentName(dept)}
-                  </h3>
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <PersonStanding className="h-12 w-12 text-primary rotate-12" />
                 </div>
-                <div className="p-4 flex flex-col items-center">
-                  <div className="text-center mb-2">
-                    <p className="text-gray-500 text-xs">Total</p>
-                    <p className="text-secondary text-4xl font-semibold">{stats.total}</p>
+
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <Badge variant="outline" className="mb-2 bg-primary/10 text-primary border-primary/20">
+                      Departamento
+                    </Badge>
+                    <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                      {formatDepartmentName(dept)}
+                    </h3>
                   </div>
-                  <div className="w-full space-y-1 mt-2">
-                    <div className="flex items-center text-gray-600 text-sm">
-                      <PersonStanding className="h-4 w-4 text-[#3A82AF] mr-1" />
-                      <p>Varones: {stats.male}</p>
+                  <div className="text-right">
+                    <p className="text-3xl font-black text-primary">{stats.total}</p>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Alumnos</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="flex items-center gap-1 text-[#3A82AF] uppercase">
+                        <PersonStanding className="h-3 w-3" /> Varones
+                      </span>
+                      <span>{stats.male} ({Math.round(malePercent)}%)</span>
                     </div>
-                    <div className="flex items-center text-gray-600 text-sm">
-                      <PersonStanding className="h-4 w-4 text-[#E83E8C] mr-1" />
-                      <p>Mujeres: {stats.female}</p>
+                    <div className="h-2 w-full bg-accent/20 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#3A82AF] to-[#60b3e5] rounded-full transition-all duration-1000"
+                        style={{ width: `${malePercent}%` }}
+                      ></div>
                     </div>
-                    {isTeacherOrLeader && userAssignedClass && (
-                      <div className="flex items-center text-gray-600 text-sm">
-                        <CheckCircle2 className="h-3 w-3 text-[#7E69AB] mr-1" />
-                        <p>Clase: {userAssignedClass}</p>
-                      </div>
-                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="flex items-center gap-1 text-[#E83E8C] uppercase">
+                        <PersonStanding className="h-3 w-3" /> Mujeres
+                      </span>
+                      <span>{stats.female} ({Math.round(femalePercent)}%)</span>
+                    </div>
+                    <div className="h-2 w-full bg-accent/20 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#E83E8C] to-[#f988b4] rounded-full transition-all duration-1000"
+                        style={{ width: `${femalePercent}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                {(showClassLabel || (isAdminOrSecretary && hasClasses)) && (
+                  <div className="mt-8 flex items-center justify-between text-xs border-t border-accent/20 pt-4">
+                    {showClassLabel ? (
+                      <span className="flex items-center gap-1 font-medium bg-secondary/10 text-secondary px-2 py-1 rounded">
+                        <CheckCircle2 className="h-3 w-3" /> Clase: {userAssignedClass}
+                      </span>
+                    ) : <span></span>}
+
                     {isAdminOrSecretary && hasClasses && (
-                      <div className="flex items-center justify-center mt-2">
-                        <p className="text-xs text-blue-500">Click para ver detalle por clases</p>
-                      </div>
+                      <span className="text-primary font-bold hover:underline flex items-center gap-1 group-hover:gap-2 transition-all">
+                        Ver detalles <Plus className="h-3 w-3" />
+                      </span>
                     )}
                   </div>
-                </div>
+                )}
               </div>
             );
           })}
@@ -420,57 +470,60 @@ useEffect(() => {
 
         {selectedDepartment && (
           <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-            <DialogContent className="max-w-3xl overflow-y-auto max-h-[80vh]">
-              <DialogHeader>
-                <DialogTitle className="text-xl">
-                  Estadísticas por Clase: {formatDepartmentName(selectedDepartment.name || '')}
-                </DialogTitle>
-              </DialogHeader>
-              
-              <div className="mt-4">
+            <DialogContent className="max-w-4xl glass-card border-none p-0 overflow-hidden shadow-2xl">
+              <div className="bg-primary/10 p-8 border-b border-primary/20">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-black text-primary mb-1">
+                    {formatDepartmentName(selectedDepartment.name || '')}
+                  </DialogTitle>
+                  <p className="text-muted-foreground">Desglose de alumnos por clase asignada</p>
+                </DialogHeader>
+              </div>
+
+              <div className="p-8 max-h-[70vh] overflow-y-auto">
                 {selectedDepartment.classes && selectedDepartment.classes.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedDepartment.classes.map(className => {
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {selectedDepartment.classes.map((className, idx) => {
                       const classStats = getStatsForClass(selectedDepartment.name || '', className);
                       return (
-                        <Card 
-                          key={className} 
-                          className="bg-accent/10 cursor-pointer hover:shadow-md transition-shadow"
+                        <div
+                          key={className}
+                          className="bg-accent/5 border border-accent/20 rounded-xl p-6 cursor-pointer hover:bg-white hover:shadow-xl hover:border-primary/30 transition-all duration-300 animate-fade-in"
+                          style={{ animationDelay: `${idx * 0.05}s` }}
                           onClick={() => handleClassClick(selectedDepartment.name || '', className)}
                         >
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-lg">{className}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex justify-between items-center">
-                              <div className="flex flex-col items-center">
-                                <span className="text-sm text-gray-500">Total</span>
-                                <span className="text-2xl font-bold text-primary">{classStats.total}</span>
-                              </div>
-                              <div className="flex gap-4">
-                                <div className="flex flex-col items-center">
-                                  <div className="flex items-center">
-                                    <PersonStanding className="h-4 w-4 text-[#3A82AF] mr-1" />
-                                    <span className="text-sm">Varones</span>
-                                  </div>
-                                  <span className="text-xl font-semibold">{classStats.male}</span>
-                                </div>
-                                <div className="flex flex-col items-center">
-                                  <div className="flex items-center">
-                                    <PersonStanding className="h-4 w-4 text-[#E83E8C] mr-1" />
-                                    <span className="text-sm">Mujeres</span>
-                                  </div>
-                                  <span className="text-xl font-semibold">{classStats.female}</span>
-                                </div>
-                              </div>
+                          <div className="flex justify-between items-center mb-6">
+                            <h4 className="text-lg font-bold text-foreground">{className}</h4>
+                            <div className="bg-primary text-white px-3 py-1 rounded-full text-xs font-black">
+                              {classStats.total} TOTAL
                             </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+
+                          <div className="flex justify-around gap-8">
+                            <div className="flex flex-col items-center group/gender">
+                              <div className="bg-[#3A82AF]/10 p-3 rounded-2xl group-hover/gender:bg-[#3A82AF]/20 transition-colors mb-2">
+                                <PersonStanding className="h-8 w-8 text-[#3A82AF]" />
+                              </div>
+                              <span className="text-2xl font-black text-[#3A82AF]">{classStats.male}</span>
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Varones</span>
+                            </div>
+
+                            <div className="flex flex-col items-center group/gender">
+                              <div className="bg-[#E83E8C]/10 p-3 rounded-2xl group-hover/gender:bg-[#E83E8C]/20 transition-colors mb-2">
+                                <PersonStanding className="h-8 w-8 text-[#E83E8C]" />
+                              </div>
+                              <span className="text-2xl font-black text-[#E83E8C]">{classStats.female}</span>
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Mujeres</span>
+                            </div>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <p className="text-center py-4">No hay clases configuradas para este departamento.</p>
+                  <div className="text-center py-12 opacity-50">
+                    <p className="text-lg font-medium">No hay clases configuradas</p>
+                  </div>
                 )}
               </div>
             </DialogContent>
@@ -570,8 +623,8 @@ useEffect(() => {
         const esSolicitud = (event as any).solicitud === true || (event as any).solicitud === 'true';
         return !esSolicitud;
       })
-      .filter(event => 
-        !searchTerm || 
+      .filter(event =>
+        !searchTerm ||
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
@@ -585,8 +638,8 @@ useEffect(() => {
     }
 
     const birthdayEvents = upcomingBirthdays
-      .filter(birthday => 
-        !searchTerm || 
+      .filter(birthday =>
+        !searchTerm ||
         birthday.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         'cumpleaños'.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (birthday.department && birthday.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -596,29 +649,29 @@ useEffect(() => {
         const today = new Date();
         const currentYear = today.getFullYear();
         const [birthYear, birthMonth, birthDay] = birthday.birthdate.split('-').map(Number);
-        
-        let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay +1);
-        
+
+        let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay + 1);
+
         if (isBefore(birthdayDate, startOfToday())) {
           birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
         }
 
         const formatDepartmentName = (name: string) => {
-          return name?.replace(/_/g, ' ').split(' ').map(word => 
+          return name?.replace(/_/g, ' ').split(' ').map(word =>
             word.charAt(0).toUpperCase() + word.slice(1)
           ).join(' ') || '';
         };
 
         return {
-          id: `birthday-${birthday.first_name}-${birthday.last_name}`, 
+          id: `birthday-${birthday.first_name}-${birthday.last_name}`,
           title: 'Cumpleaños',
-          date: birthdayDate.toISOString().split('T')[0], 
+          date: birthdayDate.toISOString().split('T')[0],
           time: '',
           description: `${birthday.fullName}` || 'Sin clase',
           created_at: '',
           updated_at: '',
-          isBirthday: true, 
-          daysUntilBirthday: birthday.daysUntilBirthday 
+          isBirthday: true,
+          daysUntilBirthday: birthday.daysUntilBirthday
         };
       });
 
@@ -632,7 +685,7 @@ useEffect(() => {
 
   const renderActionButtons = (event: EventWithBirthday) => {
     if (event.isBirthday || !isAdminOrSecretary) return null;
-    
+
     if (isMobile) {
       return (
         <DropdownMenu>
@@ -643,23 +696,23 @@ useEffect(() => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-white">
             <DropdownMenuItem onClick={() => handleEditEvent(event)}>
-              <Edit2 className="mr-2 h-4 w-4 text-white" />
+              <Edit2 className="mr-2 h-4 w-4 text-primary" />
               Editar
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)}>
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
               Eliminar
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
     }
-    
+
     return (
       <div className="flex justify-end space-x-2">
-        <Button 
-          variant="secondary" 
-          size="sm" 
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => handleEditEvent(event)}
         >
           <Edit2 className="h-4 w-4 text-white" />
@@ -679,34 +732,34 @@ useEffect(() => {
 
   // Renderizar el calendario de eventos
   const renderCalendar = () => (
-    <Card className="bg-gradient-to-br from-white to-accent/10 border-accent/20 hover:shadow-xl animate-fade-in">
-      <CardHeader className="flex-row justify-between items-center pb-2">
-        <CardTitle>Calendario de Eventos</CardTitle>
+    <div className="animate-fade-in delay-200">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-2">
+        <div className="text-center md:text-left">
+          <h2 className="text-3xl font-bold tracking-tight text-primary">
+            Calendario de Eventos
+          </h2>
+          <p className="text-muted-foreground text-sm">Próximas actividades y celebraciones</p>
+        </div>
+
         {isAdminOrSecretary && (
           <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
             <DialogTrigger asChild>
-              <Button 
-                className="bg-primary hover:bg-primary/90 transition-colors duration-300" 
+              <Button
+                className="button-gradient shadow-lg hover:shadow-primary/30 transition-all duration-300"
                 onClick={() => setSelectedEventForEdit(null)}
               >
-                {isMobile ? (
-                  <Plus className="h-4 w-4" />
-                ) : (
-                  <>
-                    <MapPin className="mr-2 h-4 w-4" />
-                    Agregar Evento
-                  </>
-                )}
+                <Plus className="mr-2 h-4 w-4" />
+                Agregar Evento
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="glass-card border-none shadow-2xl">
               <DialogHeader>
-                <DialogTitle>
+                <DialogTitle className="text-2xl font-black text-primary">
                   {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
                 </DialogTitle>
               </DialogHeader>
-              <EventForm 
-                onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent} 
+              <EventForm
+                onSubmit={selectedEventForEdit ? handleUpdateEvent : handleCreateEvent}
                 initialData={selectedEventForEdit || undefined}
                 onSuccess={() => {
                   setEventDialogOpen(false);
@@ -716,94 +769,94 @@ useEffect(() => {
             </DialogContent>
           </Dialog>
         )}
-      </CardHeader>
-      <CardContent>
-        <div className="relative mb-6">
-          <div className="relative rounded-lg overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 border border-accent">
-            <Input
-              placeholder="Buscar eventos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-0 bg-white/50 backdrop-blur-sm pr-10 focus-visible:ring-0 pl-10 py-6 text-base"
-            />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            {searchTerm && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                onClick={() => setSearchTerm("")}
-              >
-                <span className="sr-only">Clear search</span>
-                ×
-              </Button>
-            )}
-          </div>
-        </div>
+      </div>
 
-        {eventsLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-pulse flex space-x-4">
-              <div className="flex-1 space-y-4 py-1">
-                <div className="h-4 bg-accent/50 rounded w-3/4"></div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-accent/30 rounded"></div>
-                  <div className="h-4 bg-accent/30 rounded w-5/6"></div>
+      <div className="glass-card p-6 mb-8">
+        <div className="relative group max-w-2xl">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-primary/40 group-focus-within:text-primary transition-colors" />
+          </div>
+          <Input
+            placeholder="Filtrar por título, descripción o departamento..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-12 py-6 bg-accent/5 border-accent/20 focus:bg-white transition-all duration-300 rounded-xl"
+          />
+        </div>
+      </div>
+
+      {eventsLoading ? (
+        <div className="grid gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-24 glass-card animate-pulse opacity-50"></div>
+          ))}
+        </div>
+      ) : futureEvents.length === 0 ? (
+        <div className="text-center py-20 glass-card border-dashed">
+          <Calendar className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-xl font-medium text-muted-foreground">No hay eventos próximos programados</p>
+          {isAdminOrSecretary && (
+            <p className="text-sm text-muted-foreground mt-2">Usa el botón superior para crear el primero</p>
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {futureEvents.map((event, index) => {
+            const eventDate = new Date(event.date);
+            const isToday = differenceInDays(eventDate, startOfToday()) === 0;
+
+            return (
+              <div
+                key={event.id}
+                className="glass-card group flex flex-col md:flex-row items-center p-0 overflow-hidden hover:border-primary/40 transition-all duration-300 animate-slide-in"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                {/* Date Side */}
+                <div className={`w-full md:w-32 flex flex-row md:flex-col items-center justify-center p-4 gap-2 md:gap-0 ${isToday ? 'bg-primary text-white' : 'bg-primary/5 text-primary'} group-hover:scale-110 transition-transform duration-500 relative`}>
+                  <div className="flex flex-row md:flex-col items-center justify-center gap-2 md:gap-0">
+                    <span className="text-3xl font-black">{format(eventDate, "dd")}</span>
+                    <span className="text-xs uppercase font-bold tracking-widest">{format(eventDate, "MMM", { locale: es })}</span>
+                  </div>
+                  {/* Actions explicitly for mobile in the date bar */}
+                  <div className="md:hidden absolute right-4">
+                    {renderActionButtons(event)}
+                  </div>
+                </div>
+
+                {/* Content Side */}
+                <div className="flex-1 p-6 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-2 justify-center md:justify-start">
+                      <h3 className="text-xl font-bold text-foreground pr-8 md:pr-0">
+                        {event.title}
+                      </h3>
+                      {event.time && (
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-bold flex items-center gap-1.5 px-3 py-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          {event.time}
+                        </Badge>
+                      )}
+                      {isToday && (
+                        <Badge className="bg-success/10 text-success border-success/20 animate-pulse">HOY</Badge>
+                      )}
+                      {event.isBirthday && <Badge className="bg-pink-100 text-pink-600 border-pink-200">CUMPLEAÑOS</Badge>}
+                    </div>
+                    <p className="text-muted-foreground line-clamp-2 text-sm italic">
+                      {event.description || "Sin descripción adicional"}
+                    </p>
+                  </div>
+
+                  {/* Actions for desktop on the right */}
+                  <div className="hidden md:block">
+                    {renderActionButtons(event)}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        ) : futureEvents.length === 0 ? (
-          <div className="text-center py-12 bg-white/50 backdrop-blur-sm rounded-lg">
-            <p className="text-lg text-muted-foreground">No hay eventos próximos programados</p>
-            {isAdminOrSecretary && (
-              <p className="text-sm text-muted-foreground mt-2">Haga clic en "Agregar Evento" para crear uno nuevo</p>
-            )}
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-md border animate-fade-in">
-            <ScrollArea className="h-[300px]">
-              <Table>
-                <TableHeader className="bg-primary/10">
-                  <TableRow>
-                    <TableHead className="font-semibold text-primary">Título</TableHead>
-                    <TableHead className="font-semibold text-primary">Fecha</TableHead>
-                    <TableHead className="font-semibold text-primary">Hora</TableHead>
-                    <TableHead className="font-semibold text-primary">Descripción</TableHead>
-                    {isAdminOrSecretary && <TableHead className="text-right text-primary">Acciones</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {futureEvents.map((event) => (
-                    <TableRow key={event.id} className="hover:bg-accent/20 transition-colors duration-200">
-                      <TableCell className="font-medium">{event.title}</TableCell>
-                      <TableCell>
-                        {format(new Date(event.date), "dd/MM", { locale: es })}
-                      </TableCell>
-                      <TableCell>
-                        {event.time && (
-                          <span>{event.time}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <div className="max-h-16 overflow-y-auto">
-                          {event.description || <span className="text-muted-foreground text-sm italic">Sin descripción</span>}
-                        </div>
-                      </TableCell>
-                      {isAdminOrSecretary && (
-                        <TableCell className="text-right">
-                          {renderActionButtons(event)}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 
   // Si es departamento calendario, solo mostrar el calendario y el botón de solicitudes si hay
@@ -816,15 +869,14 @@ useEffect(() => {
             <Button
               onClick={handlePendingRequestsClick}
               variant="outline"
-              className={`transition-all duration-200 ${
-                pendingRequests.length > 0 
-                  ? "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700 hover:text-orange-800"
-                  : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-700"
-              }`}
+              className={`transition-all duration-200 ${pendingRequests.length > 0
+                ? "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700 hover:text-orange-800"
+                : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-700"
+                }`}
             >
               <Bell className="mr-2 h-4 w-4" />
               <span className="mr-2">
-                {pendingRequests.length > 0 
+                {pendingRequests.length > 0
                   ? `Solicitud${pendingRequests.length !== 1 ? 'es' : ''} Pendiente${pendingRequests.length !== 1 ? 's' : ''}`
                   : "Gestionar Solicitudes"
                 }
@@ -848,7 +900,7 @@ useEffect(() => {
       {isAdminOrSecretary && !studentsLoading && (
         <StudentSearch students={students} />
       )}
-      
+
       {renderStudentStats()}
       {renderCalendar()}
     </div>
