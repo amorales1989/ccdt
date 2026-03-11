@@ -10,4 +10,4 @@ jobs:
     steps:
       - name: Ping Backend
         run: |
-          curl -I https://ccdt-back.onrender.com/api/webhooks/cron/health-check
+          curl -v https://ccdt-back.onrender.com/api/webhooks/cron/health-check
