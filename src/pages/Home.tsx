@@ -650,7 +650,7 @@ const Home = () => {
         const currentYear = today.getFullYear();
         const [birthYear, birthMonth, birthDay] = birthday.birthdate.split('-').map(Number);
 
-        let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay + 1);
+        let birthdayDate = new Date(currentYear, birthMonth - 1, birthDay);
 
         if (isBefore(birthdayDate, startOfToday())) {
           birthdayDate = new Date(currentYear + 1, birthMonth - 1, birthDay);
@@ -665,7 +665,7 @@ const Home = () => {
         return {
           id: `birthday-${birthday.first_name}-${birthday.last_name}`,
           title: 'Cumpleaños',
-          date: birthdayDate.toISOString().split('T')[0],
+          date: `${birthdayDate.getFullYear()}-${String(birthdayDate.getMonth() + 1).padStart(2, '0')}-${String(birthdayDate.getDate()).padStart(2, '0')}`,
           time: '',
           description: `${birthday.fullName}` || 'Sin clase',
           created_at: '',
