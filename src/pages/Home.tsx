@@ -75,71 +75,20 @@ const Home = () => {
   }, [isCalendarDepartment, navigate, location.pathname, profile]);
   // Solo cargar estudiantes si NO es departamento calendario
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['students'],
+    queryKey: ['students', 'stats', profile?.id], // Usar prefix 'students' para que se invalide correctamente
     queryFn: async () => {
-      let baseStudents = [];
+      if (!profile) return [];
 
-      // Si es admin o secretaria, obtener todos los estudiantes
-      if (profile?.role === 'secretaria' || profile?.role === 'admin') {
-        const { data, error } = await supabase
-          .from("students")
-          .select(`
-            *,
-            departments (name)
-          `)
-          .order('first_name');
-
-        if (error) throw error;
-        baseStudents = data || [];
-      } else {
-        // Para otros roles, obtener estudiantes del departamento y clase asignados
-        const { data, error } = await supabase
-          .from("students")
-          .select(`
-            *,
-            departments (name)
-          `)
-          .eq('department_id', profile?.department_id)
-          .eq('assigned_class', profile?.assigned_class)
-          .order('first_name');
-
-        if (error) throw error;
-        baseStudents = data || [];
-
-        // Obtener estudiantes autorizados de otros departamentos
-        const { data: authorizedData, error: authError } = await supabase
-          .from("student_authorizations")
-          .select(`
-            student_id,
-            students!inner (
-              *,
-              departments (name)
-            )
-          `)
-          .eq('department_id', profile?.department_id)
-          .eq('class', profile?.assigned_class);
-
-        if (!authError && authorizedData) {
-          // Agregar estudiantes autorizados que no estén ya en la lista
-          const baseStudentIds = baseStudents.map(s => s.id);
-          const authorizedStudents = authorizedData
-            .map(auth => ({
-              ...auth.students,
-              isAuthorized: true
-            }))
-            .filter(student => !baseStudentIds.includes(student.id));
-
-          baseStudents = [...baseStudents, ...authorizedStudents];
-        }
+      const params: any = {};
+      if (profile.role !== 'admin' && profile.role !== 'secretaria') {
+        params.department_id = profile.department_id;
+        params.assigned_class = profile.assigned_class;
       }
 
-      return baseStudents.map(student => ({
-        ...student,
-        department: student.departments?.name
-      }));
+      return getStudents(params);
     },
-    enabled: !isCalendarDepartment && !!profile?.id, // Solo ejecutar si NO es departamento calendario y hay perfil cargado
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    enabled: !isCalendarDepartment && !!profile?.id,
+    staleTime: 1000 * 60 * 1, // 1 minuto
   });
 
   const { data: departments = [], isLoading: departmentsLoading } = useQuery({
@@ -664,10 +613,10 @@ const Home = () => {
 
         return {
           id: `birthday-${birthday.first_name}-${birthday.last_name}`,
-          title: 'Cumpleaños',
+          title: birthday.fullName,
           date: `${birthdayDate.getFullYear()}-${String(birthdayDate.getMonth() + 1).padStart(2, '0')}-${String(birthdayDate.getDate()).padStart(2, '0')}`,
           time: '',
-          description: `${birthday.fullName}` || 'Sin clase',
+          description: 'Cumpleaños',
           created_at: '',
           updated_at: '',
           isBirthday: true,
@@ -853,11 +802,16 @@ const Home = () => {
                       {isToday && (
                         <Badge className="bg-success/10 text-success border-success/20 animate-pulse">HOY</Badge>
                       )}
-                      {event.isBirthday && <Badge className="bg-pink-100 text-pink-600 border-pink-200">CUMPLEAÑOS</Badge>}
                     </div>
-                    <p className="text-muted-foreground line-clamp-2 text-sm italic">
-                      {event.description || "Sin descripción adicional"}
-                    </p>
+                    {event.isBirthday ? (
+                      <Badge className="bg-pink-100 text-pink-600 border-pink-200 font-bold px-3 py-1 mt-1">
+                        {event.description}
+                      </Badge>
+                    ) : (
+                      <p className="text-muted-foreground line-clamp-2 text-sm italic">
+                        {event.description || "Sin descripción adicional"}
+                      </p>
+                    )}
                   </div>
 
                   {/* Actions for desktop on the right */}

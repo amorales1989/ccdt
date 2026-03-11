@@ -6,7 +6,8 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { getAttendance, getDepartmentByName } from "@/lib/api";
-import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X } from "lucide-react";
+import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X, Save, MoreVertical, PersonStanding, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import * as XLSX from 'xlsx';
 import { useAuth } from "@/contexts/AuthContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -248,7 +249,8 @@ const HistorialAsistencia = () => {
       let query = supabase
         .from('students')
         .select('*, departments:department_id(name)')
-        .eq('department_id', departmentIdToUse);
+        .eq('department_id', departmentIdToUse)
+        .is('deleted_at', null);
 
       if ((isAdminOrSecretaria && selectedClass !== "all") || (!isAdminOrSecretaria && userClass)) {
         const classFilter = (isAdminOrSecretaria && selectedClass !== "all") ? selectedClass : userClass;
@@ -718,60 +720,95 @@ const HistorialAsistencia = () => {
           <CardContent>
             {isEditMode ? (
               isLoadingDepartmentStudents || dateAttendanceLoading ? (
-                <p className="text-muted-foreground">Cargando...</p>
+                <div className="flex flex-col gap-3">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl opacity-50" />
+                  ))}
+                </div>
               ) : !editRecords?.length ? (
-                <p className="text-muted-foreground">No hay registros de asistencia para esta fecha.</p>
+                <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                  <UserX className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium">No hay registros de asistencia para esta fecha.</p>
+                </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {editRecords.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-medium">{getFullName(record.students)}</TableCell>
-                          <TableCell>
-                            <span className={`flex justify-center gap-2 ${record.status ? "text-green-500" : "text-red-500"}`}>
-                              {record.status ? (
-                                <UserCheck className="h-6 w-6" />
-                              ) : (
-                                <UserX className="h-6 w-6" />
-                              )}
-                              {!isMobile && (record.status ? "Presente" : "Ausente")}
+                <div className="space-y-3">
+                  {editRecords
+                    .sort((a, b) => {
+                      // Sort by gender (females first) then by name
+                      const gA = (a.students?.gender || '').toLowerCase();
+                      const gB = (b.students?.gender || '').toLowerCase();
+                      if (gA !== gB) {
+                        if (gA === "femenino") return -1;
+                        if (gB === "femenino") return 1;
+                      }
+                      return (a.students?.first_name || '').localeCompare(b.students?.first_name || '');
+                    })
+                    .map((record) => {
+                      const student = record.students;
+                      const isFemale = (student?.gender || '').toLowerCase() === 'femenino';
+                      const isAuthorized = student?.is_authorized;
+
+                      return (
+                        <div
+                          key={record.id}
+                          className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-all duration-300 animate-slide-in"
+                        >
+                          {/* Gender dot */}
+                          <div className={`w-3 h-3 rounded-full shrink-0 ${isFemale ? 'bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.4)]' : 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.4)]'}`} />
+
+                          {/* Name + badges */}
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold text-base text-slate-800 dark:text-slate-100 truncate block">
+                              {getFullName(student)}
                             </span>
-                          </TableCell>
-                          <TableCell className="flex justify-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleAttendanceStatus(record.id)}
-                              className={`whitespace-nowrap ${record.status
-                                ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
-                                : "bg-green-500 hover:bg-green-600 text-white border-green-500"
-                                }`}
-                            >
-                              {record.status ? (
-                                <>
-                                  <X className="h-4 w-4" />
-                                  {!isMobile && <span className="ml-1">Marcar Ausente</span>}
-                                </>
-                              ) : (
-                                <>
-                                  <Check className="h-4 w-4" />
-                                  {!isMobile && <span className="ml-1">Marcar Presente</span>}
-                                </>
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                              {isAuthorized && (
+                                <Badge className="text-[10px] px-2 py-0.5 h-auto bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-none font-black uppercase tracking-wider">
+                                  Autorizado
+                                </Badge>
                               )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                              {student?.nuevo && (
+                                <Badge className="text-[10px] px-2 py-0.5 h-auto bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-none font-black uppercase tracking-wider">
+                                  Nuevo
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Single attendance toggle */}
+                          <button
+                            onClick={() => toggleAttendanceStatus(record.id)}
+                            disabled={savingAttendance}
+                            className={`w-12 h-12 rounded-2xl font-black text-lg transition-all duration-300 shrink-0 flex items-center justify-center transform active:scale-90 ${record.status
+                              ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/20'
+                              : 'bg-rose-50 text-rose-500 dark:bg-rose-900/20 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30'
+                              }`}
+                          >
+                            {record.status ? 'P' : 'A'}
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                  <div className="pt-6">
+                    <Button
+                      onClick={saveAttendanceChanges}
+                      disabled={savingAttendance || editRecords.length === 0}
+                      className="w-full h-14 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xl shadow-purple-500/20 font-black text-lg rounded-2xl transition-all duration-300"
+                    >
+                      {savingAttendance ? (
+                        <div className="flex items-center gap-3">
+                          <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                          Guardando cambios...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Save className="h-6 w-6" />
+                          Guardar Cambios
+                        </div>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )
             ) : (

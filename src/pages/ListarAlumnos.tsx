@@ -285,7 +285,7 @@ const ListarAlumnos = () => {
         description: "El alumno ya no está marcado como nuevo.",
         variant: "success",
       });
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["students"] });
     } catch (error: any) {
       console.error("Error updating student:", error);
       toast({
@@ -326,7 +326,7 @@ const ListarAlumnos = () => {
         variant: "success",
       });
       setIsEditModalOpen(false);
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["students"] });
     } catch (error: any) {
       toast({
         title: "Error al actualizar",
@@ -353,7 +353,7 @@ const ListarAlumnos = () => {
       });
       setDeleteAlertOpen(false);
       setStudentToDelete(null);
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["students"] });
     } catch (error: any) {
       toast({
         title: "Error al eliminar",
@@ -407,7 +407,7 @@ const ListarAlumnos = () => {
       setIsPromoteModalOpen(false);
       setStudentsToPromote([]);
       setSelectedDepartment(null);
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["students"] });
     } catch (error: any) {
       toast({
         title: "Error al promover",

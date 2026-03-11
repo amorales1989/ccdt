@@ -70,6 +70,7 @@ export const getAttendance = async (
             id,
             first_name,
             last_name,
+            gender,
             deleted_at,
             departments:department_id(name)
           )
@@ -102,7 +103,7 @@ export const getAttendance = async (
           department: student?.departments?.name || '',
           is_deleted: !!student?.deleted_at,
           name: `${student?.first_name} ${student?.last_name}`,
-          gender: 'masculino',
+          gender: student?.gender || 'masculino',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         },
@@ -154,9 +155,11 @@ export const updateCompany = async (id: number, updates: any) => {
 
 // ============ FUNCIONES DE ESTUDIANTES ACTUALIZADAS PARA USAR EL BACKEND ============
 
-export const getStudents = async () => {
+export const getStudents = async (params: Record<string, any> = {}) => {
   try {
-    const response = await apiCall('/students');
+    const query = new URLSearchParams(params).toString();
+    const endpoint = `/students${query ? `?${query}` : ''}`;
+    const response = await apiCall(endpoint);
     return response.data || response;
   } catch (error) {
     console.error('Error fetching students:', error);

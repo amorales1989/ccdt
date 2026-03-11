@@ -77,7 +77,10 @@ const TomarAsistencia = () => {
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: ["students-attendance", departmentId, userClass],
     queryFn: async () => {
-      let departmentQuery = supabase.from("students").select("*, departments:department_id(name, id)");
+      let departmentQuery = supabase
+        .from("students")
+        .select("*, departments:department_id(name, id)")
+        .is('deleted_at', null);
 
       if (!isAdminOrSecretaria) {
         if (!departmentId) return [];
@@ -99,7 +102,7 @@ const TomarAsistencia = () => {
         if (!authError && authorizedData) {
           const existingIds = new Set(departmentStudents.map(s => s.id));
           const authStudents = authorizedData
-            .filter((a: any) => a.student && !existingIds.has(a.student.id))
+            .filter((a: any) => a.student && !a.student.deleted_at && !existingIds.has(a.student.id))
             .map((a: any) => ({ ...a.student, is_authorized: true }));
           allStudents = [...departmentStudents, ...authStudents];
         }
@@ -244,8 +247,8 @@ const TomarAsistencia = () => {
         <button
           onClick={() => marcarAsistencia(student.id, !asistencias[student.id])}
           className={`w-10 h-10 rounded-xl font-black text-sm transition-all duration-200 shrink-0 ${asistencias[student.id]
-              ? 'bg-green-500 text-white shadow-md shadow-green-200 scale-105'
-              : 'bg-red-100 text-red-500 hover:bg-red-200'
+            ? 'bg-green-500 text-white shadow-md shadow-green-200 scale-105'
+            : 'bg-red-100 text-red-500 hover:bg-red-200'
             }`}
         >
           {asistencias[student.id] ? 'P' : 'A'}
