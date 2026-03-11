@@ -38,10 +38,11 @@ interface User {
   first_name: string;
   last_name: string;
   role: string;
-  assigned_class: string;
-  departments: string[];
-  department_id: string;
-  email: string;
+  assigned_class?: string;
+  departments?: string[];
+  department_id?: string;
+  email?: string;
+  phone?: string;
 }
 
 export default function Solicitudes() {
@@ -164,7 +165,7 @@ export default function Solicitudes() {
       return updateEvent(eventId, {
         solicitud: false,
         estado: 'aprobada'
-      });
+      } as any);
     },
     onSuccess: async (_, eventId) => {
       // Obtener el evento actualizado
@@ -172,7 +173,7 @@ export default function Solicitudes() {
 
       if (event) {
         const solicitanteId = (event as any).solicitante;
-        const user = users.find((u: User) => u.id === solicitanteId);
+        const user = users.find((u: any) => u.id === solicitanteId);
 
         if (user && user.email) {
           try {
@@ -220,14 +221,14 @@ export default function Solicitudes() {
       return updateEvent(eventId, {
         estado: 'rechazada',
         motivoRechazo: reason
-      });
+      } as any);
     },
     onSuccess: async (_, { eventId, reason }) => {
       const event = allEvents.find(e => e.id === eventId);
 
       if (event) {
         const solicitanteId = (event as any).solicitante;
-        const user = users.find((u: User) => u.id === solicitanteId);
+        const user = users.find((u: any) => u.id === solicitanteId);
 
         if (user && user.email) {
           try {
@@ -392,7 +393,16 @@ export default function Solicitudes() {
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-600 dark:text-slate-400">
                       <div className="flex items-center gap-1.5 bg-slate-100/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
                         <Calendar className="h-4 w-4 text-purple-500" />
-                        <span className="font-medium">{format(new Date(request.date), "dd/MM/yyyy", { locale: es })}</span>
+                        <span className="font-medium">
+                          {(() => {
+                            if (!request.date) return 'No especificada';
+                            const parts = request.date.split('T')[0].split('-');
+                            if (parts.length === 3) {
+                              return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            }
+                            return request.date;
+                          })()}
+                        </span>
                       </div>
 
                       {request.time && (
@@ -497,7 +507,14 @@ export default function Solicitudes() {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-4 w-4 text-primary" />
                         <span className="font-medium">
-                          {format(new Date(selectedRequest.date), "dd/MM/yyyy", { locale: es })}
+                          {(() => {
+                            if (!selectedRequest.date) return 'No especificada';
+                            const parts = selectedRequest.date.split('T')[0].split('-');
+                            if (parts.length === 3) {
+                              return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            }
+                            return selectedRequest.date;
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -618,7 +635,13 @@ export default function Solicitudes() {
                 <p className="text-sm font-medium text-muted-foreground">Solicitud a rechazar:</p>
                 <p className="font-semibold">{selectedRequest.title}</p>
                 <p className="text-sm text-muted-foreground">
-                  {format(new Date(selectedRequest.date), "dd/MM/yyyy", { locale: es })}
+                  {(() => {
+                    const parts = selectedRequest.date.split('T')[0].split('-');
+                    if (parts.length === 3) {
+                      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+                    return selectedRequest.date;
+                  })()}
                   {selectedRequest.time && ` - ${selectedRequest.time}`}
                 </p>
               </div>

@@ -89,7 +89,7 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
     defaultValues: {
       title: initialData?.title || "",
       date: initialData?.date
-        ? format(toZonedTime(addDays(parseISO(initialData.date), -1), timeZone), 'yyyy-MM-dd')
+        ? initialData.date.split('T')[0]
         : "",
       time: initialTimeValue,
       description: initialData?.description || "",
@@ -114,17 +114,15 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
   const handleSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
     try {
-      // Convertir la fecha local a UTC antes de enviar y sumar un día
-      const localDate = parseISO(data.date);
-      const dateWithAddedDay = addDays(localDate, 1);
-      const utcDate = fromZonedTime(dateWithAddedDay, timeZone);
+      // La fecha ya viene en formato YYYY-MM-DD desde el input
+      const dateStr = data.date;
 
       // Determinar el departamento final a enviar
       const finalDepartment = isRequestMode && isCustomDepartment ? customDepartmentValue : data.departamento;
 
       const formattedData = {
         ...data,
-        date: format(utcDate, 'yyyy-MM-dd'),
+        date: dateStr,
         // Agregar campos específicos para solicitudes
         ...(isRequestMode && {
           departamento: finalDepartment,
@@ -138,7 +136,7 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
         await onSubmit({
           ...formattedData,
           id: initialData.id
-        } as any); // Using 'as any' to bypass TypeScript's type check for this special case
+        } as any);
       } else {
         // For create operations
         await onSubmit(formattedData);
@@ -154,6 +152,8 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
       if (onSuccess) {
         onSuccess();
       }
+    } catch (error) {
+      console.error("Error submitting form:", error);
     } finally {
       setIsSubmitting(false);
     }

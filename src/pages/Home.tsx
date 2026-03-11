@@ -814,8 +814,22 @@ const Home = () => {
                 {/* Date Side */}
                 <div className={`w-full md:w-32 flex flex-row md:flex-col items-center justify-center p-4 gap-2 md:gap-0 ${isToday ? 'bg-primary text-white' : 'bg-primary/5 text-primary'} group-hover:scale-110 transition-transform duration-500 relative`}>
                   <div className="flex flex-row md:flex-col items-center justify-center gap-2 md:gap-0">
-                    <span className="text-3xl font-black">{format(eventDate, "dd")}</span>
-                    <span className="text-xs uppercase font-bold tracking-widest">{format(eventDate, "MMM", { locale: es })}</span>
+                    <span className="text-3xl font-black">
+                      {(() => {
+                        const parts = event.date.split('T')[0].split('-');
+                        return parts[2] || '00';
+                      })()}
+                    </span>
+                    <span className="text-xs uppercase font-bold tracking-widest">
+                      {(() => {
+                        const parts = event.date.split('T')[0].split('-');
+                        if (parts.length === 3) {
+                          const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+                          return monthNames[parseInt(parts[1]) - 1];
+                        }
+                        return '---';
+                      })()}
+                    </span>
                   </div>
                   {/* Actions explicitly for mobile in the date bar */}
                   <div className="md:hidden absolute right-4">
