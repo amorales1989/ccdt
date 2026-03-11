@@ -11,7 +11,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage } from "@/lib/api";
-import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings } from "lucide-react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
 
@@ -372,58 +372,86 @@ export default function Configuration() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Configuración</h1>
+    <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
+      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl mb-6">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
 
-      <Tabs defaultValue="general">
-        <TabsList className="mb-4">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="display">Visualización</TabsTrigger>
-          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
-          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
-          <TabsTrigger value="system">Sistema</TabsTrigger>
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
+              <Settings className="h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black text-foreground tracking-tight">Configuración</h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Ajusta las preferencias generales, visualización y notificaciones del sistema.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSaveSettings}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl px-6 h-12 transition-all hover:shadow-lg hover:shadow-purple-500/30"
+            >
+              Guardar Cambios
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="mb-6 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-purple-100 dark:border-slate-800 p-2 rounded-2xl flex flex-wrap w-full md:w-fit justify-center shadow-sm gap-1 md:gap-2 h-auto">
+          <TabsTrigger value="general" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">General</TabsTrigger>
+          <TabsTrigger value="display" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">Visualización</TabsTrigger>
+          <TabsTrigger value="notifications" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">Notificaciones</TabsTrigger>
+          <TabsTrigger value="whatsapp" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">WhatsApp</TabsTrigger>
+          <TabsTrigger value="system" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">Sistema</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuración General</CardTitle>
-              <CardDescription>
+        <TabsContent value="general" className="mt-0 outline-none">
+          <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 left-0 -ml-32 -mt-32 w-96 h-96 rounded-full bg-purple-400/10 blur-3xl pointer-events-none"></div>
+            <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6 px-6 sm:px-8 pt-6 sm:pt-8">
+              <CardTitle className="text-2xl font-bold">Configuración General</CardTitle>
+              <CardDescription className="text-base mt-2">
                 Configura las opciones generales de la aplicación.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Personalización</h3>
+            <CardContent className="space-y-6 relative z-10 px-6 sm:px-8 pb-8">
+              <div className="bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50 space-y-6">
+                <h3 className="text-lg font-bold">Personalización</h3>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="congregation-name">Nombre de la Congregación</Label>
+                    <Label htmlFor="congregation-name" className="text-sm font-semibold">Nombre de la Congregación</Label>
                     <div className="flex gap-2">
                       <Input
                         id="congregation-name"
                         placeholder="Ej. Comunidad Cristiana Don Torcuato"
                         value={congregationName}
                         onChange={handleCongregationNameChange}
-                        className="flex-1"
+                        className="flex-1 h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all shadow-sm"
                       />
                       <Button
                         variant="outline"
                         type="button"
                         onClick={handleClearCongregationName}
+                        className="rounded-xl h-11 border-slate-300 dark:border-slate-600 shadow-sm"
                       >
                         Eliminar
                       </Button>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Este nombre se mostrará en la parte superior del menú lateral y en la página de inicio de sesión.
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between mt-2">
-                    <Label htmlFor="show-name" className="flex flex-col">
-                      <span>Mostrar Nombre de Congregación</span>
-                      <span className="text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60 shadow-sm">
+                    <Label htmlFor="show-name" className="flex flex-col cursor-pointer">
+                      <span className="text-sm font-bold text-foreground">Mostrar Nombre de Congregación</span>
+                      <span className="text-xs text-muted-foreground mt-1">
                         Determina si se muestra el nombre de la congregación en el menú lateral y en la página de inicio.
                       </span>
                     </Label>
@@ -434,24 +462,24 @@ export default function Configuration() {
                     />
                   </div>
 
-                  <div className="space-y-2 border p-4 rounded-md">
-                    <Label htmlFor="logo-upload">Logo</Label>
-                    <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="space-y-4 p-5 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60 shadow-sm">
+                    <Label htmlFor="logo-upload" className="text-sm font-bold text-foreground">Logo personalizado</Label>
+                    <div className="flex flex-col sm:flex-row gap-6">
                       <div className="flex-1">
                         <Input
                           id="logo-upload"
                           type="file"
                           accept="image/*"
                           onChange={handleLogoChange}
-                          className="max-w-md mb-2"
+                          className="w-full h-11 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all cursor-pointer file:cursor-pointer shadow-sm file:bg-purple-100 file:text-purple-700 dark:file:bg-purple-900/30 dark:file:text-purple-300 file:border-0 file:rounded-lg file:mx-2 file:my-1 file:px-4"
                         />
-                        <div className="flex flex-wrap gap-2 mt-2">
+                        <div className="flex flex-wrap gap-3 mt-4">
                           <Button
-                            variant={logoFile ? "success" : "outline"}
+                            variant={logoFile ? "default" : "outline"}
                             type="button"
                             onClick={handleUploadLogo}
                             disabled={!logoFile || isUploading}
-                            className={`flex items-center ${logoFile ? "bg-green-500 hover:bg-green-600 text-white" : ""}`}
+                            className={`flex items-center rounded-xl h-10 ${logoFile ? "bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-500/20" : ""}`}
                           >
                             {isUploading ? (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -464,58 +492,63 @@ export default function Configuration() {
                             variant="outline"
                             type="button"
                             onClick={handleClearLogo}
-                            className="flex items-center text-xs"
+                            className="flex items-center text-xs rounded-xl h-10 text-muted-foreground hover:text-foreground border-slate-200 dark:border-slate-700"
                             size="sm"
                           >
                             <X className="h-4 w-4 mr-1" />
-                            Restaurar
+                            Restaurar por def.
                           </Button>
                         </div>
                       </div>
-                      <div className="flex items-center justify-center">
-                        {logoPreview && (
-                          <div className="relative">
+                      <div className="flex items-center justify-center min-w-[120px] bg-slate-100 dark:bg-slate-800/50 rounded-xl p-2 h-[120px]">
+                        {logoPreview ? (
+                          <div className="relative group w-full h-full flex items-center justify-center">
                             <img
                               src={logoPreview}
                               alt="Logo Preview"
-                              className="h-24 w-auto object-contain border rounded p-2"
+                              className="max-h-24 w-auto max-w-[100px] object-contain drop-shadow-sm group-hover:drop-shadow-md transition-all cursor-pointer"
                               onClick={() => handleShowImagePreview(logoPreview)}
                             />
                             <Button
-                              variant="ghost"
-                              size="sm"
-                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                              variant="secondary"
+                              size="icon"
+                              className="absolute -top-1 -right-1 h-7 w-7 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
                               onClick={() => handleShowImagePreview(logoPreview)}
                             >
                               <span className="sr-only">Ver Logo</span>
-                              🔍
+                              <span className="text-[10px]">🔎</span>
                             </Button>
                           </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground text-center">Sin Logo<br />Elegido</div>
                         )}
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Este logo se mostrará en la página de inicio de sesión. Recomendamos usar una imagen cuadrada de al menos 200x200 píxeles.
+                    <p className="text-xs text-muted-foreground mt-2 px-1">
+                      Este logo se mostrará en la página de inicio de sesión. Recomendamos usar una imagen de al menos 200x200 píxeles.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t pt-4">
-                <h3 className="text-lg font-medium mb-4">Otras Configuraciones</h3>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="dark-mode" className="flex flex-col">
-                    <span>Modo Oscuro</span>
-                    <span className="text-sm text-muted-foreground">
+              <div className="bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50 space-y-4">
+                <h3 className="text-lg font-bold mb-4">Otras Configuraciones</h3>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60 shadow-sm">
+                  <Label htmlFor="dark-mode" className="flex flex-col cursor-pointer">
+                    <span className="text-sm font-bold text-foreground">Modo Oscuro</span>
+                    <span className="text-xs text-muted-foreground mt-1">
                       Cambia la apariencia de la aplicación a un tema oscuro.
                     </span>
                   </Label>
-                  <div className="flex items-center gap-2">
-                    {theme === "light" ? (
-                      <Sun className="h-5 w-5 text-amber-500" />
-                    ) : (
-                      <Moon className="h-5 w-5 text-indigo-300" />
-                    )}
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shadow-inner">
+                      {theme === "light" ? (
+                        <Sun className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <Moon className="h-4 w-4 text-indigo-400" />
+                      )}
+                    </div>
                     <Switch
                       id="dark-mode"
                       checked={generalSettings.darkMode}
@@ -524,10 +557,10 @@ export default function Configuration() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-4">
-                  <Label htmlFor="auto-save" className="flex flex-col">
-                    <span>Autoguardado</span>
-                    <span className="text-sm text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60 shadow-sm">
+                  <Label htmlFor="auto-save" className="flex flex-col cursor-pointer">
+                    <span className="text-sm font-bold text-foreground">Autoguardado</span>
+                    <span className="text-xs text-muted-foreground mt-1">
                       Guarda automáticamente los cambios realizados.
                     </span>
                   </Label>
@@ -538,10 +571,10 @@ export default function Configuration() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between mt-4">
-                  <Label htmlFor="notifications" className="flex flex-col">
-                    <span>Notificaciones</span>
-                    <span className="text-sm text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60 shadow-sm">
+                  <Label htmlFor="notifications" className="flex flex-col cursor-pointer">
+                    <span className="text-sm font-bold text-foreground">Notificaciones Push</span>
+                    <span className="text-xs text-muted-foreground mt-1">
                       Habilita las notificaciones de la aplicación.
                     </span>
                   </Label>
@@ -556,19 +589,20 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="display">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuración de Visualización</CardTitle>
-              <CardDescription>
+        <TabsContent value="display" className="mt-0 outline-none">
+          <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 -mr-32 -mt-32 w-96 h-96 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none"></div>
+            <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6 px-6 sm:px-8 pt-6 sm:pt-8">
+              <CardTitle className="text-2xl font-bold">Configuración de Visualización</CardTitle>
+              <CardDescription className="text-base mt-2">
                 Personaliza cómo se muestra la información en la aplicación.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+            <CardContent className="space-y-4 relative z-10 px-6 sm:px-8 pb-8">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50">
                 <Label htmlFor="attendance-history" className="flex flex-col">
-                  <span>Mostrar Historial de Asistencia</span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-base font-medium">Mostrar Historial de Asistencia</span>
+                  <span className="text-sm text-muted-foreground mt-1">
                     Muestra el historial de asistencia en la página de alumnos.
                   </span>
                 </Label>
@@ -579,10 +613,10 @@ export default function Configuration() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50">
                 <Label htmlFor="compact-view" className="flex flex-col">
-                  <span>Vista Compacta</span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-base font-medium">Vista Compacta</span>
+                  <span className="text-sm text-muted-foreground mt-1">
                     Muestra más información en menos espacio.
                   </span>
                 </Label>
@@ -593,10 +627,10 @@ export default function Configuration() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50">
                 <Label htmlFor="profile-images" className="flex flex-col">
-                  <span>Mostrar Imágenes de Perfil</span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-base font-medium">Mostrar Imágenes de Perfil</span>
+                  <span className="text-sm text-muted-foreground mt-1">
                     Muestra las imágenes de perfil de los alumnos en las listas.
                   </span>
                 </Label>
@@ -610,29 +644,52 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="notifications">
-          <FcmDebug />
+        <TabsContent value="notifications" className="mt-0 outline-none">
+          <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 -mr-32 -mt-32 w-96 h-96 rounded-full bg-blue-400/10 blur-3xl pointer-events-none"></div>
+            <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6 px-6 sm:px-8 pt-6 sm:pt-8">
+              <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-xl text-blue-600 dark:text-blue-400">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                Notificaciones Push (FCM)
+              </CardTitle>
+              <CardDescription className="text-base mt-2">
+                Depuración y configuración de notificaciones Push para dispositivos móviles.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 relative z-10 px-6 sm:px-8 pb-8">
+              <FcmDebug />
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="whatsapp">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-6 w-6" />
+        <TabsContent value="whatsapp" className="mt-0 outline-none">
+          <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 -mr-32 -mt-32 w-96 h-96 rounded-full bg-green-400/10 blur-3xl pointer-events-none"></div>
+            <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6 px-6 sm:px-8 pt-6 sm:pt-8">
+              <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-xl text-green-600 dark:text-green-400">
+                  <Smartphone className="h-6 w-6" />
+                </div>
                 Vinculación de WhatsApp
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-base mt-2">
                 Vincula tu dispositivo mediante código QR para automatizar el envío de mensajes.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <div className={`h-3 w-3 rounded-full ${whatsappInfo.status === 'connected' ? 'bg-green-500 animate-pulse' :
+            <CardContent className="space-y-6 relative z-10 px-6 sm:px-8 pb-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm gap-4">
+                <div className="flex items-center gap-4">
+                  <div className={`flex items-center justify-center h-12 w-12 rounded-full ${whatsappInfo.status === 'connected' ? 'bg-green-100 dark:bg-green-900/30' :
+                    whatsappInfo.status === 'qr' ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-red-100 dark:bg-red-900/30'
+                    }`}>
+                    <div className={`h-4 w-4 rounded-full ${whatsappInfo.status === 'connected' ? 'bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.6)]' :
                       whatsappInfo.status === 'qr' ? 'bg-yellow-500' : 'bg-red-500'
-                    }`} />
+                      }`} />
+                  </div>
                   <div>
-                    <p className="font-medium">
+                    <p className="font-bold text-lg">
                       Estado: {
                         whatsappInfo.status === 'connected' ? 'Conectado' :
                           whatsappInfo.status === 'qr' ? 'Esperando escaneo' : 'Desconectado'
@@ -643,15 +700,15 @@ export default function Configuration() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   {whatsappInfo.status === 'disconnected' && (
-                    <Button onClick={handleConnectWhatsapp} disabled={isConnectingWhatsapp}>
+                    <Button onClick={handleConnectWhatsapp} disabled={isConnectingWhatsapp} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white rounded-xl h-11">
                       {isConnectingWhatsapp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                      Vincular
+                      Vincular Dispositivo
                     </Button>
                   )}
                   {whatsappInfo.status !== 'disconnected' && (
-                    <Button variant="outline" onClick={handleDisconnectWhatsapp} className="text-destructive border-destructive">
+                    <Button variant="outline" onClick={handleDisconnectWhatsapp} className="w-full sm:w-auto text-destructive border-destructive hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl h-11">
                       <X className="h-4 w-4 mr-2" />
                       Desconectar
                     </Button>
@@ -660,46 +717,50 @@ export default function Configuration() {
               </div>
 
               {whatsappInfo.status === 'qr' && whatsappInfo.qr && (
-                <div className="flex flex-col items-center justify-center p-6 border rounded-lg bg-white">
-                  <p className="mb-4 text-sm font-medium text-black">Escanee el código QR con su aplicación de WhatsApp</p>
-                  <img src={whatsappInfo.qr} alt="WhatsApp QR" className="w-64 h-64" />
-                  <p className="mt-4 text-xs text-muted-foreground text-center">
-                    Vaya a Configuración &gt; Dispositivos vinculados &gt; Vincular un dispositivo
+                <div className="flex flex-col items-center justify-center p-8 border border-slate-200 dark:border-slate-700 rounded-3xl bg-white dark:bg-slate-900 shadow-inner">
+                  <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mb-6 border border-slate-100 dark:border-slate-700 inline-block">
+                    <img src={whatsappInfo.qr} alt="WhatsApp QR" className="w-64 h-64 mix-blend-multiply dark:mix-blend-normal rounded-xl" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2 text-center text-foreground">Escanee el código QR</h3>
+                  <p className="text-sm text-muted-foreground text-center max-w-md">
+                    Abra WhatsApp en su teléfono, vaya a <strong>Dispositivos vinculados</strong> y toque <strong>Vincular un dispositivo</strong> para escanear este código.
                   </p>
                 </div>
               )}
 
               {whatsappInfo.status === 'connected' && (
-                <div className="space-y-4 border p-4 rounded-lg">
-                  <h3 className="font-medium flex items-center gap-2">
+                <div className="space-y-6 border border-slate-200 dark:border-slate-700 p-6 rounded-3xl bg-slate-50/50 dark:bg-slate-800/30">
+                  <h3 className="font-bold text-lg flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-green-500" />
                     Prueba de Envío
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="test-phone">Número de Teléfono</Label>
+                      <Label htmlFor="test-phone" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Número de Teléfono</Label>
                       <Input
                         id="test-phone"
                         placeholder="Ej: 54911..."
                         value={testPhoneNumber}
                         onChange={(e) => setTestPhoneNumber(e.target.value)}
+                        className="h-12 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all shadow-sm"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="test-msg">Mensaje</Label>
+                      <Label htmlFor="test-msg" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Mensaje de Prueba</Label>
                       <Input
                         id="test-msg"
                         value={testMessage}
                         onChange={(e) => setTestMessage(e.target.value)}
+                        className="h-12 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all shadow-sm"
                       />
                     </div>
                   </div>
                   <Button
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md shadow-green-500/20 rounded-xl h-12 mt-2 transition-all"
                     onClick={handleSendTestMessage}
                     disabled={isSendingTest}
                   >
-                    {isSendingTest ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : "Enviar Mensaje de Prueba"}
+                    {isSendingTest ? <Loader2 className="h-5 w-5 mr-3 animate-spin" /> : "Enviar Mensaje de Prueba"}
                   </Button>
                 </div>
               )}
@@ -707,34 +768,40 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="system">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuración del Sistema</CardTitle>
-              <CardDescription>
+        <TabsContent value="system" className="mt-0 outline-none">
+          <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 -mr-32 -mt-32 w-96 h-96 rounded-full bg-red-400/10 blur-3xl pointer-events-none"></div>
+            <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6 px-6 sm:px-8 pt-6 sm:pt-8">
+              <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-xl text-slate-600 dark:text-slate-400">
+                  <Settings className="h-5 w-5" />
+                </div>
+                Configuración del Sistema
+              </CardTitle>
+              <CardDescription className="text-base mt-2">
                 Ajustes avanzados del sistema.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Backup y Restauración</h3>
+            <CardContent className="space-y-8 relative z-10 px-6 sm:px-8 pb-8">
+              <div className="space-y-3 bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                <h3 className="text-lg font-bold">Backup y Restauración</h3>
                 <p className="text-sm text-muted-foreground">
-                  Gestiona la copia de seguridad y restauración de datos.
+                  Gestiona la copia de seguridad y restauración de datos guardados temporal o localmente.
                 </p>
-                <div className="flex space-x-2 mt-2">
-                  <Button variant="outline">Generar Backup</Button>
-                  <Button variant="outline">Restaurar Datos</Button>
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <Button variant="outline" className="rounded-xl h-11 border-slate-300 dark:border-slate-600">Generar Backup</Button>
+                  <Button variant="outline" className="rounded-xl h-11 border-slate-300 dark:border-slate-600">Restaurar Datos</Button>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Borrar Datos</h3>
+              <div className="space-y-3 bg-red-50/50 dark:bg-red-900/10 p-6 rounded-2xl border border-red-100 dark:border-red-900/30">
+                <h3 className="text-lg font-bold text-red-600 dark:text-red-400">Zona de Peligro</h3>
                 <p className="text-sm text-muted-foreground">
-                  Elimina datos del sistema. Esta acción no se puede deshacer.
+                  Borra datos caché del sistema y ajustes. Esta acción no se puede deshacer.
                 </p>
-                <div className="flex space-x-2 mt-2">
-                  <Button variant="destructive">Borrar Cache</Button>
-                  <Button variant="destructive">Resetear Configuración</Button>
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <Button variant="destructive" className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-11">Borrar Caché</Button>
+                  <Button variant="destructive" className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-11">Resetear Configuración</Button>
                 </div>
               </div>
             </CardContent>

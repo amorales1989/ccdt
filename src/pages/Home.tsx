@@ -356,7 +356,7 @@ const Home = () => {
     };
 
     return (
-      <div className="mb-12 animate-fade-in">
+      <div className="animate-fade-in">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-2">
           <div className="text-center md:text-left">
             <h2 className="text-3xl font-bold tracking-tight text-primary">
@@ -470,7 +470,7 @@ const Home = () => {
 
         {selectedDepartment && (
           <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-            <DialogContent className="max-w-4xl glass-card border-none p-0 overflow-hidden shadow-2xl">
+            <DialogContent className="w-[95vw] max-w-4xl sm:max-w-4xl glass-card border-none p-0 max-h-[90vh] overflow-y-auto overflow-x-hidden shadow-2xl">
               <div className="bg-primary/10 p-8 border-b border-primary/20">
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-black text-primary mb-1">
@@ -752,7 +752,7 @@ const Home = () => {
                 Agregar Evento
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass-card border-none shadow-2xl">
+            <DialogContent className="w-[95vw] max-w-md sm:max-w-md glass-card border-none shadow-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-black text-primary">
                   {selectedEventForEdit ? "Editar Evento" : "Agregar Evento"}
@@ -862,7 +862,7 @@ const Home = () => {
   // Si es departamento calendario, solo mostrar el calendario y el botón de solicitudes si hay
   if (isCalendarDepartment) {
     return (
-      <div>
+      <div className="space-y-8 pb-8">
         {/* Botón de solicitudes pendientes para calendario */}
         {isAdminOrSecretary && (
           <div className="mb-6 flex justify-end">
@@ -889,20 +889,34 @@ const Home = () => {
             </Button>
           </div>
         )}
-        {renderCalendar()}
+
+        <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-lg">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+          {renderCalendar()}
+        </section>
       </div>
     );
   }
 
   // Renderizar la página completa para otros departamentos
   return (
-    <div>
+    <div className="space-y-10 pb-10">
       {isAdminOrSecretary && !studentsLoading && (
-        <StudentSearch students={students} />
+        <section className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-slate-200 dark:bg-slate-800 blur-3xl pointer-events-none"></div>
+          <StudentSearch students={students} />
+        </section>
       )}
 
-      {renderStudentStats()}
-      {renderCalendar()}
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-100 via-white to-indigo-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-blue-200 dark:border-slate-700 shadow-lg">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-400/20 blur-3xl pointer-events-none"></div>
+        {renderStudentStats()}
+      </section>
+
+      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-lg">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+        {renderCalendar()}
+      </section>
     </div>
   );
 };

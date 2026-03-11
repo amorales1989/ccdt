@@ -39,7 +39,7 @@ const PromoverAlumnos = () => {
   useEffect(() => {
     if (!isAdminOrSecretaria && userDepartment) {
       setSelectedDepartment(userDepartment);
-      
+
       const fetchDepartmentId = async () => {
         try {
           const { data, error } = await supabase
@@ -47,12 +47,12 @@ const PromoverAlumnos = () => {
             .select("id")
             .eq("name", userDepartment)
             .single();
-          
+
           if (error) {
             console.error("Error fetching department ID:", error);
             return;
           }
-          
+
           if (data) {
             setSelectedDepartmentId(data.id);
           }
@@ -60,9 +60,9 @@ const PromoverAlumnos = () => {
           console.error("Error in fetchDepartmentId:", error);
         }
       };
-      
+
       fetchDepartmentId();
-      
+
       if (userClass) {
         setSelectedClass(userClass);
       }
@@ -75,9 +75,9 @@ const PromoverAlumnos = () => {
       const { data, error } = await (supabase
         .from("student_authorizations") as any)
         .select("*, student:student_id(id, first_name, last_name), department:department_id(id, name)");
-      
+
       if (error) throw error;
-      
+
       const authorizations: Record<string, string[]> = {};
       data?.forEach((auth: any) => {
         if (auth.student && auth.student.id) {
@@ -89,7 +89,7 @@ const PromoverAlumnos = () => {
           }
         }
       });
-      
+
       setAuthorizedStudents(authorizations);
       return data || [];
     }
@@ -102,17 +102,17 @@ const PromoverAlumnos = () => {
         .from("departments")
         .select("*")
         .order('name');
-      
+
       if (error) throw error;
       return data as Department[];
     },
   });
 
-  const availableClasses = selectedDepartment 
+  const availableClasses = selectedDepartment
     ? departments.find(d => d.name === selectedDepartment)?.classes || []
     : [];
 
-  const targetAvailableClasses = targetDepartment 
+  const targetAvailableClasses = targetDepartment
     ? departments.find(d => d.name === targetDepartment)?.classes || []
     : [];
 
@@ -126,19 +126,19 @@ const PromoverAlumnos = () => {
       }
 
       let query = supabase.from("students").select("*, departments:department_id(name, id)");
-      
+
       if (selectedDepartmentId) {
         query = query.eq("department_id", selectedDepartmentId);
-        
+
         if (selectedClass) {
           query = query.eq("assigned_class", selectedClass);
         }
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
-      
-      
+
+
       const processedData = (data || [])
         .map(student => ({
           ...student,
@@ -149,7 +149,7 @@ const PromoverAlumnos = () => {
           const nameB = `${b.first_name} ${b.last_name || ''}`;
           return nameA.localeCompare(nameB);
         }) as Student[];
-      
+
       return processedData;
     },
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(selectedDepartmentId)),
@@ -159,7 +159,7 @@ const PromoverAlumnos = () => {
     queryKey: ["authorized-students", profile?.department_id],
     queryFn: async () => {
       if (!profile?.department_id) return [];
-      
+
       const { data, error } = await (supabase
         .from("student_authorizations") as any)
         .select(`
@@ -177,9 +177,9 @@ const PromoverAlumnos = () => {
           )
         `)
         .eq("department_id", profile.department_id);
-      
+
       if (error) throw error;
-      
+
       return data?.map((auth: any) => ({
         ...auth.student,
         department: auth.student?.departments?.name,
@@ -209,8 +209,8 @@ const PromoverAlumnos = () => {
   };
 
   const getFullName = (student: any): string => {
-    return student.last_name 
-      ? `${student.first_name} ${student.last_name}` 
+    return student.last_name
+      ? `${student.first_name} ${student.last_name}`
       : student.first_name;
   };
 
@@ -219,26 +219,26 @@ const PromoverAlumnos = () => {
     setSelectedDepartment(departmentName);
     setSelectAll(false);
     setSelectedStudents([]);
-    
+
     try {
       const { data, error } = await supabase
         .from("departments")
         .select("id")
         .eq("name", departmentName)
         .single();
-      
+
       if (error) {
         console.error("Error fetching department ID:", error);
         return;
       }
-      
+
       if (data) {
         setSelectedDepartmentId(data.id);
       }
     } catch (error) {
       console.error("Error in handleDepartmentChange:", error);
     }
-    
+
     setSelectedClass(null);
   };
 
@@ -251,26 +251,26 @@ const PromoverAlumnos = () => {
   const handleTargetDepartmentChange = async (value: string) => {
     const departmentName = value as DepartmentType;
     setTargetDepartment(departmentName);
-    
+
     try {
       const { data, error } = await supabase
         .from("departments")
         .select("id")
         .eq("name", departmentName)
         .single();
-      
+
       if (error) {
         console.error("Error fetching target department ID:", error);
         return;
       }
-      
+
       if (data) {
         setTargetDepartmentId(data.id);
       }
     } catch (error) {
       console.error("Error in handleTargetDepartmentChange:", error);
     }
-    
+
     setTargetClass(null);
   };
 
@@ -348,7 +348,7 @@ const PromoverAlumnos = () => {
             .delete()
             .eq("student_id", studentId)
             .eq("department_id", targetDepartmentId);
-          
+
           if (deleteError) {
             console.error("Error al eliminar autorización:", deleteError);
           } else {
@@ -372,7 +372,7 @@ const PromoverAlumnos = () => {
       setSelectAll(false);
       refetch();
       refetchAuthorizations();
-      
+
     } catch (error) {
       console.error("Error al promover alumnos:", error);
       toast({
@@ -434,7 +434,7 @@ const PromoverAlumnos = () => {
       refetchAuthorizations();
       setSelectedStudents([]);
       setSelectAll(false);
-      
+
     } catch (error) {
       console.error("Error al autorizar alumnos:", error);
       toast({
@@ -470,7 +470,7 @@ const PromoverAlumnos = () => {
 
       refetchAuthorizations();
       refetchAuthorizedStudents();
-      
+
     } catch (error) {
       console.error("Error al remover autorización:", error);
       toast({
@@ -485,7 +485,7 @@ const PromoverAlumnos = () => {
     if (!isAdminOrSecretaria) return null;
 
     return (
-      <Card className="p-4 mb-6">
+      <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="department-filter">Departamento</Label>
@@ -538,22 +538,35 @@ const PromoverAlumnos = () => {
   };
 
   return (
-    <div className="container mx-auto py-6 px-4">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h2 className="text-xl md:text-2xl font-bold">Gestión de Alumnos</h2>
-      </div>
+    <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
+      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl mb-6">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "promote" | "authorize")}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="promote">Promover Alumnos</TabsTrigger>
-          <TabsTrigger value="authorize">Autorizar Alumnos</TabsTrigger>
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
+            <FolderUp className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-foreground tracking-tight">Gestión de Alumnos</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Promové o autorizá a los alumnos a diferentes departamentos.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "promote" | "authorize")} className="w-full">
+        <TabsList className="mb-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl p-1 h-auto flex flex-wrap sm:flex-nowrap">
+          <TabsTrigger value="promote" className="rounded-xl flex-1 py-3 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/40 dark:data-[state=active]:text-purple-300 font-medium">Promover Alumnos</TabsTrigger>
+          <TabsTrigger value="authorize" className="rounded-xl flex-1 py-3 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/40 dark:data-[state=active]:text-purple-300 font-medium">Autorizar Alumnos</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="promote">
           {renderFilters()}
 
           {isAdminOrSecretaria && !selectedDepartmentId ? (
-            <Card className="p-6 text-center">
+            <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-12 text-center">
               <FolderUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Selecciona un departamento</h3>
               <p className="text-muted-foreground">
@@ -572,7 +585,7 @@ const PromoverAlumnos = () => {
                   </p>
                 </div>
               )}
-              
+
               {isAdminOrSecretaria && selectedDepartment && (
                 <div className="bg-muted/30 p-4 rounded-lg mb-6">
                   <p className="text-sm text-muted-foreground">
@@ -583,8 +596,8 @@ const PromoverAlumnos = () => {
                   </p>
                 </div>
               )}
-              
-              <Card className="p-4 md:p-6 mb-6">
+
+              <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6 overflow-hidden">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <Checkbox
@@ -661,9 +674,9 @@ const PromoverAlumnos = () => {
                 </div>
               </Card>
 
-              <Card className="p-4 md:p-6 mb-6">
+              <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6">
                 <h3 className="text-lg font-semibold mb-4">Opciones de Promoción</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -672,7 +685,7 @@ const PromoverAlumnos = () => {
                         {formatDepartment(selectedDepartment)}
                       </div>
                     </div>
-                    
+
                     {selectedClass && (
                       <div className="space-y-2">
                         <Label>Clase actual</Label>
@@ -682,7 +695,7 @@ const PromoverAlumnos = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Promover a departamento</Label>
@@ -702,7 +715,7 @@ const PromoverAlumnos = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     {targetDepartmentHasClasses && (
                       <div className="space-y-2">
                         <Label>Promover a clase</Label>
@@ -725,30 +738,31 @@ const PromoverAlumnos = () => {
                     )}
                   </div>
                 </div>
-                
-                <div className="mt-6 flex justify-end">
-                  <Button 
+
+                <div className="mt-8 flex justify-end">
+                  <Button
                     onClick={handlePromote}
                     disabled={
-                      selectedStudents.length === 0 || 
-                      !targetDepartment || 
+                      selectedStudents.length === 0 ||
+                      !targetDepartment ||
                       (targetDepartmentHasClasses && !targetClass)
                     }
+                    className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl px-6"
                   >
-                    <FolderUp className="h-4 w-4 mr-2" />
-                    Promover {selectedStudents.length} alumnos
+                    <FolderUp className="h-5 w-5 mr-2" />
+                    Promover {selectedStudents.length} {selectedStudents.length === 1 ? 'alumno' : 'alumnos'}
                   </Button>
                 </div>
               </Card>
             </>
           )}
         </TabsContent>
-        
+
         <TabsContent value="authorize">
           {renderFilters()}
-          
+
           {isAdminOrSecretaria && !selectedDepartmentId ? (
-            <Card className="p-6 text-center">
+            <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-12 text-center">
               <UserCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Selecciona un departamento</h3>
               <p className="text-muted-foreground">
@@ -757,7 +771,7 @@ const PromoverAlumnos = () => {
             </Card>
           ) : (
             <>
-              <Card className="p-4 md:p-6 mb-6">
+              <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6 overflow-hidden">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <Checkbox
@@ -849,7 +863,7 @@ const PromoverAlumnos = () => {
 
               <Card className="p-4 md:p-6 mb-6">
                 <h3 className="text-lg font-semibold mb-4">Opciones de Autorización</h3>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Autorizar para departamento</Label>
@@ -869,7 +883,7 @@ const PromoverAlumnos = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {targetDepartmentHasClasses && (
                     <div className="space-y-2">
                       <Label>Clase específica (opcional)</Label>
@@ -890,23 +904,24 @@ const PromoverAlumnos = () => {
                       </Select>
                     </div>
                   )}
-                  
-                  <div className="mt-6 flex justify-end">
-                    <Button 
+
+                  <div className="mt-8 flex justify-end">
+                    <Button
                       onClick={handleAuthorize}
                       disabled={selectedStudents.length === 0 || !targetDepartment}
+                      className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl px-6"
                     >
-                      <UserCheck className="h-4 w-4 mr-2" />
-                      Autorizar {selectedStudents.length} alumnos
+                      <UserCheck className="h-5 w-5 mr-2" />
+                      Autorizar {selectedStudents.length} {selectedStudents.length === 1 ? 'alumno' : 'alumnos'}
                     </Button>
                   </div>
                 </div>
               </Card>
-              
+
               {!isAdminOrSecretaria && (
-                <Card className="p-4 md:p-6 mb-6">
+                <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6 overflow-hidden">
                   <h3 className="text-lg font-semibold mb-4">Alumnos autorizados en tu departamento</h3>
-                  
+
                   <div className="overflow-x-auto">
                     <Table className="w-full">
                       <TableHeader>

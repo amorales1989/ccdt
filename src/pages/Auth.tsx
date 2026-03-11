@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Mail, Lock, ArrowRight, ActivitySquare, Church } from "lucide-react";
 
 
 export default function Auth() {
@@ -145,100 +146,143 @@ export default function Auth() {
 
   if (showDepartmentSelect) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
-                <AvatarFallback>
-                  <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
-                </AvatarFallback>
-              </Avatar>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 p-4 relative overflow-hidden">
+        {/* Background Decorative Blurs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-3xl translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
+
+        <div className="w-full max-w-md relative z-10 animate-fade-in">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 shadow-2xl rounded-3xl p-8 sm:p-10">
+            <div className="flex flex-col items-center mb-8 text-center">
+              <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 p-4 rounded-2xl mb-4 shadow-inner">
+                <Avatar className="h-16 w-16 bg-transparent">
+                  <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                  <AvatarFallback className="bg-transparent">
+                    <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain drop-shadow-md" />
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">Sistema de Gestión</p>
+              <h1 className="text-2xl font-black text-foreground">
+                {showCompanyName && companyName ? companyName : "Comunidad Cristiana Don Torcuato"}
+              </h1>
             </div>
-            {showCompanyName && companyName && (
-              <h2 className="text-xl font-semibold text-center mb-2">{companyName}</h2>
-            )}
-            <CardTitle>Seleccionar Departamento</CardTitle>
-            <CardDescription>
-              Selecciona el departamento con el que deseas trabajar
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Label>Departamento</Label>
-              <Select onValueChange={handleDepartmentSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {userDepartments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {getDepartmentLabel(dept)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-lg font-semibold mb-1">Seleccionar Departamento</h2>
+                <p className="text-sm text-muted-foreground">Elige el área con la que deseas interactuar</p>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Área / Departamento</Label>
+                <Select onValueChange={handleDepartmentSelect}>
+                  <SelectTrigger className="w-full h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all">
+                    <SelectValue placeholder="Selecciona un departamento" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-xl">
+                    {userDepartments.map((dept) => (
+                      <SelectItem key={dept} value={dept} className="rounded-lg cursor-pointer">
+                        {getDepartmentLabel(dept)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
-              <AvatarFallback>
-                <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
-              </AvatarFallback>
-            </Avatar>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 p-4 relative overflow-hidden">
+      {/* Background Decorative Blurs */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-3xl translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
+
+      <div className="w-full max-w-lg relative z-10 animate-fade-in">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 shadow-2xl rounded-3xl p-8 sm:p-12">
+
+          <div className="flex flex-col items-center mb-8 text-center">
+            <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 p-4 rounded-2xl mb-5 shadow-inner hover:scale-105 transition-transform duration-500">
+              <Avatar className="h-20 w-20 bg-transparent">
+                <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                <AvatarFallback className="bg-transparent">
+                  <img src="/fire.png" alt="CCDTS" className="h-full w-full object-contain drop-shadow-md" />
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">Sistema de Gestión</p>
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground mb-1 leading-tight">
+              {showCompanyName && companyName ? companyName : "Comunidad Cristiana"} <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400">
+                {showCompanyName && companyName ? "" : "Don Torcuato"}
+              </span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">Bienvenido de nuevo. Inicia sesión para continuar.</p>
           </div>
-          {showCompanyName && companyName && (
-            <h2 className="text-xl font-semibold mb-2">{companyName}</h2>
-          )}
-          <CardTitle>Iniciar Sesión</CardTitle>
-          <CardDescription>
-            Ingresa tus credenciales para acceder
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Correo Electrónico</Label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-purple-500 transition-colors" />
+                  </div>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu@correo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="pl-11 h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center ml-1">
+                  <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contraseña</Label>
+                  {/* Future feature: <a href="#" className="text-xs text-purple-600 hover:text-purple-800 hover:underline transition-all">¿Olvidaste tu contraseña?</a> */}
+                </div>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-purple-500 transition-colors" />
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="pl-11 h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full">
-              Iniciar Sesión
+
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 group"
+              disabled={loading}
+            >
+              {loading ? "Verificando..." : "Ingresar"}
+              <ArrowRight className="ml-2 h-5 w-5 opacity-70 group-hover:translate-x-1 group-hover:opacity-100 transition-all" />
             </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              *Si no tienes una cuenta, por favor contacta al director o líder de tu área para solicitar acceso.
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
+
+            <div className="pt-4 text-center border-t border-slate-100 dark:border-slate-800">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                ¿No tienes una cuenta? <br className="sm:hidden" /> Contacta al director o líder de tu área para solicitar acceso al sistema.
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

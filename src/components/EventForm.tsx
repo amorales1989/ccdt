@@ -30,7 +30,7 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
   const [isCustomDepartment, setIsCustomDepartment] = useState(false);
   const [customDepartmentValue, setCustomDepartmentValue] = useState('');
   const timeZone = 'America/Argentina/Buenos_Aires';
-  
+
   // Obtener departamentos para el selector (excluyendo calendario)
   const { data: allDepartments = [] } = useQuery({
     queryKey: ['departments'],
@@ -44,7 +44,7 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
   // Verificar si el valor inicial es un departamento personalizado
   const initialDepartment = (initialData as any)?.departamento || "";
   const isInitialCustom = initialDepartment && !availableDepartments.some(dept => dept.name === initialDepartment);
-  
+
   // Inicializar estado para departamento personalizado
   useEffect(() => {
     if (isInitialCustom) {
@@ -64,39 +64,39 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
       setCustomDepartmentValue('');
     }
   };
-  
+
   // Parse initial time value if available
   const initialTimeValue = initialData?.time || "09:00";
   const [timeValue, setTimeValue] = useState(initialTimeValue);
-  
+
   // Parse hour and minute from the time string
   const parseTime = (timeString: string) => {
     const [hourStr, minuteStr] = timeString.split(':');
     const hour = parseInt(hourStr, 10);
     const minute = parseInt(minuteStr, 10);
-    
+
     return { hour, minute };
   };
-  
+
   const initialTimeParts = parseTime(initialTimeValue);
   const [hour, setHour] = useState(initialTimeParts.hour);
   const [minute, setMinute] = useState(initialTimeParts.minute);
-  
+
   // Obtener la fecha actual en formato YYYY-MM-DD en la zona horaria de Argentina
   const today = format(toZonedTime(new Date(), timeZone), 'yyyy-MM-dd');
 
-const form = useForm<EventFormData>({
-  defaultValues: {
-    title: initialData?.title || "",
-    date: initialData?.date 
-      ? format(toZonedTime(addDays(parseISO(initialData.date), -1), timeZone), 'yyyy-MM-dd') 
-      : "",
-    time: initialTimeValue,
-    description: initialData?.description || "",
-    departamento: isInitialCustom ? 'otro' : ((initialData as any)?.departamento || ""),
-    solicitud: isRequestMode
-  }
-});
+  const form = useForm<EventFormData>({
+    defaultValues: {
+      title: initialData?.title || "",
+      date: initialData?.date
+        ? format(toZonedTime(addDays(parseISO(initialData.date), -1), timeZone), 'yyyy-MM-dd')
+        : "",
+      time: initialTimeValue,
+      description: initialData?.description || "",
+      departamento: isInitialCustom ? 'otro' : ((initialData as any)?.departamento || ""),
+      solicitud: isRequestMode
+    }
+  });
 
   // Function to format the time in 24-hour format for form submission
   const formatTimeFor24Hour = () => {
@@ -118,10 +118,10 @@ const form = useForm<EventFormData>({
       const localDate = parseISO(data.date);
       const dateWithAddedDay = addDays(localDate, 1);
       const utcDate = fromZonedTime(dateWithAddedDay, timeZone);
-      
+
       // Determinar el departamento final a enviar
       const finalDepartment = isRequestMode && isCustomDepartment ? customDepartmentValue : data.departamento;
-      
+
       const formattedData = {
         ...data,
         date: format(utcDate, 'yyyy-MM-dd'),
@@ -132,7 +132,7 @@ const form = useForm<EventFormData>({
           estado: 'solicitud'
         })
       };
-      
+
       if (initialData) {
         // For update operations, include the ID
         await onSubmit({
@@ -143,13 +143,13 @@ const form = useForm<EventFormData>({
         // For create operations
         await onSubmit(formattedData);
       }
-      
+
       if (!initialData) {
         form.reset();
         setIsCustomDepartment(false);
         setCustomDepartmentValue('');
       }
-      
+
       // Call onSuccess callback to close modal if provided
       if (onSuccess) {
         onSuccess();
@@ -187,11 +187,11 @@ const form = useForm<EventFormData>({
     if (isSubmitting) {
       return "Guardando...";
     }
-    
+
     if (initialData) {
       return isRequestMode ? "Actualizar Solicitud" : "Actualizar Evento";
     }
-    
+
     return isRequestMode ? "Solicitar Evento" : "Crear Evento";
   };
 
@@ -222,11 +222,11 @@ const form = useForm<EventFormData>({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Departamento que solicita</FormLabel>
-                  <Select 
+                  <Select
                     onValueChange={(value) => {
                       field.onChange(value);
                       handleDepartmentChange(value);
-                    }} 
+                    }}
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -236,11 +236,11 @@ const form = useForm<EventFormData>({
                     </FormControl>
                     <SelectContent>
                       {availableDepartments.map((department) => (
-                        <SelectItem 
-                          key={department.id} 
+                        <SelectItem
+                          key={department.id}
                           value={department.name || ''}
                         >
-                          {department.name?.replace(/_/g, ' ').split(' ').map(word => 
+                          {department.name?.replace(/_/g, ' ').split(' ').map(word =>
                             word.charAt(0).toUpperCase() + word.slice(1)
                           ).join(' ')}
                         </SelectItem>
@@ -254,13 +254,13 @@ const form = useForm<EventFormData>({
                 </FormItem>
               )}
             />
-            
+
             {/* Campo personalizado de departamento - aparece cuando se selecciona "Otro" */}
             {isCustomDepartment && (
               <FormItem>
                 <FormLabel>Especificar departamento</FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     value={customDepartmentValue}
                     onChange={(e) => setCustomDepartmentValue(e.target.value)}
                     placeholder="Ingrese el nombre del departamento"
@@ -282,9 +282,9 @@ const form = useForm<EventFormData>({
             <FormItem>
               <FormLabel>Fecha</FormLabel>
               <FormControl>
-                <Input 
-                  type="date" 
-                  {...field} 
+                <Input
+                  type="date"
+                  {...field}
                   min={today}
                 />
               </FormControl>
@@ -302,7 +302,7 @@ const form = useForm<EventFormData>({
               <FormLabel>Hora</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <div 
+                  <div
                     className="flex items-center border border-input rounded-md px-3 py-2 bg-background cursor-pointer"
                     onClick={() => setShowTimePicker(!showTimePicker)}
                   >
@@ -313,12 +313,12 @@ const form = useForm<EventFormData>({
                   {showTimePicker && (
                     <div className="absolute z-50 mt-2 p-4 bg-white rounded-lg shadow-lg border border-gray-200 w-[300px]">
                       <p className="text-sm text-center mb-2 text-gray-500">Seleccionar hora</p>
-                      
+
                       {/* Time display and controls */}
                       <div className="flex items-center justify-center mb-6 gap-4">
                         {/* Hour selector */}
                         <div className="relative flex flex-col items-center">
-                          <button 
+                          <button
                             type="button"
                             className="text-gray-400 hover:text-gray-600"
                             onClick={() => adjustHour(true)}
@@ -328,7 +328,7 @@ const form = useForm<EventFormData>({
                           <div className="w-16 h-16 flex items-center justify-center bg-[#E5DEFF] rounded-md text-3xl font-medium text-[#6E59A5]">
                             {hour.toString().padStart(2, '0')}
                           </div>
-                          <button 
+                          <button
                             type="button"
                             className="text-gray-400 hover:text-gray-600"
                             onClick={() => adjustHour(false)}
@@ -336,13 +336,13 @@ const form = useForm<EventFormData>({
                             ▼
                           </button>
                         </div>
-                        
+
                         {/* Separator */}
                         <div className="text-3xl font-bold">:</div>
-                        
+
                         {/* Minute selector */}
                         <div className="relative flex flex-col items-center">
-                          <button 
+                          <button
                             type="button"
                             className="text-gray-400 hover:text-gray-600"
                             onClick={() => adjustMinute(true)}
@@ -352,7 +352,7 @@ const form = useForm<EventFormData>({
                           <div className="w-16 h-16 flex items-center justify-center bg-gray-100 rounded-md text-3xl font-medium">
                             {minute.toString().padStart(2, '0')}
                           </div>
-                          <button 
+                          <button
                             type="button"
                             className="text-gray-400 hover:text-gray-600"
                             onClick={() => adjustMinute(false)}
@@ -361,20 +361,21 @@ const form = useForm<EventFormData>({
                           </button>
                         </div>
                       </div>
-                      
+
                       {/* Action buttons */}
                       <div className="flex justify-between mt-4">
-                        <Button 
-                          type="button" 
+                        <Button
+                          type="button"
                           variant="outline"
                           onClick={() => setShowTimePicker(false)}
+                          className="rounded-xl border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-700 dark:text-purple-300"
                         >
                           Cancelar
                         </Button>
-                        <Button 
+                        <Button
                           type="button"
                           onClick={updateFormTime}
-                          className="bg-[#9b87f5] hover:bg-[#7E69AB]"
+                          className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl px-6"
                         >
                           Aceptar
                         </Button>
@@ -396,8 +397,8 @@ const form = useForm<EventFormData>({
             <FormItem>
               <FormLabel>Descripción</FormLabel>
               <FormControl>
-                <Textarea 
-                  {...field} 
+                <Textarea
+                  {...field}
                   placeholder={isRequestMode ? "Ingrese la descripción de la solicitud" : "Ingrese la descripción del evento"}
                   className="min-h-[100px]"
                 />
@@ -407,7 +408,11 @@ const form = useForm<EventFormData>({
           )}
         />
 
-        <Button type="submit" disabled={isSubmitting} className="w-full">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl mt-4"
+        >
           {getButtonText()}
         </Button>
       </form>

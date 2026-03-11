@@ -421,13 +421,30 @@ const HistorialAsistencia = () => {
   };
 
   return (
-    <div className="p-2 sm:p-4 md:p-6">
+    <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
+      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl mb-6">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
+
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
+            <CalendarIcon className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-foreground tracking-tight">Historial de Asistencias</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Consultá y gestioná el registro de asistencias de las distintas áreas.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-[300px_1fr]">
         <div className="space-y-4">
           {isEditMode ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl">Editar Asistencia</CardTitle>
+            <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl overflow-hidden">
+              <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200/40 dark:border-slate-700/40">
+                <CardTitle className="text-lg md:text-xl text-slate-800 dark:text-slate-100">Editar Asistencia</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -475,9 +492,12 @@ const HistorialAsistencia = () => {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl">Filtros</CardTitle>
+            <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl overflow-hidden">
+              <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200/40 dark:border-slate-700/40 pb-4">
+                <CardTitle className="text-lg md:text-xl flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                  <Search className="h-5 w-5 text-purple-500" />
+                  Filtros
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
@@ -646,8 +666,8 @@ const HistorialAsistencia = () => {
             </Card>
           )}
 
-          <Card className="p-4">
-            <div className="flex justify-between items-center gap-4">
+          <Card className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl">
+            <div className="flex justify-around items-center gap-4">
               <div className="flex items-center gap-2">
                 <UserCheck className="h-5 w-5 text-green-500" />
                 <span>Presentes: {isEditMode ? editRecords.filter(r => r.status).length : attendanceStats.present}</span>
@@ -660,9 +680,9 @@ const HistorialAsistencia = () => {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <CardTitle className="text-lg md:text-xl">
+        <Card className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/50 shadow-lg shadow-purple-500/5 rounded-3xl overflow-hidden h-fit">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200/40 dark:border-slate-700/40">
+            <CardTitle className="text-lg md:text-xl text-slate-800 dark:text-slate-100">
               {isEditMode
                 ? `Editar Asistencia del ${format(editDate, "dd/MM/yyyy")}`
                 : isAdminOrSecretaria
@@ -672,15 +692,23 @@ const HistorialAsistencia = () => {
                     : `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`
               }
             </CardTitle>
-            <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3">
               {!isEditMode && (
-                <Button onClick={enterEditMode} className="w-full sm:w-auto">
+                <Button
+                  onClick={enterEditMode}
+                  className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl"
+                >
                   <PenSquare className="mr-2 h-4 w-4" />
                   Editar Asistencia
                 </Button>
               )}
               {isAdminOrSecretaria && !isEditMode && (
-                <Button onClick={handleExportToExcel} disabled={!filteredAttendance.length} className="w-full sm:w-auto">
+                <Button
+                  onClick={handleExportToExcel}
+                  disabled={!filteredAttendance.length}
+                  variant="outline"
+                  className="w-full sm:w-auto border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-xl"
+                >
                   <Download className="mr-2 h-4 w-4" />
                   Exportar Excel
                 </Button>
@@ -723,8 +751,8 @@ const HistorialAsistencia = () => {
                               size="sm"
                               onClick={() => toggleAttendanceStatus(record.id)}
                               className={`whitespace-nowrap ${record.status
-                                  ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
-                                  : "bg-green-500 hover:bg-green-600 text-white border-green-500"
+                                ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
+                                : "bg-green-500 hover:bg-green-600 text-white border-green-500"
                                 }`}
                             >
                               {record.status ? (

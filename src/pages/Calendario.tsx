@@ -56,7 +56,7 @@ export default function Calendario() {
   const isAdmin = profile?.role === 'admin';
   const isSecrCalendario = profile?.role === 'secr.-calendario';
   const canCreateEvents = isSecretaria || isAdmin || isSecrCalendario;
-  
+
   const queryClient = useQueryClient();
 
   const { data: allEvents = [], isLoading, refetch } = useQuery({
@@ -82,7 +82,7 @@ export default function Calendario() {
       const filtered = events
         .filter(event => isSameMonth(new Date(event.date), selectedDate))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      
+
       setCurrentMonthEvents(filtered);
     }
   }, [selectedDate, events]);
@@ -103,98 +103,98 @@ export default function Calendario() {
     return (event as any).solicitante === profile?.id;
   };
 
-// Reemplazar la función handleCreateEvent en calendario.tsx
-// También agregar el import de notifyNewRequest al inicio del archivo:
-// import { getEvents, deleteEvent, updateEvent, createEvent, notifyNewRequest } from "@/lib/api";
+  // Reemplazar la función handleCreateEvent en calendario.tsx
+  // También agregar el import de notifyNewRequest al inicio del archivo:
+  // import { getEvents, deleteEvent, updateEvent, createEvent, notifyNewRequest } from "@/lib/api";
 
-const handleCreateEvent = async (eventData: any) => {
-  try {
-    if (selectedEvent) {
-      // Actualizar evento existente
-      await updateEvent(selectedEvent.id, {
-        ...eventData,
-        id: selectedEvent.id
-      });
-      toast({
-        title: (isSecretaria || isAdmin || isSecrCalendario) ? "Evento actualizado" : "Solicitud actualizada",
-        description: (isSecretaria || isAdmin || isSecrCalendario) 
-          ? "El evento se ha actualizado exitosamente." 
-          : "La solicitud se ha actualizado exitosamente.",
-      });
-    } else {
-      // Crear nuevo evento/solicitud
-      const dataToSend = {
-        ...eventData
-      };
+  const handleCreateEvent = async (eventData: any) => {
+    try {
+      if (selectedEvent) {
+        // Actualizar evento existente
+        await updateEvent(selectedEvent.id, {
+          ...eventData,
+          id: selectedEvent.id
+        });
+        toast({
+          title: (isSecretaria || isAdmin || isSecrCalendario) ? "Evento actualizado" : "Solicitud actualizada",
+          description: (isSecretaria || isAdmin || isSecrCalendario)
+            ? "El evento se ha actualizado exitosamente."
+            : "La solicitud se ha actualizado exitosamente.",
+        });
+      } else {
+        // Crear nuevo evento/solicitud
+        const dataToSend = {
+          ...eventData
+        };
 
-      // Si no puede crear eventos directamente (es una solicitud)
-      if (!canCreateEvents && profile?.id) {
-        dataToSend.solicitante = profile.id;
-      }
+        // Si no puede crear eventos directamente (es una solicitud)
+        if (!canCreateEvents && profile?.id) {
+          dataToSend.solicitante = profile.id;
+        }
 
-      // Crear el evento/solicitud
-      const newEvent = await createEvent(dataToSend);
+        // Crear el evento/solicitud
+        const newEvent = await createEvent(dataToSend);
 
-      // Si es una solicitud (usuario sin permisos), enviar notificación por email
-      if (!canCreateEvents && profile) {
-        try {
-          const requesterName = profile.first_name && profile.last_name 
-            ? `${profile.first_name} ${profile.last_name}`.trim()
-            : profile.email || 'Usuario no identificado';
+        // Si es una solicitud (usuario sin permisos), enviar notificación por email
+        if (!canCreateEvents && profile) {
+          try {
+            const requesterName = profile.first_name && profile.last_name
+              ? `${profile.first_name} ${profile.last_name}`.trim()
+              : profile.email || 'Usuario no identificado';
 
-          await notifyNewRequest({
-            eventTitle: eventData.title,
-            eventDate: eventData.date,
-            eventTime: eventData.time,
-            department: eventData.departamento,
-            requesterName: requesterName,
-            description: eventData.description,
-            adminEmails: [
-              'a19morales89@gmail.com',
-              'wmaldonado1987@hotmail.com',
-              'daniela.s.galarza86@gmail.com',
-              'amonima115@hotmail.com',
-              'marcelaponceabril@gmail.com',
-              'comunidadcristianadontorcuato@gmail.com'
-            ]
-          });
+            await notifyNewRequest({
+              eventTitle: eventData.title,
+              eventDate: eventData.date,
+              eventTime: eventData.time,
+              department: eventData.departamento,
+              requesterName: requesterName,
+              description: eventData.description,
+              adminEmails: [
+                'a19morales89@gmail.com',
+                'wmaldonado1987@hotmail.com',
+                'daniela.s.galarza86@gmail.com',
+                'amonima115@hotmail.com',
+                'marcelaponceabril@gmail.com',
+                'comunidadcristianadontorcuato@gmail.com'
+              ]
+            });
 
+            toast({
+              title: "Solicitud enviada",
+              description: "Tu solicitud ha sido enviada exitosamente.",
+            });
+          } catch (emailError) {
+            console.error('Error sending notification email:', emailError);
+            // No fallar la creación del evento por error de email
+            toast({
+              title: "Solicitud creada",
+              description: "La solicitud se ha creado, pero no se pudo enviar la notificación por email.",
+              variant: "destructive",
+            });
+          }
+        } else {
+          // Para administradores/secretarias (evento directo)
           toast({
-            title: "Solicitud enviada",
-            description: "Tu solicitud ha sido enviada exitosamente.",
-          });
-        } catch (emailError) {
-          console.error('Error sending notification email:', emailError);
-          // No fallar la creación del evento por error de email
-          toast({
-            title: "Solicitud creada",
-            description: "La solicitud se ha creado, pero no se pudo enviar la notificación por email.",
-            variant: "destructive",
+            title: "Evento creado",
+            description: "El evento se ha creado exitosamente.",
           });
         }
-      } else {
-        // Para administradores/secretarias (evento directo)
-        toast({
-          title: "Evento creado",
-          description: "El evento se ha creado exitosamente.",
-        });
       }
-    }
 
-    await refetch();
-    setDialogOpen(false);
-    setSelectedEvent(null);
-  } catch (error) {
-    console.error("Error creating/updating event:", error);
-    toast({
-      title: "Error",
-      description: selectedEvent 
-        ? ((isSecretaria || isAdmin || isSecrCalendario) ? "No se pudo actualizar el evento." : "No se pudo actualizar la solicitud.")
-        : ((isSecretaria || isAdmin || isSecrCalendario) ? "No se pudo crear el evento." : "No se pudo enviar la solicitud."),
-      variant: "destructive",
-    });
-  }
-};
+      await refetch();
+      setDialogOpen(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error("Error creating/updating event:", error);
+      toast({
+        title: "Error",
+        description: selectedEvent
+          ? ((isSecretaria || isAdmin || isSecrCalendario) ? "No se pudo actualizar el evento." : "No se pudo actualizar la solicitud.")
+          : ((isSecretaria || isAdmin || isSecrCalendario) ? "No se pudo crear el evento." : "No se pudo enviar la solicitud."),
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
@@ -209,20 +209,20 @@ const handleCreateEvent = async (eventData: any) => {
 
   const confirmDelete = async () => {
     if (!eventToDelete) return;
-    
+
     try {
       await deleteEvent(eventToDelete.id);
       await refetch();
       toast({
         title: (isSecretaria || isAdmin || isSecrCalendario) ? "Evento eliminado" : "Solicitud eliminada",
-        description: (isSecretaria || isAdmin || isSecrCalendario) 
+        description: (isSecretaria || isAdmin || isSecrCalendario)
           ? "El evento se ha eliminado exitosamente."
           : "La solicitud se ha eliminado exitosamente.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: (isSecretaria || isAdmin || isSecrCalendario) 
+        description: (isSecretaria || isAdmin || isSecrCalendario)
           ? "No se pudo eliminar el evento."
           : "No se pudo eliminar la solicitud.",
         variant: "destructive",
@@ -294,7 +294,7 @@ const handleCreateEvent = async (eventData: any) => {
   // Función para obtener el badge de estado
   const getStatusBadge = (event: any) => {
     if (!canCreateEvents || !event.solicitud) return null;
-    
+
     const estado = event.estado || 'pendiente';
     const variants: { [key: string]: string } = {
       'pendiente': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
@@ -327,8 +327,8 @@ const handleCreateEvent = async (eventData: any) => {
   const getEventCardStyle = (eventDate: string) => {
     const now = new Date();
     const date = new Date(eventDate);
-    return isAfter(date, now) 
-      ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70" 
+    return isAfter(date, now)
+      ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70"
       : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70";
   };
 
@@ -351,386 +351,421 @@ const handleCreateEvent = async (eventData: any) => {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Calendario de Eventos</CardTitle>
-          {/* Solo mostrar el botón de crear si puede crear eventos */}
-          {canCreateEvents && (
-            <Dialog 
-              open={dialogOpen} 
-              onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) setSelectedEvent(null);
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button className="bg-primary hover:bg-primary/90">
-                  <CalendarPlus className="mr-2 h-4 w-4" />
-                  Agregar Evento
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center">
-                    {selectedEvent ? "Editar Evento" : "Crear Nuevo Evento"}
-                    {selectedEvent && getStatusBadge(selectedEvent)}
-                  </DialogTitle>
-                </DialogHeader>
-                
-                {/* Mostrar información de la solicitud si es aplicable */}
-                {selectedEvent && canCreateEvents && (selectedEvent as any).solicitud && (
-                  <div className="mb-4 p-3 bg-muted/50 rounded-md">
-                    <h4 className="font-semibold text-sm mb-2">Información de la Solicitud:</h4>
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Departamento:</strong> {(selectedEvent as any).departamento || 'No especificado'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Estado:</strong> {(selectedEvent as any).estado || 'Pendiente'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Fecha:</strong> {format(new Date(selectedEvent.date), "dd/MM/yyyy", { locale: es })}
-                    </p>
-                    {selectedEvent.time && (
-                      <p className="text-sm text-muted-foreground">
-                        <strong>Hora:</strong> {selectedEvent.time}
-                      </p>
-                    )}
-                    {selectedEvent.description && (
-                      <p className="text-sm text-muted-foreground">
-                        <strong>Descripción:</strong> {selectedEvent.description}
-                      </p>
-                    )}
-                  </div>
-                )}
-                
-                {/* Solo mostrar el formulario si no es una solicitud rechazada */}
-                {!(selectedEvent && (selectedEvent as any).estado === 'rechazada') && (
-                  <EventForm 
-                    onSubmit={handleCreateEvent} 
-                    initialData={selectedEvent || undefined}
-                    isRequestMode={!(isSecretaria || isAdmin || isSecrCalendario)}
-                    onSuccess={() => {
-                      setDialogOpen(false);
-                      setSelectedEvent(null);
-                    }}
-                  />
-                )}
-                
-                {/* Mensaje para solicitudes rechazadas */}
-                {selectedEvent && (selectedEvent as any).estado === 'rechazada' && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-md text-center">
-                    <p className="text-red-800 font-medium">Esta solicitud ha sido rechazada y no puede ser modificada.</p>
-                  </div>
-                )}
-                
-                {/* Botones para gestionar solicitudes */}
-                {selectedEvent && canCreateEvents && (selectedEvent as any).solicitud && 
-                  ((selectedEvent as any).estado === 'pendiente' || !(selectedEvent as any).estado) && (
-                  <DialogFooter className="mt-4 flex justify-between gap-2">
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="default"
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => handleApproveRequest(selectedEvent.id)}
-                      >
-                        <Check className="mr-2 h-4 w-4" />
-                        Aprobar
-                      </Button>
-                      <Button 
-                        variant="destructive"
-                        onClick={() => handleRejectRequest(selectedEvent.id)}
-                      >
-                        <X className="mr-2 h-4 w-4" />
-                        Rechazar
-                      </Button>
-                    </div>
-                  </DialogFooter>
-                )}
-                
-                {/* Botón de eliminar para eventos/solicitudes (no rechazadas) */}
-                {selectedEvent && canCreateEvents && !(canCreateEvents && (selectedEvent as any).solicitud) && 
-                  (selectedEvent as any).estado !== 'rechazada' && (
-                  <DialogFooter className="mt-4 flex justify-between">
-                    <Button 
-                      variant="destructive" 
-                      type="button"
-                      onClick={(e) => handleDeleteClick(selectedEvent, e)}
-                      className="flex items-center"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar Evento
-                    </Button>
-                  </DialogFooter>
-                )}
-              </DialogContent>
-            </Dialog>
-          )}
-          
-          {/* Botón separado para solicitar fecha si no puede crear eventos */}
-          {!canCreateEvents && (
-            <Dialog 
-              open={dialogOpen} 
-              onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) setSelectedEvent(null);
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button className="bg-primary hover:bg-primary/90">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  Solicitar Fecha
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center">
-                    {selectedEvent 
-                      ? "Editar Solicitud"
-                      : "Solicitar Nueva Fecha"
-                    }
-                    {selectedEvent && getStatusBadge(selectedEvent)}
-                  </DialogTitle>
-                </DialogHeader>
-                
-                {/* Solo mostrar el formulario si puede editar el evento o está creando uno nuevo */}
-                {(!selectedEvent || canEditEvent(selectedEvent)) && 
-                 !(selectedEvent && (selectedEvent as any).estado === 'rechazada') && (
-                  <EventForm 
-                    onSubmit={handleCreateEvent} 
-                    initialData={selectedEvent || undefined}
-                    isRequestMode={true}
-                    onSuccess={() => {
-                      setDialogOpen(false);
-                      setSelectedEvent(null);
-                    }}
-                  />
-                )}
-                
-                {/* Vista de solo lectura para eventos que no puede editar */}
-                {selectedEvent && !canEditEvent(selectedEvent) && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-muted/50 rounded-md">
-                      <h4 className="font-semibold text-sm mb-3">Detalles del Evento:</h4>
-                      <div className="space-y-2">
-                        <p className="text-sm">
-                          <strong>Título:</strong> {selectedEvent.title}
+    <div className="animate-fade-in space-y-8 pb-8 p-4 md:p-6">
+      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl max-w-7xl mx-auto">
+        {/* Decorative background blurs */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
+
+        <div className="relative z-10">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 border-b border-purple-200/60 dark:border-slate-700/60 pb-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
+                <CalendarIcon className="h-8 w-8" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-foreground tracking-tight">Calendario de Eventos</h2>
+                <p className="text-muted-foreground text-sm mt-1">
+                  {(isSecretaria || isAdmin || isSecrCalendario) ? "Gestiona los eventos y solicitudes" : "Consulta y solicita nuevas fechas"}
+                </p>
+              </div>
+            </div>
+            {/* Solo mostrar el botón de crear si puede crear eventos */}
+            {canCreateEvents && (
+              <Dialog
+                open={dialogOpen}
+                onOpenChange={(open) => {
+                  setDialogOpen(open);
+                  if (!open) setSelectedEvent(null);
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl">
+                    <CalendarPlus className="mr-2 h-4 w-4" />
+                    Agregar Evento
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="w-[95vw] max-w-2xl sm:max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-0 max-h-[90vh] overflow-y-auto overflow-x-hidden">
+                  <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+
+                  <div className="p-6 sm:p-8 relative z-10">
+                    <DialogHeader className="mb-6">
+                      <DialogTitle className="flex items-center gap-3 text-2xl text-slate-800 dark:text-slate-100">
+                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl text-purple-600 dark:text-purple-400">
+                          {selectedEvent ? <CalendarIcon className="h-6 w-6" /> : <CalendarPlus className="h-6 w-6" />}
+                        </div>
+                        {selectedEvent ? "Editar Evento" : "Crear Nuevo Evento"}
+                        {selectedEvent && getStatusBadge(selectedEvent)}
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    {/* Mostrar información de la solicitud si es aplicable */}
+                    {selectedEvent && canCreateEvents && (selectedEvent as any).solicitud && (
+                      <div className="mb-4 p-3 bg-muted/50 rounded-md">
+                        <h4 className="font-semibold text-sm mb-2">Información de la Solicitud:</h4>
+                        <p className="text-sm text-muted-foreground">
+                          <strong>Departamento:</strong> {(selectedEvent as any).departamento || 'No especificado'}
                         </p>
-                        <p className="text-sm">
+                        <p className="text-sm text-muted-foreground">
+                          <strong>Estado:</strong> {(selectedEvent as any).estado || 'Pendiente'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
                           <strong>Fecha:</strong> {format(new Date(selectedEvent.date), "dd/MM/yyyy", { locale: es })}
                         </p>
                         {selectedEvent.time && (
-                          <p className="text-sm">
+                          <p className="text-sm text-muted-foreground">
                             <strong>Hora:</strong> {selectedEvent.time}
                           </p>
                         )}
                         {selectedEvent.description && (
-                          <p className="text-sm">
+                          <p className="text-sm text-muted-foreground">
                             <strong>Descripción:</strong> {selectedEvent.description}
                           </p>
                         )}
-                        {(selectedEvent as any).departamento && (
-                          <p className="text-sm">
-                            <strong>Departamento:</strong> {(selectedEvent as any).departamento}
-                          </p>
-                        )}
                       </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Mensaje para solicitudes rechazadas */}
-                {selectedEvent && (selectedEvent as any).estado === 'rechazada' && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-md text-center">
-                    <p className="text-red-800 font-medium">Esta solicitud ha sido rechazada y no puede ser modificada.</p>
-                  </div>
-                )}
-                
-                {/* Botón de eliminar solo para solicitudes propias */}
-                {selectedEvent && canEditEvent(selectedEvent) && (selectedEvent as any).estado !== 'rechazada' && (
-                  <DialogFooter className="mt-4 flex justify-between">
-                    <Button 
-                      variant="destructive" 
-                      type="button"
-                      onClick={(e) => handleDeleteClick(selectedEvent, e)}
-                      className="flex items-center"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar Solicitud
-                    </Button>
-                  </DialogFooter>
-                )}
-              </DialogContent>
-            </Dialog>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-md border shadow-sm p-4 flex justify-center dark:bg-gray-800 dark:border-gray-700">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                onMonthChange={handleMonthChange}
-                className="w-full"
-                locale={es}
-                modifiers={modifiers}
-                modifiersStyles={modifiersStyles}
-                components={{
-                  DayContent: ({ date }) => {
-                    const dateStr = format(date, 'yyyy-MM-dd');
-                    const dayEvents = eventDates[dateStr];
+                    )}
 
-                    if (!dayEvents) {
-                      return <span>{date.getDate()}</span>;
-                    }
+                    {/* Solo mostrar el formulario si no es una solicitud rechazada */}
+                    {!(selectedEvent && (selectedEvent as any).estado === 'rechazada') && (
+                      <EventForm
+                        onSubmit={handleCreateEvent}
+                        initialData={selectedEvent || undefined}
+                        isRequestMode={!(isSecretaria || isAdmin || isSecrCalendario)}
+                        onSuccess={() => {
+                          setDialogOpen(false);
+                          setSelectedEvent(null);
+                        }}
+                      />
+                    )}
 
-                    const allPastEvents = dayEvents.every(event => 
-                      isBefore(new Date(event.date), new Date())
-                    );
+                    {/* Mensaje para solicitudes rechazadas */}
+                    {selectedEvent && (selectedEvent as any).estado === 'rechazada' && (
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-md text-center">
+                        <p className="text-red-800 font-medium">Esta solicitud ha sido rechazada y no puede ser modificada.</p>
+                      </div>
+                    )}
 
-                    return (
-                      <HoverCard>
-                        <HoverCardTrigger asChild>
-                          <span 
-                            className={`cursor-pointer w-full h-full flex items-center justify-center ${
-                              allPastEvents 
-                                ? 'bg-[#ea384c]/10 dark:bg-[#4e2a2a]/70' 
-                                : 'bg-[#F2FCE2] dark:bg-[#2a4e27]/70'
-                            }`}
+                    {/* Botones para gestionar solicitudes */}
+                    {selectedEvent && canCreateEvents && (selectedEvent as any).solicitud &&
+                      ((selectedEvent as any).estado === 'pendiente' || !(selectedEvent as any).estado) && (
+                        <DialogFooter className="mt-8 flex justify-between gap-3">
+                          <div className="flex flex-col sm:flex-row gap-3 w-full">
+                            <Button
+                              variant="default"
+                              className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-md shadow-green-500/20 rounded-xl"
+                              onClick={() => handleApproveRequest(selectedEvent.id)}
+                            >
+                              Otorgar Fecha
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              className="w-full sm:w-auto shadow-md shadow-red-500/20 rounded-xl"
+                              onClick={() => {
+                                handleRejectRequest(selectedEvent.id);
+                                setDialogOpen(false);
+                              }}
+                            >
+                              Rechazar Fecha
+                            </Button>
+                          </div>
+                        </DialogFooter>
+                      )}
+
+                    {/* Botón de eliminar para eventos/solicitudes (no rechazadas) */}
+                    {selectedEvent && canCreateEvents && !(canCreateEvents && (selectedEvent as any).solicitud) &&
+                      (selectedEvent as any).estado !== 'rechazada' && (
+                        <DialogFooter className="mt-4 flex justify-between">
+                          <Button
+                            variant="destructive"
+                            type="button"
+                            onClick={(e) => handleDeleteClick(selectedEvent, e)}
+                            className="flex items-center"
                           >
-                            {date.getDate()}
-                          </span>
-                        </HoverCardTrigger>
-                        <HoverCardContent className="w-80 dark:bg-gray-800 dark:border-gray-700">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar Evento
+                          </Button>
+                        </DialogFooter>
+                      )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {/* Botón separado para solicitar fecha si no puede crear eventos */}
+            {!canCreateEvents && (
+              <Dialog
+                open={dialogOpen}
+                onOpenChange={(open) => {
+                  setDialogOpen(open);
+                  if (!open) setSelectedEvent(null);
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    Solicitar Fecha
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="w-[95vw] max-w-xl sm:max-w-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-0 max-h-[90vh] overflow-y-auto overflow-x-hidden">
+                  <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+
+                  <div className="p-6 sm:p-8 relative z-10">
+                    <DialogHeader className="mb-6">
+                      <DialogTitle className="flex items-center gap-3 text-2xl text-slate-800 dark:text-slate-100">
+                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl text-purple-600 dark:text-purple-400">
+                          {selectedEvent ? <CalendarIcon className="h-6 w-6" /> : <CalendarPlus className="h-6 w-6" />}
+                        </div>
+                        {selectedEvent
+                          ? "Editar Solicitud"
+                          : "Solicitar Nueva Fecha"
+                        }
+                        {selectedEvent && getStatusBadge(selectedEvent)}
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    {/* Solo mostrar el formulario si puede editar el evento o está creando uno nuevo */}
+                    {(!selectedEvent || canEditEvent(selectedEvent)) &&
+                      !(selectedEvent && (selectedEvent as any).estado === 'rechazada') && (
+                        <EventForm
+                          onSubmit={handleCreateEvent}
+                          initialData={selectedEvent || undefined}
+                          isRequestMode={true}
+                          onSuccess={() => {
+                            setDialogOpen(false);
+                            setSelectedEvent(null);
+                          }}
+                        />
+                      )}
+
+                    {/* Vista de solo lectura para eventos que no puede editar */}
+                    {selectedEvent && !canEditEvent(selectedEvent) && (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-muted/50 rounded-md">
+                          <h4 className="font-semibold text-sm mb-3">Detalles del Evento:</h4>
                           <div className="space-y-2">
-                            {dayEvents.map((event) => {
-                              const isPastEvent = isBefore(new Date(event.date), new Date());
-                              return (
-                                <div 
-                                  key={event.id} 
-                                  className={`p-2 rounded-md cursor-pointer ${
-                                    isPastEvent 
-                                      ? "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70" 
+                            <p className="text-sm">
+                              <strong>Título:</strong> {selectedEvent.title}
+                            </p>
+                            <p className="text-sm">
+                              <strong>Fecha:</strong> {format(new Date(selectedEvent.date), "dd/MM/yyyy", { locale: es })}
+                            </p>
+                            {selectedEvent.time && (
+                              <p className="text-sm">
+                                <strong>Hora:</strong> {selectedEvent.time}
+                              </p>
+                            )}
+                            {selectedEvent.description && (
+                              <p className="text-sm">
+                                <strong>Descripción:</strong> {selectedEvent.description}
+                              </p>
+                            )}
+                            {(selectedEvent as any).departamento && (
+                              <p className="text-sm">
+                                <strong>Departamento:</strong> {(selectedEvent as any).departamento}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mensaje para solicitudes rechazadas */}
+                    {selectedEvent && (selectedEvent as any).estado === 'rechazada' && (
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-md text-center">
+                        <p className="text-red-800 font-medium">Esta solicitud ha sido rechazada y no puede ser modificada.</p>
+                      </div>
+                    )}
+
+                    {/* Botón de eliminar solo para solicitudes propias */}
+                    {selectedEvent && canEditEvent(selectedEvent) && (selectedEvent as any).estado !== 'rechazada' && (
+                      <DialogFooter className="mt-4 flex justify-between">
+                        <Button
+                          variant="destructive"
+                          type="button"
+                          onClick={(e) => handleDeleteClick(selectedEvent, e)}
+                          className="flex items-center w-full sm:w-auto shadow-md shadow-red-500/20 rounded-xl"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar Solicitud
+                        </Button>
+                      </DialogFooter>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+
+          <div className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Calendario visual (Izquierda) */}
+              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/40 dark:border-slate-700/50 shadow-sm p-4 flex justify-center h-fit">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  onMonthChange={handleMonthChange}
+                  className="w-full"
+                  locale={es}
+                  modifiers={modifiers}
+                  modifiersStyles={modifiersStyles}
+                  components={{
+                    DayContent: ({ date }) => {
+                      const dateStr = format(date, 'yyyy-MM-dd');
+                      const dayEvents = eventDates[dateStr];
+
+                      if (!dayEvents) {
+                        return <span>{date.getDate()}</span>;
+                      }
+
+                      const allPastEvents = dayEvents.every(event =>
+                        isBefore(new Date(event.date), new Date())
+                      );
+
+                      return (
+                        <HoverCard>
+                          <HoverCardTrigger asChild>
+                            <span
+                              className={`cursor-pointer w-full h-full flex items-center justify-center ${allPastEvents
+                                ? 'bg-[#ea384c]/10 dark:bg-[#4e2a2a]/70'
+                                : 'bg-[#F2FCE2] dark:bg-[#2a4e27]/70'
+                                }`}
+                            >
+                              {date.getDate()}
+                            </span>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-80 dark:bg-gray-800 dark:border-gray-700">
+                            <div className="space-y-2">
+                              {dayEvents.map((event) => {
+                                const isPastEvent = isBefore(new Date(event.date), new Date());
+                                return (
+                                  <div
+                                    key={event.id}
+                                    className={`p-2 rounded-md cursor-pointer ${isPastEvent
+                                      ? "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70"
                                       : "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70"
-                                  }`}
-                                  onClick={() => handleEventClick(event)}
-                                >
-                                  <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                      <div className="flex items-center">
-                                        <h4 className="font-semibold dark:text-white">{event.title}</h4>
-                                        {getStatusBadge(event)}
+                                      }`}
+                                    onClick={() => handleEventClick(event)}
+                                  >
+                                    <div className="flex justify-between items-start">
+                                      <div className="flex-1">
+                                        <div className="flex items-center">
+                                          <h4 className="font-semibold dark:text-white">{event.title}</h4>
+                                          {getStatusBadge(event)}
+                                        </div>
+                                        {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            Solicitado por: {(event as any).departamento}
+                                          </p>
+                                        )}
                                       </div>
-                                      {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                          Solicitado por: {(event as any).departamento}
-                                        </p>
+                                      {/* Solo mostrar botón de eliminar si puede gestionar eventos y puede editar este evento específico */}
+                                      {canCreateEvents && canEditEvent(event) && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7 p-0 ml-2"
+                                          onClick={(e) => handleDeleteClick(event, e)}
+                                        >
+                                          <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
+                                        </Button>
                                       )}
                                     </div>
-                                    {/* Solo mostrar botón de eliminar si puede gestionar eventos y puede editar este evento específico */}
-                                    {canCreateEvents && canEditEvent(event) && (
-                                      <Button 
-                                        variant="ghost" 
+                                    <p className="text-sm text-muted-foreground whitespace-pre-line dark:text-gray-300">{event.description}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      );
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Lista de eventos del mes (Derecha) */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-6">
+                  <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                    {(isSecretaria || isAdmin || isSecrCalendario) ? "Eventos" : "Fechas solicitadas"} de {format(selectedDate || new Date(), 'MMMM yyyy', { locale: es })}
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  {currentMonthEvents.length > 0 ? (
+                    <div className="overflow-hidden rounded-2xl border border-white/40 dark:border-slate-700/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm shadow-sm">
+                      <div className="bg-indigo-50/80 dark:bg-indigo-900/20">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="hover:bg-transparent border-b-indigo-100 dark:border-b-indigo-900/30">
+                              <TableHead className="font-semibold text-indigo-700 dark:text-indigo-300 w-16">Fecha</TableHead>
+                              <TableHead className="font-semibold text-indigo-700 dark:text-indigo-300">Título</TableHead>
+                              <TableHead className="font-semibold text-indigo-700 dark:text-indigo-300 w-16">Hora</TableHead>
+                              {canCreateEvents && <TableHead className="font-semibold text-indigo-700 dark:text-indigo-300 w-10"></TableHead>}
+                            </TableRow>
+                          </TableHeader>
+                        </Table>
+                      </div>
+                      <ScrollArea className="h-[250px]">
+                        <Table>
+                          <TableBody>
+                            {currentMonthEvents.map((event) => (
+                              <TableRow
+                                key={event.id}
+                                className={`hover:bg-muted/50 cursor-pointer transition-colors duration-200 ${isAfter(new Date(event.date), new Date())
+                                  ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70"
+                                  : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70"
+                                  }`}
+                                onClick={() => handleEventClick(event)}
+                              >
+                                <TableCell className="font-medium w-16">
+                                  {format(new Date(event.date), 'dd/MM')}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <span>{event.title}</span>
+                                    {getStatusBadge(event)}
+                                  </div>
+                                  {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Solicitado por: {(event as any).departamento}
+                                    </p>
+                                  )}
+                                </TableCell>
+                                <TableCell className="w-16">
+                                  {event.time || "-"}
+                                </TableCell>
+                                {canCreateEvents && (
+                                  <TableCell className="w-10">
+                                    {canEditEvent(event) && (
+                                      <Button
+                                        variant="ghost"
                                         size="sm"
-                                        className="h-7 w-7 p-0 ml-2" 
+                                        className="h-7 w-7 p-0"
                                         onClick={(e) => handleDeleteClick(event, e)}
                                       >
                                         <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
                                       </Button>
                                     )}
-                                  </div>
-                                  <p className="text-sm text-muted-foreground whitespace-pre-line dark:text-gray-300">{event.description}</p>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </HoverCardContent>
-                      </HoverCard>
-                    );
-                  }
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold mb-4 dark:text-white">
-                {(isSecretaria || isAdmin || isSecrCalendario) ? "Eventos" : "Fechas solicitadas"} del mes {format(selectedDate || new Date(), 'MMMM yyyy', { locale: es })}
-              </h3>
-              <div className="space-y-2">
-                {currentMonthEvents.length > 0 ? (
-                  <div className="overflow-hidden rounded-md border">
-                    <div className="bg-primary/10 dark:bg-primary/20">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent">
-                            <TableHead className="font-semibold text-primary w-16">Fecha</TableHead>
-                            <TableHead className="font-semibold text-primary">Título</TableHead>
-                            <TableHead className="font-semibold text-primary w-16">Hora</TableHead>
-                            {canCreateEvents && <TableHead className="font-semibold text-primary w-10"></TableHead>}
-                          </TableRow>
-                        </TableHeader>
-                      </Table>
-                    </div>
-                    <ScrollArea className="h-[250px]">
-                      <Table>
-                        <TableBody>
-                          {currentMonthEvents.map((event) => (
-                            <TableRow 
-                              key={event.id} 
-                              className={`hover:bg-muted/50 cursor-pointer transition-colors duration-200 ${
-                                isAfter(new Date(event.date), new Date()) 
-                                ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70" 
-                                : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70"
-                              }`}
-                              onClick={() => handleEventClick(event)}
-                            >
-                              <TableCell className="font-medium w-16">
-                                {format(new Date(event.date), 'dd/MM')}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center">
-                                  <span>{event.title}</span>
-                                  {getStatusBadge(event)}
-                                </div>
-                                {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Solicitado por: {(event as any).departamento}
-                                  </p>
+                                  </TableCell>
                                 )}
-                              </TableCell>
-                              <TableCell className="w-16">
-                                {event.time || "-"}
-                              </TableCell>
-                              {canCreateEvents && (
-                                <TableCell className="w-10">
-                                  {canEditEvent(event) && (
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      className="h-7 w-7 p-0" 
-                                      onClick={(e) => handleDeleteClick(event, e)}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
-                                    </Button>
-                                  )}
-                                </TableCell>
-                              )}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </ScrollArea>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground dark:text-gray-400">
-                    {(isSecretaria || isAdmin || isSecrCalendario) ? "No hay eventos este mes" : "No hay fechas solicitadas este mes"}
-                  </p>
-                )}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground dark:text-gray-400">
+                      {(isSecretaria || isAdmin || isSecrCalendario) ? "No hay eventos este mes" : "No hay fechas solicitadas este mes"}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="dark:bg-gray-800 dark:border-gray-700">

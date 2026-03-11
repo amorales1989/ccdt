@@ -145,101 +145,128 @@ export default function Index() {
 
   if (showDepartmentSelect) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
-                <AvatarFallback>
-                  <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
-                </AvatarFallback>
-              </Avatar>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 p-4 relative overflow-hidden">
+        {/* Background Decorative Blurs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-3xl translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
+
+        <div className="w-full max-w-md relative z-10 animate-fade-in">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 shadow-2xl rounded-3xl p-8 sm:p-10">
+            <div className="flex flex-col items-center mb-8 text-center">
+              <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 p-4 rounded-2xl mb-4 shadow-inner">
+                <Avatar className="h-16 w-16 bg-transparent">
+                  <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                  <AvatarFallback className="bg-transparent">
+                    <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain drop-shadow-md" />
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">Sistema de Gestión</p>
+              <h1 className="text-2xl font-black text-foreground">
+                {showCompanyName && companyName ? companyName : "Comunidad Cristiana Don Torcuato"}
+              </h1>
             </div>
-            {showCompanyName && companyName && (
-              <h2 className="text-xl font-semibold text-center mb-2">{companyName}</h2>
-            )}
-            <CardTitle>Seleccionar Departamento</CardTitle>
-            <CardDescription>
-              Selecciona el departamento con el que deseas trabajar
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Label>Departamento</Label>
-              <Select onValueChange={handleDepartmentSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {userDepartments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {getDepartmentLabel(dept)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-lg font-semibold mb-1">Seleccionar Departamento</h2>
+                <p className="text-sm text-muted-foreground">Elige el área con la que deseas interactuar</p>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Área / Departamento</Label>
+                <Select onValueChange={handleDepartmentSelect}>
+                  <SelectTrigger className="w-full h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all">
+                    <SelectValue placeholder="Selecciona un departamento" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-xl">
+                    {userDepartments.map((dept) => (
+                      <SelectItem key={dept} value={dept} className="rounded-lg cursor-pointer">
+                        {getDepartmentLabel(dept)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 p-4 relative overflow-hidden">
       {isSubmitting && <LoadingOverlay message="Iniciando sesión..." />}
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
-              <AvatarFallback>
-                <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain" />
-              </AvatarFallback>
-            </Avatar>
+
+      {/* Background Decorative Blurs */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-3xl translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
+
+      <div className="w-full max-w-md relative z-10 animate-fade-in">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 shadow-2xl rounded-3xl p-8 sm:p-10 mb-6">
+          <div className="flex flex-col items-center mb-8 text-center">
+            <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 p-4 rounded-2xl mb-4 shadow-inner">
+              <Avatar className="h-16 w-16 bg-transparent">
+                <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                <AvatarFallback className="bg-transparent">
+                  <img src="/fire.png" alt="Default Logo" className="h-full w-full object-contain drop-shadow-md" />
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">Sistema de Gestión</p>
+            <h1 className="text-2xl font-black text-foreground">
+              {showCompanyName && companyName ? companyName : "Comunidad Cristiana Don Torcuato"}
+            </h1>
           </div>
-          {showCompanyName && companyName && (
-            <h2 className="text-xl font-semibold mb-2">{companyName}</h2>
-          )}
-          <CardTitle>Iniciar Sesión</CardTitle>
-          <CardDescription>
-            Ingresa tus credenciales para acceder
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Correo Electrónico</Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="ejemplo@correo.com"
+                    className="h-12 pl-4 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="h-12 pl-4 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl text-base font-medium"
+              >
+                Ingresar al Sistema
+              </Button>
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full">
-              Iniciar Sesión
-            </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              *Si no tienes una cuenta, por favor contacta al director o líder de tu área para solicitar acceso.
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
+          </form>
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center px-4">
+          *Si no tienes una cuenta, por favor contacta al director o líder de tu área para solicitar acceso.
+        </p>
+      </div>
     </div>
   );
 }

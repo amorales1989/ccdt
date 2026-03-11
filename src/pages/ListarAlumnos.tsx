@@ -185,6 +185,7 @@ const ListarAlumnos = () => {
     phone: z.string().optional(),
     document_number: z.string().optional(),
     department_id: z.string().optional(),
+    email: z.string().optional(),
   });
 
   // ========== ACTUALIZAR DEFAULT VALUES (línea ~124) ==========
@@ -196,7 +197,9 @@ const ListarAlumnos = () => {
       birthdate: "",
       address: "",
       phone: "",
-      document_number: ""
+      document_number: "",
+      department_id: "",
+      email: ""
     },
     resolver: zodResolver(formSchema),
   });
@@ -751,470 +754,479 @@ const ListarAlumnos = () => {
   };
 
   return (
-    <Card className="w-full">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Listado de Alumnos</h2>
-          <TooltipProvider>
-            <div className="flex items-center space-x-2">
-              {canFilter && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-                      <Filter className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Filtrar alumnos</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={exportToExcel}>
-                      <FileDown className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Exportar a Excel</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={() => navigate('/agregar')}>
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Agregar nuevo</p>
-                </TooltipContent>
-              </Tooltip>
+    <div className="animate-fade-in space-y-8 pb-8">
+      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-lg">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+
+        <div className="relative z-10">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+            <div className="text-center sm:text-left">
+              <h2 className="text-3xl font-black text-foreground tracking-tight">Directorio de Alumnos</h2>
+              <p className="text-muted-foreground text-sm mt-1">Gestión general e información detallada</p>
             </div>
-          </TooltipProvider>
-        </div>
 
-        {canFilter && (
-          <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-            <CollapsibleTrigger asChild>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-
-              <div>
-                <Label htmlFor="department">Departamento</Label>
-                <Select
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value }))}
-                  defaultValue={filters.department || "all"}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccione un departamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {departments?.map((department) => (
-                      <SelectItem key={department.id} value={department.name}>
-                        {department.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="class">Anexo/Clase</Label>
-                <Select
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, class: value === "all" ? "" : value }))}
-                  value={filters.class || "all"}
-                  key={filters.department} // Forzar re-render cuando cambie el departamento
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccione una clase" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {classes?.map((className) => (
-                      <SelectItem key={className} value={className}>
-                        {className}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="md:col-span-3 flex justify-end">
-                <Button className="text-white" variant="secondary" size="sm" onClick={handleClearFilters}>
-                  Limpiar Filtros
-                </Button>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-
-        <div className="overflow-x-auto mt-4">
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Nombre</TableCell>
-                {!isMobile && (
-                  <TableCell className="font-medium">Departamento</TableCell>
+            <TooltipProvider>
+              <div className="flex items-center space-x-2">
+                {canFilter && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" className="bg-white/80 hover:bg-white dark:bg-slate-800 border-slate-200 shadow-sm" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                        <Filter className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Filtrar alumnos</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
-                <TableCell className="font-medium">Edad</TableCell>
-                <TableCell className={`flex justify-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>Acciones</TableCell>
-              </TableRow>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                  </TableCell>
-                </TableRow>
-              ) : isError ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Error al cargar los alumnos.
-                  </TableCell>
-                </TableRow>
-              ) : (regularStudents.length === 0 && newStudents.length === 0) ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    No hay alumnos registrados.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                <>
-                  {/* Renderizar alumnos regulares */}
-                  {regularStudents.map((student) => renderStudentRow(student))}
+                {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" className="bg-white/80 hover:bg-white dark:bg-slate-800 border-slate-200 shadow-sm" onClick={exportToExcel}>
+                        <FileDown className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Exportar a Excel</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={() => navigate('/agregar')} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Nuevo
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Agregar nuevo alumno</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+          </div>
 
-                  {/* Línea separadora y alumnos nuevos */}
-                  {hasNewStudents && (
-                    <>
-                      <TableRow>
-                        <TableCell colSpan={4} className="py-4">
-                          <div className="flex items-center justify-center">
-                            <div className="flex-grow border-t border-gray-300"></div>
-                            <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                              Nuevos Alumnos
-                            </span>
-                            <div className="flex-grow border-t border-gray-300"></div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      {newStudents.map((student) => renderStudentRow(student))}
-                    </>
+          {canFilter && (
+            <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+              <CollapsibleTrigger asChild>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+
+                <div>
+                  <Label htmlFor="department">Departamento</Label>
+                  <Select
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value }))}
+                    defaultValue={filters.department || "all"}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccione un departamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {departments?.map((department) => (
+                        <SelectItem key={department.id} value={department.name}>
+                          {department.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="class">Anexo/Clase</Label>
+                  <Select
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, class: value === "all" ? "" : value }))}
+                    value={filters.class || "all"}
+                    key={filters.department} // Forzar re-render cuando cambie el departamento
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccione una clase" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {classes?.map((className) => (
+                        <SelectItem key={String(className)} value={String(className)}>
+                          {String(className)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="md:col-span-3 flex justify-end">
+                  <Button className="text-white" variant="secondary" size="sm" onClick={handleClearFilters}>
+                    Limpiar Filtros
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          <div className="overflow-hidden mt-6 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-2xl shadow-sm">
+            <Table>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">Nombre</TableCell>
+                  {!isMobile && (
+                    <TableCell className="font-medium">Departamento</TableCell>
                   )}
-                </>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                  <TableCell className="font-medium">Edad</TableCell>
+                  <TableCell className={`flex justify-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>Acciones</TableCell>
+                </TableRow>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                    </TableCell>
+                  </TableRow>
+                ) : isError ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      Error al cargar los alumnos.
+                    </TableCell>
+                  </TableRow>
+                ) : (regularStudents.length === 0 && newStudents.length === 0) ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      No hay alumnos registrados.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <>
+                    {/* Renderizar alumnos regulares */}
+                    {regularStudents.map((student) => renderStudentRow(student))}
 
-        <Dialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Promover Alumnos</DialogTitle>
-              <DialogDescription>
-                Seleccione el departamento al que desea promover los alumnos seleccionados.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="department" className="text-right">
-                  Departamento
-                </Label>
-                <Select onValueChange={setSelectedDepartment} defaultValue={selectedDepartment ?? ""}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Seleccione un departamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments?.map((department) => (
-                      <SelectItem key={department.id} value={department.id}>
-                        {department.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <div></div>
-                <Button variant="outline" onClick={handlePromoteAll} className="col-span-3 justify-start">
-                  {studentsToPromote.length === (students?.length || 0) ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                </Button>
-              </div>
-              <div>
-                {studentsToPromote.length > 0 && (
-                  <div>
-                    Alumnos a promover:
-                    <div className="mt-2">
-                      {studentsToPromote.map(studentId => {
-                        const student = students?.find(s => s.id === studentId);
-                        return (
-                          student && (
-                            <Badge key={student.id} className="mr-2">{student.first_name} {student.last_name}</Badge>
-                          )
-                        );
-                      })}
+                    {/* Línea separadora y alumnos nuevos */}
+                    {hasNewStudents && (
+                      <>
+                        <TableRow>
+                          <TableCell colSpan={4} className="py-4">
+                            <div className="flex items-center justify-center">
+                              <div className="flex-grow border-t border-gray-300"></div>
+                              <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                                Nuevos Alumnos
+                              </span>
+                              <div className="flex-grow border-t border-gray-300"></div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {newStudents.map((student) => renderStudentRow(student))}
+                      </>
+                    )}
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <Dialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
+            <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+              <DialogHeader>
+                <DialogTitle>Promover Alumnos</DialogTitle>
+                <DialogDescription>
+                  Seleccione el departamento al que desea promover los alumnos seleccionados.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="department" className="text-right">
+                    Departamento
+                  </Label>
+                  <Select onValueChange={setSelectedDepartment} defaultValue={selectedDepartment ?? ""}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Seleccione un departamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments?.map((department) => (
+                        <SelectItem key={department.id} value={department.id}>
+                          {department.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div></div>
+                  <Button variant="outline" onClick={handlePromoteAll} className="col-span-3 justify-start">
+                    {studentsToPromote.length === (students?.length || 0) ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                  </Button>
+                </div>
+                <div>
+                  {studentsToPromote.length > 0 && (
+                    <div>
+                      Alumnos a promover:
+                      <div className="mt-2">
+                        {studentsToPromote.map(studentId => {
+                          const student = students?.find(s => s.id === studentId);
+                          return (
+                            student && (
+                              <Badge key={student.id} className="mr-2">{student.first_name} {student.last_name}</Badge>
+                            )
+                          );
+                        })}
+                      </div>
                     </div>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={() => setIsPromoteModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" onClick={promoteStudents} disabled={isPromoting}>
+                  {isPromoting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Promover
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+            <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+              <DialogHeader>
+                <DialogTitle>Importar Alumnos desde Excel</DialogTitle>
+                <DialogDescription>
+                  Seleccione un archivo .xlsx para importar los alumnos.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="excelFile" className="text-right">
+                    Archivo Excel
+                  </Label>
+                  <Input
+                    type="file"
+                    id="excelFile"
+                    accept=".xlsx"
+                    onChange={handleFileChange}
+                    className="col-span-3"
+                  />
+                </div>
+                {excelError && (
+                  <div className="text-red-500 col-span-4">{excelError}</div>
+                )}
+                {importModalState === "success" && importResults.errors.length > 0 && (
+                  <div>
+                    Errores:
+                    <ul>
+                      {importResults.errors.map((error, index) => (
+                        <li key={index} className="text-red-500">{error}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setIsPromoteModalOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" onClick={promoteStudents} disabled={isPromoting}>
-                {isPromoting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Promover
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={() => setIsImportModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" onClick={handleImport} disabled={importModalState === "loading" || !excelFile}>
+                  {importModalState === "loading" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Importar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-        <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Importar Alumnos desde Excel</DialogTitle>
-              <DialogDescription>
-                Seleccione un archivo .xlsx para importar los alumnos.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="excelFile" className="text-right">
-                  Archivo Excel
-                </Label>
-                <Input
-                  type="file"
-                  id="excelFile"
-                  accept=".xlsx"
-                  onChange={handleFileChange}
-                  className="col-span-3"
-                />
-              </div>
-              {excelError && (
-                <div className="text-red-500 col-span-4">{excelError}</div>
-              )}
-              {importModalState === "success" && importResults.errors.length > 0 && (
-                <div>
-                  Errores:
-                  <ul>
-                    {importResults.errors.map((error, index) => (
-                      <li key={index} className="text-red-500">{error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setIsImportModalOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" onClick={handleImport} disabled={importModalState === "loading" || !excelFile}>
-                {importModalState === "loading" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Importar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Editar Alumno</DialogTitle>
-              <DialogDescription>
-                Realice los cambios necesarios en la información del alumno.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleUpdate)} className="grid gap-4 py-4">
-                <FormField
-                  control={form.control}
-                  name="first_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre*</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nombre" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="last_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Apellido</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Apellido" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Género</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+            <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+              <DialogHeader>
+                <DialogTitle>Editar Alumno</DialogTitle>
+                <DialogDescription>
+                  Realice los cambios necesarios en la información del alumno.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleUpdate)} className="grid gap-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="first_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nombre*</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione el género" />
-                          </SelectTrigger>
+                          <Input placeholder="Nombre" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="masculino">Masculino</SelectItem>
-                          <SelectItem value="femenino">Femenino</SelectItem>
-                          <SelectItem value="otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="birthdate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fecha de Nacimiento</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="document_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número de Documento</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Número de documento"
-                          {...field}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, '');
-                            field.onChange(value);
-                          }}
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* ⭐ ACTUALIZADO: phone en lugar de phone_number */}
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teléfono</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Teléfono" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dirección</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Dirección" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="department_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Departamento</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={profile?.role === 'maestro'}
-                      >
+                  <FormField
+                    control={form.control}
+                    name="last_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Apellido</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un departamento" />
-                          </SelectTrigger>
+                          <Input placeholder="Apellido" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          {departments?.map((department) => (
-                            <SelectItem key={department.id} value={department.id}>
-                              {department.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <div className="flex justify-end">
-                  <Button type="submit">Guardar</Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Género</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccione el género" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="masculino">Masculino</SelectItem>
+                            <SelectItem value="femenino">Femenino</SelectItem>
+                            <SelectItem value="otro">Otro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-        <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción eliminará al alumno de forma permanente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete}>Eliminar</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+                  <FormField
+                    control={form.control}
+                    name="birthdate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha de Nacimiento</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="document_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Número de Documento</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Número de documento"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              field.onChange(value);
+                            }}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* ⭐ ACTUALIZADO: phone en lugar de phone_number */}
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Teléfono" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dirección</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Dirección" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="department_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Departamento</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          disabled={profile?.role === 'maestro'}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccione un departamento" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {departments?.map((department) => (
+                              <SelectItem key={department.id} value={department.id}>
+                                {department.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-end">
+                    <Button type="submit">Guardar</Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
+          <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+            <AlertDialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción eliminará al alumno de forma permanente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete}>Eliminar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </section>
+    </div>
   );
 };
 
