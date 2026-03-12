@@ -692,20 +692,8 @@ export const testWhatsappMessage = async (companyId: string | number, phoneNumbe
 
 export const getObservations = async (studentId: string): Promise<StudentObservation[]> => {
   try {
-    const { data, error } = await (supabase as any)
-      .from('student_observations')
-      .select(`
-        *,
-        profiles (
-          first_name,
-          last_name
-        )
-      `)
-      .eq('student_id', studentId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return (data as any) || [];
+    const response = await apiCall(`/observations/${studentId}`);
+    return response.data || [];
   } catch (error) {
     console.error('Error fetching observations:', error);
     throw error;
@@ -718,16 +706,38 @@ export const addObservation = async (observation: {
   created_by: string;
 }) => {
   try {
-    const { data, error } = await (supabase as any)
-      .from('student_observations')
-      .insert([observation])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    const response = await apiCall('/observations', {
+      method: 'POST',
+      body: JSON.stringify(observation),
+    });
+    return response.data;
   } catch (error) {
     console.error('Error adding observation:', error);
+    throw error;
+  }
+};
+
+export const updateObservation = async (id: string, text: string) => {
+  try {
+    const response = await apiCall(`/observations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ observation: text }),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating observation:', error);
+    throw error;
+  }
+};
+
+export const deleteObservation = async (id: string) => {
+  try {
+    const response = await apiCall(`/observations/${id}`, {
+      method: 'DELETE',
+    });
+    return response.success;
+  } catch (error) {
+    console.error('Error deleting observation:', error);
     throw error;
   }
 };
