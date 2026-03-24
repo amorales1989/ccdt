@@ -311,8 +311,8 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
                   </div>
 
                   {showTimePicker && (
-                    <div className="absolute z-50 mt-2 p-4 bg-white rounded-lg shadow-lg border border-gray-200 w-[300px]">
-                      <p className="text-sm text-center mb-2 text-gray-500">Seleccionar hora</p>
+                    <div className="absolute z-50 mt-2 p-4 bg-popover rounded-2xl shadow-2xl border border-border w-[300px] animate-in fade-in zoom-in-95 duration-200">
+                      <p className="text-xs font-bold text-center mb-4 text-muted-foreground uppercase tracking-widest">Seleccionar hora</p>
 
                       {/* Time display and controls */}
                       <div className="flex items-center justify-center mb-6 gap-4">
@@ -320,17 +320,17 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
                         <div className="relative flex flex-col items-center">
                           <button
                             type="button"
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-muted-foreground hover:text-primary transition-colors p-1"
                             onClick={() => adjustHour(true)}
                           >
                             ▲
                           </button>
-                          <div className="w-16 h-16 flex items-center justify-center bg-[#E5DEFF] rounded-md text-3xl font-medium text-[#6E59A5]">
+                          <div className="w-16 h-16 flex items-center justify-center bg-primary/10 dark:bg-primary/20 rounded-2xl text-3xl font-black text-primary">
                             {hour.toString().padStart(2, '0')}
                           </div>
                           <button
                             type="button"
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-muted-foreground hover:text-primary transition-colors p-1"
                             onClick={() => adjustHour(false)}
                           >
                             ▼
@@ -344,17 +344,17 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
                         <div className="relative flex flex-col items-center">
                           <button
                             type="button"
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-muted-foreground hover:text-primary transition-colors p-1"
                             onClick={() => adjustMinute(true)}
                           >
                             ▲
                           </button>
-                          <div className="w-16 h-16 flex items-center justify-center bg-gray-100 rounded-md text-3xl font-medium">
+                          <div className="w-16 h-16 flex items-center justify-center bg-accent/20 dark:bg-accent/10 rounded-2xl text-3xl font-black text-foreground opacity-80">
                             {minute.toString().padStart(2, '0')}
                           </div>
                           <button
                             type="button"
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-muted-foreground hover:text-primary transition-colors p-1"
                             onClick={() => adjustMinute(false)}
                           >
                             ▼

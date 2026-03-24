@@ -145,14 +145,14 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				sidebar: {
-					DEFAULT: '#0f172a', // secondary-900
-					foreground: '#f8fafc', // secondary-50
-					primary: '#2563eb', // primary-600
-					'primary-foreground': '#ffffff',
-					accent: '#60a5fa', // primary-400
-					'accent-foreground': '#ffffff',
-					border: '#1e293b', // secondary-800
-					ring: '#2563eb' // primary-600
+					DEFAULT: 'hsl(var(--sidebar-background))',
+					foreground: 'hsl(var(--sidebar-foreground))',
+					primary: 'hsl(var(--sidebar-primary))',
+					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+					accent: 'hsl(var(--sidebar-accent))',
+					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+					border: 'hsl(var(--sidebar-border))',
+					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
 			borderRadius: {

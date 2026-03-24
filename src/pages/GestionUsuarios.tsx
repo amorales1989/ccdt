@@ -12,8 +12,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { Department, DepartmentType } from "@/types/database";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Pencil, Trash2, Eye, EyeOff, Search } from "lucide-react";
+import { Users, Pencil, Trash2, Eye, EyeOff, Search, ChevronLeft, ChevronRight, Filter, ArrowRight, ArrowLeft, ArrowUpRight, GraduationCap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Box, Tabs, Tab } from "@mui/material";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -28,6 +38,7 @@ type Profile = {
 };
 
 const GestionUsuarios = () => {
+  const [activeTab, setActiveTab] = useState("listado");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
@@ -41,8 +52,23 @@ const GestionUsuarios = () => {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [listDepartmentFilter, setListDepartmentFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
+  // Assignment states
+  const [assignmentDept, setAssignmentDept] = useState<string>("");
+  const [assignmentClass, setAssignmentClass] = useState<string>("");
+  const [assignmentClasses, setAssignmentClasses] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (profile?.role === 'director' && profile.departments?.[0]) {
+      setListDepartmentFilter(profile.departments[0]);
+      setAssignmentDept(profile.departments[0]);
+    }
+  }, [profile]);
+
+  if (profile?.role !== 'admin' && profile?.role !== 'secretaria' && profile?.role !== 'director') {
     navigate('/');
     return null;
   }
@@ -105,6 +131,77 @@ const GestionUsuarios = () => {
       setSelectedClass("");
     }
   }, [selectedDepartment, departments]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, listDepartmentFilter]);
+
+  // Handle assignment classes
+  useEffect(() => {
+    if (assignmentDept) {
+      const department = departments.find(d => d.name === assignmentDept);
+      setAssignmentClasses(department?.classes || []);
+      setAssignmentClass("");
+    } else {
+      setAssignmentClasses([]);
+      setAssignmentClass("");
+    }
+  }, [assignmentDept, departments]);
+
+  const updateClassMutation = useMutation({
+    mutationFn: async ({ userId, newClass }: { userId: string; newClass: string | null }) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ assigned_class: newClass })
+        .eq('id', userId);
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Éxito",
+        description: "Asignación actualizada correctamente",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Error al actualizar la asignación: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkResetMutation = useMutation({
+    mutationFn: async (department: string) => {
+      // In Supabase, the .contains filter for arrays works with an array as the second argument
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ assigned_class: null })
+        .contains('departments', [department])
+        .in('role', ['maestro', 'lider']);
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Éxito",
+        description: "Todas las asignaciones del departamento han sido reiniciadas",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Error al reiniciar asignaciones: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const updateUserMutation = useMutation({
     mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
@@ -204,6 +301,20 @@ const GestionUsuarios = () => {
   });
 
   const filteredUsers = users.filter(user => {
+    // Filter by department if selected
+    if (listDepartmentFilter !== "all") {
+      const userDepts = user.departments || [];
+      if (!userDepts.includes(listDepartmentFilter as DepartmentType)) {
+        return false;
+      }
+    } else if (profile?.role === 'director') {
+      const userDepts = user.departments || [];
+      const directorDept = profile.departments?.[0];
+      if (directorDept && !userDepts.includes(directorDept as DepartmentType)) {
+        return false;
+      }
+    }
+
     if (!searchTerm.trim()) return true;
 
     const searchTermLower = searchTerm.toLowerCase();
@@ -220,282 +331,541 @@ const GestionUsuarios = () => {
       || assignedClass.includes(searchTermLower);
   });
 
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+
+  // Assignment logic filtering
+  const assignmentFilteredUsers = users.filter(user =>
+    (user.role === 'maestro' || user.role === 'lider') &&
+    user.departments?.includes(assignmentDept as DepartmentType)
+  );
+
+  const availableTeachers = assignmentFilteredUsers.filter(user =>
+    !user.assigned_class
+  );
+
+  const assignedTeachers = assignmentFilteredUsers.filter(user =>
+    assignmentClass && user.assigned_class === assignmentClass
+  );
+
   if (isLoading) {
     return <div className="p-6">Cargando...</div>;
   }
 
   return (
-    <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl mb-6">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
+    <div className="animate-fade-in space-y-4 px-4 md:px-6 pb-8 pt-2 md:pt-4 max-w-[1600px] mx-auto min-h-screen">
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/10 blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/10 blur-3xl pointer-events-none"></div>
 
-        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
-              <Users className="h-8 w-8" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-black text-foreground tracking-tight">Gestión de Usuarios</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Administra los perfiles, roles y accesos de los miembros.
-              </p>
-            </div>
+      <div className="relative z-10 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-2">
+        <div className="flex items-center gap-4">
+          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
+            <Users className="h-8 w-8" />
           </div>
-
-          <div className="w-full sm:w-80 relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300 opacity-0 group-hover:opacity-100 pointer-events-none" />
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Buscar por nombre, rol, email..."
-                className="pl-10 h-12 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-purple-100 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all shadow-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+          <div>
+            <h1 className="text-3xl font-black text-foreground tracking-tight">Gestión de Usuarios</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Administra los perfiles, roles y accesos de los miembros.
+            </p>
           </div>
         </div>
-      </section>
+      </div>
 
-      <div className="space-y-4">
-        {filteredUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
-            <Users className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-            <p className="text-center text-muted-foreground text-lg">No se encontraron usuarios con ese criterio de búsqueda</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredUsers.map((user) => (
-              <Card key={user.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 transition-all duration-300 rounded-3xl p-6 relative overflow-hidden group flex flex-col h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-400/5 rounded-full blur-2xl group-hover:bg-purple-400/10 transition-colors pointer-events-none" />
+      <div className="space-y-6 relative z-10 w-full">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 w-full">
+          <Box className="bg-slate-100/90 dark:bg-slate-800/60 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 w-full sm:w-fit overflow-hidden lg:flex-shrink-0">
+            <Tabs
+              value={activeTab}
+              onChange={(_, newValue) => setActiveTab(newValue)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                minHeight: 'auto',
+                '& .MuiTabs-indicator': {
+                  display: 'none',
+                },
+                '& .MuiTabs-flexContainer': {
+                  gap: '8px',
+                },
+              }}
+            >
+              <Tab
+                value="listado"
+                label="Lista de Usuarios"
+                icon={<Users className="h-4 w-4" />}
+                iconPosition="start"
+                sx={{
+                  minHeight: '44px',
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  color: 'rgb(100 116 139)',
+                  padding: '0 32px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&.Mui-selected': {
+                    backgroundColor: 'white',
+                    color: 'rgb(126 34 206)',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                  },
+                  '.dark &.Mui-selected': {
+                    backgroundColor: 'rgb(147 51 234)',
+                    color: 'white',
+                  },
+                  '&:hover': {
+                    opacity: 0.8,
+                  }
+                }}
+              />
+              <Tab
+                value="asignacion"
+                label="Asignación de Clases"
+                icon={<GraduationCap className="h-4 w-4" />}
+                iconPosition="start"
+                sx={{
+                  minHeight: '44px',
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  color: 'rgb(100 116 139)',
+                  padding: '0 32px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&.Mui-selected': {
+                    backgroundColor: 'white',
+                    color: 'rgb(126 34 206)',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                  },
+                  '.dark &.Mui-selected': {
+                    backgroundColor: 'rgb(147 51 234)',
+                    color: 'white',
+                  },
+                  '&:hover': {
+                    opacity: 0.8,
+                  }
+                }}
+              />
+            </Tabs>
+          </Box>
 
-                <div className="relative z-10 flex-grow">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                        {user.first_name} {user.last_name}
-                      </h3>
-                      <p className="text-sm text-purple-600 dark:text-purple-400 font-medium mb-1">{user.email || "Sin email registrado"}</p>
+          {activeTab === "listado" && (
+            <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-end w-full lg:w-auto animate-in fade-in duration-300">
+              <div className="w-full sm:w-64 relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300 opacity-0 group-hover:opacity-100 pointer-events-none" />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar usuario..."
+                    className="pl-10 h-11 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-purple-100 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all shadow-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="w-full sm:w-56">
+                <Select value={listDepartmentFilter} onValueChange={setListDepartmentFilter}>
+                  <SelectTrigger className="h-11 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-purple-100 dark:border-slate-700">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-purple-500" />
+                      <SelectValue placeholder="Filtrar Departamento" />
                     </div>
-                    <span className="bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border border-purple-200/50 dark:border-purple-800/30">
-                      {user.role}
-                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profile?.role !== 'director' && <SelectItem value="all">Todos los Deptos.</SelectItem>}
+                    {departments.filter(dept => profile?.role !== 'director' || profile.departments?.includes(dept.name as DepartmentType)).map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {activeTab === "listado" && (
+          <div className="space-y-6 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {filteredUsers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
+                <Users className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
+                <p className="text-center text-muted-foreground text-lg">No se encontraron usuarios</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
+                        <TableRow>
+                          <TableHead className="font-bold py-4">Usuario</TableHead>
+                          <TableHead className="font-bold py-4">Rol</TableHead>
+                          <TableHead className="font-bold py-4 hidden md:table-cell">Departamento</TableHead>
+                          <TableHead className="font-bold py-4 hidden sm:table-cell">Clase</TableHead>
+                          <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedUsers.map((user) => (
+                          <TableRow key={user.id} className="group hover:bg-purple-50/30 dark:hover:bg-purple-900/10 transition-colors">
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-800 dark:text-slate-200">{user.first_name} {user.last_name}</span>
+                                <span className="text-xs text-muted-foreground">{user.email || "Sin email"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50 capitalize text-[10px] font-black tracking-wider">
+                                {user.role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <div className="flex flex-wrap gap-1">
+                                {user.departments?.length ? user.departments.map((dept, i) => (
+                                  <Badge key={i} variant="outline" className="text-[9px] h-5 bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/40">
+                                    {dept}
+                                  </Badge>
+                                )) : (
+                                  <span className="text-xs text-muted-foreground italic">Ninguno</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {user.assigned_class ? (
+                                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-900/40 text-[10px]">
+                                  {user.assigned_class}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Dialog open={isEditing && selectedUser?.id === user.id} onOpenChange={(open) => {
+                                  if (!open) {
+                                    setIsEditing(false);
+                                    setSelectedUser(null);
+                                  }
+                                }}>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 rounded-full transition-colors"
+                                      onClick={() => {
+                                        setSelectedUser(user);
+                                        setIsEditing(true);
+                                        setNewEmail(user.email || "");
+                                        setSelectedDepartment(user.departments?.[0] || null);
+                                        setSelectedClass(user.assigned_class || "");
+                                      }}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="w-[95vw] max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-2xl flex items-center gap-2">
+                                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl text-purple-600 dark:text-purple-400">
+                                          <Pencil className="h-5 w-5" />
+                                        </div>
+                                        Editar Usuario
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label htmlFor="first_name">Nombre</Label>
+                                        <Input id="first_name" value={selectedUser?.first_name || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, first_name: e.target.value } : null)} />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="last_name">Apellido</Label>
+                                        <Input id="last_name" value={selectedUser?.last_name || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, last_name: e.target.value } : null)} />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="email">Email</Label>
+                                        <Input id="email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                                      </div>
+                                      <div className="relative">
+                                        <Label htmlFor="password">Nueva Contraseña</Label>
+                                        <div className="relative">
+                                          <Input id="password" type={showPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="pr-10" />
+                                          <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full" onClick={() => setShowPassword(!showPassword)}>
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="role">Rol</Label>
+                                        <Select value={selectedUser?.role} onValueChange={(value: AppRole) => setSelectedUser(prev => prev ? { ...prev, role: value } : null)}>
+                                          <SelectTrigger><SelectValue placeholder="Seleccionar rol" /></SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="maestro">Maestro</SelectItem>
+                                            <SelectItem value="lider">Líder</SelectItem>
+                                            <SelectItem value="director">Director</SelectItem>
+                                            <SelectItem value="secretaria">Secretaria</SelectItem>
+                                            <SelectItem value="secr.-calendario">Secr.-calendario</SelectItem>
+                                            <SelectItem value="admin">Administrador</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="department">Departamento</Label>
+                                        <Select value={selectedDepartment || undefined} onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}>
+                                          <SelectTrigger><SelectValue placeholder="Seleccionar departamento" /></SelectTrigger>
+                                          <SelectContent>
+                                            {departments.map((dept) => (
+                                              <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      {selectedDepartment && availableClasses.length > 0 && (
+                                        <div>
+                                          <Label htmlFor="class">Clase</Label>
+                                          <Select value={selectedClass} onValueChange={setSelectedClass}>
+                                            <SelectTrigger><SelectValue placeholder="Seleccionar clase" /></SelectTrigger>
+                                            <SelectContent>
+                                              {availableClasses.map((className) => (
+                                                <SelectItem key={className} value={className}>{className}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      )}
+                                      <Button
+                                        className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl h-12 mt-6"
+                                        onClick={() => {
+                                          if (selectedUser) {
+                                            updateUserMutation.mutate({
+                                              ...selectedUser,
+                                              newEmail: newEmail !== selectedUser.email ? newEmail : undefined,
+                                              newPassword: newPassword || undefined
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        Guardar Cambios
+                                      </Button>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-full transition-colors"
+                                  onClick={() => { if (window.confirm('¿Está seguro de eliminar este usuario?')) deleteUserMutation.mutate(user.id); }}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
+                </div>
 
-                  <div className="space-y-3 mt-4">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Departamentos</p>
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {user.departments?.length ? user.departments.join(", ") : "Ninguno asignado"}
-                      </p>
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2">
+                    <p className="text-sm text-muted-foreground">
+                      Mostrando <span className="font-bold text-foreground">{startIndex + 1}</span> a <span className="font-bold text-foreground">{Math.min(startIndex + itemsPerPage, filteredUsers.length)}</span> de <span className="font-bold text-foreground">{filteredUsers.length}</span> usuarios
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" className="h-9 px-3 rounded-lg" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+                        <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" className={`h-9 w-9 rounded-lg ${currentPage === page ? 'bg-purple-600 hover:bg-purple-700' : ''}`} onClick={() => setCurrentPage(page)}>
+                            {page}
+                          </Button>
+                        ))}
+                      </div>
+                      <Button variant="outline" size="sm" className="h-9 px-3 rounded-lg" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages}>
+                        Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
-                    {user.assigned_class && (
-                      <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900/30">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-purple-600/70 dark:text-purple-400/70 mb-1">Clase Asignada</p>
-                        <p className="text-sm font-medium text-purple-800 dark:text-purple-300">
-                          {user.assigned_class}
+        {activeTab === "asignacion" && (
+          <div className="space-y-6 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="flex flex-col lg:flex-row gap-4 items-end bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 blur-3xl rounded-full" />
+
+              <div className="w-full md:w-64 space-y-2 relative z-10">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 ml-1">Departamento</Label>
+                <Select value={assignmentDept} onValueChange={setAssignmentDept}>
+                  <SelectTrigger className="h-11 rounded-xl bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800">
+                    <SelectValue placeholder="Seleccionar Depto." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                    {departments.filter(dept => profile?.role !== 'director' || profile.departments?.includes(dept.name as DepartmentType)).map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-full md:w-64 space-y-2 relative z-10">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 ml-1">Clase Destino</Label>
+                <Select value={assignmentClass} onValueChange={setAssignmentClass} disabled={!assignmentDept}>
+                  <SelectTrigger className="h-11 rounded-xl bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800">
+                    <SelectValue placeholder="Seleccionar Clase" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                    {assignmentClasses.map((className) => (
+                      <SelectItem key={className} value={className}>{className}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-grow"></div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto relative z-10 pb-0.5">
+                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400 text-sm font-bold bg-white/80 dark:bg-slate-800/80 px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <Users className="h-4 w-4 text-purple-500" />
+                  <span>{assignmentFilteredUsers.length}</span>
+                  <span className="hidden sm:inline text-slate-400 font-medium tracking-tight">Maestros/Líderes</span>
+                </div>
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="h-11 rounded-xl border-red-200 text-red-600 hover:bg-red-600 hover:text-white dark:border-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white px-5 transition-all duration-300 shadow-sm whitespace-nowrap"
+                      disabled={!assignmentDept || bulkResetMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Reiniciar Depto.
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] rounded-3xl border-none shadow-2xl p-8">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                          <Trash2 className="h-6 w-6" />
+                        </div>
+                        Reiniciar Asignaciones
+                      </DialogTitle>
+                      <div className="py-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                        ¿Estás seguro de que deseas quitar todas las clases asignadas a los maestros y líderes del departamento <span className="font-bold text-red-600 dark:text-red-400">"{assignmentDept}"</span>?
+                        <p className="mt-3 text-sm flex items-center gap-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                          <ArrowLeft className="h-4 w-4 rotate-45" /> Esta acción dejará a todo el personal disponible para reasignar.
                         </p>
                       </div>
-                    )}
+                    </DialogHeader>
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 mt-2">
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" className="rounded-xl h-11 px-6">Cancelar</Button>
+                      </DialogTrigger>
+                      <Button
+                        variant="destructive"
+                        onClick={() => bulkResetMutation.mutate(assignmentDept)}
+                        disabled={bulkResetMutation.isPending}
+                        className="rounded-xl bg-red-600 hover:bg-red-700 h-11 px-6 shadow-lg shadow-red-200 dark:shadow-none"
+                      >
+                        {bulkResetMutation.isPending ? "Reiniciando..." : "Confirmar Reinicio"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            {!assignmentDept || !assignmentClass ? (
+              <div className="flex flex-col items-center justify-center p-20 bg-white/30 dark:bg-slate-900/30 backdrop-blur-md rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
+                <div className="bg-purple-100 dark:bg-purple-900/30 p-4 rounded-full mb-4">
+                  <GraduationCap className="h-10 w-10 text-purple-600 dark:text-purple-400 opacity-50" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300">Asignación de Clases</h3>
+                <p className="text-center text-muted-foreground max-w-sm mt-2">
+                  Selecciona un departamento y una clase para comenzar a organizar a tus maestros y líderes.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-bold flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div>Disponibles</h3>
+                    <Badge variant="secondary">{availableTeachers.length}</Badge>
+                  </div>
+                  <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                    <Table>
+                      <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50 text-[11px] uppercase tracking-wider">
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Actual</TableHead>
+                          <TableHead className="text-right">Acción</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {availableTeachers.length === 0 ? (
+                          <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground italic">No hay maestros disponibles</TableCell></TableRow>
+                        ) : (
+                          availableTeachers.map((user) => (
+                            <TableRow key={user.id} className="group hover:bg-blue-50/30 dark:hover:bg-blue-900/10">
+                              <TableCell className="py-3">
+                                <div className="font-bold text-slate-700 dark:text-slate-300">{user.first_name} {user.last_name}</div>
+                                <div className="text-[10px] text-muted-foreground uppercase">{user.role}</div>
+                              </TableCell>
+                              <TableCell className="py-3 text-xs">
+                                {user.assigned_class ? <Badge variant="outline" className="h-5 text-[10px]">{user.assigned_class}</Badge> : <span className="text-muted-foreground">Sin clase</span>}
+                              </TableCell>
+                              <TableCell className="text-right py-3">
+                                <Button size="sm" variant="ghost" className="h-8 w-8 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 p-0" onClick={() => updateClassMutation.mutate({ userId: user.id, newClass: assignmentClass })}>
+                                  <ArrowRight className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
 
-                <div className="flex gap-2 justify-end pt-4 mt-6 border-t border-slate-100 dark:border-slate-800 relative z-10">
-                  <Dialog open={isEditing && selectedUser?.id === user.id} onOpenChange={(open) => {
-                    if (!open) {
-                      setIsEditing(false);
-                      setSelectedUser(null);
-                      setNewEmail("");
-                      setNewPassword("");
-                      setShowPassword(false);
-                      setSelectedDepartment(null);
-                      setSelectedClass("");
-                    }
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 rounded-full transition-colors"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setIsEditing(true);
-                          setNewEmail(user.email || "");
-                          setSelectedDepartment(user.departments?.[0] || null);
-                          setSelectedClass(user.assigned_class || "");
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="w-[95vw] max-w-md sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-                      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-                      <DialogHeader className="relative z-10">
-                        <DialogTitle className="text-2xl flex items-center gap-2">
-                          <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl text-purple-600 dark:text-purple-400">
-                            <Pencil className="h-5 w-5" />
-                          </div>
-                          Editar Usuario
-                        </DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="first_name">Nombre</Label>
-                          <Input
-                            id="first_name"
-                            value={selectedUser?.first_name || ""}
-                            onChange={(e) =>
-                              setSelectedUser(prev => prev ? {
-                                ...prev,
-                                first_name: e.target.value
-                              } : null)
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="last_name">Apellido</Label>
-                          <Input
-                            id="last_name"
-                            value={selectedUser?.last_name || ""}
-                            onChange={(e) =>
-                              setSelectedUser(prev => prev ? {
-                                ...prev,
-                                last_name: e.target.value
-                              } : null)
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="email">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={newEmail}
-                            onChange={(e) => setNewEmail(e.target.value)}
-                          />
-                        </div>
-                        <div className="relative">
-                          <Label htmlFor="password">Nueva Contraseña</Label>
-                          <div className="relative">
-                            <Input
-                              id="password"
-                              type={showPassword ? "text" : "password"}
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              className="pr-10"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-0 top-0 h-full"
-                              onClick={() => setShowPassword(!showPassword)}
-                            >
-                              {showPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="role">Rol</Label>
-                          <Select
-                            value={selectedUser?.role}
-                            onValueChange={(value: AppRole) =>
-                              setSelectedUser(prev => prev ? {
-                                ...prev,
-                                role: value
-                              } : null)
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar rol" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="maestro">Maestro</SelectItem>
-                              <SelectItem value="lider">Líder</SelectItem>
-                              <SelectItem value="director">Director</SelectItem>
-                              <SelectItem value="secretaria">Secretaria</SelectItem>
-                              <SelectItem value="secr.-calendario">Secr.-calendario</SelectItem>
-                              <SelectItem value="admin">Administrador</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="department">Departamento</Label>
-                          <Select
-                            value={selectedDepartment || undefined}
-                            onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar departamento" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {departments.map((dept) => (
-                                <SelectItem key={dept.id} value={dept.name}>
-                                  {dept.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {selectedDepartment && availableClasses.length > 0 && (
-                          <div>
-                            <Label htmlFor="class">Clase</Label>
-                            <Select
-                              value={selectedClass}
-                              onValueChange={setSelectedClass}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar clase" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableClasses.map((className) => (
-                                  <SelectItem key={className} value={className}>
-                                    {className}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-bold flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500"></div>En la Clase: <span className="text-purple-600 dark:text-purple-400">{assignmentClass}</span></h3>
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{assignedTeachers.length}</Badge>
+                  </div>
+                  <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm ring-1 ring-green-500/20">
+                    <Table>
+                      <TableHeader className="bg-green-50/30 dark:bg-green-900/10 text-[11px] uppercase tracking-wider">
+                        <TableRow>
+                          <TableHead className="w-[40px]"></TableHead>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Rol</TableHead>
+                          <TableHead className="text-right"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {assignedTeachers.length === 0 ? (
+                          <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground italic">Ningún maestro asignado</TableCell></TableRow>
+                        ) : (
+                          assignedTeachers.map((user) => (
+                            <TableRow key={user.id} className="group hover:bg-green-50/30 dark:hover:bg-green-900/10">
+                              <TableCell className="py-3">
+                                <Button size="sm" variant="ghost" className="h-8 w-8 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 p-0" onClick={() => updateClassMutation.mutate({ userId: user.id, newClass: null })}>
+                                  <ArrowLeft className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                              <TableCell className="py-3"><div className="font-bold text-slate-800 dark:text-slate-200">{user.first_name} {user.last_name}</div></TableCell>
+                              <TableCell className="py-3"><Badge variant="outline" className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-[9px]">{user.role}</Badge></TableCell>
+                              <TableCell className="text-right py-3"><div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div></TableCell>
+                            </TableRow>
+                          ))
                         )}
-                        <Button
-                          className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl h-12 mt-6"
-                          onClick={() => {
-                            if (selectedUser) {
-                              updateUserMutation.mutate({
-                                ...selectedUser,
-                                newEmail: newEmail !== selectedUser.email ? newEmail : undefined,
-                                newPassword: newPassword || undefined
-                              });
-                            }
-                          }}
-                        >
-                          Guardar Cambios
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-full transition-colors"
-                    onClick={() => {
-                      if (window.confirm('¿Está seguro de eliminar este usuario?')) {
-                        deleteUserMutation.mutate(user.id);
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
-              </Card>
-            ))}
+              </div>
+            )}
           </div>
         )}
       </div>

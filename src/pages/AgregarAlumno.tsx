@@ -45,6 +45,7 @@ const AgregarAlumno = () => {
 
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const isMaestro = profile?.role === 'maestro';
+  const isDirector = profile?.role === 'director';
 
   const availableDepartments = isAdminOrSecretaria
     ? departments
@@ -338,7 +339,7 @@ const AgregarAlumno = () => {
                       assigned_class: ""
                     });
                   }}
-                  disabled={isMaestro}
+                  disabled={isMaestro || isDirector}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar departamento" />

@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { jsPDF } from "jspdf";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears, parse, isValid, parseISO } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -21,7 +22,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "@/hooks/use-toast";
 import { StudentDetails } from "@/components/StudentDetails";
 import { Badge } from "@/components/ui/badge";
-import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments } from "@/lib/api";
+import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations } from "@/lib/api";
 import {
   Form,
   FormControl,
@@ -37,14 +38,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { CustomTooltip } from "@/components/CustomTooltip";
 import * as z from "zod";
 
 const ListarAlumnos = () => {
@@ -82,10 +78,11 @@ const ListarAlumnos = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const profile = useAuth().profile;
-  const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin';
-  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro';
+  const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'director';
+  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro' || profile?.role === 'director';
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ============ CONSULTA PRINCIPAL DE ESTUDIANTES USANDO BACKEND API ============
   const { data: allStudents, isLoading, isError, refetch } = useQuery({
@@ -105,6 +102,13 @@ const ListarAlumnos = () => {
         ...student,
         department: student.departments?.name || student.department
       }));
+    }
+
+    // Si es director, filtrar por departamento (todo el departamento)
+    if (profile?.role === 'director' && profile?.department_id) {
+      filteredStudents = allStudents.filter(student =>
+        student.department_id === profile.department_id
+      );
     }
 
     // Para otros roles, filtrar por departamento y clase
@@ -143,38 +147,40 @@ const ListarAlumnos = () => {
     },
   });
 
-  // ============ CONSULTA DE CLASES - USAR STUDENTS DEL BACKEND ============
+  // ============ CONSULTA DE CLASES - USAR DEPARTAMENTOS Y STUDENTS ============
   const { data: classes } = useQuery({
     queryKey: ["classes", filters.department],
     queryFn: async () => {
-      if (!allStudents) return [];
+      // 1. Obtener clases del departamento si está seleccionado
+      const selectedDeptObj = departments?.find(d =>
+        d.name === filters.department || (d.id === profile?.department_id && profile?.role === 'director')
+      );
+      const deptClasses = selectedDeptObj?.classes || [];
 
-      let studentsToAnalyze = allStudents;
-
-      // Si hay un departamento seleccionado, filtrar por ese departamento
-      if (filters.department) {
-        studentsToAnalyze = allStudents.filter(student =>
-          student.departments?.name === filters.department ||
-          student.department === filters.department
-        );
+      // 2. Obtener clases de los estudiantes existentes (para retrocompatibilidad)
+      let studentClasses: string[] = [];
+      if (allStudents) {
+        let studentsToAnalyze = allStudents;
+        if (filters.department) {
+          studentsToAnalyze = allStudents.filter(student =>
+            student.departments?.name === filters.department ||
+            student.department === filters.department
+          );
+        }
+        studentClasses = [...new Set(
+          studentsToAnalyze
+            .map(student => student.assigned_class)
+            .filter(Boolean)
+        )] as string[];
       }
 
-      // Obtener clases únicas y filtrar valores nulos/vacíos
-      const uniqueClasses = [...new Set(
-        studentsToAnalyze
-          .map(student => student.assigned_class)
-          .filter(Boolean)
-      )];
-
-      return uniqueClasses.sort();
+      // 3. Combinar y devolver únicas
+      return [...new Set([...deptClasses, ...studentClasses])].sort();
     },
-    enabled: !!allStudents,
+    enabled: !!allStudents || !!departments,
   });
 
-  useEffect(() => {
-    // Siempre limpiar la clase cuando cambie el departamento
-    setFilters(prev => ({ ...prev, class: '' }));
-  }, [filters.department]);
+
 
   const formSchema = z.object({
     first_name: z.string().min(1, "El nombre es requerido"),
@@ -185,7 +191,8 @@ const ListarAlumnos = () => {
     phone: z.string().optional(),
     document_number: z.string().optional(),
     department_id: z.string().optional(),
-    email: z.string().optional(),
+
+    assigned_class: z.string().optional(),
   });
 
   // ========== ACTUALIZAR DEFAULT VALUES (línea ~124) ==========
@@ -199,7 +206,7 @@ const ListarAlumnos = () => {
       phone: "",
       document_number: "",
       department_id: "",
-      email: ""
+      assigned_class: ""
     },
     resolver: zodResolver(formSchema),
   });
@@ -211,8 +218,28 @@ const ListarAlumnos = () => {
   useEffect(() => {
     if (!profile) {
       navigate('/');
+      return;
     }
-  }, [profile, navigate]);
+
+    // Leer parámetros de búsqueda al cargar
+    const deptParam = searchParams.get('department');
+    const classParam = searchParams.get('class');
+
+    if (deptParam || classParam) {
+      setFilters(prev => ({
+        ...prev,
+        department: deptParam || '',
+        class: classParam || ''
+      }));
+      setIsFilterOpen(true);
+    } else if (profile?.role === 'director' && profile?.department_id && departments) {
+      const directorDept = departments.find(d => d.id === profile.department_id);
+      if (directorDept) {
+        setFilters(prev => ({ ...prev, department: directorDept.name }));
+        setIsFilterOpen(true);
+      }
+    }
+  }, [profile, navigate, searchParams, departments]);
 
   const calculateAge = (dateOfBirth: string): number | null => {
     if (!dateOfBirth) return null;
@@ -309,8 +336,123 @@ const ListarAlumnos = () => {
       phone: student.phone || "",
       document_number: student.document_number || "",
       department_id: student.department_id || "",
+      assigned_class: student.assigned_class || "",
     });
     setIsEditModalOpen(true);
+  };
+
+  const handleDownloadStudentPDF = async (student: Student) => {
+    try {
+      toast({
+        title: "Generando PDF",
+        description: "Obteniendo historial de observaciones...",
+      });
+
+      const observations = await getObservations(student.id);
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Header
+      doc.setFontSize(22);
+      doc.setTextColor(75, 85, 99);
+      doc.text(`Informe de ${student.first_name} ${student.last_name || ""}`, pageWidth / 2, 20, { align: "center" });
+
+      doc.setFontSize(10);
+      doc.setTextColor(107, 114, 128);
+      doc.text(`Fecha de generación: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, pageWidth / 2, 28, { align: "center" });
+
+      doc.setDrawColor(229, 231, 235);
+      doc.line(20, 35, pageWidth - 20, 35);
+
+      // Student Data Section
+      doc.setFontSize(16);
+      doc.setTextColor(31, 41, 55);
+      doc.setFont("helvetica", "bold");
+      doc.text("Datos Personales", 20, 48);
+
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(55, 65, 81);
+
+      const leftCol = 25;
+      const dataYStart = 58;
+      const rowHeight = 8;
+
+      const age = student.birthdate ? calculateAge(student.birthdate) : null;
+      doc.text(`Edad: ${age ? `${age} años` : "No registrada"}`, leftCol, dataYStart);
+
+      doc.text(`DNI: ${student.document_number || "No registrado"}`, leftCol, dataYStart + rowHeight);
+      doc.text(`Género: ${student.gender === 'masculino' ? 'Masculino' : 'Femenino'}`, leftCol, dataYStart + (rowHeight * 2));
+      doc.text(`Fecha de Nacimiento: ${student.birthdate ? format(parseISO(student.birthdate), "dd/MM/yyyy") : "No registrada"}`, leftCol, dataYStart + (rowHeight * 3));
+      doc.text(`Teléfono: ${student.phone || "No registrado"}`, leftCol, dataYStart + (rowHeight * 4));
+      doc.text(`Dirección: ${student.address || "No registrada"}`, leftCol, dataYStart + (rowHeight * 5));
+      doc.text(`Departamento: ${student.department || "No asignado"}`, leftCol, dataYStart + (rowHeight * 6));
+      doc.text(`Clase: ${student.assigned_class || "No asignada"}`, leftCol, dataYStart + (rowHeight * 7));
+
+      // Observations Section
+      let currentY = dataYStart + (rowHeight * 9) + 15;
+
+      doc.line(20, currentY - 5, pageWidth - 20, currentY - 5);
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(31, 41, 55);
+      doc.text("Historial de Observaciones", 20, currentY);
+
+      currentY += 12;
+
+      if (!observations || observations.length === 0) {
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(107, 114, 128);
+        doc.text("No hay observaciones registradas para este alumno.", 25, currentY);
+      } else {
+        observations.forEach((obs, index) => {
+          // Check if we need a new page
+          if (currentY > 260) {
+            doc.addPage();
+            currentY = 25;
+          }
+
+          // Background for date header
+          doc.setFillColor(243, 244, 246);
+          doc.rect(25, currentY - 5, pageWidth - 50, 8, 'F');
+
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(75, 85, 99);
+          const dateStr = obs.created_at ? format(parseISO(obs.created_at), "dd/MM/yyyy HH:mm") : "Sin fecha";
+          const author = obs.profiles ? ` - Por: ${obs.profiles.first_name} ${obs.profiles.last_name}` : "";
+          doc.text(`${dateStr}${author}`, 30, currentY);
+
+          currentY += 8;
+
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(55, 65, 81);
+
+          const lines = doc.splitTextToSize(obs.observation, pageWidth - 60);
+          doc.text(lines, 30, currentY);
+
+          currentY += (lines.length * 5) + 8;
+        });
+      }
+
+      doc.save(`informe_${student.first_name}_${student.last_name || ""}.pdf`);
+
+      toast({
+        title: "PDF Generado",
+        description: "El informe se ha descargado correctamente.",
+        variant: "success"
+      });
+    } catch (error: any) {
+      console.error("Error al generar PDF:", error);
+      toast({
+        title: "Error",
+        description: "Hubo un problema al generar el PDF: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   // ============ FUNCIÓN PARA ACTUALIZAR USANDO BACKEND API ============
@@ -513,11 +655,21 @@ const ListarAlumnos = () => {
   };
 
   const handleClearFilters = () => {
-    setFilters({
-      name: '',
-      department: '',
-      class: '',
-    });
+    if (profile?.role === 'director' && profile?.department_id && departments) {
+      const directorDept = departments.find(d => d.id === profile.department_id);
+      setFilters({
+        name: '',
+        department: directorDept?.name || '',
+        class: '',
+      });
+    } else {
+      setFilters({
+        name: '',
+        department: '',
+        class: '',
+      });
+    }
+    setSearchParams({});
   };
 
   const handleImportResult = (result: any) => {
@@ -653,100 +805,76 @@ const ListarAlumnos = () => {
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {canManageStudents && !student.isAuthorized && (
             <>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={(e) => { e.stopPropagation(); handleEdit(student); }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Editar</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <CustomTooltip title="Editar">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground"
+                  onClick={(e) => { e.stopPropagation(); handleEdit(student); }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </CustomTooltip>
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                      onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Eliminar</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <CustomTooltip title="Eliminar">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </CustomTooltip>
             </>
           )}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                  onClick={(e) => { e.stopPropagation(); handleWhatsAppClick(student.phone); }}
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                  </svg>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>WhatsApp</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <CustomTooltip title="WhatsApp">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 transition-colors"
+              onClick={(e) => { e.stopPropagation(); handleWhatsAppClick(student.phone); }}
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+            </Button>
+          </CustomTooltip>
 
           {student.nuevo && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
-                    onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Marcar como no nuevo</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <CustomTooltip title="Marcar como no nuevo">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            </CustomTooltip>
           )}
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-primary hover:text-primary/80"
-                  onClick={(e) => { e.stopPropagation(); setExpandedStudentId(student.id); }}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Ver/Agregar Observaciones</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <CustomTooltip title="Descargar Informe PDF">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+              onClick={(e) => { e.stopPropagation(); handleDownloadStudentPDF(student); }}
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
+          </CustomTooltip>
+
+          <CustomTooltip title="Ver/Agregar Observaciones">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-primary hover:text-primary/80 hover:bg-primary/10"
+              onClick={(e) => { e.stopPropagation(); setExpandedStudentId(student.id); }}
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          </CustomTooltip>
 
         </div>
       );
@@ -765,45 +893,28 @@ const ListarAlumnos = () => {
               <p className="text-muted-foreground text-sm mt-1">Gestión general e información detallada</p>
             </div>
 
-            <TooltipProvider>
-              <div className="flex items-center space-x-2">
-                {canFilter && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" className="bg-white/80 hover:bg-white dark:bg-slate-800 border-slate-200 shadow-sm" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-                        <Filter className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Filtrar alumnos</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" className="bg-white/80 hover:bg-white dark:bg-slate-800 border-slate-200 shadow-sm" onClick={exportToExcel}>
-                        <FileDown className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Exportar a Excel</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={() => navigate('/agregar')} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20">
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Nuevo
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Agregar nuevo alumno</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
+            <div className="flex items-center space-x-2">
+              {canFilter && (
+                <CustomTooltip title="Filtrar alumnos">
+                  <Button variant="outline" className="bg-white/80 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 shadow-sm text-foreground hover:text-foreground" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                </CustomTooltip>
+              )}
+              {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director') && (
+                <CustomTooltip title="Exportar a Excel">
+                  <Button variant="outline" className="bg-white/80 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 shadow-sm text-foreground hover:text-foreground" onClick={exportToExcel}>
+                    <FileDown className="h-4 w-4" />
+                  </Button>
+                </CustomTooltip>
+              )}
+              <CustomTooltip title="Agregar nuevo alumno">
+                <Button onClick={() => navigate('/agregar')} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Nuevo
+                </Button>
+              </CustomTooltip>
+            </div>
           </div>
 
           {canFilter && (
@@ -815,15 +926,16 @@ const ListarAlumnos = () => {
                 <div>
                   <Label htmlFor="department">Departamento</Label>
                   <Select
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value }))}
-                    defaultValue={filters.department || "all"}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value, class: '' }))}
+                    value={filters.department || "all"}
+                    disabled={profile?.role === 'director'}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Seleccione un departamento" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {departments?.map((department) => (
+                      {profile?.role !== 'director' && <SelectItem value="all">Todos</SelectItem>}
+                      {departments?.filter(dept => profile?.role !== 'director' || profile.department_id === dept.id).map((department) => (
                         <SelectItem key={department.id} value={department.name}>
                           {department.name}
                         </SelectItem>
@@ -853,8 +965,12 @@ const ListarAlumnos = () => {
                   </Select>
                 </div>
 
-                <div className="md:col-span-3 flex justify-end">
-                  <Button className="text-white" variant="secondary" size="sm" onClick={handleClearFilters}>
+                <div className="flex items-end">
+                  <Button
+                    className="bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-950 dark:hover:bg-slate-900 shadow-lg rounded-full px-6 transition-all active:scale-95"
+                    size="sm"
+                    onClick={handleClearFilters}
+                  >
                     Limpiar Filtros
                   </Button>
                 </div>
@@ -1038,169 +1154,189 @@ const ListarAlumnos = () => {
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleUpdate)} className="grid gap-4 py-4">
-                  <FormField
-                    control={form.control}
-                    name="first_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nombre*</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nombre" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="last_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Apellido</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Apellido" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Género</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nombre*</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccione el género" />
-                            </SelectTrigger>
+                            <Input placeholder="Nombre" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="masculino">Masculino</SelectItem>
-                            <SelectItem value="femenino">Femenino</SelectItem>
-                            <SelectItem value="otro">Otro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="birthdate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de Nacimiento</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            value={field.value || ''}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="document_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número de Documento</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Número de documento"
-                            {...field}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              field.onChange(value);
-                            }}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* ⭐ ACTUALIZADO: phone en lugar de phone_number */}
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Teléfono</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Teléfono" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Dirección</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Dirección" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="department_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Departamento</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          disabled={profile?.role === 'maestro'}
-                        >
+                    <FormField
+                      control={form.control}
+                      name="last_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Apellido</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccione un departamento" />
-                            </SelectTrigger>
+                            <Input placeholder="Apellido" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            {departments?.map((department) => (
-                              <SelectItem key={department.id} value={department.id}>
-                                {department.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Género</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccione el género" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="masculino">Masculino</SelectItem>
+                              <SelectItem value="femenino">Femenino</SelectItem>
+                              <SelectItem value="otro">Otro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="birthdate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fecha de Nacimiento</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="document_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Número de Documento</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Número de documento"
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '');
+                                field.onChange(value);
+                              }}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* ⭐ ACTUALIZADO: phone en lugar de phone_number */}
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Teléfono</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Teléfono" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+
+
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Dirección</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Dirección" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="department_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Departamento</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            disabled={profile?.role === 'maestro' || profile?.role === 'director'}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccione un departamento" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {departments?.map((department) => (
+                                <SelectItem key={department.id} value={department.id}>
+                                  {department.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="assigned_class"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Clase</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccione una clase" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value=" ">Ninguna</SelectItem>
+                              {classes?.map((className) => (
+                                <SelectItem key={String(className)} value={String(className)}>
+                                  {String(className)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <div className="flex justify-end">
                     <Button type="submit">Guardar</Button>

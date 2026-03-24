@@ -5,13 +5,7 @@ import { Department, DepartmentType } from "@/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Layers, Pencil, Trash, Plus, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog as MuiDialog, DialogTitle as MuiDialogTitle, DialogContent as MuiDialogContent, TextField, Chip, Box } from "@mui/material";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -172,102 +166,10 @@ const Departamentos = () => {
             </div>
           </div>
 
-          <Dialog open={isCreating} onOpenChange={setIsCreating}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl whitespace-nowrap">
-                <Plus className="h-5 w-5 mr-2" />
-                <span>Nuevo Departamento</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[95vw] max-w-md sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-              <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-              <DialogHeader className="relative z-10">
-                <DialogTitle className="text-2xl flex items-center gap-2">
-                  <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl text-purple-600 dark:text-purple-400">
-                    <Plus className="h-5 w-5" />
-                  </div>
-                  Crear Departamento
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Nombre</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Nombre del departamento"
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Descripción</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Ingrese una descripción para el departamento"
-                    className="min-h-[100px]"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="classes">Clases</Label>
-                  <div className="flex gap-2 mb-2">
-                    <Input
-                      id="classes"
-                      value={newClass}
-                      onChange={(e) => setNewClass(e.target.value)}
-                      placeholder="Nombre de la clase"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddClass();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      onClick={handleAddClass}
-                      disabled={!newClass.trim()}
-                    >
-                      Agregar
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {classes.map((className, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-white"
-                      >
-                        <span>{className}</span>
-                        <button
-                          onClick={() => handleRemoveClass(className)}
-                          className="text-white/80 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <Button
-                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl h-12 mt-4"
-                  onClick={() => {
-                    if (name) {
-                      createDepartmentMutation.mutate({
-                        name: name as DepartmentType,
-                        description: description.trim() || undefined,
-                        classes
-                      });
-                    }
-                  }}
-                  disabled={!name}
-                >
-                  Crear Departamento
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={() => setIsCreating(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl whitespace-nowrap">
+            <Plus className="h-5 w-5 mr-2" />
+            <span>Nuevo Departamento</span>
+          </Button>
         </div>
       </section>
 
@@ -302,123 +204,23 @@ const Departamentos = () => {
               </div>
 
               <div className="flex gap-2 justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
-                <Dialog open={isEditing && selectedDepartment?.id === department.id} onOpenChange={(open) => {
-                  if (!open) {
-                    setIsEditing(false);
-                    setSelectedDepartment(null);
-                    setDescription("");
-                    setClasses([]);
-                    setEditingName("");
-                  }
-                }}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 rounded-full transition-colors"
-                      onClick={() => {
-                        setSelectedDepartment({
-                          ...department,
-                          name: department.name as DepartmentType
-                        });
-                        setIsEditing(true);
-                        setDescription(department.description || "");
-                        setClasses(department.classes || []);
-                        setEditingName(department.name);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="w-[95vw] max-w-md sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-                    <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-                    <DialogHeader className="relative z-10">
-                      <DialogTitle className="text-2xl flex items-center gap-2">
-                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl text-purple-600 dark:text-purple-400">
-                          <Pencil className="h-5 w-5" />
-                        </div>
-                        Editar Departamento
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="editName">Nombre</Label>
-                        <Input
-                          id="editName"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          placeholder="Nombre del departamento"
-                          className="w-full"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="description">Descripción</Label>
-                        <Textarea
-                          id="description"
-                          value={description}
-                          onChange={(e) => setDescription(e.target.value)}
-                          placeholder="Ingrese una descripción para el departamento"
-                          className="min-h-[100px]"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="classes">Clases</Label>
-                        <div className="flex gap-2 mb-2">
-                          <Input
-                            id="classes"
-                            value={newClass}
-                            onChange={(e) => setNewClass(e.target.value)}
-                            placeholder="Nombre de la clase"
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddClass();
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            onClick={handleAddClass}
-                            disabled={!newClass.trim()}
-                          >
-                            Agregar
-                          </Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {classes.map((className, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-white"
-                            >
-                              <span>{className}</span>
-                              <button
-                                onClick={() => handleRemoveClass(className)}
-                                className="text-white/80 hover:text-destructive"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <Button
-                        className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl h-12 mt-4"
-                        onClick={() => {
-                          if (selectedDepartment) {
-                            updateDepartmentMutation.mutate({
-                              id: selectedDepartment.id,
-                              name: editingName,
-                              description,
-                              classes
-                            });
-                          }
-                        }}
-                      >
-                        Guardar Cambios
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 rounded-full transition-colors"
+                  onClick={() => {
+                    setSelectedDepartment({
+                      ...department,
+                      name: department.name as DepartmentType
+                    });
+                    setIsEditing(true);
+                    setDescription(department.description || "");
+                    setClasses(department.classes || []);
+                    setEditingName(department.name);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 <AlertDialog open={isDeleting && selectedDepartment?.id === department.id} onOpenChange={(open) => {
                   if (!open) {
                     setIsDeleting(false);
@@ -476,6 +278,207 @@ const Departamentos = () => {
           </Card>
         ))}
       </div>
+
+      {/* Unified MUI Modal for Create and Edit */}
+      <MuiDialog
+        open={isCreating || isEditing}
+        onClose={() => {
+          setIsCreating(false);
+          setIsEditing(false);
+          setSelectedDepartment(null);
+          setName("");
+          setEditingName("");
+          setDescription("");
+          setClasses([]);
+          setNewClass("");
+        }}
+        PaperProps={{
+          sx: (theme) => ({
+            borderRadius: '24px',
+            padding: { xs: '16px', sm: '24px' },
+            background: theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+              : 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '500px',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            border: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+          })
+        }}
+        BackdropProps={{
+          sx: {
+            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
+          }
+        }}
+      >
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-purple-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-blue-400/10 blur-3xl pointer-events-none" />
+
+        <MuiDialogTitle sx={{ pb: 1, zIndex: 1, position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="flex items-center gap-3">
+            <div className="bg-purple-100/50 dark:bg-purple-900/30 p-2.5 rounded-2xl text-primary shadow-sm border border-purple-200/50 dark:border-purple-800/50">
+              {isEditing ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+            </div>
+            <span className="text-2xl font-black tracking-tight text-foreground">
+              {isEditing ? 'Editar Departamento' : 'Crear Departamento'}
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setIsCreating(false);
+              setIsEditing(false);
+              setSelectedDepartment(null);
+            }}
+            className="p-1 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors text-muted-foreground"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </MuiDialogTitle>
+
+        <MuiDialogContent sx={{ zIndex: 1, position: 'relative', display: 'flex', flexDirection: 'column', gap: 2.5, px: 3, pb: 2, pt: '12px !important' }}>
+          <Box>
+            <Label className="text-[13px] font-bold text-foreground opacity-80 mb-1.5 block">Nombre</Label>
+            <TextField
+              fullWidth
+              value={isEditing ? editingName : name}
+              onChange={(e) => isEditing ? setEditingName(e.target.value) : setName(e.target.value)}
+              placeholder="Ej: Escuelita Central"
+              variant="outlined"
+              size="small"
+              InputProps={{
+                sx: (theme) => ({
+                  borderRadius: '12px',
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.6)',
+                  height: '44px',
+                  fontSize: '14px',
+                  '&:hover fieldset': { borderColor: theme.palette.primary.light },
+                  '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main, borderWidth: '2px' },
+                })
+              }}
+            />
+          </Box>
+
+          <Box>
+            <Label className="text-[13px] font-bold text-foreground opacity-80 mb-1.5 block">Descripción</Label>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Breve descripción"
+              variant="outlined"
+              InputProps={{
+                sx: (theme) => ({
+                  borderRadius: '16px',
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.6)',
+                  fontSize: '14px',
+                  lineHeight: '1.5',
+                  '&:hover fieldset': { borderColor: theme.palette.primary.light },
+                  '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main, borderWidth: '2px' },
+                })
+              }}
+            />
+          </Box>
+
+          <Box>
+            <Label className="text-[13px] font-bold text-foreground opacity-80 mb-1.5 block">Clases</Label>
+            <div className="flex gap-2 mb-3 items-center">
+              <TextField
+                fullWidth
+                value={newClass}
+                onChange={(e) => setNewClass(e.target.value)}
+                placeholder="Nombre de la clase"
+                variant="outlined"
+                size="small"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddClass();
+                  }
+                }}
+                InputProps={{
+                  sx: (theme) => ({
+                    borderRadius: '12px',
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.6)',
+                    height: '42px',
+                    fontSize: '14px',
+                    '&:hover fieldset': { borderColor: theme.palette.primary.light },
+                    '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main, borderWidth: '2px' },
+                  })
+                }}
+              />
+              <button
+                onClick={handleAddClass}
+                disabled={!newClass.trim()}
+                className="bg-blue-200 dark:bg-blue-900/50 hover:bg-blue-300 dark:hover:bg-blue-800/50 text-blue-800 dark:text-blue-100 font-bold h-[42px] px-5 rounded-[12px] shadow-sm transition-all disabled:opacity-50 text-[14px] border border-blue-300/30"
+              >
+                Agregar
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {classes.map((className, index) => (
+                <Chip
+                  key={index}
+                  label={className}
+                  onDelete={() => handleRemoveClass(className)}
+                  deleteIcon={<X size={14} color="#a855f7" />}
+                  sx={(theme) => ({
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(126, 34, 206, 0.2)' : '#f3e8ff',
+                    color: theme.palette.mode === 'dark' ? '#d8b4fe' : '#7e22ce',
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    padding: '2px 4px',
+                    height: '30px',
+                    fontSize: '13.5px',
+                    border: theme.palette.mode === 'dark' ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid #e9d5ff',
+                    boxShadow: '0 2px 4px rgba(147, 51, 234, 0.05)',
+                    '& .MuiChip-deleteIcon': {
+                      transition: 'all 0.2s',
+                      color: theme.palette.mode === 'dark' ? '#a855f7' : '#c084fc',
+                      '&:hover': {
+                        color: theme.palette.primary.main,
+                        transform: 'scale(1.1)'
+                      }
+                    }
+                  })}
+                />
+              ))}
+            </div>
+          </Box>
+
+          <button
+            onClick={() => {
+              if (isEditing && selectedDepartment) {
+                updateDepartmentMutation.mutate({
+                  id: selectedDepartment.id,
+                  name: editingName,
+                  description,
+                  classes
+                });
+              } else if (name) {
+                createDepartmentMutation.mutate({
+                  name: name as DepartmentType,
+                  description: description.trim() || undefined,
+                  classes
+                });
+              }
+            }}
+            disabled={
+              (isEditing ? (!editingName || updateDepartmentMutation.isPending) : (!name || createDepartmentMutation.isPending))
+            }
+            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-purple-500/25 transition-all mt-4 disabled:opacity-70 flex justify-center items-center text-[15px]"
+          >
+            {isEditing ? (updateDepartmentMutation.isPending ? "Guardando..." : "Guardar Cambios") : (createDepartmentMutation.isPending ? "Creando..." : "Crear Departamento")}
+          </button>
+        </MuiDialogContent>
+      </MuiDialog>
     </div>
   );
 };

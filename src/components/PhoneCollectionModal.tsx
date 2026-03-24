@@ -17,8 +17,10 @@ export function PhoneCollectionModal() {
 
     useEffect(() => {
         // Mostrar el modal si el usuario está logueado, el perfil cargado,
-        // pero falta el número de teléfono.
-        if (profile && !profile.phone) {
+        // pero falta el número de teléfono y NO ha sido pospuesto en esta sesión.
+        const wasPostponed = sessionStorage.getItem("phone_modal_postponed") === "true";
+
+        if (profile && !profile.phone && !wasPostponed) {
             setOpen(true);
         } else {
             setOpen(false);
@@ -85,8 +87,15 @@ export function PhoneCollectionModal() {
         }
     };
 
+    const handleOpenChange = (isOpen: boolean) => {
+        setOpen(isOpen);
+        if (!isOpen) {
+            sessionStorage.setItem("phone_modal_postponed", "true");
+        }
+    };
+
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-2xl">
