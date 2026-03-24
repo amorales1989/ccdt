@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Box, Tabs, Tab } from "@mui/material";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -60,6 +61,8 @@ const GestionUsuarios = () => {
   const [assignmentDept, setAssignmentDept] = useState<string>("");
   const [assignmentClass, setAssignmentClass] = useState<string>("");
   const [assignmentClasses, setAssignmentClasses] = useState<string[]>([]);
+  // Pending assignments: userId -> newClass (string) or null (remove)
+  const [pendingAssignments, setPendingAssignments] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     if (profile?.role === 'director' && profile.departments?.[0]) {
@@ -149,27 +152,33 @@ const GestionUsuarios = () => {
     }
   }, [assignmentDept, departments]);
 
-  const updateClassMutation = useMutation({
-    mutationFn: async ({ userId, newClass }: { userId: string; newClass: string | null }) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ assigned_class: newClass })
-        .eq('id', userId);
+  // Reset pending when class changes
+  useEffect(() => {
+    setPendingAssignments({});
+  }, [assignmentClass, assignmentDept]);
 
-      if (error) throw error;
-      return data;
+  const saveClassMutation = useMutation({
+    mutationFn: async (assignments: Record<string, string | null>) => {
+      const entries = Object.entries(assignments);
+      await Promise.all(
+        entries.map(([userId, newClass]) =>
+          supabase.from('profiles').update({ assigned_class: newClass }).eq('id', userId)
+        )
+      );
+      // Await refetch so isPending stays true until UI has fresh data (no flash of stale state)
+      await queryClient.refetchQueries({ queryKey: ["users"] });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setPendingAssignments({});
       toast({
         title: "Éxito",
-        description: "Asignación actualizada correctamente",
+        description: "Asignaciones guardadas correctamente",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Error al actualizar la asignación: " + error.message,
+        description: "Error al guardar asignaciones: " + error.message,
         variant: "destructive",
       });
     },
@@ -335,26 +344,38 @@ const GestionUsuarios = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
-  // Assignment logic filtering
+  // Assignment logic filtering (accounts for pending local changes)
   const assignmentFilteredUsers = users.filter(user =>
     (user.role === 'maestro' || user.role === 'lider') &&
     user.departments?.includes(assignmentDept as DepartmentType)
   );
 
-  const availableTeachers = assignmentFilteredUsers.filter(user =>
-    !user.assigned_class
-  );
+  // Compute effective class for each user (pending overrides DB)
+  const getEffectiveClass = (user: Profile) =>
+    user.id in pendingAssignments ? pendingAssignments[user.id] : user.assigned_class;
 
-  const assignedTeachers = assignmentFilteredUsers.filter(user =>
-    assignmentClass && user.assigned_class === assignmentClass
-  );
+  const availableTeachers = assignmentFilteredUsers.filter(user => {
+    const effective = getEffectiveClass(user);
+    // Only show truly unassigned teachers (no class at all)
+    return !effective;
+  });
+
+  const assignedTeachers = assignmentFilteredUsers.filter(user => {
+    const effective = getEffectiveClass(user);
+    return assignmentClass && effective === assignmentClass;
+  });
+
+  const hasPendingChanges = Object.keys(pendingAssignments).length > 0;
 
   if (isLoading) {
     return <div className="p-6">Cargando...</div>;
   }
 
   return (
-    <div className="animate-fade-in space-y-4 px-4 md:px-6 pb-8 pt-2 md:pt-4 max-w-[1600px] mx-auto min-h-screen">
+    <div className="animate-fade-in space-y-4 px-4 md:px-6 pb-8 pt-2 md:pt-4 max-w-[1600px] mx-auto relative overflow-hidden">
+      {(updateUserMutation.isPending || deleteUserMutation.isPending || saveClassMutation.isPending || bulkResetMutation.isPending) && (
+        <LoadingOverlay message="Guardando..." />
+      )}
       <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/10 blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/10 blur-3xl pointer-events-none"></div>
 
@@ -373,81 +394,93 @@ const GestionUsuarios = () => {
       </div>
 
       <div className="space-y-6 relative z-10 w-full">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 w-full">
-          <Box className="bg-slate-100/90 dark:bg-slate-800/60 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 w-full sm:w-fit overflow-hidden lg:flex-shrink-0">
-            <Tabs
-              value={activeTab}
-              onChange={(_, newValue) => setActiveTab(newValue)}
-              variant="scrollable"
-              scrollButtons="auto"
-              sx={{
-                minHeight: 'auto',
-                '& .MuiTabs-indicator': {
-                  display: 'none',
-                },
-                '& .MuiTabs-flexContainer': {
-                  gap: '8px',
-                },
-              }}
+        <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-4 w-full">
+          <div className="flex items-center gap-4 w-full justify-between">
+            <Box className="bg-slate-100/90 dark:bg-slate-800/60 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 w-full sm:w-fit overflow-hidden lg:flex-shrink-0 mx-auto lg:mx-0">
+              <Tabs
+                value={activeTab}
+                onChange={(_, newValue) => setActiveTab(newValue)}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                  minHeight: 'auto',
+                  '& .MuiTabs-indicator': {
+                    display: 'none',
+                  },
+                  '& .MuiTabs-flexContainer': {
+                    gap: '8px',
+                    justifyContent: 'center',
+                  },
+                }}
+              >
+                <Tab
+                  value="listado"
+                  label="Lista de Usuarios"
+                  icon={<Users className="h-4 w-4" />}
+                  iconPosition="start"
+                  sx={{
+                    minHeight: '44px',
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    color: 'rgb(100 116 139)',
+                    padding: { xs: '0 12px', sm: '0 32px' },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&.Mui-selected': {
+                      backgroundColor: 'white',
+                      color: 'rgb(126 34 206)',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                    },
+                    '.dark &.Mui-selected': {
+                      backgroundColor: 'rgb(147 51 234)',
+                      color: 'white',
+                    },
+                    '&:hover': {
+                      opacity: 0.8,
+                    }
+                  }}
+                />
+                <Tab
+                  value="asignacion"
+                  label="Asignación de Clases"
+                  icon={<GraduationCap className="h-4 w-4" />}
+                  iconPosition="start"
+                  sx={{
+                    minHeight: '44px',
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    color: 'rgb(100 116 139)',
+                    padding: { xs: '0 12px', sm: '0 32px' },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&.Mui-selected': {
+                      backgroundColor: 'white',
+                      color: 'rgb(126 34 206)',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                    },
+                    '.dark &.Mui-selected': {
+                      backgroundColor: 'rgb(147 51 234)',
+                      color: 'white',
+                    },
+                    '&:hover': {
+                      opacity: 0.8,
+                    }
+                  }}
+                />
+              </Tabs>
+            </Box>
+
+            {/* Desktop-only: Nuevo Usuario button aligned far right of tabs */}
+            <Button
+              className="hidden lg:flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 font-bold text-sm transition-all flex-shrink-0"
+              onClick={() => navigate('/register')}
             >
-              <Tab
-                value="listado"
-                label="Lista de Usuarios"
-                icon={<Users className="h-4 w-4" />}
-                iconPosition="start"
-                sx={{
-                  minHeight: '44px',
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                  color: 'rgb(100 116 139)',
-                  padding: { xs: '0 12px', sm: '0 32px' },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&.Mui-selected': {
-                    backgroundColor: 'white',
-                    color: 'rgb(126 34 206)',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-                  },
-                  '.dark &.Mui-selected': {
-                    backgroundColor: 'rgb(147 51 234)',
-                    color: 'white',
-                  },
-                  '&:hover': {
-                    opacity: 0.8,
-                  }
-                }}
-              />
-              <Tab
-                value="asignacion"
-                label="Asignación de Clases"
-                icon={<GraduationCap className="h-4 w-4" />}
-                iconPosition="start"
-                sx={{
-                  minHeight: '44px',
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                  color: 'rgb(100 116 139)',
-                  padding: { xs: '0 12px', sm: '0 32px' },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&.Mui-selected': {
-                    backgroundColor: 'white',
-                    color: 'rgb(126 34 206)',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-                  },
-                  '.dark &.Mui-selected': {
-                    backgroundColor: 'rgb(147 51 234)',
-                    color: 'white',
-                  },
-                  '&:hover': {
-                    opacity: 0.8,
-                  }
-                }}
-              />
-            </Tabs>
-          </Box>
+              <Plus className="h-4 w-4" />
+              Nuevo Usuario
+            </Button>
+          </div>
 
           {activeTab === "listado" && (
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-end w-full lg:w-auto animate-in fade-in duration-300">
@@ -576,28 +609,28 @@ const GestionUsuarios = () => {
                                     <div className="space-y-4">
                                       <div>
                                         <Label htmlFor="first_name">Nombre</Label>
-                                        <Input id="first_name" value={selectedUser?.first_name || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, first_name: e.target.value } : null)} />
+                                        <Input id="first_name" value={selectedUser?.first_name || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, first_name: e.target.value } : null)} disabled={updateUserMutation.isPending} />
                                       </div>
                                       <div>
                                         <Label htmlFor="last_name">Apellido</Label>
-                                        <Input id="last_name" value={selectedUser?.last_name || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, last_name: e.target.value } : null)} />
+                                        <Input id="last_name" value={selectedUser?.last_name || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, last_name: e.target.value } : null)} disabled={updateUserMutation.isPending} />
                                       </div>
                                       <div>
                                         <Label htmlFor="email">Email</Label>
-                                        <Input id="email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                                        <Input id="email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} disabled={updateUserMutation.isPending} />
                                       </div>
                                       <div className="relative">
                                         <Label htmlFor="password">Nueva Contraseña</Label>
                                         <div className="relative">
-                                          <Input id="password" type={showPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="pr-10" />
-                                          <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full" onClick={() => setShowPassword(!showPassword)}>
+                                          <Input id="password" type={showPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="pr-10" disabled={updateUserMutation.isPending} />
+                                          <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full" onClick={() => setShowPassword(!showPassword)} disabled={updateUserMutation.isPending}>
                                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                           </Button>
                                         </div>
                                       </div>
                                       <div>
                                         <Label htmlFor="role">Rol</Label>
-                                        <Select value={selectedUser?.role} onValueChange={(value: AppRole) => setSelectedUser(prev => prev ? { ...prev, role: value } : null)}>
+                                        <Select value={selectedUser?.role} onValueChange={(value: AppRole) => setSelectedUser(prev => prev ? { ...prev, role: value } : null)} disabled={updateUserMutation.isPending}>
                                           <SelectTrigger><SelectValue placeholder="Seleccionar rol" /></SelectTrigger>
                                           <SelectContent>
                                             <SelectItem value="maestro">Maestro</SelectItem>
@@ -611,7 +644,11 @@ const GestionUsuarios = () => {
                                       </div>
                                       <div>
                                         <Label htmlFor="department">Departamento</Label>
-                                        <Select value={selectedDepartment || undefined} onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}>
+                                        <Select
+                                          value={selectedDepartment || undefined}
+                                          onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
+                                          disabled={profile?.role === 'director' || updateUserMutation.isPending}
+                                        >
                                           <SelectTrigger><SelectValue placeholder="Seleccionar departamento" /></SelectTrigger>
                                           <SelectContent>
                                             {departments.map((dept) => (
@@ -623,7 +660,7 @@ const GestionUsuarios = () => {
                                       {selectedDepartment && availableClasses.length > 0 && (
                                         <div>
                                           <Label htmlFor="class">Clase</Label>
-                                          <Select value={selectedClass} onValueChange={setSelectedClass}>
+                                          <Select value={selectedClass} onValueChange={setSelectedClass} disabled={updateUserMutation.isPending}>
                                             <SelectTrigger><SelectValue placeholder="Seleccionar clase" /></SelectTrigger>
                                             <SelectContent>
                                               {availableClasses.map((className) => (
@@ -644,13 +681,15 @@ const GestionUsuarios = () => {
                                             });
                                           }
                                         }}
+                                        disabled={updateUserMutation.isPending}
                                       >
-                                        Guardar Cambios
+                                        {updateUserMutation.isPending ? "Guardando..." : "Guardar Cambios"}
                                       </Button>
                                     </div>
                                   </DialogContent>
                                 </Dialog>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-full transition-colors"
+                                  disabled={deleteUserMutation.isPending}
                                   onClick={() => { if (window.confirm('¿Está seguro de eliminar este usuario?')) deleteUserMutation.mutate(user.id); }}>
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
@@ -702,7 +741,7 @@ const GestionUsuarios = () => {
                     variant="ghost"
                     size="icon"
                     onClick={() => navigate('/register')}
-                    className="h-6 w-6 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-600 hover:text-white transition-all"
+                    className="lg:hidden h-6 w-6 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-600 hover:text-white transition-all"
                     title="Nuevo Usuario"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -782,6 +821,14 @@ const GestionUsuarios = () => {
                     </div>
                   </DialogContent>
                 </Dialog>
+
+                <Button
+                  className={`h-11 rounded-xl px-5 transition-all duration-300 shadow-sm whitespace-nowrap font-bold text-sm ${hasPendingChanges ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-green-500/20' : 'opacity-50 cursor-not-allowed bg-slate-200 dark:bg-slate-700 text-slate-500'}`}
+                  disabled={!hasPendingChanges || saveClassMutation.isPending}
+                  onClick={() => saveClassMutation.mutate(pendingAssignments)}
+                >
+                  {saveClassMutation.isPending ? "Guardando..." : `Guardar Clase${hasPendingChanges ? ` (${Object.keys(pendingAssignments).length})` : ''}`}
+                </Button>
               </div>
             </div>
 
@@ -822,10 +869,15 @@ const GestionUsuarios = () => {
                                 <div className="text-[10px] text-muted-foreground uppercase">{user.role}</div>
                               </TableCell>
                               <TableCell className="py-3 text-xs">
-                                {user.assigned_class ? <Badge variant="outline" className="h-5 text-[10px]">{user.assigned_class}</Badge> : <span className="text-muted-foreground">Sin clase</span>}
+                                {(() => { const eff = getEffectiveClass(user); return eff ? <Badge variant="outline" className={`h-5 text-[10px] ${user.id in pendingAssignments ? 'border-amber-400 text-amber-600' : ''}`}>{eff}</Badge> : <span className="text-muted-foreground">Sin clase</span>; })()}
                               </TableCell>
                               <TableCell className="text-right py-3">
-                                <Button size="sm" variant="ghost" className="h-8 w-8 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 p-0" onClick={() => updateClassMutation.mutate({ userId: user.id, newClass: assignmentClass })}>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 p-0"
+                                  onClick={() => setPendingAssignments(prev => ({ ...prev, [user.id]: assignmentClass }))}
+                                >
                                   <ArrowRight className="h-4 w-4" />
                                 </Button>
                               </TableCell>
@@ -859,13 +911,22 @@ const GestionUsuarios = () => {
                           assignedTeachers.map((user) => (
                             <TableRow key={user.id} className="group hover:bg-green-50/30 dark:hover:bg-green-900/10">
                               <TableCell className="py-3">
-                                <Button size="sm" variant="ghost" className="h-8 w-8 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 p-0" onClick={() => updateClassMutation.mutate({ userId: user.id, newClass: null })}>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 p-0"
+                                  onClick={() => setPendingAssignments(prev => ({ ...prev, [user.id]: user.assigned_class === assignmentClass ? null : user.assigned_class ?? null }))}
+                                >
                                   <ArrowLeft className="h-4 w-4" />
                                 </Button>
                               </TableCell>
                               <TableCell className="py-3"><div className="font-bold text-slate-800 dark:text-slate-200">{user.first_name} {user.last_name}</div></TableCell>
                               <TableCell className="py-3"><Badge variant="outline" className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-[9px]">{user.role}</Badge></TableCell>
-                              <TableCell className="text-right py-3"><div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div></TableCell>
+                              <TableCell className="text-right py-3">
+                                {user.id in pendingAssignments
+                                  ? <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" title="Cambio pendiente" />
+                                  : <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />}
+                              </TableCell>
                             </TableRow>
                           ))
                         )}
