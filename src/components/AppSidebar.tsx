@@ -70,6 +70,10 @@ const getItems = (role: string | undefined, profile: any) => {
         { title: "Registrar Usuario", url: "/register", icon: UserPlus2 },
         { title: "Departamentos", url: "/departamentos", icon: FolderIcon }
       );
+    } else if (role === "director") {
+      baseItems.push(
+        { title: "Registrar Usuario", url: "/register", icon: UserPlus2 }
+      );
     }
     baseItems.push(
       { title: "Gestión de Usuarios", url: "/gestion-usuarios", icon: UserRound }

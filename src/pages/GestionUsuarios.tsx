@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { Department, DepartmentType } from "@/types/database";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Pencil, Trash2, Eye, EyeOff, Search, ChevronLeft, ChevronRight, Filter, ArrowRight, ArrowLeft, ArrowUpRight, GraduationCap } from "lucide-react";
+import { Users, Pencil, Trash2, Eye, EyeOff, Search, ChevronLeft, ChevronRight, Filter, ArrowRight, ArrowLeft, ArrowUpRight, GraduationCap, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -191,13 +191,13 @@ const GestionUsuarios = () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
         title: "Éxito",
-        description: "Todas las asignaciones del departamento han sido reiniciadas",
+        description: "Todas las clases del departamento han sido limpiadas",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Error al reiniciar asignaciones: " + error.message,
+        description: "Error al limpiar clases: " + error.message,
         variant: "destructive",
       });
     },
@@ -359,13 +359,13 @@ const GestionUsuarios = () => {
       <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/10 blur-3xl pointer-events-none"></div>
 
       <div className="relative z-10 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-2">
-        <div className="flex items-center gap-4">
-          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
-            <Users className="h-8 w-8" />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl shadow-lg shadow-purple-500/30 text-white">
+            <Users className="h-6 w-6 sm:h-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-foreground tracking-tight">Gestión de Usuarios</h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">Gestión de Usuarios</h1>
+            <p className="text-muted-foreground text-[11px] sm:text-sm mt-0.5 sm:mt-1">
               Administra los perfiles, roles y accesos de los miembros.
             </p>
           </div>
@@ -400,9 +400,9 @@ const GestionUsuarios = () => {
                   borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 700,
-                  fontSize: '0.875rem',
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
                   color: 'rgb(100 116 139)',
-                  padding: '0 32px',
+                  padding: { xs: '0 12px', sm: '0 32px' },
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&.Mui-selected': {
                     backgroundColor: 'white',
@@ -428,9 +428,9 @@ const GestionUsuarios = () => {
                   borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 700,
-                  fontSize: '0.875rem',
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
                   color: 'rgb(100 116 139)',
-                  padding: '0 32px',
+                  padding: { xs: '0 12px', sm: '0 32px' },
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&.Mui-selected': {
                     backgroundColor: 'white',
@@ -696,7 +696,18 @@ const GestionUsuarios = () => {
               <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 blur-3xl rounded-full" />
 
               <div className="w-full md:w-64 space-y-2 relative z-10">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 ml-1">Departamento</Label>
+                <div className="flex items-center justify-between ml-1">
+                  <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Departamento</Label>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate('/register')}
+                    className="h-6 w-6 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-600 hover:text-white transition-all"
+                    title="Nuevo Usuario"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
                 <Select value={assignmentDept} onValueChange={setAssignmentDept}>
                   <SelectTrigger className="h-11 rounded-xl bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800">
                     <SelectValue placeholder="Seleccionar Depto." />
@@ -725,11 +736,10 @@ const GestionUsuarios = () => {
 
               <div className="flex-grow"></div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto relative z-10 pb-0.5">
-                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400 text-sm font-bold bg-white/80 dark:bg-slate-800/80 px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="flex flex-row items-center gap-2 sm:gap-4 w-full md:w-auto relative z-10 pb-0.5">
+                <div className="flex items-center gap-2 sm:gap-3 text-slate-600 dark:text-slate-400 text-sm font-bold bg-white/80 dark:bg-slate-800/80 px-3 sm:px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <Users className="h-4 w-4 text-purple-500" />
                   <span>{assignmentFilteredUsers.length}</span>
-                  <span className="hidden sm:inline text-slate-400 font-medium tracking-tight">Maestros/Líderes</span>
                 </div>
 
                 <Dialog>
@@ -739,8 +749,7 @@ const GestionUsuarios = () => {
                       className="h-11 rounded-xl border-red-200 text-red-600 hover:bg-red-600 hover:text-white dark:border-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white px-5 transition-all duration-300 shadow-sm whitespace-nowrap"
                       disabled={!assignmentDept || bulkResetMutation.isPending}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Reiniciar Depto.
+                      <span className="text-sm font-bold">Limpiar clases</span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[425px] rounded-3xl border-none shadow-2xl p-8">
@@ -749,12 +758,12 @@ const GestionUsuarios = () => {
                         <div className="h-12 w-12 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
                           <Trash2 className="h-6 w-6" />
                         </div>
-                        Reiniciar Asignaciones
+                        Limpiar Clases
                       </DialogTitle>
                       <div className="py-6 text-slate-600 dark:text-slate-400 leading-relaxed">
                         ¿Estás seguro de que deseas quitar todas las clases asignadas a los maestros y líderes del departamento <span className="font-bold text-red-600 dark:text-red-400">"{assignmentDept}"</span>?
                         <p className="mt-3 text-sm flex items-center gap-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30">
-                          <ArrowLeft className="h-4 w-4 rotate-45" /> Esta acción dejará a todo el personal disponible para reasignar.
+                          <ArrowLeft className="h-4 w-4 rotate-45" /> Esta acción dejará a todo el personal disponible para reasignar clases.
                         </p>
                       </div>
                     </DialogHeader>
@@ -768,7 +777,7 @@ const GestionUsuarios = () => {
                         disabled={bulkResetMutation.isPending}
                         className="rounded-xl bg-red-600 hover:bg-red-700 h-11 px-6 shadow-lg shadow-red-200 dark:shadow-none"
                       >
-                        {bulkResetMutation.isPending ? "Reiniciando..." : "Confirmar Reinicio"}
+                        {bulkResetMutation.isPending ? "Limpiando..." : "Confirmar Limpiar"}
                       </Button>
                     </div>
                   </DialogContent>
@@ -869,7 +878,7 @@ const GestionUsuarios = () => {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 };
 

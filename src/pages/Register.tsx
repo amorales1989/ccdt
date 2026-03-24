@@ -25,9 +25,18 @@ export default function Register() {
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const { signUp } = useAuth();
+  const { profile, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const isDirector = profile?.role === 'director';
+
+  useEffect(() => {
+    if (isDirector && profile.departments?.[0]) {
+      setSelectedDepartment(profile.departments[0]);
+      setRole("maestro");
+    }
+  }, [isDirector, profile]);
 
   // Fetch departments
   const { data: departments = [] } = useQuery({
@@ -214,8 +223,8 @@ export default function Register() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div className="space-y-2">
                   <Label htmlFor="role" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Rol en el Sistema</Label>
-                  <Select value={role} onValueChange={(value: AppRole) => setRole(value)}>
-                    <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all">
+                  <Select value={role} onValueChange={(value: AppRole) => setRole(value)} disabled={isDirector}>
+                    <SelectTrigger className={`h-12 rounded-xl border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${isDirector ? "bg-slate-100 dark:bg-slate-800 opacity-80 cursor-not-allowed" : "bg-slate-50"}`}>
                       <SelectValue placeholder="Selecciona un rol" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl shadow-xl">
@@ -234,8 +243,9 @@ export default function Register() {
                   <Select
                     value={selectedDepartment || undefined}
                     onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
+                    disabled={isDirector}
                   >
-                    <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all">
+                    <SelectTrigger className={`h-12 rounded-xl border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${isDirector ? "bg-slate-100 dark:bg-slate-800 opacity-80 cursor-not-allowed" : "bg-slate-50"}`}>
                       <SelectValue placeholder="Selecciona un departamento" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl shadow-xl">
