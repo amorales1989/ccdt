@@ -52,7 +52,14 @@ export interface Event {
   title: string;
   date: string;
   time?: string;
+  end_date?: string;
+  end_time?: string;
   description?: string;
+  departamento?: string;
+  solicitud?: boolean;
+  estado?: 'pendiente' | 'aprobada' | 'rechazada' | string;
+  solicitante?: string;
+  motivoRechazo?: string;
   created_at: string;
   updated_at: string;
   isBirthday?: boolean;

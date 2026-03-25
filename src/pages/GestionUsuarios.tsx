@@ -25,6 +25,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Box, Tabs, Tab } from "@mui/material";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { BulkImportDialog } from "@/components/BulkImportDialog";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { FileUp } from "lucide-react";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -63,6 +66,9 @@ const GestionUsuarios = () => {
   const [assignmentClasses, setAssignmentClasses] = useState<string[]>([]);
   // Pending assignments: userId -> newClass (string) or null (remove)
   const [pendingAssignments, setPendingAssignments] = useState<Record<string, string | null>>({});
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.role === 'director' && profile.departments?.[0]) {
@@ -298,6 +304,8 @@ const GestionUsuarios = () => {
         title: "Usuario eliminado",
         description: "El usuario ha sido eliminado exitosamente"
       });
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
     },
     onError: (error) => {
       console.error("Error deleting user:", error);
@@ -473,13 +481,22 @@ const GestionUsuarios = () => {
             </Box>
 
             {/* Desktop-only: Nuevo Usuario button aligned far right of tabs */}
-            <Button
-              className="hidden lg:flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 font-bold text-sm transition-all flex-shrink-0"
-              onClick={() => navigate('/register')}
-            >
-              <Plus className="h-4 w-4" />
-              Nuevo Usuario
-            </Button>
+            <div className="hidden lg:flex items-center gap-3">
+              <Button
+                onClick={() => setShowImportDialog(true)}
+                className="flex items-center gap-2 h-10 px-5 rounded-xl border border-purple-200 bg-white text-purple-600 hover:bg-purple-50 hover:text-purple-700 font-bold text-sm transition-all shadow-sm"
+              >
+                <FileUp className="h-4 w-4" />
+                Importar Usuarios
+              </Button>
+              <Button
+                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 font-bold text-sm transition-all flex-shrink-0"
+                onClick={() => navigate('/register')}
+              >
+                <Plus className="h-4 w-4" />
+                Nuevo Usuario
+              </Button>
+            </div>
           </div>
 
           {activeTab === "listado" && (
@@ -690,7 +707,10 @@ const GestionUsuarios = () => {
                                 </Dialog>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-full transition-colors"
                                   disabled={deleteUserMutation.isPending}
-                                  onClick={() => { if (window.confirm('¿Está seguro de eliminar este usuario?')) deleteUserMutation.mutate(user.id); }}>
+                                  onClick={() => {
+                                    setUserToDelete(user.id);
+                                    setIsDeleteDialogOpen(true);
+                                  }}>
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                               </div>
@@ -939,6 +959,21 @@ const GestionUsuarios = () => {
           </div>
         )}
       </div>
+      <BulkImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
+      />
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={() => {
+          if (userToDelete) deleteUserMutation.mutate(userToDelete);
+        }}
+        title="¿Eliminar usuario?"
+        description="Esta acción no se puede deshacer. Se eliminará permanentemente la cuenta y el perfil del usuario."
+        isLoading={deleteUserMutation.isPending}
+      />
     </div >
   );
 };

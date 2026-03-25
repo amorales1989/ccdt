@@ -12,8 +12,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Student, Department, DepartmentType } from "@/types/database";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { UserPlus, User, MapPin, Phone, Hash, CalendarDays, KeyRound, Building2 } from "lucide-react";
+import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 
 const AgregarAlumno = () => {
   const { toast } = useToast();
@@ -22,6 +23,7 @@ const AgregarAlumno = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [dniError, setDniError] = useState<string | null>(null);
   const [isValidatingDni, setIsValidatingDni] = useState(false);
+  const [birthdateOpen, setBirthdateOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -300,13 +302,14 @@ const AgregarAlumno = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-                <Input
-                  id="birthdate"
-                  type="date"
-                  value={formData.birthdate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, birthdate: e.target.value })
+                <MuiDatePickerField
+                  value={formData.birthdate ? parseISO(formData.birthdate) : undefined}
+                  onChange={(date) =>
+                    setFormData({ ...formData, birthdate: date ? format(date, 'yyyy-MM-dd') : '' })
                   }
+                  open={birthdateOpen}
+                  onOpenChange={setBirthdateOpen}
+                  placeholder="Seleccionar fecha de nacimiento"
                 />
               </div>
               <div className="space-y-2">

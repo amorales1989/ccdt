@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { StudentObservation } from "@/types/database";
-import type { Attendance, Student, Department, DepartmentType, Event } from "@/types/database";
+import type { Attendance, Student, Department, DepartmentType, Event, Profile } from "@/types/database";
 
 
 // Configuración de la API base
@@ -253,6 +253,20 @@ export const getUpcomingBirthdays = async () => {
     return response.data || response;
   } catch (error) {
     console.error('Error fetching upcoming birthdays:', error);
+    throw error;
+  }
+};
+
+export const importUsersFromExcel = async (users: any[]) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('manage-users', {
+      body: { action: 'bulk-create', userData: { users } }
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error importing users:', error);
     throw error;
   }
 };
@@ -513,7 +527,7 @@ export const deleteEvent = async (id: string) => {
   }
 };
 
-export const getUsers = async () => {
+export const getUsers = async (): Promise<Profile[]> => {
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -531,7 +545,9 @@ export const getUsers = async () => {
 export const notifyNewRequest = async (requestData: {
   eventTitle: string;
   eventDate: string;
+  eventEndDate?: string;
   eventTime?: string;
+  eventEndTime?: string;
   department?: string;
   requesterName: string;
   description?: string;

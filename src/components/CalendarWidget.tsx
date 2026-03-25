@@ -3,8 +3,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar, Clock, Search, Plus, Trash2, Edit2, MoreVertical } from "lucide-react";
-import { differenceInDays, startOfToday } from "date-fns";
+import { differenceInDays, startOfToday, format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createEvent, updateEvent, deleteEvent } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +47,8 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
 
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDeleteId, setEventToDeleteId] = useState<string | null>(null);
 
   const { mutate: createEventMutate } = useMutation({
     mutationFn: (newEvent: Omit<Event, "id" | "created_at" | "updated_at">) => createEvent(newEvent),
@@ -115,7 +125,16 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
   };
 
   const handleDeleteEvent = (id: string) => {
-    deleteEventMutate(id);
+    setEventToDeleteId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (eventToDeleteId) {
+      deleteEventMutate(eventToDeleteId);
+      setEventToDeleteId(null);
+      setDeleteDialogOpen(false);
+    }
   };
 
   const handleEditEvent = (event: Event) => {
@@ -131,16 +150,16 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertIcon className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-popover border-border">
             <DropdownMenuItem onClick={() => handleEditEvent(event as Event)}>
-              <Edit2 className="mr-2 h-4 w-4 text-primary" />
+              <EditIcon className="mr-2 h-4 w-4 text-primary/70" />
               Editar
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)}>
-              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <DeleteIcon className="mr-2 h-4 w-4 text-destructive/70" />
               Eliminar
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -151,19 +170,21 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
     return (
       <div className="flex justify-end space-x-2">
         <Button
-          variant="secondary"
+          variant="ghost"
           size="sm"
+          className="text-primary/60 hover:text-primary transition-colors"
           onClick={() => handleEditEvent(event as Event)}
         >
-          <Edit2 className="h-4 w-4 text-white" />
+          <EditIcon className="h-4 w-4" />
           <span className="sr-only">Editar</span>
         </Button>
         <Button
-          variant="destructive"
+          variant="ghost"
           size="sm"
+          className="text-destructive/60 hover:text-destructive transition-colors"
           onClick={() => handleDeleteEvent(event.id)}
         >
-          <Trash2 className="h-4 w-4" />
+          <DeleteIcon className="h-4 w-4" />
           <span className="sr-only">Eliminar</span>
         </Button>
       </div>
@@ -187,7 +208,7 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
                 className="button-gradient shadow-lg hover:shadow-primary/30 transition-all duration-300"
                 onClick={() => setSelectedEventForEdit(null)}
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <AddIcon className="mr-2 h-4 w-4" />
                 Agregar Evento
               </Button>
             </DialogTrigger>
@@ -210,20 +231,6 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
         )}
       </div>
 
-      <div className="glass-card p-6 mb-8">
-        <div className="relative group max-w-2xl">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-primary/40 group-focus-within:text-primary transition-colors" />
-          </div>
-          <Input
-            placeholder="Filtrar por título, descripción o departamento..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-12 py-6 bg-accent/5 dark:bg-accent/10 border-accent/20 focus:bg-background transition-all duration-300 rounded-xl"
-          />
-        </div>
-      </div>
-
       {eventsLoading ? (
         <div className="grid gap-4">
           {[1, 2, 3].map(i => (
@@ -232,7 +239,7 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
         </div>
       ) : events.length === 0 ? (
         <div className="text-center py-20 glass-card border-dashed">
-          <Calendar className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
+          <CalendarTodayIcon className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
           <p className="text-xl font-medium text-muted-foreground">No hay eventos próximos programados</p>
           {isAdminOrSecretary && (
             <p className="text-sm text-muted-foreground mt-2">Usa el botón superior para crear el primero</p>
@@ -241,8 +248,8 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
       ) : (
         <div className="grid gap-4">
           {events.map((event, index) => {
-            const eventDate = new Date(event.date);
-            const isToday = differenceInDays(eventDate, startOfToday()) === 0;
+            const todayStr = format(toZonedTime(new Date(), 'America/Argentina/Buenos_Aires'), 'yyyy-MM-dd');
+            const isToday = event.date.split('T')[0] === todayStr;
 
             return (
               <div
@@ -253,13 +260,23 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
                 {/* Date Side */}
                 <div className={`w-full md:w-32 flex flex-row md:flex-col items-center justify-center p-4 gap-2 md:gap-0 ${isToday ? 'bg-primary text-white' : 'bg-primary/5 text-primary'} group-hover:scale-110 transition-transform duration-500 relative`}>
                   <div className="flex flex-row md:flex-col items-center justify-center gap-2 md:gap-0">
-                    <span className="text-3xl font-black">
+                    <span className={`${(event.end_date && event.end_date !== event.date) ? 'text-xl md:text-2xl' : 'text-3xl'} font-black leading-tight text-center`}>
                       {(() => {
-                        const parts = event.date.split('T')[0].split('-');
-                        return parts[2] || '00';
+                        const d1 = event.date.split('T')[0];
+                        const d2 = event.end_date ? event.end_date.split('T')[0] : null;
+                        const p1 = d1.split('-');
+                        const day1 = p1[2] || '00';
+
+                        if (d2 && d2 !== d1) {
+                          const p2 = d2.split('-');
+                          const day2 = p2[2] || '00';
+                          if (p1[1] === p2[1]) return `${day1}-${day2}`;
+                          return `${day1}+`;
+                        }
+                        return day1;
                       })()}
                     </span>
-                    <span className="text-xs uppercase font-bold tracking-widest">
+                    <span className="text-[10px] md:text-xs uppercase font-bold tracking-widest text-center">
                       {(() => {
                         const parts = event.date.split('T')[0].split('-');
                         if (parts.length === 3) {
@@ -285,8 +302,8 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
                       </h3>
                       {event.time && (
                         <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-bold flex items-center gap-1.5 px-3 py-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          {event.time}
+                          <AccessTimeIcon className="h-3.5 w-3.5" />
+                          {event.time} {event.end_time ? `- ${event.end_time}` : ''}
                         </Badge>
                       )}
                       {isToday && (
@@ -313,6 +330,15 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
             );
           })}
         </div>
+      )}
+      {isAdminOrSecretary && (
+        <DeleteConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={confirmDelete}
+          title="¿Eliminar este evento?"
+          description="Esta acción eliminará el evento de forma permanente y no se puede deshacer."
+        />
       )}
     </div>
   );

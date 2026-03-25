@@ -796,6 +796,9 @@ const ListarAlumnos = () => {
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setExpandedStudentId(student.id); }}>
               <MessageSquare className="mr-2 h-4 w-4" /> Observaciones
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownloadStudentPDF(student); }}>
+              <FileText className="mr-2 h-4 w-4" /> Descargar Informe PDF
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

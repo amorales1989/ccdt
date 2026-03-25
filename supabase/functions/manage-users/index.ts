@@ -44,7 +44,7 @@ serve(async (req) => {
             .select('id')
             .eq('name', userData.departments[0])
             .single();
-          
+
           if (departmentError) {
             console.error('Error fetching department ID:', departmentError);
           } else if (departmentData) {
@@ -79,7 +79,7 @@ serve(async (req) => {
             .select('id')
             .eq('name', userData.departments[0])
             .single();
-          
+
           if (departmentError) {
             console.error('Error fetching department ID:', departmentError);
           } else if (departmentData) {
@@ -101,7 +101,7 @@ serve(async (req) => {
         if (userData.email) {
           updates.email = userData.email
         }
-        
+
         if (userData.password) {
           updates.password = userData.password
         }
@@ -124,49 +124,111 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
 
+      case 'bulk-create':
+        const { users: usersToCreate } = userData;
+        console.log(`Processing bulk create for ${usersToCreate?.length} users`);
+
+        if (!usersToCreate || !Array.isArray(usersToCreate)) {
+          throw new Error('Invalid users data for bulk-create');
+        }
+
+        // 1. Fetch all departments once to avoid redundant queries
+        const { data: deptList, error: deptListError } = await supabaseClient
+          .from('departments')
+          .select('id, name');
+
+        if (deptListError) {
+          console.error('Error fetching departments for bulk lookup:', deptListError);
+        }
+
+        const deptMap = Object.fromEntries(deptList?.map(d => [d.name, d.id]) || []);
+
+        const bulkResults = [];
+        const batchSize = 10;
+
+        for (let i = 0; i < usersToCreate.length; i += batchSize) {
+          const batch = usersToCreate.slice(i, i + batchSize);
+          const batchPromises = batch.map(async (u: any) => {
+            try {
+              const departmentId = u.department ? deptMap[u.department] : null;
+
+              const { data, error } = await supabaseClient.auth.admin.createUser({
+                email: u.email,
+                password: u.password || Math.random().toString(36).slice(-10),
+                email_confirm: true,
+                user_metadata: {
+                  first_name: u.first_name,
+                  last_name: u.last_name || '',
+                  role: u.role || 'maestro',
+                  departments: u.department ? [u.department] : [],
+                  department_id: departmentId,
+                  assigned_class: u.assigned_class || ''
+                }
+              });
+
+              if (error) {
+                console.error(`Error creating user ${u.email}:`, error.message);
+                return { email: u.email, success: false, error: error.message };
+              }
+
+              return { email: u.email, success: true, userId: data.user.id };
+            } catch (err: any) {
+              console.error(`Unexpected error for ${u.email}:`, err.message);
+              return { email: u.email, success: false, error: err.message };
+            }
+          });
+
+          const chunkResults = await Promise.all(batchPromises);
+          bulkResults.push(...chunkResults);
+        }
+
+        return new Response(JSON.stringify({ results: bulkResults }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+
       case 'updateDepartmentIds':
         // This action will update department_ids for all users
         const { data: allUsers, error: allUsersError } = await supabaseClient.auth.admin.listUsers()
         if (allUsersError) throw allUsersError
 
         const results = [];
-        
+
         for (const user of allUsers.users) {
           const departments = user.user_metadata?.departments;
-          
+
           if (departments && departments.length > 0) {
             const { data: departmentData, error: departmentError } = await supabaseClient
               .from('departments')
               .select('id')
               .eq('name', departments[0])
               .single();
-            
+
             if (departmentError) {
               console.error(`Error fetching department ID for user ${user.id}:`, departmentError);
               results.push({ userId: user.id, success: false, error: departmentError.message });
               continue;
             }
-            
+
             if (departmentData) {
               const metadata = { ...user.user_metadata, department_id: departmentData.id };
-              
+
               const { data: updatedUser, error: updateError } = await supabaseClient.auth.admin.updateUserById(
                 user.id,
                 { user_metadata: metadata }
               );
-              
+
               if (updateError) {
                 console.error(`Error updating user ${user.id}:`, updateError);
                 results.push({ userId: user.id, success: false, error: updateError.message });
               } else {
                 results.push({ userId: user.id, success: true });
-                
+
                 // Update the profile table too
                 const { error: profileError } = await supabaseClient
                   .from('profiles')
                   .update({ department_id: departmentData.id })
                   .eq('id', user.id);
-                
+
                 if (profileError) {
                   console.error(`Error updating profile for user ${user.id}:`, profileError);
                 }
@@ -174,7 +236,7 @@ serve(async (req) => {
             }
           }
         }
-        
+
         return new Response(JSON.stringify({ results }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

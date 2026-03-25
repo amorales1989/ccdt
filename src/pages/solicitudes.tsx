@@ -29,21 +29,10 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import type { Event } from "@/types/database";
+import type { Event, Profile } from "@/types/database";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Tipo para el usuario
-interface User {
-  id: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  assigned_class?: string;
-  departments?: string[];
-  department_id?: string;
-  email?: string;
-  phone?: string;
-}
+
 
 export default function Solicitudes() {
   const [selectedRequest, setSelectedRequest] = useState<Event | null>(null);
@@ -66,7 +55,7 @@ export default function Solicitudes() {
   });
 
   // Obtener todos los usuarios para poder mostrar nombres
-  const { data: users = [], isLoading: usersLoading } = useQuery({
+  const { data: users = [] as Profile[], isLoading: usersLoading } = useQuery({
     queryKey: ['users'],
     queryFn: getUsers,
     refetchOnWindowFocus: true,
@@ -75,14 +64,14 @@ export default function Solicitudes() {
 
   // Función para obtener el nombre del usuario por ID
   const getUserName = (userId: string): string => {
-    const user = users.find((u: User) => u.id === userId);
+    const user = (users as Profile[]).find((u) => u.id === userId);
     if (!user) return 'Usuario no encontrado';
     return `${user.first_name.trim()} ${user.last_name.trim()}`.trim();
   };
 
   // Función para obtener el usuario completo por ID
-  const getUser = (userId: string): User | null => {
-    return users.find((u: User) => u.id === userId) || null;
+  const getUser = (userId: string): Profile | null => {
+    return (users as Profile[]).find((u) => u.id === userId) || null;
   };
 
   // Función para obtener el badge de estado
@@ -172,8 +161,8 @@ export default function Solicitudes() {
       const event = allEvents.find(e => e.id === eventId);
 
       if (event) {
-        const solicitanteId = (event as any).solicitante;
-        const user = users.find((u: any) => u.id === solicitanteId);
+        const solicitanteId = event.solicitante;
+        const user = users.find((u) => u.id === solicitanteId);
 
         if (user && user.email) {
           try {
@@ -227,8 +216,8 @@ export default function Solicitudes() {
       const event = allEvents.find(e => e.id === eventId);
 
       if (event) {
-        const solicitanteId = (event as any).solicitante;
-        const user = users.find((u: any) => u.id === solicitanteId);
+        const solicitanteId = event.solicitante;
+        const user = users.find((u) => u.id === solicitanteId);
 
         if (user && user.email) {
           try {
@@ -396,19 +385,25 @@ export default function Solicitudes() {
                         <span className="font-medium">
                           {(() => {
                             if (!request.date) return 'No especificada';
-                            const parts = request.date.split('T')[0].split('-');
-                            if (parts.length === 3) {
-                              return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            const d1 = request.date.split('T')[0];
+                            const d2 = request.end_date ? request.end_date.split('T')[0] : null;
+                            const p1 = d1.split('-');
+                            let res = p1.length === 3 ? `${p1[2]}/${p1[1]}/${p1[0]}` : d1;
+                            if (d2 && d2 !== d1) {
+                              const p2 = d2.split('-');
+                              if (p2.length === 3) res += ` - ${p2[2]}/${p2[1]}/${p2[0]}`;
                             }
-                            return request.date;
+                            return res;
                           })()}
                         </span>
                       </div>
 
-                      {request.time && (
+                      {(request.time || request.end_time) && (
                         <div className="flex items-center gap-1.5 bg-slate-100/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
                           <Clock className="h-4 w-4 text-indigo-500" />
-                          <span className="font-medium">{request.time}</span>
+                          <span className="font-medium">
+                            {request.time || 'N/A'} {request.end_time ? `- ${request.end_time}` : ''}
+                          </span>
                         </div>
                       )}
 
@@ -509,11 +504,15 @@ export default function Solicitudes() {
                         <span className="font-medium">
                           {(() => {
                             if (!selectedRequest.date) return 'No especificada';
-                            const parts = selectedRequest.date.split('T')[0].split('-');
-                            if (parts.length === 3) {
-                              return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            const d1 = selectedRequest.date.split('T')[0];
+                            const d2 = selectedRequest.end_date ? selectedRequest.end_date.split('T')[0] : null;
+                            const p1 = d1.split('-');
+                            let res = p1.length === 3 ? `${p1[2]}/${p1[1]}/${p1[0]}` : d1;
+                            if (d2 && d2 !== d1) {
+                              const p2 = d2.split('-');
+                              if (p2.length === 3) res += ` - ${p2[2]}/${p2[1]}/${p2[0]}`;
                             }
-                            return selectedRequest.date;
+                            return res;
                           })()}
                         </span>
                       </div>
@@ -524,7 +523,7 @@ export default function Solicitudes() {
                       <div className="flex items-center gap-2 mt-1">
                         <Clock className="h-4 w-4 text-primary" />
                         <span className="font-medium">
-                          {selectedRequest.time || 'No especificada'}
+                          {selectedRequest.time || 'N/A'} {selectedRequest.end_time ? `- ${selectedRequest.end_time}` : ''}
                         </span>
                       </div>
                     </div>
@@ -637,12 +636,17 @@ export default function Solicitudes() {
                 <p className="text-sm text-muted-foreground">
                   {(() => {
                     const parts = selectedRequest.date.split('T')[0].split('-');
-                    if (parts.length === 3) {
-                      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    let result = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : selectedRequest.date;
+
+                    if (selectedRequest.end_date && selectedRequest.end_date !== selectedRequest.date) {
+                      const endParts = selectedRequest.end_date.split('T')[0].split('-');
+                      if (endParts.length === 3) {
+                        result += ` - ${endParts[2]}/${endParts[1]}/${endParts[0]}`;
+                      }
                     }
-                    return selectedRequest.date;
+                    return result;
                   })()}
-                  {selectedRequest.time && ` - ${selectedRequest.time}`}
+                  {(selectedRequest.time || selectedRequest.end_time) && ` - ${selectedRequest.time || 'N/A'}${selectedRequest.end_time ? ` - ${selectedRequest.end_time}` : ''}`}
                 </p>
               </div>
             )}

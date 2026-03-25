@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
+import { MuiCalendar } from "@/components/MuiCalendar";
 import { Badge } from "@/components/ui/badge";
 import { getEvents, deleteEvent, updateEvent, notifyNewRequest } from "@/lib/api";
 import { useState, useEffect } from "react";
@@ -17,17 +17,8 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { format, isBefore, startOfDay, isSameMonth, isAfter, startOfMonth, endOfMonth } from "date-fns";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { format, isBefore, startOfDay, isSameMonth, isAfter, startOfMonth, endOfMonth, parseISO, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { CalendarPlus, Trash2, Calendar as CalendarIcon, Check, X } from "lucide-react";
@@ -80,7 +71,7 @@ export default function Calendario() {
   useEffect(() => {
     if (selectedDate && events.length > 0) {
       const filtered = events
-        .filter(event => isSameMonth(new Date(event.date), selectedDate))
+        .filter(event => isSameMonth(parseISO(event.date), selectedDate))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       setCurrentMonthEvents(filtered);
@@ -88,11 +79,30 @@ export default function Calendario() {
   }, [selectedDate, events]);
 
   const eventDates = events.reduce((acc: Record<string, any[]>, event) => {
-    const dateStr = format(new Date(event.date), 'yyyy-MM-dd');
-    if (!acc[dateStr]) {
-      acc[dateStr] = [];
+    try {
+      const startDate = parseISO(event.date);
+      let eventRange = [startDate];
+
+      if (event.end_date) {
+        const endDate = parseISO(event.end_date);
+        if (!isBefore(endDate, startDate)) {
+          eventRange = eachDayOfInterval({ start: startDate, end: endDate });
+        }
+      }
+
+      eventRange.forEach((day: Date) => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        if (!acc[dateStr]) {
+          acc[dateStr] = [];
+        }
+        // Avoid duplicates if the event is spanning across months or something
+        if (!acc[dateStr].find(e => e.id === event.id)) {
+          acc[dateStr].push(event);
+        }
+      });
+    } catch (e) {
+      console.error(e);
     }
-    acc[dateStr].push(event);
     return acc;
   }, {});
 
@@ -145,7 +155,9 @@ export default function Calendario() {
             await notifyNewRequest({
               eventTitle: eventData.title,
               eventDate: eventData.date,
+              eventEndDate: eventData.end_date,
               eventTime: eventData.time,
+              eventEndTime: eventData.end_time,
               department: eventData.departamento,
               requesterName: requesterName,
               description: eventData.description,
@@ -410,11 +422,14 @@ export default function Calendario() {
                           <strong>Estado:</strong> {(selectedEvent as any).estado || 'Pendiente'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          <strong>Fecha:</strong> {format(new Date(selectedEvent.date), "dd/MM/yyyy", { locale: es })}
+                          <strong>Fecha:</strong> {format(parseISO(selectedEvent.date), "dd/MM/yyyy", { locale: es })}
+                          {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.date && (
+                            <> - {format(parseISO(selectedEvent.end_date), "dd/MM/yyyy", { locale: es })}</>
+                          )}
                         </p>
-                        {selectedEvent.time && (
+                        {(selectedEvent.time || selectedEvent.end_time) && (
                           <p className="text-sm text-muted-foreground">
-                            <strong>Hora:</strong> {selectedEvent.time}
+                            <strong>Hora:</strong> {selectedEvent.time || 'N/A'} {selectedEvent.end_time ? `- ${selectedEvent.end_time} hs` : 'hs'}
                           </p>
                         )}
                         {selectedEvent.description && (
@@ -549,9 +564,14 @@ export default function Calendario() {
                             <p className="text-sm">
                               <strong>Fecha:</strong> {format(new Date(selectedEvent.date), "dd/MM/yyyy", { locale: es })}
                             </p>
-                            {selectedEvent.time && (
+                            {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.date && (
                               <p className="text-sm">
-                                <strong>Hora:</strong> {selectedEvent.time}
+                                <strong>Hasta:</strong> {format(parseISO(selectedEvent.end_date), "dd/MM/yyyy", { locale: es })}
+                              </p>
+                            )}
+                            {(selectedEvent.time || selectedEvent.end_time) && (
+                              <p className="text-sm">
+                                <strong>Hora:</strong> {selectedEvent.time || 'N/A'} {selectedEvent.end_time ? `- ${selectedEvent.end_time} hs` : 'hs'}
                               </p>
                             )}
                             {selectedEvent.description && (
@@ -600,86 +620,70 @@ export default function Calendario() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Calendario visual (Izquierda) */}
               <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/40 dark:border-slate-700/50 shadow-sm p-4 flex justify-center h-fit">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
+                <MuiCalendar
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
                   onMonthChange={handleMonthChange}
-                  className="w-full"
-                  locale={es}
-                  modifiers={modifiers}
-                  modifiersStyles={modifiersStyles}
-                  components={{
-                    DayContent: ({ date }) => {
-                      const dateStr = format(date, 'yyyy-MM-dd');
-                      const dayEvents = eventDates[dateStr];
-
-                      if (!dayEvents) {
-                        return <span>{date.getDate()}</span>;
-                      }
-
-                      const allPastEvents = dayEvents.every(event =>
-                        isBefore(new Date(event.date), new Date())
-                      );
-
-                      return (
-                        <HoverCard>
-                          <HoverCardTrigger asChild>
-                            <span
-                              className={`cursor-pointer w-full h-full flex items-center justify-center ${allPastEvents
-                                ? 'bg-[#ea384c]/10 dark:bg-[#4e2a2a]/70'
-                                : 'bg-[#F2FCE2] dark:bg-[#2a4e27]/70'
-                                }`}
-                            >
-                              {date.getDate()}
-                            </span>
-                          </HoverCardTrigger>
-                          <HoverCardContent className="w-80 dark:bg-gray-800 dark:border-gray-700">
-                            <div className="space-y-2">
-                              {dayEvents.map((event) => {
-                                const isPastEvent = isBefore(new Date(event.date), new Date());
-                                return (
-                                  <div
-                                    key={event.id}
-                                    className={`p-2 rounded-md cursor-pointer ${isPastEvent
-                                      ? "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70"
-                                      : "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70"
-                                      }`}
-                                    onClick={() => handleEventClick(event)}
-                                  >
-                                    <div className="flex justify-between items-start">
-                                      <div className="flex-1">
-                                        <div className="flex items-center">
-                                          <h4 className="font-semibold dark:text-white">{event.title}</h4>
-                                          {getStatusBadge(event)}
-                                        </div>
-                                        {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
-                                          <p className="text-xs text-muted-foreground mt-1">
-                                            Solicitado por: {(event as any).departamento}
-                                          </p>
-                                        )}
+                  eventDates={eventDates}
+                  renderDayWithEvents={(date, dayEvents) => {
+                    const allPastEvents = dayEvents.every(event =>
+                      isBefore(parseISO(event.date), new Date())
+                    );
+                    return (
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <span
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              cursor: 'pointer',
+                            }}
+                          />
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-80 dark:bg-gray-800 dark:border-gray-700" style={{ zIndex: 9999 }}>
+                          <div className="space-y-2">
+                            {dayEvents.map((event) => {
+                              const isPastEvent = isBefore(parseISO(event.date), new Date());
+                              return (
+                                <div
+                                  key={event.id}
+                                  className={`p-2 rounded-md cursor-pointer ${isPastEvent
+                                    ? 'bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70'
+                                    : 'bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70'
+                                    }`}
+                                  onClick={() => handleEventClick(event)}
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <div className="flex items-center">
+                                        <h4 className="font-semibold dark:text-white">{event.title}</h4>
+                                        {getStatusBadge(event)}
                                       </div>
-                                      {/* Solo mostrar botón de eliminar si puede gestionar eventos y puede editar este evento específico */}
-                                      {canCreateEvents && canEditEvent(event) && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-7 w-7 p-0 ml-2"
-                                          onClick={(e) => handleDeleteClick(event, e)}
-                                        >
-                                          <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
-                                        </Button>
+                                      {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          Solicitado por: {(event as any).departamento}
+                                        </p>
                                       )}
                                     </div>
-                                    <p className="text-sm text-muted-foreground whitespace-pre-line dark:text-gray-300">{event.description}</p>
+                                    {canCreateEvents && canEditEvent(event) && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0 ml-2"
+                                        onClick={(e) => handleDeleteClick(event, e)}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
+                                      </Button>
+                                    )}
                                   </div>
-                                );
-                              })}
-                            </div>
-                          </HoverCardContent>
-                        </HoverCard>
-                      );
-                    }
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line dark:text-gray-300">{event.description}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    );
                   }}
                 />
               </div>
@@ -712,14 +716,19 @@ export default function Calendario() {
                             {currentMonthEvents.map((event) => (
                               <TableRow
                                 key={event.id}
-                                className={`hover:bg-muted/50 cursor-pointer transition-colors duration-200 ${isAfter(new Date(event.date), new Date())
+                                className={`hover:bg-muted/50 cursor-pointer transition-colors duration-200 ${isAfter(parseISO(event.date), new Date())
                                   ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70"
                                   : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70"
                                   }`}
                                 onClick={() => handleEventClick(event)}
                               >
-                                <TableCell className="font-medium w-16">
-                                  {format(new Date(event.date), 'dd/MM')}
+                                <TableCell className="font-medium">
+                                  {format(parseISO(event.date), 'dd/MM')}
+                                  {event.end_date && event.end_date !== event.date && (
+                                    <span className="text-[10px] block opacity-70">
+                                      al {format(parseISO(event.end_date), 'dd/MM')}
+                                    </span>
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center">
@@ -732,8 +741,11 @@ export default function Calendario() {
                                     </p>
                                   )}
                                 </TableCell>
-                                <TableCell className="w-16">
+                                <TableCell className="w-16 text-xs px-2">
                                   {event.time || "-"}
+                                  {event.end_time && (
+                                    <span className="block opacity-70">-{event.end_time}</span>
+                                  )}
                                 </TableCell>
                                 {canCreateEvents && (
                                   <TableCell className="w-10">
@@ -767,25 +779,13 @@ export default function Calendario() {
         </div>
       </section>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="dark:bg-gray-800 dark:border-gray-700">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="dark:text-white">Confirmar eliminación</AlertDialogTitle>
-            <AlertDialogDescription className="dark:text-gray-300">
-              ¿Estás seguro de que deseas eliminar {(isSecretaria || isAdmin || isSecrCalendario) ? "este evento" : "esta solicitud"}? Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Confirmar eliminación"
+        description={`¿Estás seguro de que deseas eliminar ${(isSecretaria || isAdmin || isSecrCalendario) ? "este evento" : "esta solicitud"}? Esta acción no se puede deshacer.`}
+      />
     </div>
   );
 }

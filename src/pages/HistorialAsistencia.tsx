@@ -10,9 +10,8 @@ import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from 'xlsx';
 import { useAuth } from "@/contexts/AuthContext";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { cn } from "@/lib/utils";
-import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DepartmentType, Attendance } from "@/types/database";
@@ -451,28 +450,13 @@ const HistorialAsistencia = () => {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Seleccionar Fecha</label>
-                  <Popover open={editDateOpen} onOpenChange={setEditDateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !editDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {editDate ? format(editDate, "dd/MM/yyyy") : "Seleccionar fecha"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={editDate}
-                        onSelect={handleEditDateSelect}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <MuiDatePickerField
+                    value={editDate}
+                    onChange={handleEditDateSelect}
+                    open={editDateOpen}
+                    onOpenChange={setEditDateOpen}
+                    placeholder="Seleccionar fecha"
+                  />
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2 pt-4">
@@ -569,83 +553,35 @@ const HistorialAsistencia = () => {
                       <>
                         <div>
                           <label className="text-sm font-medium mb-2 block">Fecha Inicio</label>
-                          <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !startDate && "text-muted-foreground"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {startDate ? format(startDate, "dd/MM/yyyy") : "Seleccionar fecha"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={startDate}
-                                onSelect={handleStartDateSelect}
-                                initialFocus
-                                className={cn("p-3 pointer-events-auto")}
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <MuiDatePickerField
+                            value={startDate}
+                            onChange={handleStartDateSelect}
+                            open={startDateOpen}
+                            onOpenChange={setStartDateOpen}
+                            placeholder="Seleccionar fecha"
+                          />
                         </div>
                         <div>
                           <label className="text-sm font-medium mb-2 block">Fecha Fin</label>
-                          <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !endDate && "text-muted-foreground"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {endDate ? format(endDate, "dd/MM/yyyy") : "Seleccionar fecha"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={endDate}
-                                onSelect={handleEndDateSelect}
-                                initialFocus
-                                className={cn("p-3 pointer-events-auto")}
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <MuiDatePickerField
+                            value={endDate}
+                            onChange={handleEndDateSelect}
+                            open={endDateOpen}
+                            onOpenChange={setEndDateOpen}
+                            placeholder="Seleccionar fecha"
+                          />
                         </div>
                       </>
                     ) : (
                       <div>
                         <label className="text-sm font-medium mb-2 block">Fecha</label>
-                        <Popover open={singleDateOpen} onOpenChange={setSingleDateOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !selectedDate && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {selectedDate ? format(selectedDate, "dd/MM/yyyy") : "Seleccionar fecha"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={selectedDate}
-                              onSelect={handleSingleDateSelect}
-                              initialFocus
-                              className={cn("p-3 pointer-events-auto")}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <MuiDatePickerField
+                          value={selectedDate}
+                          onChange={handleSingleDateSelect}
+                          open={singleDateOpen}
+                          onOpenChange={setSingleDateOpen}
+                          placeholder="Seleccionar fecha"
+                        />
                       </div>
                     )
                   )}
