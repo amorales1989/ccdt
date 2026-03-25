@@ -80,14 +80,16 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
                 }
 
                 // Map column names (support common variations)
-                const mappedData = json.map((row: any) => ({
-                    first_name: row.Nombre || row.nombre || row.FirstName,
-                    last_name: row.Apellido || row.apellido || row.LastName || "",
-                    email: row.Email || row.email || row.Correo,
-                    role: (row.Rol || row.rol || row.Role || "maestro").toLowerCase(),
-                    department: row.Departamento || row.departamento || row.Department,
-                    assigned_class: row.Clase || row.clase || row.Class || ""
-                }));
+                const mappedData = json.map((row: any) => {
+                    return {
+                        first_name: row.Nombre || row.nombre || row.FirstName,
+                        last_name: row.Apellido || row.apellido || row.LastName || "",
+                        email: row.Email || row.email || row.Correo,
+                        role: (row.Rol || row.rol || row.Role || "maestro").toLowerCase(),
+                        department: row.Departamento || row.departamento || row.Department,
+                        assigned_class: "" // Always empty now, will be assigned in app
+                    };
+                });
 
                 // Validate basic requirements
                 const missingData = mappedData.some(u => !u.first_name || !u.email);
@@ -122,6 +124,8 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
             if (successful > 0) {
                 onSuccess();
+                setFile(null);
+                setPreviewData([]);
                 onOpenChange(false);
             }
         } catch (err: any) {
@@ -145,8 +149,7 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
             { header: "Apellido", key: "last_name", width: 20 },
             { header: "Email", key: "email", width: 30 },
             { header: "Rol", key: "role", width: 15 },
-            { header: "Departamento", key: "department", width: 20 },
-            { header: "Clase", key: "assigned_class", width: 15 }
+            { header: "Departamento", key: "department", width: 20 }
         ];
 
         // Add example row with exactly the strings currently in the file
@@ -155,8 +158,7 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
             last_name: "Ejemplo Apellido",
             email: "ejemplo@correo.com",
             role: "maestro",
-            department: departments[0]?.name || "adolescentes",
-            assigned_class: departments[0]?.classes?.[0] || "central"
+            department: departments[0]?.name || "adolescentes"
         });
 
         // Validation lists
@@ -165,12 +167,11 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         // Ensure lists are not empty for validation formulae
         const deptsForFormula = deptNames.length > 0 ? deptNames : ["adolescentes"];
         const allClasses = Array.from(new Set(departments.flatMap(d => d.classes || [])));
-        const classesForFormula = allClasses.length > 0 ? allClasses : ["central"];
+        const classesForFormula = ["Ninguna", ...(allClasses.length > 0 ? allClasses : ["central"])];
 
         // Excel JS strings for formulae (must be comma separated values inside double quotes if not referencing cells)
         const rolesFormula = `"${roles.join(',')}"`;
         const deptsFormula = `"${deptsForFormula.join(',')}"`;
-        const classesFormula = `"${classesForFormula.join(',')}"`;
 
         // Apply validation to the first 100 rows
         for (let i = 2; i <= 101; i++) {
@@ -185,12 +186,6 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
                 type: 'list',
                 allowBlank: true,
                 formulae: [deptsFormula]
-            };
-            // Clase (Column 6)
-            sheet.getCell(i, 6).dataValidation = {
-                type: 'list',
-                allowBlank: true,
-                formulae: [classesFormula]
             };
         }
 
@@ -230,7 +225,7 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
         toast({
             title: "Plantilla descargada",
-            description: "El Excel ahora incluye listas desplegables para Rol, Departamento y Clase.",
+            description: "El Excel ahora solo contiene los campos principales. Podrás asignar las clases luego desde la app.",
         });
     };
 
@@ -254,8 +249,8 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
                         </Button>
                     </div>
                     <DialogDescription className="text-muted-foreground pt-2">
-                        Sube un archivo Excel con las columnas: <span className="font-bold text-primary">Nombre, Apellido, Email, Rol, Departamento, Clase</span>.
-                        El sistema creará automáticamente las cuentas y perfiles.
+                        Sube un archivo Excel con las columnas: <span className="font-bold text-primary">Nombre, Apellido, Email, Rol, Departamento</span>.
+                        Podrás asignar las clases individualmente después de la creación.
                     </DialogDescription>
                 </DialogHeader>
 
