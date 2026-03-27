@@ -85,6 +85,7 @@ export type Database = {
           show_name: boolean | null
           show_profile_images: boolean | null
           updated_at: string
+          auth_pdf_header: Json | null
         }
         Insert: {
           auto_save?: boolean | null
@@ -100,6 +101,7 @@ export type Database = {
           show_name?: boolean | null
           show_profile_images?: boolean | null
           updated_at?: string
+          auth_pdf_header?: Json | null
         }
         Update: {
           auto_save?: boolean | null
@@ -115,6 +117,7 @@ export type Database = {
           show_name?: boolean | null
           show_profile_images?: boolean | null
           updated_at?: string
+          auth_pdf_header?: Json | null
         }
         Relationships: []
       }

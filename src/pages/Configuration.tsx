@@ -11,7 +11,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage } from "@/lib/api";
-import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings } from "lucide-react";
+import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText } from "lucide-react";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
 
@@ -39,11 +39,12 @@ export default function Configuration() {
     showName: true,
   });
 
-  const [displaySettings, setDisplaySettings] = useState({
-    showAttendanceHistory: true,
-    compactView: false,
-    showProfileImages: true,
-  });
+  const [authPdfHeader, setAuthPdfHeader] = useState<{ text: string, enabled: boolean }[]>([
+    { text: "Asociación de Beneficencia y Educación RHEMA", enabled: true },
+    { text: "Personería Jurídica N° 23.212 (Leg. 111.169 – D.P.P.J.)", enabled: true },
+    { text: "Libertad 3248, El Talar, Pdo. de Tigre, Pcia. Bs. As.", enabled: true },
+    { text: "C.U.I.T. N° 30-70792033-1", enabled: true }
+  ]);
 
   const { data: company, isLoading: isCompanyLoading } = useQuery({
     queryKey: ['company'],
@@ -51,7 +52,7 @@ export default function Configuration() {
   });
 
   const { mutate: updateCompanyMutate } = useMutation({
-    mutationFn: (updates: Partial<typeof company>) => updateCompany(1, updates),
+    mutationFn: (updates: any) => updateCompany(1, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
       toast({
@@ -91,11 +92,10 @@ export default function Configuration() {
       showName: company.show_name !== false
     });
 
-    setDisplaySettings({
-      showAttendanceHistory: company.show_attendance_history !== false,
-      compactView: company.compact_view || false,
-      showProfileImages: company.show_profile_images !== false
-    });
+    const companyData = company as any;
+    if (companyData.auth_pdf_header && Array.isArray(companyData.auth_pdf_header)) {
+      setAuthPdfHeader(companyData.auth_pdf_header as { text: string, enabled: boolean }[]);
+    }
   }, [company]);
 
   // Polling para el estado de WhatsApp
@@ -203,22 +203,11 @@ export default function Configuration() {
     }
   };
 
-  const handleDisplaySettingChange = (setting: keyof typeof displaySettings) => {
-    const newValue = !displaySettings[setting];
-
-    setDisplaySettings(prev => ({
-      ...prev,
-      [setting]: newValue
-    }));
-
-    const settingMap: Record<string, string> = {
-      showAttendanceHistory: 'show_attendance_history',
-      compactView: 'compact_view',
-      showProfileImages: 'show_profile_images'
-    };
-
-    updateCompanyMutate({
-      [settingMap[setting]]: newValue
+  const handleAuthPdfHeaderChange = (index: number, field: 'text' | 'enabled', value: string | boolean) => {
+    setAuthPdfHeader(prev => {
+      const newHeader = [...prev];
+      newHeader[index] = { ...newHeader[index], [field]: value };
+      return newHeader;
     });
   };
 
@@ -314,7 +303,8 @@ export default function Configuration() {
   const handleSaveSettings = () => {
     try {
       const updates: any = {
-        congregation_name: congregationName
+        congregation_name: congregationName,
+        auth_pdf_header: authPdfHeader
       };
 
       updateCompanyMutate(updates);
@@ -390,24 +380,14 @@ export default function Configuration() {
             </div>
           </div>
 
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSaveSettings}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl px-6 h-12 transition-all hover:shadow-lg hover:shadow-purple-500/30"
-            >
-              Guardar Cambios
-            </Button>
-          </div>
         </div>
       </section>
 
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="mb-6 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-purple-100 dark:border-slate-800 p-2 rounded-2xl flex flex-wrap w-full md:w-fit justify-center shadow-sm gap-1 md:gap-2 h-auto">
           <TabsTrigger value="general" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">General</TabsTrigger>
-          <TabsTrigger value="display" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">Visualización</TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">Notificaciones</TabsTrigger>
+          <TabsTrigger value="authorizations" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">Autorizaciones</TabsTrigger>
           <TabsTrigger value="whatsapp" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">WhatsApp</TabsTrigger>
-          <TabsTrigger value="system" className="rounded-xl data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all">Sistema</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-0 outline-none">
@@ -531,138 +511,64 @@ export default function Configuration() {
                 </div>
               </div>
 
-              <div className="bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50 space-y-4">
-                <h3 className="text-lg font-bold mb-4">Otras Configuraciones</h3>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60 shadow-sm">
-                  <Label htmlFor="dark-mode" className="flex flex-col cursor-pointer">
-                    <span className="text-sm font-bold text-foreground">Modo Oscuro</span>
-                    <span className="text-xs text-muted-foreground mt-1">
-                      Cambia la apariencia de la aplicación a un tema oscuro.
-                    </span>
-                  </Label>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 shadow-inner">
-                      {theme === "light" ? (
-                        <Sun className="h-4 w-4 text-amber-500" />
-                      ) : (
-                        <Moon className="h-4 w-4 text-indigo-400" />
-                      )}
-                    </div>
-                    <Switch
-                      id="dark-mode"
-                      checked={generalSettings.darkMode}
-                      onCheckedChange={() => handleGeneralSettingChange('darkMode')}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60 shadow-sm">
-                  <Label htmlFor="auto-save" className="flex flex-col cursor-pointer">
-                    <span className="text-sm font-bold text-foreground">Autoguardado</span>
-                    <span className="text-xs text-muted-foreground mt-1">
-                      Guarda automáticamente los cambios realizados.
-                    </span>
-                  </Label>
-                  <Switch
-                    id="auto-save"
-                    checked={generalSettings.autoSave}
-                    onCheckedChange={() => handleGeneralSettingChange('autoSave')}
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60 shadow-sm">
-                  <Label htmlFor="notifications" className="flex flex-col cursor-pointer">
-                    <span className="text-sm font-bold text-foreground">Notificaciones Push</span>
-                    <span className="text-xs text-muted-foreground mt-1">
-                      Habilita las notificaciones de la aplicación.
-                    </span>
-                  </Label>
-                  <Switch
-                    id="notifications"
-                    checked={generalSettings.notifications}
-                    onCheckedChange={() => handleGeneralSettingChange('notifications')}
-                  />
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="display" className="mt-0 outline-none">
+        <TabsContent value="authorizations" className="mt-0 outline-none">
           <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl overflow-hidden relative">
             <div className="absolute top-0 right-0 -mr-32 -mt-32 w-96 h-96 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none"></div>
             <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6 px-6 sm:px-8 pt-6 sm:pt-8">
-              <CardTitle className="text-2xl font-bold">Configuración de Visualización</CardTitle>
+              <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-xl text-indigo-600 dark:text-indigo-400">
+                  <FileText className="h-6 w-6" />
+                </div>
+                Configuración de Autorizaciones
+              </CardTitle>
               <CardDescription className="text-base mt-2">
-                Personaliza cómo se muestra la información en la aplicación.
+                Personaliza el encabezado que aparece en los PDFs de autorizaciones (ej. Campamentos).
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 relative z-10 px-6 sm:px-8 pb-8">
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50">
-                <Label htmlFor="attendance-history" className="flex flex-col">
-                  <span className="text-base font-medium">Mostrar Historial de Asistencia</span>
-                  <span className="text-sm text-muted-foreground mt-1">
-                    Muestra el historial de asistencia en la página de alumnos.
-                  </span>
-                </Label>
-                <Switch
-                  id="attendance-history"
-                  checked={displaySettings.showAttendanceHistory}
-                  onCheckedChange={() => handleDisplaySettingChange('showAttendanceHistory')}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50">
-                <Label htmlFor="compact-view" className="flex flex-col">
-                  <span className="text-base font-medium">Vista Compacta</span>
-                  <span className="text-sm text-muted-foreground mt-1">
-                    Muestra más información en menos espacio.
-                  </span>
-                </Label>
-                <Switch
-                  id="compact-view"
-                  checked={displaySettings.compactView}
-                  onCheckedChange={() => handleDisplaySettingChange('compactView')}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50">
-                <Label htmlFor="profile-images" className="flex flex-col">
-                  <span className="text-base font-medium">Mostrar Imágenes de Perfil</span>
-                  <span className="text-sm text-muted-foreground mt-1">
-                    Muestra las imágenes de perfil de los alumnos en las listas.
-                  </span>
-                </Label>
-                <Switch
-                  id="profile-images"
-                  checked={displaySettings.showProfileImages}
-                  onCheckedChange={() => handleDisplaySettingChange('showProfileImages')}
-                />
-              </div>
+              {authPdfHeader.map((line, index) => {
+                const placeholders = [
+                  "Ej: Asociación Civil Los Pinos",
+                  "Ej: Personería Jurídica N°...",
+                  "Ej: Calle 1234, Localidad, Provincia",
+                  "Ej: C.U.I.T. N° 30-xxxxxxxx-x"
+                ];
+                return (
+                  <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50 gap-4">
+                    <div className="space-y-2 flex-1 w-full">
+                      <Label htmlFor={`auth-line-${index}`} className="text-sm font-semibold text-muted-foreground ml-1">Línea {index + 1}</Label>
+                      <Input
+                        id={`auth-line-${index}`}
+                        value={line.text}
+                        onChange={(e) => handleAuthPdfHeaderChange(index, 'text', e.target.value)}
+                        className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm w-full"
+                        placeholder={placeholders[index] || `Texto para la línea ${index + 1}`}
+                      />
+                    </div>
+                    <div className="flex flex-col items-center gap-2 self-end sm:self-center mb-1 sm:mb-0">
+                      <Label htmlFor={`auth-enable-${index}`} className="text-xs font-semibold text-muted-foreground cursor-pointer">
+                        Habilitar
+                      </Label>
+                      <Switch
+                        id={`auth-enable-${index}`}
+                        checked={line.enabled}
+                        onCheckedChange={(checked) => handleAuthPdfHeaderChange(index, 'enabled', checked)}
+                        className="data-[state=checked]:bg-indigo-600"
+                      />
+                    </div>
+                  </div>
+                )
+              })}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="notifications" className="mt-0 outline-none">
-          <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl overflow-hidden relative">
-            <div className="absolute top-0 right-0 -mr-32 -mt-32 w-96 h-96 rounded-full bg-blue-400/10 blur-3xl pointer-events-none"></div>
-            <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6 px-6 sm:px-8 pt-6 sm:pt-8">
-              <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-xl text-blue-600 dark:text-blue-400">
-                  <AlertCircle className="h-6 w-6" />
-                </div>
-                Notificaciones Push (FCM)
-              </CardTitle>
-              <CardDescription className="text-base mt-2">
-                Depuración y configuración de notificaciones Push para dispositivos móviles.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 relative z-10 px-6 sm:px-8 pb-8">
-              <FcmDebug />
-            </CardContent>
-          </Card>
-        </TabsContent>
+
 
         <TabsContent value="whatsapp" className="mt-0 outline-none">
           <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl overflow-hidden relative">
@@ -768,45 +674,7 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="system" className="mt-0 outline-none">
-          <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl overflow-hidden relative">
-            <div className="absolute top-0 right-0 -mr-32 -mt-32 w-96 h-96 rounded-full bg-red-400/10 blur-3xl pointer-events-none"></div>
-            <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6 px-6 sm:px-8 pt-6 sm:pt-8">
-              <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-xl text-slate-600 dark:text-slate-400">
-                  <Settings className="h-5 w-5" />
-                </div>
-                Configuración del Sistema
-              </CardTitle>
-              <CardDescription className="text-base mt-2">
-                Ajustes avanzados del sistema.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8 relative z-10 px-6 sm:px-8 pb-8">
-              <div className="space-y-3 bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                <h3 className="text-lg font-bold">Backup y Restauración</h3>
-                <p className="text-sm text-muted-foreground">
-                  Gestiona la copia de seguridad y restauración de datos guardados temporal o localmente.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <Button variant="outline" className="rounded-xl h-11 border-slate-300 dark:border-slate-600">Generar Backup</Button>
-                  <Button variant="outline" className="rounded-xl h-11 border-slate-300 dark:border-slate-600">Restaurar Datos</Button>
-                </div>
-              </div>
 
-              <div className="space-y-3 bg-red-50/50 dark:bg-red-900/10 p-6 rounded-2xl border border-red-100 dark:border-red-900/30">
-                <h3 className="text-lg font-bold text-red-600 dark:text-red-400">Zona de Peligro</h3>
-                <p className="text-sm text-muted-foreground">
-                  Borra datos caché del sistema y ajustes. Esta acción no se puede deshacer.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <Button variant="destructive" className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-11">Borrar Caché</Button>
-                  <Button variant="destructive" className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-11">Resetear Configuración</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       <div className="mt-6 flex justify-end">

@@ -5,12 +5,36 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import AuthorizationOption from "@/components/AuthorizationOption";
+import { useQuery } from "@tanstack/react-query";
+import { getCompany } from "@/lib/api";
+import { generateBlankFichaSalud } from "@/lib/pdfUtils";
 
 const AutorizacionesSalida = () => {
   const { profile } = useAuth();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const { data: company } = useQuery({
+    queryKey: ['company'],
+    queryFn: () => getCompany(1)
+  });
+
+  const handleDownloadFicha = () => {
+    try {
+      generateBlankFichaSalud(company);
+      toast({
+        title: "Ficha de Salud",
+        description: "La ficha en blanco se ha descargado correctamente."
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo generar la ficha de salud.",
+        variant: "destructive"
+      });
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -67,6 +91,12 @@ const AutorizacionesSalida = () => {
             description="Genera autorizaciones para salidas"
             icon="signpost"
             route="/autorizaciones/simple"
+          />
+          <AuthorizationOption
+            title="Ficha de Salud"
+            description="Descarga la ficha médica para completar a mano"
+            icon="heart"
+            onClick={handleDownloadFicha}
           />
         </div>
       </div>

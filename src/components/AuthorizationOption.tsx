@@ -1,18 +1,27 @@
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tent, SignpostBig } from "lucide-react";
+import { Tent, SignpostBig, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface AuthorizationOptionProps {
   title: string;
   description: string;
-  icon: 'tent' | 'signpost';
-  route: string;
+  icon: 'tent' | 'signpost' | 'heart';
+  route?: string;
+  onClick?: () => void;
 }
 
-const AuthorizationOption = ({ title, description, icon, route }: AuthorizationOptionProps) => {
+const AuthorizationOption = ({ title, description, icon, route, onClick }: AuthorizationOptionProps) => {
   const navigate = useNavigate();
+
+  const handleAction = () => {
+    if (onClick) {
+      onClick();
+    } else if (route) {
+      navigate(route);
+    }
+  };
 
   const renderIcon = () => {
     switch (icon) {
@@ -20,13 +29,15 @@ const AuthorizationOption = ({ title, description, icon, route }: AuthorizationO
         return <Tent className="h-10 w-10" />;
       case 'signpost':
         return <SignpostBig className="h-10 w-10" />;
+      case 'heart':
+        return <Heart className="h-10 w-10" />;
     }
   };
 
   return (
     <div
       className="group relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 hover:border-purple-300/50 dark:hover:border-purple-500/50 transition-all duration-300 cursor-pointer overflow-hidden p-8"
-      onClick={() => navigate(route)}
+      onClick={handleAction}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 

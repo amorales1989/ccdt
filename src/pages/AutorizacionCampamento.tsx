@@ -4,12 +4,24 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, MapPin, Users, FileText, List } from "lucide-react";
+import { Calendar, MapPin, Users, FileText, List, Info } from "lucide-react";
 import { jsPDF } from "jspdf";
+import { useQuery } from "@tanstack/react-query";
+import { getCompany } from "@/lib/api";
+import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { format, parseISO } from "date-fns";
 
 const AutorizacionCampamento = () => {
   const [loading, setLoading] = useState(false);
-  
+  const [inicioOpen, setInicioOpen] = useState(false);
+  const [finOpen, setFinOpen] = useState(false);
+  const [limiteOpen, setLimiteOpen] = useState(false);
+
+  const { data: company } = useQuery({
+    queryKey: ['company'],
+    queryFn: () => getCompany(1)
+  });
+
   // Lista por defecto de elementos
   const elementosDefault = `• Sábanas, frazadas
 • Ropa liviana
@@ -22,25 +34,64 @@ const AutorizacionCampamento = () => {
 • Biblia`;
 
   const [formData, setFormData] = useState({
-    fechaInicio: "2025-03-14",
-    fechaFin: "2025-03-16",
+    fechaInicio: "",
+    fechaFin: "",
     lugar: "",
-    costo: "10.000",
-    fechaLimite: "2025-03-08",
-    horaSalida1: "17:00",
-    horaSalida2: null,
-    horaRegreso: "18:00",
+    costo: "",
+    fechaLimite: "",
+    horaSalida1: "",
+    horaSalida2: "",
+    horaRegreso: "",
     liderDirector: "",
     telefono: "",
-    elementos: elementosDefault 
+    elementos: elementosDefault
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [fechaInicioOpen, setFechaInicioOpen] = useState(false);
+  const [fechaFinOpen, setFechaFinOpen] = useState(false);
+  const [fechaLimiteOpen, setFechaLimiteOpen] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "costo") {
+      const numericValue = value.replace(/\D/g, "");
+      const formattedValue = numericValue ? new Intl.NumberFormat("es-AR").format(parseInt(numericValue, 10)) : "";
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedValue
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleDateChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -52,8 +103,8 @@ const AutorizacionCampamento = () => {
   const getCurrentDate = () => {
     const today = new Date();
     const day = String(today.getDate()).padStart(2, '0');
-    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
-                   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
     const month = months[today.getMonth()];
     const year = today.getFullYear();
     return `${day} de ${month} del ${year}`;
@@ -75,20 +126,34 @@ const AutorizacionCampamento = () => {
     let currentY = margin;
 
     // Encabezado de la organización
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("Asociación de Beneficencia y Educación RHEMA", margin, currentY);
-    doc.text(getCurrentDate(), pageWidth - margin - 50, currentY);
-    currentY += 5;
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("Personería Jurídica N° 23.212 (Leg. 111.169 – D.P.P.J.)", margin, currentY);
-    currentY += 4;
-    doc.text("Libertad 3248, El Talar, Pdo. de Tigre, Pcia. Bs. As.", margin, currentY);
-    currentY += 4;
-    doc.text("C.U.I.T. N° 30-70792033-1", margin, currentY);
-    currentY += 10;
+    const companyData = company as any;
+    const authPdfHeader = (companyData?.auth_pdf_header && Array.isArray(companyData.auth_pdf_header))
+      ? companyData.auth_pdf_header
+      : [
+        { text: "Asociación de Beneficencia y Educación RHEMA", enabled: true },
+        { text: "Personería Jurídica N° 23.212 (Leg. 111.169 – D.P.P.J.)", enabled: true },
+        { text: "Libertad 3248, El Talar, Pdo. de Tigre, Pcia. Bs. As.", enabled: true },
+        { text: "C.U.I.T. N° 30-70792033-1", enabled: true }
+      ];
+
+    authPdfHeader.forEach((line: any, index: number) => {
+      if (!line.enabled) return;
+
+      if (index === 0) {
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(line.text, margin, currentY);
+        doc.text(getCurrentDate(), pageWidth - margin - 50, currentY);
+        currentY += 5;
+      } else {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(line.text, margin, currentY);
+        currentY += 4;
+      }
+    });
+
+    currentY += 6;
 
     // Saludo
     doc.text("Señores Padres:", margin, currentY);
@@ -96,7 +161,7 @@ const AutorizacionCampamento = () => {
 
     // Cuerpo de la carta
     const textoIntro = `Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para adolescentes que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio ${formData.lugar}`;
-    
+
     // Dividir texto en líneas manualmente
     const lineas = [
       "Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos",
@@ -114,15 +179,18 @@ const AutorizacionCampamento = () => {
     // Detalles del campamento
     const inicioFormatted = formatDate(formData.fechaInicio);
     const finFormatted = formatDate(formData.fechaFin);
-    const mesNombre = getMonthName(finFormatted.split('/')[1]);
-    const año = finFormatted.split('/')[2];
-    doc.text(`El campamento se realizará los días ${inicioFormatted.split('/')[0]} al ${finFormatted.split('/')[0]} de ${mesNombre} del ${año}. Vamos`, margin, currentY);
+    const mesNombre = finFormatted ? getMonthName(finFormatted.split('/')[1]) : "______";
+    const año = finFormatted ? finFormatted.split('/')[2] : "______";
+    const inicioDia = inicioFormatted ? inicioFormatted.split('/')[0] : "____";
+    const finDia = finFormatted ? finFormatted.split('/')[0] : "____";
+
+    doc.text(`El campamento se realizará los días ${inicioDia} al ${finDia} de ${mesNombre} del ${año}. Vamos`, margin, currentY);
     currentY += 4;
-    doc.text(`a salir de la Iglesia el día viernes ${inicioFormatted.split('/')[0]}, a las ${formData.horaSalida1}hs${formData.horaSalida2 != null ? ` y ${formData.horaSalida2}hs` : ''}. y estaremos`, margin, currentY);
+    doc.text(`a salir de la Iglesia el día viernes ${inicioDia}, a las ${formData.horaSalida1 || "____"}hs${formData.horaSalida2 ? ` y ${formData.horaSalida2}hs` : ''}. y estaremos`, margin, currentY);
     currentY += 4;
-    doc.text(`regresando el día Domingo ${finFormatted.split('/')[0]}, a las ${formData.horaRegreso}hs., aproximadamente.`, margin, currentY);
+    doc.text(`regresando el día Domingo ${finDia}, a las ${formData.horaRegreso || "____"}hs., aproximadamente.`, margin, currentY);
     currentY += 4;
-    doc.text(`El costo es de: $${formData.costo}.-`, margin, currentY);
+    doc.text(`El costo es de: $${formData.costo || "______"}.-`, margin, currentY);
     currentY += 7;
 
     // Párrafo de inscripción
@@ -143,7 +211,7 @@ const AutorizacionCampamento = () => {
     doc.text(formData.liderDirector, pageWidth - margin - 60, currentY);
     currentY += 4;
     doc.setFont("helvetica", "normal");
-    doc.text("Líder Director", pageWidth - margin - 50, currentY);
+    doc.text("Director/Responsable", pageWidth - margin - 50, currentY);
     currentY += 4;
     doc.text(`Teléfono: ${formData.telefono}`, pageWidth - margin - 60, currentY);
     currentY += 8;
@@ -163,8 +231,8 @@ const AutorizacionCampamento = () => {
     currentY += 5;
 
     // Convertir el texto del formulario en un array de líneas
-    const elementos = formData.elementos.trim() ? 
-      formData.elementos.split('\n').filter(linea => linea.trim()) : 
+    const elementos = formData.elementos.trim() ?
+      formData.elementos.split('\n').filter(linea => linea.trim()) :
       elementosDefault.split('\n').filter(linea => linea.trim());
 
     doc.setFont("helvetica", "normal");
@@ -257,7 +325,7 @@ const AutorizacionCampamento = () => {
     currentY += 8;
     doc.text(`concurrir los días ${inicioFormatted.split('/')[0]} al ${finFormatted.split('/')[0]} de ${mesNombre} del ${año} al Campamento para Adolescentes que`, margin, currentY);
     currentY += 8;
-    doc.text("organiza la \"ASOCIACIÓN DE BENEFICIENCIA Y EDUCACIÓN RHEMA\", en el predio con", margin, currentY);
+    doc.text(`organiza la "${authPdfHeader[0]?.text || 'ASOCIACIÓN DE BENEFICIENCIA Y EDUCACIÓN RHEMA'}", en el predio con`, margin, currentY);
     currentY += 8;
     doc.text(`domicilio en ${formData.lugar}.`, margin, currentY);
     currentY += 12;
@@ -281,9 +349,32 @@ const AutorizacionCampamento = () => {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+
+    // Validación de campos básicos
+    const newErrors: Record<string, string> = {};
+    if (!formData.lugar) newErrors.lugar = "El lugar es requerido";
+    if (!formData.fechaInicio) newErrors.fechaInicio = "La fecha de inicio es requerida";
+    if (!formData.fechaFin) newErrors.fechaFin = "La fecha de fin es requerida";
+    if (!formData.fechaLimite) newErrors.fechaLimite = "La fecha límite es requerida";
+    if (!formData.costo) newErrors.costo = "El costo es requerido";
+    if (!formData.liderDirector) newErrors.liderDirector = "El nombre del responsable es requerido";
+    if (!formData.telefono) newErrors.telefono = "El teléfono es requerido";
+    if (!formData.horaSalida1) newErrors.horaSalida1 = "La hora de salida es requerida";
+    if (!formData.horaRegreso) newErrors.horaRegreso = "La hora de regreso es requerida";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.keys(newErrors)[0];
+      const element = document.getElementById(firstError);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
     setLoading(true);
-    
+
     // Simular tiempo de procesamiento
     setTimeout(() => {
       generatePDF();
@@ -291,188 +382,279 @@ const AutorizacionCampamento = () => {
     }, 1000);
   };
 
+  const companyData = company as any;
+  const authPdfHeader = (companyData?.auth_pdf_header && Array.isArray(companyData.auth_pdf_header))
+    ? companyData.auth_pdf_header
+    : [
+      { text: "Asociación de Beneficencia y Educación RHEMA", enabled: true },
+      { text: "Personería Jurídica N° 23.212 (Leg. 111.169 – D.P.P.J.)", enabled: true },
+      { text: "Libertad 3248, El Talar, Pdo. de Tigre, Pcia. Bs. As.", enabled: true },
+      { text: "C.U.I.T. N° 30-70792033-1", enabled: true }
+    ];
+
+  const inicioFormatted = formatDate(formData.fechaInicio);
+  const finFormatted = formatDate(formData.fechaFin);
+  const mesNombre = finFormatted && finFormatted.split('/')[1] ? getMonthName(finFormatted.split('/')[1]) : "______";
+  const año = finFormatted && finFormatted.split('/')[2] ? finFormatted.split('/')[2] : "______";
+  const inicioDia = inicioFormatted ? inicioFormatted.split('/')[0] : "____";
+  const finDia = finFormatted ? finFormatted.split('/')[0] : "____";
+
   return (
-    <div className="container mx-auto py-6 max-w-4xl">
+    <div className="container mx-auto py-6 max-w-[1400px]">
       <h1 className="text-2xl font-bold mb-6 text-center">Autorización Campamento de Adolescentes</h1>
-      
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Users className="h-6 w-6 text-blue-600" />
-            Datos del Campamento
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fechaInicio" className="text-sm font-medium">Fecha de inicio</Label>
-                <div className="relative">
-                  <Input
-                    id="fechaInicio"
-                    name="fechaInicio"
-                    type="date"
-                    value={formData.fechaInicio}
+
+      <div className="flex flex-col xl:flex-row gap-6 items-start">
+
+        {/* Lado izquierdo: Formulario */}
+        <div className="w-full xl:w-1/2 space-y-6">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Users className="h-6 w-6 text-blue-600" />
+                Datos del Campamento
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="fechaInicio" className="text-sm font-medium">Fecha de inicio <span className="text-red-500">*</span></Label>
+                    <MuiDatePickerField
+                      value={formData.fechaInicio ? parseISO(formData.fechaInicio) : undefined}
+                      onChange={(date) =>
+                        handleDateChange('fechaInicio', date ? format(date, 'yyyy-MM-dd') : '')
+                      }
+                      open={fechaInicioOpen}
+                      onOpenChange={setFechaInicioOpen}
+                      placeholder="Seleccionar fecha"
+                    />
+                    {errors.fechaInicio && <p className="text-xs text-red-500">{errors.fechaInicio}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="fechaFin" className="text-sm font-medium">Fecha de fin <span className="text-red-500">*</span></Label>
+                    <MuiDatePickerField
+                      value={formData.fechaFin ? parseISO(formData.fechaFin) : undefined}
+                      onChange={(date) =>
+                        handleDateChange('fechaFin', date ? format(date, 'yyyy-MM-dd') : '')
+                      }
+                      open={fechaFinOpen}
+                      onOpenChange={setFechaFinOpen}
+                      placeholder="Seleccionar fecha"
+                    />
+                    {errors.fechaFin && <p className="text-xs text-red-500">{errors.fechaFin}</p>}
+                  </div>
+
+                  <div className="space-y-1 md:col-span-2">
+                    <Label htmlFor="lugar" className="text-sm font-medium">Lugar del campamento <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Input
+                        id="lugar"
+                        name="lugar"
+                        value={formData.lugar}
+                        onChange={handleInputChange}
+                        className="pl-10"
+                        placeholder="Dirección completa del campamento"
+                      />
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                    </div>
+                    {errors.lugar && <p className="text-xs text-red-500">{errors.lugar}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="costo" className="text-sm font-medium">Costo ($) <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="costo"
+                      name="costo"
+                      type="text"
+                      value={formData.costo}
+                      onChange={handleInputChange}
+                      placeholder="Ej: 15.000"
+                    />
+                    {errors.costo && <p className="text-xs text-red-500">{errors.costo}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="fechaLimite" className="text-sm font-medium">Fecha límite de inscripción <span className="text-red-500">*</span></Label>
+                    <MuiDatePickerField
+                      value={formData.fechaLimite ? parseISO(formData.fechaLimite) : undefined}
+                      onChange={(date) =>
+                        handleDateChange('fechaLimite', date ? format(date, 'yyyy-MM-dd') : '')
+                      }
+                      open={fechaLimiteOpen}
+                      onOpenChange={setFechaLimiteOpen}
+                      placeholder="Seleccionar límite"
+                    />
+                    {errors.fechaLimite && <p className="text-xs text-red-500">{errors.fechaLimite}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="horaSalida1" className="text-sm font-medium">Primera hora de salida <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="horaSalida1"
+                      name="horaSalida1"
+                      type="time"
+                      value={formData.horaSalida1}
+                      onChange={handleInputChange}
+                    />
+                    {errors.horaSalida1 && <p className="text-xs text-red-500">{errors.horaSalida1}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="horaSalida2" className="text-sm font-medium">Segunda hora de salida</Label>
+                    <Input
+                      id="horaSalida2"
+                      name="horaSalida2"
+                      type="time"
+                      value={formData.horaSalida2}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="horaRegreso" className="text-sm font-medium">Hora de regreso <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="horaRegreso"
+                      name="horaRegreso"
+                      type="time"
+                      value={formData.horaRegreso}
+                      onChange={handleInputChange}
+                    />
+                    {errors.horaRegreso && <p className="text-xs text-red-500">{errors.horaRegreso}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="liderDirector" className="text-sm font-medium">Nombre del Director/Responsable <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="liderDirector"
+                      name="liderDirector"
+                      value={formData.liderDirector}
+                      onChange={handleInputChange}
+                      placeholder="Nombre del director/responsable"
+                    />
+                    {errors.liderDirector && <p className="text-xs text-red-500">{errors.liderDirector}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="telefono" className="text-sm font-medium">Teléfono de contacto <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="telefono"
+                      name="telefono"
+                      type="tel"
+                      value={formData.telefono}
+                      onChange={handleInputChange}
+                      placeholder="Número de teléfono"
+                    />
+                    {errors.telefono && <p className="text-xs text-red-500">{errors.telefono}</p>}
+                  </div>
+                </div>
+
+                {/* Nuevo campo para elementos */}
+                <div className="space-y-1">
+                  <Label htmlFor="elementos" className="text-sm font-medium flex items-center gap-2">
+                    <List className="h-4 w-4 text-blue-600" />
+                    Lista de elementos que debe llevar cada campamentista
+                  </Label>
+                  <Textarea
+                    id="elementos"
+                    name="elementos"
+                    value={formData.elementos}
                     onChange={handleInputChange}
-                    className="pl-10"
+                    placeholder="Escriba cada elemento en una línea separada..."
+                    rows={10}
+                    className="resize-vertical"
                   />
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                  <p className="text-xs text-gray-500">
+                    Escriba cada elemento en una línea separada. Si deja vacío, se usará la lista por defecto.
+                  </p>
+                </div>
+
+                <div className="flex justify-center pt-4">
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="w-full md:w-auto px-8 py-3 text-lg"
+                  >
+                    <FileText className="w-5 h-5 mr-2" />
+                    {loading ? "Generando PDF..." : "Generar PDF de Autorización"}
+                  </Button>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="fechaFin" className="text-sm font-medium">Fecha de fin</Label>
-                <div className="relative">
-                  <Input
-                    id="fechaFin"
-                    name="fechaFin"
-                    type="date"
-                    value={formData.fechaFin}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                  />
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+        {/* Lado derecho: Previsualización */}
+        <div className="w-full xl:w-1/2 sticky top-6">
+          <Card className="shadow-lg overflow-hidden border-slate-200">
+            <CardHeader className="bg-slate-50 border-b border-slate-100 py-4">
+              <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-600 uppercase tracking-wider">
+                <FileText className="h-4 w-4 text-indigo-500" />
+                Vista Previa del Documento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 bg-slate-100/50 flex justify-center py-8 overflow-hidden hidden md:flex">
+              {/* Vista previa A4 aproximada */}
+              <div className="w-[100%] max-w-[650px] bg-white p-8 sm:p-12 shadow-md font-sans text-black relative scale-[0.70] sm:scale-[0.80] md:scale-90 xl:scale-100 origin-top">
+
+                {/* Encabezado */}
+                {authPdfHeader.filter((l: any) => l.enabled).map((line: any, idx: number) => (
+                  <div key={idx} className={idx === 0 ? "flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2" : "mb-1"}>
+                    <div className={idx === 0 ? "font-bold text-base flex-1" : "text-sm text-gray-800"}>
+                      {line.text}
+                    </div>
+                    {idx === 0 && (
+                      <div className="font-bold text-base text-gray-800 whitespace-nowrap">
+                        {getCurrentDate()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="mt-8 mb-4">
+                  <strong className="text-base block">Señores Padres:</strong>
                 </div>
-              </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="lugar" className="text-sm font-medium">Lugar del campamento</Label>
-                <div className="relative">
-                  <Input
-                    id="lugar"
-                    name="lugar"
-                    value={formData.lugar}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                    placeholder="Dirección completa del campamento"
-                  />
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <div className="text-sm mt-4 text-gray-800 space-y-4">
+                  <p className="text-justify leading-relaxed">
+                    Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para adolescentes que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio <strong>{formData.lugar || "_________________"}</strong>.
+                  </p>
+                  <p className="text-justify leading-relaxed">
+                    El campamento se realizará los días <strong>{inicioDia} al {finDia} de {mesNombre} del {año}</strong>. Vamos a salir de la Iglesia el día viernes {inicioDia}, a las {formData.horaSalida1 || "____"}hs{formData.horaSalida2 ? ` y ${formData.horaSalida2}hs` : ''}. y estaremos regresando el día Domingo {finDia}, a las {formData.horaRegreso || "____"}hs., aproximadamente.
+                  </p>
+                  <p className="text-justify leading-relaxed">
+                    El costo es de: <strong>${formData.costo || "______"}.-</strong>
+                  </p>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="costo" className="text-sm font-medium">Costo ($)</Label>
-                <Input
-                  id="costo"
-                  name="costo"
-                  type="number"
-                  value={formData.costo}
-                  onChange={handleInputChange}
-                  placeholder="10000"
-                />
-              </div>
+                <div className="mt-8 border-t-2 border-dashed border-gray-300 pt-8 opacity-50 flex flex-col items-center">
+                  <p className="text-xs text-gray-400 font-bold tracking-widest uppercase mb-2">Resto del documento</p>
+                  <div className="h-2 bg-gray-100 rounded w-full mb-2"></div>
+                  <div className="h-2 bg-gray-100 rounded w-5/6 mb-2"></div>
+                  <div className="h-2 bg-gray-100 rounded w-4/6"></div>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="fechaLimite" className="text-sm font-medium">Fecha límite de inscripción</Label>
-                <Input
-                  id="fechaLimite"
-                  name="fechaLimite"
-                  type="date"
-                  value={formData.fechaLimite}
-                  onChange={handleInputChange}
-                />
               </div>
+            </CardContent>
+            <CardContent className="p-8 text-center text-muted-foreground flex md:hidden items-center justify-center">
+              Vista previa disponible en pantallas más grandes
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="horaSalida1" className="text-sm font-medium">Primera hora de salida</Label>
-                <Input
-                  id="horaSalida1"
-                  name="horaSalida1"
-                  type="time"
-                  value={formData.horaSalida1}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="horaSalida2" className="text-sm font-medium">Segunda hora de salida</Label>
-                <Input
-                  id="horaSalida2"
-                  name="horaSalida2"
-                  type="time"
-                  value={formData.horaSalida2}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="horaRegreso" className="text-sm font-medium">Hora de regreso</Label>
-                <Input
-                  id="horaRegreso"
-                  name="horaRegreso"
-                  type="time"
-                  value={formData.horaRegreso}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="liderDirector" className="text-sm font-medium">Líder Director</Label>
-                <Input
-                  id="liderDirector"
-                  name="liderDirector"
-                  value={formData.liderDirector}
-                  onChange={handleInputChange}
-                  placeholder="Nombre del líder director"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="telefono" className="text-sm font-medium">Teléfono de contacto</Label>
-                <Input
-                  id="telefono"
-                  name="telefono"
-                  type="tel"
-                  value={formData.telefono}
-                  onChange={handleInputChange}
-                  placeholder="Número de teléfono"
-                />
-              </div>
-            </div>
-
-            {/* Nuevo campo para elementos */}
-            <div className="space-y-2">
-              <Label htmlFor="elementos" className="text-sm font-medium flex items-center gap-2">
-                <List className="h-4 w-4 text-blue-600" />
-                Lista de elementos que debe llevar cada campamentista
-              </Label>
-              <Textarea
-                id="elementos"
-                name="elementos"
-                value={formData.elementos}
-                onChange={handleInputChange}
-                placeholder="Escriba cada elemento en una línea separada..."
-                rows={10}
-                className="resize-vertical"
-              />
-              <p className="text-xs text-gray-500">
-                Escriba cada elemento en una línea separada. Si deja vacío, se usará la lista por defecto.
-              </p>
-            </div>
-            
-            <div className="flex justify-center pt-4">
-              <Button 
-                onClick={handleSubmit}
-                disabled={loading} 
-                className="w-full md:w-auto px-8 py-3 text-lg"
-              >
-                <FileText className="w-5 h-5 mr-2" />
-                {loading ? "Generando PDF..." : "Generar PDF de Autorización"}
-              </Button>
-            </div>
+          {/* Información importante reubicada */}
+          <div className="mt-6 p-5 bg-blue-50/80 rounded-2xl border border-blue-200 shadow-sm flex flex-col gap-2">
+            <h3 className="font-bold text-blue-800 flex items-center gap-2">
+              <Info className="h-5 w-5" />
+              Información importante
+            </h3>
+            <ul className="text-sm text-blue-800/90 space-y-1.5 ml-1 leading-relaxed">
+              <li>• El PDF incluye la carta para padres completa.</li>
+              <li>• Contiene el formulario de inscripción y autorización.</li>
+              <li>• La lista de elementos es editable y personalizable.</li>
+              <li>• Si dejas el campo vacío, se usará la lista predeterminada.</li>
+            </ul>
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h3 className="font-semibold text-blue-800 mb-2">📋 Información importante:</h3>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>• El PDF generado incluye la carta informativa completa para los padres</li>
-          <li>• Contiene el formulario de inscripción que deben completar</li>
-          <li>• Incluye la autorización que debe ser firmada por el padre o tutor</li>
-          <li>• La lista de elementos es personalizable - modifica el campo de texto según tus necesidades</li>
-          <li>• Si dejas el campo de elementos vacío, se usará la lista predeterminada</li>
-        </ul>
+        </div>
       </div>
     </div>
   );

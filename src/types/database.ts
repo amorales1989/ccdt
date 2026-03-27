@@ -108,6 +108,7 @@ export interface Company {
   show_profile_images?: boolean;
   congregation_name?: string;
   show_name?: boolean;
+  auth_pdf_header?: { text: string; enabled: boolean }[];
 }
 
 export type DepartmentType =
