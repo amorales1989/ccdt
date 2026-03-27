@@ -13,6 +13,7 @@ import { es } from "date-fns/locale";
 import type { Event, DepartmentType, Student, Department, EventWithBirthday } from "@/types/database";
 import { CalendarWidget } from "@/components/CalendarWidget";
 import { StudentStatsWidget } from "@/components/StudentStatsWidget";
+import { MiniStatsCarousel } from "@/components/MiniStatsCarousel";
 import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -73,7 +74,7 @@ const Home = () => {
       navigate("/calendario", { replace: true });
     }
   }, [isCalendarDepartment, navigate, location.pathname, profile]);
-  // Solo cargar estudiantes si NO es departamento calendario
+  // Solo cargar miembros si NO es departamento calendario
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students', 'stats', profile?.id], // Usar prefix 'students' para que se invalide correctamente
     queryFn: async () => {
@@ -145,7 +146,7 @@ const Home = () => {
         const studentDept = student.department;
         const studentClass = student.assigned_class;
 
-        // Verificar si el estudiante pertenece a los departamentos del usuario
+        // Verificar si el miembro pertenece a los departamentos del usuario
         const belongsToUserDepartment = userDepartments.includes(studentDept);
 
         // Si el usuario tiene una clase asignada, también verificar la clase
@@ -295,16 +296,18 @@ const Home = () => {
 
   // Renderizar la página completa para otros departamentos
   return (
-    <div className="space-y-10 pb-10">
-      {isAdminOrSecretary && !studentsLoading && (
-        <section className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-slate-200 dark:bg-slate-800 blur-3xl pointer-events-none"></div>
-          <StudentSearch students={students} />
-        </section>
-      )}
+    <div className="space-y-8 bg-[#f8fafc] dark:bg-slate-900/50 min-h-screen -mt-4 -mx-4 px-4 pt-4 sm:-mt-8 sm:-mx-8 sm:px-8 sm:pt-8 rounded-tl-3xl">
+      {/* Top Navbar Section */}
+      <header className="flex flex-col items-center justify-center gap-6 mb-8 mt-2 animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="w-full max-w-2xl mx-auto">
+          {isAdminOrSecretary && !studentsLoading && (
+            <StudentSearch students={students} />
+          )}
+        </div>
+      </header>
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-100 via-white to-indigo-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-blue-200 dark:border-slate-700 shadow-lg">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-400/20 blur-3xl pointer-events-none"></div>
+      {/* Cards Section */}
+      <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 mb-8">
         <StudentStatsWidget
           auth={{ profile, isAdminOrSecretary, isTeacherOrLeader }}
           data={{ students, departments, pendingRequests }}
@@ -312,13 +315,27 @@ const Home = () => {
         />
       </section>
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-lg">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-        <CalendarWidget
-          auth={{ isAdminOrSecretary }}
-          data={{ events: futureEvents, eventsLoading, searchTerm, setSearchTerm }}
-        />
-      </section>
+      {/* 2-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
+        {/* Left Column: Events */}
+        <section className={`transition-all duration-500 ${isAdminOrSecretary ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+          <CalendarWidget
+            auth={{ isAdminOrSecretary }}
+            data={{ events: futureEvents, eventsLoading, searchTerm, setSearchTerm }}
+          />
+        </section>
+
+        {/* Right Column: Actions & Resources */}
+        {isAdminOrSecretary && (
+          <section className="space-y-6 lg:col-span-1 animate-in fade-in slide-in-from-right-8 duration-700 delay-300">
+            <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100 mb-4 px-2">
+              Estadisticas generales
+            </h2>
+
+            <MiniStatsCarousel students={students} currentProfile={profile} />
+          </section>
+        )}
+      </div>
     </div>
   );
 };

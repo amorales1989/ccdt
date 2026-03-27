@@ -36,7 +36,7 @@ const departments = [
 ];
 
 const getFullName = (student: any): string => {
-  if (!student) return "Alumno eliminado";
+  if (!student) return "Miembro eliminado";
 
   return student.last_name
     ? `${student.first_name} ${student.last_name}`
@@ -375,7 +375,7 @@ const HistorialAsistencia = () => {
     if (searchQuery === "") return true;
 
     if (!record.students) {
-      return "alumno eliminado".includes(searchQuery.toLowerCase());
+      return "miembro eliminado".includes(searchQuery.toLowerCase());
     }
 
     return record.students.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -389,7 +389,7 @@ const HistorialAsistencia = () => {
 
   const handleExportToExcel = () => {
     const data = filteredAttendance.map(record => ({
-      Nombre: record.students ? `${record.students.first_name} ${record.students.last_name || ''}` : "Alumno eliminado",
+      Nombre: record.students ? `${record.students.first_name} ${record.students.last_name || ''}` : "Miembro eliminado",
       Estado: record.status ? "Presente" : "Ausente",
       Fecha: adjustDateForDisplay(record.date),
       Departamento: record.students?.departments?.name
@@ -591,7 +591,7 @@ const HistorialAsistencia = () => {
                     <div className="relative">
                       <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Nombre del alumno"
+                        placeholder="Nombre del miembro"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-8"

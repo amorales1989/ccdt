@@ -322,14 +322,14 @@ const TomarAsistencia = () => {
         {students.length === 0 ? (
           <div className="glass-card p-12 text-center animate-fade-in">
             <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="font-semibold text-muted-foreground">No hay alumnos en este departamento</p>
+            <p className="font-semibold text-muted-foreground">No hay miembros en este departamento</p>
           </div>
         ) : (
           <div className="space-y-2">
             {/* Section label */}
             <div className="flex items-center gap-2 mb-3 px-1">
               <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">
-                Alumnos · {regularStudents.length}
+                Miembros · {regularStudents.length}
               </div>
             </div>
 
@@ -341,7 +341,7 @@ const TomarAsistencia = () => {
                 <div className="flex items-center gap-3 py-4">
                   <div className="flex-1 h-px bg-gray-200" />
                   <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
-                    Nuevos Alumnos · {newStudents.length}
+                    Nuevos Miembros · {newStudents.length}
                   </span>
                   <div className="flex-1 h-px bg-gray-200" />
                 </div>

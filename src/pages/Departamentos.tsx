@@ -107,7 +107,7 @@ const Departamentos = () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
       toast({
         title: "Departamento eliminado",
-        description: "El departamento ha sido eliminado exitosamente y los estudiantes asociados han sido desvinculados"
+        description: "El departamento ha sido eliminado exitosamente y los miembros asociados han sido desvinculados"
       });
       setIsDeleting(false);
       setSelectedDepartment(null);
@@ -246,7 +246,7 @@ const Departamentos = () => {
                         Esta acción eliminará permanentemente el departamento
                         <span className="font-bold text-slate-900 dark:text-slate-100"> {department.name}</span>.
                         <br /><br />
-                        <span className="text-amber-500/90 font-medium">Nota:</span> Si hay estudiantes asignados,
+                        <span className="text-amber-500/90 font-medium">Nota:</span> Si hay miembros asignados,
                         serán desvinculados pero no eliminados.
                       </AlertDialogDescription>
                     </AlertDialogHeader>

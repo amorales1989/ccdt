@@ -62,11 +62,11 @@ const Secretaria = () => {
         <CardContent className="space-y-4">
           <p>Bienvenido, {profile?.first_name}!</p>
           
-          <Button onClick={() => navigate("/agregar-alumno")} className="w-full">
-            Agregar Alumno
+          <Button onClick={() => navigate("/agregar-miembro")} className="w-full">
+            Agregar Miembro
           </Button>
-          <Button onClick={() => navigate("/listar-alumnos")} className="w-full">
-            Listar Alumnos
+          <Button onClick={() => navigate("/listar-miembros")} className="w-full">
+            Listar Miembros
           </Button>
           <Button onClick={() => navigate("/attendance")} className="w-full">
             Gestionar Asistencia

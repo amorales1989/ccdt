@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PersonStanding, CheckCircle2, Plus, Bell } from "lucide-react";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import type { DepartmentType, Student, Department } from "@/types/database";
 
 interface ClassStats {
@@ -96,7 +97,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
     } else if (departmentsWithStats.length === 1) {
         statsTitle = formatDepartmentName(departmentsWithStats[0][0]);
     } else {
-        statsTitle = "Estadísticas de Alumnos";
+        statsTitle = "Estadísticas de Miembros";
     }
 
     const getStatsForClass = (deptName: string, className: string): ClassStats => {
@@ -113,116 +114,152 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
     };
 
     return (
-        <div className="animate-fade-in">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-2">
-                <div className="text-center md:text-left">
-                    <h2 className="text-3xl font-bold tracking-tight text-primary">
-                        {statsTitle}
-                    </h2>
-                    <p className="text-muted-foreground text-sm">Resumen general y distribución por género</p>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex flex-col items-center justify-center text-center mb-10 gap-4 mt-6">
+                <div>
+                    <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                        Resumen Institucional
+                    </h1>
                 </div>
 
                 {isAdminOrSecretary && pendingRequests.length > 0 && (
                     <Button
                         onClick={onPendingRequestsClick}
-                        variant="outline"
-                        className="bg-orange-50/50 border-orange-200 hover:bg-orange-100 text-orange-700 hover:text-orange-800 transition-all duration-300 shadow-sm hover:shadow-md animate-bounce-slow"
+                        className="bg-primary hover:bg-primary/90 text-white rounded-full px-6 py-5 shadow-lg shadow-primary/20 transition-all font-semibold"
                     >
                         <Bell className="mr-2 h-4 w-4" />
-                        <span className="mr-2">
-                            Solicitud{pendingRequests.length !== 1 ? 'es' : ''} Pendiente{pendingRequests.length !== 1 ? 's' : ''}
-                        </span>
-                        <Badge variant="secondary" className="bg-orange-200 text-orange-800 font-bold px-2 py-0.5 rounded-full">
-                            {pendingRequests.length}
-                        </Badge>
+                        Revisar {pendingRequests.length} Solicitud{pendingRequests.length !== 1 ? 'es' : ''}
                     </Button>
                 )}
             </div>
 
-            <div className={`grid gap-6 ${isSingleCard ? 'place-items-center' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-                {departmentsWithStats.map(([dept, stats], index) => {
-                    const departmentObj = departments.find(d => d.name === dept);
-                    const hasClasses = departmentObj?.classes && departmentObj.classes.length > 0;
-                    const malePercent = stats.total > 0 ? (stats.male / stats.total) * 100 : 0;
-                    const femalePercent = stats.total > 0 ? (stats.female / stats.total) * 100 : 0;
+            {departmentsWithStats.length > 3 ? (
+                <div className="px-10 relative">
+                    <Carousel
+                        opts={{
+                            align: "start",
+                        }}
+                        className="w-full"
+                    >
+                        <CarouselContent className="">
+                            {departmentsWithStats.map(([dept, stats], index) => {
+                                const departmentObj = departments.find(d => d.name === dept);
+                                const hasClasses = departmentObj?.classes && departmentObj.classes.length > 0;
+                                const malePercent = stats.total > 0 ? (stats.male / stats.total) * 100 : 0;
+                                const femalePercent = stats.total > 0 ? (stats.female / stats.total) * 100 : 0;
 
-                    return (
-                        <div
-                            key={dept}
-                            className={`glass-card group relative p-6 cursor-pointer hover:border-primary/50 transition-all duration-500 hover:-translate-y-1 animate-slide-in ${isSingleCard ? 'w-full max-w-md' : ''}`}
-                            style={{ animationDelay: `${index * 0.1}s` }}
-                            onClick={() => isDirectorOrAdminOrSecretary && hasClasses && departmentObj ? handleDepartmentClick(departmentObj) : null}
-                        >
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <PersonStanding className="h-12 w-12 text-primary rotate-12" />
-                            </div>
+                                return (
+                                    <CarouselItem key={dept} className="pl-6 md:basis-1/2 lg:basis-1/3">
+                                        <div
+                                            className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:shadow-md transition-all duration-300 group h-full"
+                                            style={{ animationDelay: `${index * 0.1}s` }}
+                                            onClick={() => isDirectorOrAdminOrSecretary && hasClasses && departmentObj ? handleDepartmentClick(departmentObj) : null}
+                                        >
+                                            <div className="flex justify-between items-start mb-8">
+                                                <div className="h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                                    <PersonStanding className="h-6 w-6" />
+                                                </div>
+                                            </div>
 
-                            <div className="flex justify-between items-start mb-6">
-                                <div>
-                                    <Badge variant="outline" className="mb-2 bg-primary/10 text-primary border-primary/20">
-                                        Departamento
-                                    </Badge>
-                                    <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                                            <div className="mb-8">
+                                                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">
+                                                    {formatDepartmentName(dept)}
+                                                </h3>
+                                                <div className="flex items-baseline gap-2">
+                                                    <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.total}</span>
+                                                    <span className="text-sm font-semibold text-slate-500">MIEMBROS</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
+                                                    <div
+                                                        className="h-full bg-indigo-500 transition-all duration-1000"
+                                                        style={{ width: `${malePercent}%` }}
+                                                    ></div>
+                                                    <div
+                                                        className="h-full bg-fuchsia-400 transition-all duration-1000"
+                                                        style={{ width: `${femalePercent}%` }}
+                                                    ></div>
+                                                </div>
+                                                <div className="flex justify-between text-sm font-medium text-slate-500">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                                        <span>Masculino {stats.male}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 rounded-full bg-fuchsia-400"></div>
+                                                        <span>Femenino {stats.female}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CarouselItem>
+                                );
+                            })}
+                        </CarouselContent>
+                        <CarouselPrevious className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white hover:bg-slate-100 text-slate-800 shadow-md" />
+                        <CarouselNext className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white hover:bg-slate-100 text-slate-800 shadow-md" />
+                    </Carousel>
+                </div>
+            ) : (
+                <div className={`grid gap-6 ${isSingleCard ? 'place-items-center' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+                    {departmentsWithStats.map(([dept, stats], index) => {
+                        const departmentObj = departments.find(d => d.name === dept);
+                        const hasClasses = departmentObj?.classes && departmentObj.classes.length > 0;
+                        const malePercent = stats.total > 0 ? (stats.male / stats.total) * 100 : 0;
+                        const femalePercent = stats.total > 0 ? (stats.female / stats.total) * 100 : 0;
+
+                        return (
+                            <div
+                                key={dept}
+                                className={`bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:shadow-md transition-all duration-300 group ${isSingleCard ? 'w-full max-w-md' : ''}`}
+                                style={{ animationDelay: `${index * 0.1}s` }}
+                                onClick={() => isDirectorOrAdminOrSecretary && hasClasses && departmentObj ? handleDepartmentClick(departmentObj) : null}
+                            >
+                                <div className="flex justify-between items-start mb-8">
+                                    <div className="h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                        <PersonStanding className="h-6 w-6" />
+                                    </div>
+                                </div>
+
+                                <div className="mb-8">
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">
                                         {formatDepartmentName(dept)}
                                     </h3>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-3xl font-black text-primary">{stats.total}</p>
-                                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Alumnos</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <div className="flex justify-between text-xs font-semibold">
-                                        <span className="flex items-center gap-1 text-[#3A82AF] uppercase">
-                                            <PersonStanding className="h-3 w-3" /> Varones
-                                        </span>
-                                        <span>{stats.male} ({Math.round(malePercent)}%)</span>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.total}</span>
+                                        <span className="text-sm font-semibold text-slate-500">MIEMBROS</span>
                                     </div>
-                                    <div className="h-2 w-full bg-accent/20 rounded-full overflow-hidden">
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
                                         <div
-                                            className="h-full bg-gradient-to-r from-[#3A82AF] to-[#60b3e5] rounded-full transition-all duration-1000"
+                                            className="h-full bg-indigo-500 transition-all duration-1000"
                                             style={{ width: `${malePercent}%` }}
                                         ></div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <div className="flex justify-between text-xs font-semibold">
-                                        <span className="flex items-center gap-1 text-[#E83E8C] uppercase">
-                                            <PersonStanding className="h-3 w-3" /> Mujeres
-                                        </span>
-                                        <span>{stats.female} ({Math.round(femalePercent)}%)</span>
-                                    </div>
-                                    <div className="h-2 w-full bg-accent/20 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-gradient-to-r from-[#E83E8C] to-[#f988b4] rounded-full transition-all duration-1000"
+                                            className="h-full bg-fuchsia-400 transition-all duration-1000"
                                             style={{ width: `${femalePercent}%` }}
                                         ></div>
                                     </div>
+                                    <div className="flex justify-between text-sm font-medium text-slate-500">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                            <span>Masculino {stats.male}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-fuchsia-400"></div>
+                                            <span>Femenino {stats.female}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-
-                            {(showClassLabel || (isAdminOrSecretary && hasClasses)) && (
-                                <div className="mt-8 flex items-center justify-between text-xs border-t border-accent/20 pt-4">
-                                    {showClassLabel ? (
-                                        <span className="flex items-center gap-1 font-medium bg-secondary/10 text-secondary px-2 py-1 rounded">
-                                            <CheckCircle2 className="h-3 w-3" /> Clase: {userAssignedClass}
-                                        </span>
-                                    ) : <span></span>}
-
-                                    {isDirectorOrAdminOrSecretary && hasClasses && (
-                                        <span className="text-primary font-bold hover:underline flex items-center gap-1 group-hover:gap-2 transition-all">
-                                            Ver detalles <Plus className="h-3 w-3" />
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {selectedDepartment && (
                 <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
@@ -232,7 +269,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                                 <DialogTitle className="text-2xl font-black text-primary mb-1">
                                     {formatDepartmentName(selectedDepartment.name || '')}
                                 </DialogTitle>
-                                <p className="text-muted-foreground">Desglose de alumnos por clase asignada</p>
+                                <p className="text-muted-foreground">Desglose de miembros por clase asignada</p>
                             </DialogHeader>
                         </div>
 

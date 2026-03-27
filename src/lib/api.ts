@@ -153,7 +153,7 @@ export const updateCompany = async (id: number, updates: any) => {
   }
 };
 
-// ============ FUNCIONES DE ESTUDIANTES ACTUALIZADAS PARA USAR EL BACKEND ============
+// ============ FUNCIONES DE MIEMBROS ACTUALIZADAS PARA USAR EL BACKEND ============
 
 export const getStudents = async (params: Record<string, any> = {}) => {
   try {
@@ -287,7 +287,7 @@ export const importStudentsFromExcel = async (students: { first_name: string; ge
     }
 
     // Si tu backend tiene un endpoint específico para importación masiva, úsalo
-    // Si no, puedes crear múltiples estudiantes uno por uno
+    // Si no, puedes crear múltiples miembros uno por uno
     const results = {
       data: [] as any[],
       successful: 0,
@@ -704,7 +704,7 @@ export const testWhatsappMessage = async (companyId: string | number, phoneNumbe
   }
 };
 
-// ============ FUNCIONES DE OBSERVACIONES DE ALUMNOS ============
+// ============ FUNCIONES DE OBSERVACIONES DE MIEMBROS ============
 
 export const getObservations = async (studentId: string): Promise<StudentObservation[]> => {
   try {

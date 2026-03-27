@@ -16,7 +16,12 @@ import { format, parseISO } from "date-fns";
 import { UserPlus, User, MapPin, Phone, Hash, CalendarDays, KeyRound, Building2 } from "lucide-react";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 
-const AgregarAlumno = () => {
+interface AgregarAlumnoProps {
+  onSuccess?: () => void;
+  isModal?: boolean;
+}
+
+const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -179,7 +184,7 @@ const AgregarAlumno = () => {
     if (!formData.first_name) {
       toast({
         title: "Error",
-        description: "Por favor ingrese el nombre del alumno",
+        description: "Por favor ingrese el nombre del miembro",
         variant: "destructive",
       });
       return;
@@ -205,16 +210,21 @@ const AgregarAlumno = () => {
       });
 
       toast({
-        title: "Alumno agregado",
-        description: `El alumno ha sido agregado exitosamente${formData.nuevo ? ' y marcado como nuevo' : ''}`,
+        title: "Miembro agregado",
+        description: `El miembro ha sido agregado exitosamente${formData.nuevo ? ' y marcado como nuevo' : ''}`,
         variant: "success",
       });
-      navigate("/");
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate("/");
+      }
     } catch (error: any) {
-      console.error("Error al crear alumno:", error);
+      console.error("Error al crear miembro:", error);
       toast({
         title: "Error",
-        description: error.message || "Hubo un error al agregar el alumno",
+        description: error.message || "Hubo un error al agregar el miembro",
         variant: "destructive",
       });
     } finally {
@@ -236,223 +246,231 @@ const AgregarAlumno = () => {
     );
   }
 
+  const content = (
+    <div className="relative z-10">
+      {!isModal && (
+        <div className="flex items-center gap-4 mb-8 pb-6 border-b border-purple-200/60 dark:border-slate-700/60">
+          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
+            <UserPlus className="h-8 w-8" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-black text-foreground tracking-tight">Agregar Miembro</h2>
+            <p className="text-muted-foreground text-sm mt-1">Complete los datos para inscribir un nuevo miembro</p>
+          </div>
+        </div>
+      )}
+
+      <div className={`${!isModal ? 'bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/40 dark:border-slate-700/50 shadow-sm' : ''}`}>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="first_name">Nombre *</Label>
+              <Input
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, first_name: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="last_name">Apellido</Label>
+              <Input
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, last_name: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="document_number" error={!!dniError}>DNI</Label>
+            <Input
+              id="document_number"
+              value={formData.document_number}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  document_number: e.target.value.replace(/\D/g, '')
+                })
+              }
+              onBlur={handleDniBlur}
+              placeholder="Ingrese el DNI sin puntos"
+              error={!!dniError}
+              inputMode="numeric"
+              pattern="[0-9]*"
+            />
+            {dniError && (
+              <p className="text-sm font-medium text-destructive mt-1">{dniError}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
+            <MuiDatePickerField
+              value={formData.birthdate ? parseISO(formData.birthdate) : undefined}
+              onChange={(date) =>
+                setFormData({ ...formData, birthdate: date ? format(date, 'yyyy-MM-dd') : '' })
+              }
+              open={birthdateOpen}
+              onOpenChange={setBirthdateOpen}
+              placeholder="Seleccionar fecha de nacimiento"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="gender">Género</Label>
+            <Select
+              value={formData.gender}
+              onValueChange={(value) =>
+                setFormData({ ...formData, gender: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar género" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="masculino">Masculino</SelectItem>
+                <SelectItem value="femenino">Femenino</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="department">Departamento</Label>
+            <Select
+              value={formData.department || undefined}
+              onValueChange={(value) => {
+                const selectedDept = departments.find(d => d.name === value);
+                setFormData({
+                  ...formData,
+                  department: value as DepartmentType,
+                  department_id: selectedDept?.id || "",
+                  assigned_class: ""
+                });
+              }}
+              disabled={isMaestro || isDirector}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableDepartments.map((dept) => (
+                  <SelectItem key={dept.name} value={dept.name}>
+                    {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {formData.department && departmentHasClasses && (
+            <div className="space-y-2">
+              <Label htmlFor="assigned_class">Clase</Label>
+              <Select
+                value={formData.assigned_class}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, assigned_class: value })
+                }
+                disabled={isMaestro}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar clase" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableClasses.map((className) => (
+                    <SelectItem key={className} value={className}>
+                      {className}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="phone">Teléfono</Label>
+            <div className="grid grid-cols-[100px_1fr] gap-2">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">+</span>
+                <Input
+                  id="phoneCode"
+                  value="54"
+                  onChange={(e) =>
+                    setFormData({ ...formData, phoneCode: e.target.value })
+                  }
+                  placeholder="54"
+                  disabled
+                />
+              </div>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+                placeholder="Sin 0 ni 15 al inicio, ej: 11xxxxxxxx"
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">No incluir el 0 ni el 15 al inicio del número. Ejemplo correcto: 11xxxxxxxx</span>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="address">Dirección</Label>
+            <Input
+              id="address"
+              value={formData.address}
+              onChange={(e) =>
+                setFormData({ ...formData, address: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="flex items-center space-x-2 pt-4 pb-4 border-b">
+            <Checkbox
+              id="nuevo"
+              checked={formData.nuevo}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, nuevo: checked as boolean })
+              }
+            />
+            <Label
+              htmlFor="nuevo"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Marcar miembro como nuevo
+            </Label>
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full h-14 text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xl shadow-purple-500/30 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] mt-4"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Registrando miembro...</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5" />
+                <span>Completar Registro</span>
+              </div>
+            )}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+
+  if (isModal) {
+    return content;
+  }
+
   return (
     <div className="animate-fade-in space-y-8 pb-8">
       <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-10 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl mx-auto max-w-4xl mt-4">
         {/* Decorative background blur */}
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-500/20 blur-3xl pointer-events-none"></div>
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-purple-200/60 dark:border-slate-700/60">
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
-              <UserPlus className="h-8 w-8" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-black text-foreground tracking-tight">Agregar Alumno</h2>
-              <p className="text-muted-foreground text-sm mt-1">Complete los datos para inscribir un nuevo estudiante</p>
-            </div>
-          </div>
-
-          <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/40 dark:border-slate-700/50 shadow-sm">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="first_name">Nombre *</Label>
-                  <Input
-                    id="first_name"
-                    value={formData.first_name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, first_name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="last_name">Apellido</Label>
-                  <Input
-                    id="last_name"
-                    value={formData.last_name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, last_name: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="document_number" error={!!dniError}>DNI</Label>
-                <Input
-                  id="document_number"
-                  value={formData.document_number}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      document_number: e.target.value.replace(/\D/g, '')
-                    })
-                  }
-                  onBlur={handleDniBlur}
-                  placeholder="Ingrese el DNI sin puntos"
-                  error={!!dniError}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                />
-                {dniError && (
-                  <p className="text-sm font-medium text-destructive mt-1">{dniError}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-                <MuiDatePickerField
-                  value={formData.birthdate ? parseISO(formData.birthdate) : undefined}
-                  onChange={(date) =>
-                    setFormData({ ...formData, birthdate: date ? format(date, 'yyyy-MM-dd') : '' })
-                  }
-                  open={birthdateOpen}
-                  onOpenChange={setBirthdateOpen}
-                  placeholder="Seleccionar fecha de nacimiento"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gender">Género</Label>
-                <Select
-                  value={formData.gender}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, gender: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar género" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="masculino">Masculino</SelectItem>
-                    <SelectItem value="femenino">Femenino</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">Departamento</Label>
-                <Select
-                  value={formData.department || undefined}
-                  onValueChange={(value) => {
-                    const selectedDept = departments.find(d => d.name === value);
-                    setFormData({
-                      ...formData,
-                      department: value as DepartmentType,
-                      department_id: selectedDept?.id || "",
-                      assigned_class: ""
-                    });
-                  }}
-                  disabled={isMaestro || isDirector}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar departamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableDepartments.map((dept) => (
-                      <SelectItem key={dept.name} value={dept.name}>
-                        {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, " ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {formData.department && departmentHasClasses && (
-                <div className="space-y-2">
-                  <Label htmlFor="assigned_class">Clase</Label>
-                  <Select
-                    value={formData.assigned_class}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, assigned_class: value })
-                    }
-                    disabled={isMaestro}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar clase" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableClasses.map((className) => (
-                        <SelectItem key={className} value={className}>
-                          {className}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono</Label>
-                <div className="grid grid-cols-[100px_1fr] gap-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">+</span>
-                    <Input
-                      id="phoneCode"
-                      value="54"
-                      onChange={(e) =>
-                        setFormData({ ...formData, phoneCode: e.target.value })
-                      }
-                      placeholder="54"
-                      disabled
-                    />
-                  </div>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    placeholder="Sin 0 ni 15 al inicio, ej: 11xxxxxxxx"
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground">No incluir el 0 ni el 15 al inicio del número. Ejemplo correcto: 11xxxxxxxx</span>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Dirección</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
-                />
-              </div>
-
-              {/* Checkbox para marcar como nuevo */}
-              <div className="flex items-center space-x-2 pt-4 pb-4 border-b">
-                <Checkbox
-                  id="nuevo"
-                  checked={formData.nuevo}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, nuevo: checked as boolean })
-                  }
-                />
-                <Label
-                  htmlFor="nuevo"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Marcar alumno como nuevo
-                </Label>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xl shadow-purple-500/30 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] mt-4"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Registrando alumno...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <UserPlus className="h-5 w-5" />
-                    <span>Completar Registro</span>
-                  </div>
-                )}
-              </Button>
-            </form>
-          </div>
-        </div>
+        {content}
       </section>
     </div>
   );

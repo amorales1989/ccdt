@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import {
   Users, UserPlus, ClipboardList, History, Home, Menu,
   FileText, LogOut, UserPlus2, UserRound, FolderIcon,
-  FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon
+  FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
+  BarChart3
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -35,18 +36,13 @@ const getItems = (role: string | undefined, profile: any) => {
       { title: "Inicio", url: "/", icon: Home },
       { title: "Calendario", url: "/calendario", icon: FileText }
     ];
-    if (role === "admin" || role === "secretaria" || role === "secr.-calendario" || role === "lider") {
-      calendarItems.push({ title: "Solicitudes", url: "/solicitudes", icon: ClipboardCheck });
-    }
     return calendarItems;
   }
 
   const baseItems: { title: string; url: string; icon: any }[] = [
     { title: "Inicio", url: "/", icon: Home },
-    { title: "Lista de Alumnos", url: "/listar", icon: Users },
-    { title: "Agregar Alumno", url: "/agregar", icon: UserPlus },
+    { title: "Lista de Miembros", url: "/listar", icon: Users },
     { title: "Calendario", url: "/calendario", icon: FileText },
-    { title: "Solicitudes", url: "/solicitudes", icon: ClipboardCheck },
   ];
 
   if (role !== "secretaria") {
@@ -60,19 +56,15 @@ const getItems = (role: string | undefined, profile: any) => {
     }
   }
 
-  baseItems.push({ title: "Promover Alumnos", url: "/promover", icon: FolderUp });
+  baseItems.push({ title: "Promover Miembros", url: "/promover", icon: FolderUp });
   baseItems.push({ title: "Historial", url: "/historial", icon: History });
 
   if (role === "admin" || role === "secretaria" || role === "director") {
     if (role === "admin" || role === "secretaria") {
       baseItems.push(
+        { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
         { title: "Autorizaciones", url: "/autorizaciones", icon: FileOutput },
-        { title: "Registrar Usuario", url: "/register", icon: UserPlus2 },
         { title: "Departamentos", url: "/departamentos", icon: FolderIcon }
-      );
-    } else if (role === "director") {
-      baseItems.push(
-        { title: "Registrar Usuario", url: "/register", icon: UserPlus2 }
       );
     }
     baseItems.push(
@@ -86,17 +78,17 @@ const getItems = (role: string | undefined, profile: any) => {
 // Icon background color by category
 const iconBgMap: Record<string, string> = {
   "Inicio": "bg-purple-100 text-purple-600",
-  "Lista de Alumnos": "bg-blue-100 text-blue-600",
-  "Agregar Alumno": "bg-green-100 text-green-600",
+  "Lista de Miembros": "bg-blue-100 text-blue-600",
   "Calendario": "bg-orange-100 text-orange-600",
-  "Solicitudes": "bg-yellow-100 text-yellow-600",
+
   "Tomar Asistencia": "bg-teal-100 text-teal-600",
   "Historial": "bg-indigo-100 text-indigo-600",
-  "Promover Alumnos": "bg-pink-100 text-pink-600",
+  "Promover Miembros": "bg-pink-100 text-pink-600",
   "Autorizaciones": "bg-red-100 text-red-600",
   "Registrar Usuario": "bg-cyan-100 text-cyan-600",
   "Gestión de Usuarios": "bg-violet-100 text-violet-600",
   "Departamentos": "bg-amber-100 text-amber-600",
+  "Estadísticas": "bg-indigo-100 text-indigo-600",
   "Configuración": "bg-slate-100 text-slate-600",
 };
 

@@ -101,7 +101,7 @@ export const StudentObservations = ({ studentId }: StudentObservationsProps) => 
 
             <form onSubmit={handleSubmit} className="space-y-3">
                 <Textarea
-                    placeholder="Agregar una nueva observación sobre el alumno..."
+                    placeholder="Agregar una nueva observación sobre el miembro..."
                     value={newObservation}
                     onChange={(e) => setNewObservation(e.target.value)}
                     className="min-h-[100px] glass-card border-primary/20 focus:border-primary/50"
@@ -129,7 +129,7 @@ export const StudentObservations = ({ studentId }: StudentObservationsProps) => 
                     </div>
                 ) : observations.length === 0 ? (
                     <div className="text-center p-8 text-muted-foreground bg-accent/5 rounded-lg border border-dashed">
-                        No hay observaciones registradas para este alumno.
+                        No hay observaciones registradas para este miembro.
                     </div>
                 ) : (
                     <div className="relative border-l-2 border-primary/20 ml-3 pl-6 space-y-6">

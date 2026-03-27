@@ -192,13 +192,12 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
   };
 
   return (
-    <div className="animate-fade-in delay-200">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-2">
+    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-left-4 duration-700 delay-200">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div className="text-center md:text-left">
-          <h2 className="text-3xl font-bold tracking-tight text-primary">
-            Calendario de Eventos
+          <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100 mb-1">
+            Próximos Eventos
           </h2>
-          <p className="text-muted-foreground text-sm">Próximas actividades y celebraciones</p>
         </div>
 
         {isAdminOrSecretary && (
@@ -246,7 +245,7 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
           )}
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {events.map((event, index) => {
             const todayStr = format(toZonedTime(new Date(), 'America/Argentina/Buenos_Aires'), 'yyyy-MM-dd');
             const isToday = event.date.split('T')[0] === todayStr;
@@ -254,77 +253,72 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
             return (
               <div
                 key={event.id}
-                className="glass-card group flex flex-col md:flex-row items-center p-0 overflow-hidden hover:border-primary/40 transition-all duration-300 animate-slide-in"
+                className="group flex flex-row items-center p-2 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-white dark:bg-transparent hover:border-slate-200 transition-all duration-300 relative overflow-hidden animate-slide-in"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 {/* Date Side */}
-                <div className={`w-full md:w-32 flex flex-row md:flex-col items-center justify-center p-4 gap-2 md:gap-0 ${isToday ? 'bg-primary text-white' : 'bg-primary/5 text-primary'} group-hover:scale-110 transition-transform duration-500 relative`}>
-                  <div className="flex flex-row md:flex-col items-center justify-center gap-2 md:gap-0">
-                    <span className={`${(event.end_date && event.end_date !== event.date) ? 'text-xl md:text-2xl' : 'text-3xl'} font-black leading-tight text-center`}>
-                      {(() => {
-                        const d1 = event.date.split('T')[0];
-                        const d2 = event.end_date ? event.end_date.split('T')[0] : null;
-                        const p1 = d1.split('-');
-                        const day1 = p1[2] || '00';
+                <div className={`w-[4.25rem] h-[4.25rem] shrink-0 flex flex-col items-center justify-center rounded-xl ml-1 ${isToday ? 'bg-indigo-50 text-indigo-600' : 'bg-[#f4f6fa] dark:bg-slate-800/80 text-slate-500'}`}>
+                  <span className="text-2xl font-black leading-none tracking-tight">
+                    {(() => {
+                      const d1 = event.date.split('T')[0];
+                      const d2 = event.end_date ? event.end_date.split('T')[0] : null;
+                      const p1 = d1.split('-');
+                      const day1 = p1[2] || '00';
 
-                        if (d2 && d2 !== d1) {
-                          const p2 = d2.split('-');
-                          const day2 = p2[2] || '00';
-                          if (p1[1] === p2[1]) return `${day1}-${day2}`;
-                          return `${day1}+`;
-                        }
-                        return day1;
-                      })()}
-                    </span>
-                    <span className="text-[10px] md:text-xs uppercase font-bold tracking-widest text-center">
-                      {(() => {
-                        const parts = event.date.split('T')[0].split('-');
-                        if (parts.length === 3) {
-                          const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
-                          return monthNames[parseInt(parts[1]) - 1];
-                        }
-                        return '---';
-                      })()}
-                    </span>
-                  </div>
-                  {/* Actions explicitly for mobile in the date bar */}
-                  <div className="md:hidden absolute right-4">
-                    {renderActionButtons(event)}
-                  </div>
+                      if (d2 && d2 !== d1) {
+                        const p2 = d2.split('-');
+                        const day2 = p2[2] || '00';
+                        if (p1[1] === p2[1]) return `${day1}-${day2}`;
+                        return `${day1}+`;
+                      }
+                      return day1;
+                    })()}
+                  </span>
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-center mt-1">
+                    {(() => {
+                      const parts = event.date.split('T')[0].split('-');
+                      if (parts.length === 3) {
+                        const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+                        return monthNames[parseInt(parts[1]) - 1];
+                      }
+                      return '---';
+                    })()}
+                  </span>
                 </div>
 
                 {/* Content Side */}
-                <div className="flex-1 p-6 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-2 justify-center md:justify-start">
-                      <h3 className="text-xl font-bold text-foreground pr-8 md:pr-0">
-                        {event.title}
-                      </h3>
-                      {event.time && (
-                        <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-bold flex items-center gap-1.5 px-3 py-1">
-                          <AccessTimeIcon className="h-3.5 w-3.5" />
-                          {event.time} {event.end_time ? `- ${event.end_time}` : ''}
-                        </Badge>
-                      )}
-                      {isToday && (
-                        <Badge className="bg-success/10 text-success border-success/20 animate-pulse">HOY</Badge>
-                      )}
-                    </div>
-                    {event.isBirthday ? (
-                      <Badge className="bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-300 border-pink-200 dark:border-pink-800/50 font-bold px-3 py-1 mt-1">
-                        {event.description}
-                      </Badge>
-                    ) : (
-                      <p className="text-muted-foreground line-clamp-2 text-sm italic">
-                        {event.description || "Sin descripción adicional"}
-                      </p>
+                <div className="flex-1 px-4 flex flex-col justify-center min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                      {event.title}
+                    </h3>
+                    {event.time && (
+                      <div className="bg-[#f4f6fa] text-slate-500 dark:bg-slate-800 dark:text-slate-400 font-semibold flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] shrink-0">
+                        <AccessTimeIcon className="h-3 w-3 opacity-70" />
+                        {event.time} {event.end_time ? `- ${event.end_time}` : ''}
+                      </div>
+                    )}
+                    {isToday && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 font-bold uppercase tracking-wider text-[9px] shrink-0">HOY</span>
                     )}
                   </div>
 
-                  {/* Actions for desktop on the right */}
-                  <div className="hidden md:block">
-                    {renderActionButtons(event)}
-                  </div>
+                  {event.isBirthday ? (
+                    <div>
+                      <span className="inline-block bg-pink-50 text-[#ff4b72] font-bold px-2 py-0.5 text-[9px] rounded-full tracking-wide">
+                        {event.description}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-[#8492a6] dark:text-slate-400 truncate text-xs font-medium">
+                      {event.description || "Sin descripción adicional"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions on the right */}
+                <div className="pr-2 shrink-0">
+                  {renderActionButtons(event)}
                 </div>
               </div>
             );

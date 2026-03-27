@@ -23,6 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { StudentDetails } from "@/components/StudentDetails";
 import { Badge } from "@/components/ui/badge";
 import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations } from "@/lib/api";
+import AgregarAlumno from "@/pages/AgregarAlumno";
 import {
   Form,
   FormControl,
@@ -65,6 +66,7 @@ const ListarAlumnos = () => {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [excelError, setExcelError] = useState<string | null>(null);
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [studentsToPromote, setStudentsToPromote] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [isPromoting, setIsPromoting] = useState(false);
@@ -84,19 +86,19 @@ const ListarAlumnos = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // ============ CONSULTA PRINCIPAL DE ESTUDIANTES USANDO BACKEND API ============
+  // ============ CONSULTA PRINCIPAL DE MIEMBROS USANDO BACKEND API ============
   const { data: allStudents, isLoading, isError, refetch } = useQuery({
     queryKey: ["students"],
     queryFn: getStudents,
   });
 
-  // Filtrar estudiantes según el rol y permisos del usuario
+  // Filtrar miembros según el rol y permisos del usuario
   const students = React.useMemo(() => {
     if (!allStudents?.length) return [];
 
     let filteredStudents = allStudents;
 
-    // Si es admin o secretaria, mostrar todos los estudiantes
+    // Si es admin o secretaria, mostrar todos los miembros
     if (profile?.role === 'secretaria' || profile?.role === 'admin') {
       return filteredStudents.map(student => ({
         ...student,
@@ -119,7 +121,7 @@ const ListarAlumnos = () => {
       );
     }
 
-    // TODO: Aquí puedes agregar lógica para estudiantes autorizados de otros departamentos
+    // TODO: Aquí puedes agregar lógica para miembros autorizados de otros departamentos
     // cuando implementes ese endpoint en tu backend
 
     return filteredStudents.map(student => ({
@@ -157,7 +159,7 @@ const ListarAlumnos = () => {
       );
       const deptClasses = selectedDeptObj?.classes || [];
 
-      // 2. Obtener clases de los estudiantes existentes (para retrocompatibilidad)
+      // 2. Obtener clases de los miembros existentes (para retrocompatibilidad)
       let studentClasses: string[] = [];
       if (allStudents) {
         let studentsToAnalyze = allStudents;
@@ -257,7 +259,7 @@ const ListarAlumnos = () => {
     if (!filteredStudents || filteredStudents.length === 0) {
       toast({
         title: "Sin datos",
-        description: "No hay alumnos para exportar.",
+        description: "No hay miembros para exportar.",
         variant: "destructive",
       });
       return;
@@ -279,7 +281,7 @@ const ListarAlumnos = () => {
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Alumnos');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Miembros');
 
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
@@ -289,7 +291,7 @@ const ListarAlumnos = () => {
 
       toast({
         title: "Exportación exitosa",
-        description: `Se exportaron ${filteredStudents.length} alumnos a ${fileName}`,
+        description: `Se exportaron ${filteredStudents.length} miembros a ${fileName}`,
         variant: "success",
       });
     } catch (error) {
@@ -308,8 +310,8 @@ const ListarAlumnos = () => {
       await updateStudent(studentId, { nuevo: false });
 
       toast({
-        title: "Alumno actualizado",
-        description: "El alumno ya no está marcado como nuevo.",
+        title: "Miembro actualizado",
+        description: "El miembro ya no está marcado como nuevo.",
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["students"] });
@@ -317,7 +319,7 @@ const ListarAlumnos = () => {
       console.error("Error updating student:", error);
       toast({
         title: "Error al actualizar",
-        description: error.message || "Hubo un error al actualizar el alumno.",
+        description: error.message || "Hubo un error al actualizar el miembro.",
         variant: "destructive",
       });
     }
@@ -405,7 +407,7 @@ const ListarAlumnos = () => {
         doc.setFontSize(11);
         doc.setFont("helvetica", "italic");
         doc.setTextColor(107, 114, 128);
-        doc.text("No hay observaciones registradas para este alumno.", 25, currentY);
+        doc.text("No hay observaciones registradas para este miembro.", 25, currentY);
       } else {
         observations.forEach((obs, index) => {
           // Check if we need a new page
@@ -463,8 +465,8 @@ const ListarAlumnos = () => {
 
       await updateStudent(studentToEdit.id, values);
       toast({
-        title: "Alumno actualizado",
-        description: "El alumno ha sido actualizado correctamente.",
+        title: "Miembro actualizado",
+        description: "El miembro ha sido actualizado correctamente.",
         variant: "success",
       });
       setIsEditModalOpen(false);
@@ -472,7 +474,7 @@ const ListarAlumnos = () => {
     } catch (error: any) {
       toast({
         title: "Error al actualizar",
-        description: error.message || "Hubo un error al actualizar el alumno.",
+        description: error.message || "Hubo un error al actualizar el miembro.",
         variant: "destructive",
       });
     }
@@ -489,8 +491,8 @@ const ListarAlumnos = () => {
     try {
       await deleteStudent(studentToDelete);
       toast({
-        title: "Alumno eliminado",
-        description: "El alumno ha sido eliminado correctamente.",
+        title: "Miembro eliminado",
+        description: "El miembro ha sido eliminado correctamente.",
         variant: "success",
       });
       setDeleteAlertOpen(false);
@@ -499,7 +501,7 @@ const ListarAlumnos = () => {
     } catch (error: any) {
       toast({
         title: "Error al eliminar",
-        description: error.message || "Hubo un error al eliminar el alumno.",
+        description: error.message || "Hubo un error al eliminar el miembro.",
         variant: "destructive",
       });
     }
@@ -530,7 +532,7 @@ const ListarAlumnos = () => {
     if (studentsToPromote.length === 0 || !selectedDepartment) {
       toast({
         title: "Error",
-        description: "Por favor, seleccione al menos un alumno y un departamento.",
+        description: "Por favor, seleccione al menos un miembro y un departamento.",
         variant: "destructive",
       });
       return;
@@ -542,8 +544,8 @@ const ListarAlumnos = () => {
         await updateStudent(studentId, { department_id: selectedDepartment });
       }
       toast({
-        title: "Alumnos promovidos",
-        description: "Los alumnos han sido promovidos correctamente.",
+        title: "Miembros promovidos",
+        description: "Los miembros han sido promovidos correctamente.",
         variant: "success",
       });
       setIsPromoteModalOpen(false);
@@ -553,7 +555,7 @@ const ListarAlumnos = () => {
     } catch (error: any) {
       toast({
         title: "Error al promover",
-        description: error.message || "Hubo un error al promover los alumnos.",
+        description: error.message || "Hubo un error al promover los miembros.",
         variant: "destructive",
       });
     } finally {
@@ -641,7 +643,7 @@ const ListarAlumnos = () => {
     return nameMatch && departmentMatch && classMatch;
   });
 
-  // Separar alumnos en dos grupos: normales y nuevos
+  // Separar miembros en dos grupos: normales y nuevos
   const regularStudents = filteredStudents?.filter(student => !student.nuevo) || [];
   const newStudents = filteredStudents?.filter(student => student.nuevo === true) || [];
   const hasNewStudents = newStudents.length > 0;
@@ -683,7 +685,7 @@ const ListarAlumnos = () => {
 
       toast({
         title: "Importación completada",
-        description: `${result.successful || 0} alumnos importados correctamente. ${result.failed || 0} alumnos fallaron.`,
+        description: `${result.successful || 0} miembros importados correctamente. ${result.failed || 0} miembros fallaron.`,
         variant: "success",
       });
 
@@ -703,7 +705,7 @@ const ListarAlumnos = () => {
     if (!phoneNumber) {
       toast({
         title: "Error",
-        description: "El alumno no tiene un número de teléfono registrado.",
+        description: "El miembro no tiene un número de teléfono registrado.",
         variant: "destructive",
       });
       return;
@@ -718,7 +720,7 @@ const ListarAlumnos = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  // Función para renderizar una fila de alumno
+  // Función para renderizar una fila de miembro
   const renderStudentRow = (student: Student) => (
     <React.Fragment key={student.id}>
       <TableRow
@@ -892,13 +894,13 @@ const ListarAlumnos = () => {
         <div className="relative z-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
             <div className="text-center sm:text-left">
-              <h2 className="text-3xl font-black text-foreground tracking-tight">Directorio de Alumnos</h2>
+              <h2 className="text-3xl font-black text-foreground tracking-tight">Directorio de Miembros</h2>
               <p className="text-muted-foreground text-sm mt-1">Gestión general e información detallada</p>
             </div>
 
             <div className="flex items-center space-x-2">
               {canFilter && (
-                <CustomTooltip title="Filtrar alumnos">
+                <CustomTooltip title="Filtrar miembros">
                   <Button variant="outline" className="bg-white/80 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 shadow-sm text-foreground hover:text-foreground" onClick={() => setIsFilterOpen(!isFilterOpen)}>
                     <Filter className="h-4 w-4" />
                   </Button>
@@ -911,8 +913,8 @@ const ListarAlumnos = () => {
                   </Button>
                 </CustomTooltip>
               )}
-              <CustomTooltip title="Agregar nuevo alumno">
-                <Button onClick={() => navigate('/agregar')} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20">
+              <CustomTooltip title="Agregar nuevo miembro">
+                <Button onClick={() => setIsAddModalOpen(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Nuevo
                 </Button>
@@ -1001,21 +1003,21 @@ const ListarAlumnos = () => {
                 ) : isError ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center">
-                      Error al cargar los alumnos.
+                      Error al cargar los miembros.
                     </TableCell>
                   </TableRow>
                 ) : (regularStudents.length === 0 && newStudents.length === 0) ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center">
-                      No hay alumnos registrados.
+                      No hay miembros registrados.
                     </TableCell>
                   </TableRow>
                 ) : (
                   <>
-                    {/* Renderizar alumnos regulares */}
+                    {/* Renderizar miembros regulares */}
                     {regularStudents.map((student) => renderStudentRow(student))}
 
-                    {/* Línea separadora y alumnos nuevos */}
+                    {/* Línea separadora y miembros nuevos */}
                     {hasNewStudents && (
                       <>
                         <TableRow>
@@ -1023,7 +1025,7 @@ const ListarAlumnos = () => {
                             <div className="flex items-center justify-center">
                               <div className="flex-grow border-t border-gray-300"></div>
                               <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                                Nuevos Alumnos
+                                Nuevos Miembros
                               </span>
                               <div className="flex-grow border-t border-gray-300"></div>
                             </div>
@@ -1041,9 +1043,9 @@ const ListarAlumnos = () => {
           <Dialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
             <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
               <DialogHeader>
-                <DialogTitle>Promover Alumnos</DialogTitle>
+                <DialogTitle>Promover Miembros</DialogTitle>
                 <DialogDescription>
-                  Seleccione el departamento al que desea promover los alumnos seleccionados.
+                  Seleccione el departamento al que desea promover los miembros seleccionados.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -1073,7 +1075,7 @@ const ListarAlumnos = () => {
                 <div>
                   {studentsToPromote.length > 0 && (
                     <div>
-                      Alumnos a promover:
+                      Miembros a promover:
                       <div className="mt-2">
                         {studentsToPromote.map(studentId => {
                           const student = students?.find(s => s.id === studentId);
@@ -1103,9 +1105,9 @@ const ListarAlumnos = () => {
           <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
             <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
               <DialogHeader>
-                <DialogTitle>Importar Alumnos desde Excel</DialogTitle>
+                <DialogTitle>Importar Miembros desde Excel</DialogTitle>
                 <DialogDescription>
-                  Seleccione un archivo .xlsx para importar los alumnos.
+                  Seleccione un archivo .xlsx para importar los miembros.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -1150,9 +1152,9 @@ const ListarAlumnos = () => {
           <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
             <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
               <DialogHeader>
-                <DialogTitle>Editar Alumno</DialogTitle>
+                <DialogTitle>Editar Miembro</DialogTitle>
                 <DialogDescription>
-                  Realice los cambios necesarios en la información del alumno.
+                  Realice los cambios necesarios en la información del miembro.
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -1349,12 +1351,30 @@ const ListarAlumnos = () => {
             </DialogContent>
           </Dialog>
 
+          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-black text-primary">Agregar Nuevo Miembro</DialogTitle>
+                <DialogDescription>
+                  Complete el formulario para registrar un nuevo miembro en la congregación.
+                </DialogDescription>
+              </DialogHeader>
+              <AgregarAlumno
+                isModal={true}
+                onSuccess={() => {
+                  setIsAddModalOpen(false);
+                  queryClient.invalidateQueries({ queryKey: ["students"] });
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+
           <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
             <AlertDialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Esta acción eliminará al alumno de forma permanente.
+                  Esta acción eliminará al miembro de forma permanente.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

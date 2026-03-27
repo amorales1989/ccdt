@@ -315,7 +315,7 @@ const PromoverAlumnos = () => {
     if (selectedStudents.length === 0) {
       toast({
         title: "Error",
-        description: "Debes seleccionar al menos un alumno",
+        description: "Debes seleccionar al menos un miembro",
         variant: "destructive",
       });
       return;
@@ -332,10 +332,10 @@ const PromoverAlumnos = () => {
         .in("id", selectedStudents);
 
       if (error) {
-        console.error("Error al promover alumnos:", error);
+        console.error("Error al promover miembros:", error);
         toast({
           title: "Error",
-          description: "No se pudieron promover los alumnos. Intenta nuevamente.",
+          description: "No se pudieron promover los miembros. Intenta nuevamente.",
           variant: "destructive",
         });
         return;
@@ -352,7 +352,7 @@ const PromoverAlumnos = () => {
           if (deleteError) {
             console.error("Error al eliminar autorización:", deleteError);
           } else {
-            console.log(`Eliminada autorización para estudiante ${studentId} en departamento ${targetDepartmentId}`);
+            console.log(`Eliminada autorización para miembro ${studentId} en departamento ${targetDepartmentId}`);
           }
         } catch (e) {
           console.error("Error al procesar eliminación de autorización:", e);
@@ -363,7 +363,7 @@ const PromoverAlumnos = () => {
 
       toast({
         title: "Éxito",
-        description: `${selectedStudents.length} alumnos promovidos exitosamente`,
+        description: `${selectedStudents.length} miembros promovidos exitosamente`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["students"] });
@@ -374,10 +374,10 @@ const PromoverAlumnos = () => {
       refetchAuthorizations();
 
     } catch (error) {
-      console.error("Error al promover alumnos:", error);
+      console.error("Error al promover miembros:", error);
       toast({
         title: "Error",
-        description: "No se pudieron promover los alumnos. Intenta nuevamente.",
+        description: "No se pudieron promover los miembros. Intenta nuevamente.",
         variant: "destructive",
       });
     }
@@ -396,7 +396,7 @@ const PromoverAlumnos = () => {
     if (selectedStudents.length === 0) {
       toast({
         title: "Error",
-        description: "Debes seleccionar al menos un alumno",
+        description: "Debes seleccionar al menos un miembro",
         variant: "destructive",
       });
       return;
@@ -417,10 +417,10 @@ const PromoverAlumnos = () => {
         });
 
       if (error) {
-        console.error("Error al autorizar alumnos:", error);
+        console.error("Error al autorizar miembros:", error);
         toast({
           title: "Error",
-          description: "No se pudieron autorizar los alumnos. Intenta nuevamente.",
+          description: "No se pudieron autorizar los miembros. Intenta nuevamente.",
           variant: "destructive",
         });
         return;
@@ -428,7 +428,7 @@ const PromoverAlumnos = () => {
 
       toast({
         title: "Éxito",
-        description: `${selectedStudents.length} alumnos autorizados exitosamente`,
+        description: `${selectedStudents.length} miembros autorizados exitosamente`,
       });
 
       refetchAuthorizations();
@@ -436,10 +436,10 @@ const PromoverAlumnos = () => {
       setSelectAll(false);
 
     } catch (error) {
-      console.error("Error al autorizar alumnos:", error);
+      console.error("Error al autorizar miembros:", error);
       toast({
         title: "Error",
-        description: "No se pudieron autorizar los alumnos. Intenta nuevamente.",
+        description: "No se pudieron autorizar los miembros. Intenta nuevamente.",
         variant: "destructive",
       });
     }
@@ -548,9 +548,9 @@ const PromoverAlumnos = () => {
             <FolderUp className="h-8 w-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-foreground tracking-tight">Gestión de Alumnos</h1>
+            <h1 className="text-3xl font-black text-foreground tracking-tight">Gestión de Miembros</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Promové o autorizá a los alumnos a diferentes departamentos.
+              Promové o autorizá a los miembros a diferentes departamentos.
             </p>
           </div>
         </div>
@@ -558,8 +558,8 @@ const PromoverAlumnos = () => {
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "promote" | "authorize")} className="w-full">
         <TabsList className="mb-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl p-1 h-auto flex flex-wrap sm:flex-nowrap">
-          <TabsTrigger value="promote" className="rounded-xl flex-1 py-3 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/40 dark:data-[state=active]:text-purple-300 font-medium">Promover Alumnos</TabsTrigger>
-          <TabsTrigger value="authorize" className="rounded-xl flex-1 py-3 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/40 dark:data-[state=active]:text-purple-300 font-medium">Autorizar Alumnos</TabsTrigger>
+          <TabsTrigger value="promote" className="rounded-xl flex-1 py-3 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/40 dark:data-[state=active]:text-purple-300 font-medium">Promover Miembros</TabsTrigger>
+          <TabsTrigger value="authorize" className="rounded-xl flex-1 py-3 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/40 dark:data-[state=active]:text-purple-300 font-medium">Autorizar Miembros</TabsTrigger>
         </TabsList>
 
         <TabsContent value="promote">
@@ -570,7 +570,7 @@ const PromoverAlumnos = () => {
               <FolderUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Selecciona un departamento</h3>
               <p className="text-muted-foreground">
-                Por favor, selecciona un departamento para ver los alumnos que puedes promover.
+                Por favor, selecciona un departamento para ver los miembros que puedes promover.
               </p>
             </Card>
           ) : (
@@ -578,7 +578,7 @@ const PromoverAlumnos = () => {
               {!isAdminOrSecretaria && userDepartment && (
                 <div className="bg-muted/30 p-4 rounded-lg mb-6">
                   <p className="text-sm text-muted-foreground">
-                    Mostrando alumnos de: <span className="font-medium capitalize">{formatDepartment(userDepartment)}</span>
+                    Mostrando miembros de: <span className="font-medium capitalize">{formatDepartment(userDepartment)}</span>
                     {userClass && (
                       <> - Clase: <span className="font-medium">{userClass}</span></>
                     )}
@@ -589,7 +589,7 @@ const PromoverAlumnos = () => {
               {isAdminOrSecretaria && selectedDepartment && (
                 <div className="bg-muted/30 p-4 rounded-lg mb-6">
                   <p className="text-sm text-muted-foreground">
-                    Mostrando alumnos de: <span className="font-medium capitalize">{formatDepartment(selectedDepartment)}</span>
+                    Mostrando miembros de: <span className="font-medium capitalize">{formatDepartment(selectedDepartment)}</span>
                     {selectedClass && (
                       <> - Clase: <span className="font-medium">{selectedClass}</span></>
                     )}
@@ -611,7 +611,7 @@ const PromoverAlumnos = () => {
                     </Label>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {selectedStudents.length} alumnos seleccionados
+                    {selectedStudents.length} miembros seleccionados
                   </div>
                 </div>
 
@@ -637,7 +637,7 @@ const PromoverAlumnos = () => {
                       ) : students.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-4">
-                            No hay alumnos para mostrar
+                            No hay miembros para mostrar
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -750,7 +750,7 @@ const PromoverAlumnos = () => {
                     className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl px-6"
                   >
                     <FolderUp className="h-5 w-5 mr-2" />
-                    Promover {selectedStudents.length} {selectedStudents.length === 1 ? 'alumno' : 'alumnos'}
+                    Promover {selectedStudents.length} {selectedStudents.length === 1 ? 'miembro' : 'miembros'}
                   </Button>
                 </div>
               </Card>
@@ -766,7 +766,7 @@ const PromoverAlumnos = () => {
               <UserCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Selecciona un departamento</h3>
               <p className="text-muted-foreground">
-                Por favor, selecciona un departamento para ver los alumnos que puedes autorizar.
+                Por favor, selecciona un departamento para ver los miembros que puedes autorizar.
               </p>
             </Card>
           ) : (
@@ -785,7 +785,7 @@ const PromoverAlumnos = () => {
                     </Label>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {selectedStudents.length} alumnos seleccionados
+                    {selectedStudents.length} miembros seleccionados
                   </div>
                 </div>
 
@@ -811,7 +811,7 @@ const PromoverAlumnos = () => {
                       ) : students.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-4">
-                            No hay alumnos para mostrar
+                            No hay miembros para mostrar
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -912,7 +912,7 @@ const PromoverAlumnos = () => {
                       className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl px-6"
                     >
                       <UserCheck className="h-5 w-5 mr-2" />
-                      Autorizar {selectedStudents.length} {selectedStudents.length === 1 ? 'alumno' : 'alumnos'}
+                      Autorizar {selectedStudents.length} {selectedStudents.length === 1 ? 'miembro' : 'miembros'}
                     </Button>
                   </div>
                 </div>
@@ -920,7 +920,7 @@ const PromoverAlumnos = () => {
 
               {!isAdminOrSecretaria && (
                 <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6 overflow-hidden">
-                  <h3 className="text-lg font-semibold mb-4">Alumnos autorizados en tu departamento</h3>
+                  <h3 className="text-lg font-semibold mb-4">Miembros autorizados en tu departamento</h3>
 
                   <div className="overflow-x-auto">
                     <Table className="w-full">
@@ -936,7 +936,7 @@ const PromoverAlumnos = () => {
                         {authorizedStudentsList.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={4} className="text-center py-4">
-                              No hay alumnos autorizados en tu departamento
+                              No hay miembros autorizados en tu departamento
                             </TableCell>
                           </TableRow>
                         ) : (

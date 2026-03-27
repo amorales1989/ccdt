@@ -12,7 +12,6 @@ import AgregarAlumno from "@/pages/AgregarAlumno";
 import TomarAsistencia from "@/pages/TomarAsistencia";
 import HistorialAsistencia from "@/pages/HistorialAsistencia";
 import NotFound from "@/pages/NotFound";
-import Register from "@/pages/Register";
 import GestionUsuarios from "@/pages/GestionUsuarios";
 import Calendario from "@/pages/Calendario";
 import Departamentos from "@/pages/Departamentos";
@@ -23,7 +22,8 @@ import Notificaciones from "@/pages/Notificaciones";
 import AutorizacionesSalida from "@/pages/AutorizacionesSalida";
 import AutorizacionSimple from "@/pages/AutorizacionSimple";
 import AutorizacionCampamento from "./pages/AutorizacionCampamento";
-import Solicitudes from "./pages/solicitudes";
+
+import Estadisticas from "./pages/Estadisticas";
 import { NotificationHandler } from '@/components/NotificationHandler';
 
 const queryClient = new QueryClient({
@@ -73,17 +73,15 @@ function App() {
                     element: <HistorialAsistencia />,
                   },
                   {
+                    path: "/estadisticas",
+                    element: <Estadisticas />,
+                  },
+                  {
                     path: "/calendario",
                     element: <Calendario />,
                   },
-                  {
-                    path: "/solicitudes",
-                    element: <Solicitudes />
-                  },
-                  {
-                    path: "/register",
-                    element: <Register />,
-                  },
+
+
                   {
                     path: "/gestion-usuarios",
                     element: <GestionUsuarios />,

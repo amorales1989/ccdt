@@ -23,10 +23,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Box, Tabs, Tab } from "@mui/material";
+import { CustomTabs } from "@/components/CustomTabs";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { RegisterUserModal } from "@/components/RegisterUserModal";
 import { FileUp } from "lucide-react";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -167,9 +168,13 @@ const GestionUsuarios = () => {
     mutationFn: async (assignments: Record<string, string | null>) => {
       const entries = Object.entries(assignments);
       await Promise.all(
-        entries.map(([userId, newClass]) =>
-          supabase.from('profiles').update({ assigned_class: newClass }).eq('id', userId)
-        )
+        entries.map(async ([userId, newClass]) => {
+          const finalClass = newClass === null ? "" : newClass;
+          const { error } = await supabase.from('profiles').update({ assigned_class: finalClass }).eq('id', userId);
+          if (error) {
+            throw new Error("No se pudo actualizar la clase: " + error.message);
+          }
+        })
       );
       // Await refetch so isPending stays true until UI has fresh data (no flash of stale state)
       await queryClient.refetchQueries({ queryKey: ["users"] });
@@ -404,81 +409,14 @@ const GestionUsuarios = () => {
       <div className="space-y-6 relative z-10 w-full">
         <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-4 w-full">
           <div className="flex items-center gap-4 w-full justify-between">
-            <Box className="bg-slate-100/90 dark:bg-slate-800/60 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 w-full sm:w-fit overflow-hidden lg:flex-shrink-0 mx-auto lg:mx-0">
-              <Tabs
-                value={activeTab}
-                onChange={(_, newValue) => setActiveTab(newValue)}
-                variant="scrollable"
-                scrollButtons="auto"
-                sx={{
-                  minHeight: 'auto',
-                  '& .MuiTabs-indicator': {
-                    display: 'none',
-                  },
-                  '& .MuiTabs-flexContainer': {
-                    gap: '8px',
-                    justifyContent: 'center',
-                  },
-                }}
-              >
-                <Tab
-                  value="listado"
-                  label="Lista de Usuarios"
-                  icon={<Users className="h-4 w-4" />}
-                  iconPosition="start"
-                  sx={{
-                    minHeight: '44px',
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                    color: 'rgb(100 116 139)',
-                    padding: { xs: '0 12px', sm: '0 32px' },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&.Mui-selected': {
-                      backgroundColor: 'white',
-                      color: 'rgb(126 34 206)',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-                    },
-                    '.dark &.Mui-selected': {
-                      backgroundColor: 'rgb(147 51 234)',
-                      color: 'white',
-                    },
-                    '&:hover': {
-                      opacity: 0.8,
-                    }
-                  }}
-                />
-                <Tab
-                  value="asignacion"
-                  label="Asignación de Clases"
-                  icon={<GraduationCap className="h-4 w-4" />}
-                  iconPosition="start"
-                  sx={{
-                    minHeight: '44px',
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                    color: 'rgb(100 116 139)',
-                    padding: { xs: '0 12px', sm: '0 32px' },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&.Mui-selected': {
-                      backgroundColor: 'white',
-                      color: 'rgb(126 34 206)',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-                    },
-                    '.dark &.Mui-selected': {
-                      backgroundColor: 'rgb(147 51 234)',
-                      color: 'white',
-                    },
-                    '&:hover': {
-                      opacity: 0.8,
-                    }
-                  }}
-                />
-              </Tabs>
-            </Box>
+            <CustomTabs
+              value={activeTab}
+              onChange={setActiveTab}
+              options={[
+                { value: "listado", label: "Lista de Usuarios", icon: Users },
+                { value: "asignacion", label: "Asignación de Clases", icon: GraduationCap }
+              ]}
+            />
 
             {/* Desktop-only: Nuevo Usuario button aligned far right of tabs */}
             <div className="hidden lg:flex items-center gap-3">
@@ -489,13 +427,14 @@ const GestionUsuarios = () => {
                 <FileUp className="h-4 w-4" />
                 Importar Usuarios
               </Button>
-              <Button
-                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 font-bold text-sm transition-all flex-shrink-0"
-                onClick={() => navigate('/register')}
-              >
-                <Plus className="h-4 w-4" />
-                Nuevo Usuario
-              </Button>
+              <RegisterUserModal onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}>
+                <Button
+                  className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 font-bold text-sm transition-all flex-shrink-0"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nuevo Usuario
+                </Button>
+              </RegisterUserModal>
             </div>
           </div>
 
@@ -757,15 +696,16 @@ const GestionUsuarios = () => {
               <div className="w-full md:w-64 space-y-2 relative z-10">
                 <div className="flex items-center justify-between ml-1">
                   <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Departamento</Label>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate('/register')}
-                    className="lg:hidden h-6 w-6 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-600 hover:text-white transition-all"
-                    title="Nuevo Usuario"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
+                  <RegisterUserModal onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="lg:hidden h-6 w-6 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-600 hover:text-white transition-all"
+                      title="Nuevo Usuario"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </RegisterUserModal>
                 </div>
                 <Select value={assignmentDept} onValueChange={setAssignmentDept}>
                   <SelectTrigger className="h-11 rounded-xl bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800">
@@ -935,7 +875,7 @@ const GestionUsuarios = () => {
                                   size="sm"
                                   variant="ghost"
                                   className="h-8 w-8 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 p-0"
-                                  onClick={() => setPendingAssignments(prev => ({ ...prev, [user.id]: user.assigned_class === assignmentClass ? null : user.assigned_class ?? null }))}
+                                  onClick={() => setPendingAssignments(prev => ({ ...prev, [user.id]: user.assigned_class === assignmentClass ? "" : user.assigned_class || "" }))}
                                 >
                                   <ArrowLeft className="h-4 w-4" />
                                 </Button>
