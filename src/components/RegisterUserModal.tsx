@@ -9,7 +9,8 @@ import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Department, DepartmentType } from "@/types/database";
-import { UserPlus, Eye, EyeOff } from "lucide-react";
+import { UserPlus, Eye, EyeOff, Search } from "lucide-react";
+import { PersonSearchInput, PersonSearchResult } from "./PersonSearchInput";
 import {
     Dialog,
     DialogContent,
@@ -37,6 +38,15 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
     const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
     const [selectedClass, setSelectedClass] = useState<string>("");
     const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+    const [phone, setPhone] = useState("");
+    const [birthdate, setBirthdate] = useState("");
+    const [gender, setGender] = useState("masculino");
+    const [address, setAddress] = useState("");
+    const [documentNumber, setDocumentNumber] = useState("");
+    const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+    const [profileId, setProfileId] = useState<string | null>(null);
+    const [personSource, setPersonSource] = useState<'profile' | 'student' | null>(null);
+
     const { profile, signUp } = useAuth();
     const { toast } = useToast();
 
@@ -99,7 +109,15 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                 role,
                 departments: [selectedDepartment],
                 department_id,
-                assigned_class: selectedClass || undefined
+                assigned_class: selectedClass || undefined,
+                phone,
+                birthdate,
+                gender,
+                address,
+                document_number: documentNumber,
+                is_member: (role as string) === 'miembro' || personSource === 'student',
+                profile_id: profileId,
+                person_source: personSource
             };
 
             await signUp(email, password, profileData);
@@ -117,14 +135,21 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                 description: "El usuario ha sido registrado exitosamente.",
             });
 
-            setEmail("");
-            setPassword("");
             setFirstName("");
             setLastName("");
+            setEmail("");
+            setPassword("");
+            setPhone("");
+            setBirthdate("");
+            setGender("masculino");
+            setAddress("");
+            setDocumentNumber("");
             setRole("maestro");
             setSelectedDepartment(null);
             setSelectedClass("");
             setAvailableClasses([]);
+            setSelectedPersonId(null);
+            setPersonSource(null);
 
             setOpen(false); // Close Modal
 
@@ -167,6 +192,34 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                     </DialogDescription>
                 </DialogHeader>
 
+                <div className="mt-4 mb-6">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1 mb-2 block">
+                        Buscar persona existente (Opcional)
+                    </Label>
+                    <PersonSearchInput
+                        onSelect={(person: PersonSearchResult) => {
+                            setFirstName(person.first_name);
+                            setLastName(person.last_name);
+                            setPhone(person.phone || "");
+                            setBirthdate(person.birthdate || "");
+                            setGender(person.gender || "masculino");
+                            setAddress(person.address || "");
+                            setDocumentNumber(person.document_number || "");
+                            setProfileId(person.profile_id || (person.source === 'profile' ? person.id : null));
+                            setPersonSource(person.source);
+                            setSelectedPersonId(person.id);
+
+                            toast({
+                                title: "Persona seleccionada",
+                                description: `Se han cargado los datos de ${person.first_name} ${person.last_name}.`,
+                            });
+                        }}
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-2 px-1 italic">
+                        Si la persona ya existe como miembro o líder, selecciónala para evitar duplicados.
+                    </p>
+                </div>
+
                 <form onSubmit={handleSubmit} className="relative z-10 mt-4">
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,6 +242,29 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                                     onChange={(e) => setLastName(e.target.value)}
                                     required
                                     placeholder="Ej. Pérez"
+                                    className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="documentNumber" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">DNI / Documento</Label>
+                                <Input
+                                    id="documentNumber"
+                                    value={documentNumber}
+                                    onChange={(e) => setDocumentNumber(e.target.value)}
+                                    placeholder="Ej. 12345678"
+                                    className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Teléfono</Label>
+                                <Input
+                                    id="phone"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    placeholder="Ej. 1122334455"
                                     className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                                 />
                             </div>

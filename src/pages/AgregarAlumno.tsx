@@ -13,8 +13,9 @@ import { Student, Department, DepartmentType } from "@/types/database";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
-import { UserPlus, User, MapPin, Phone, Hash, CalendarDays, KeyRound, Building2 } from "lucide-react";
+import { UserPlus, User, MapPin, Phone, Hash, CalendarDays, KeyRound, Building2, Search, Check } from "lucide-react";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { PersonSearchInput, PersonSearchResult } from "@/components/PersonSearchInput";
 
 interface AgregarAlumnoProps {
   onSuccess?: () => void;
@@ -43,6 +44,8 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
     department_id: "",
     assigned_class: "",
     nuevo: true, // Por defecto marcado como nuevo
+    profile_id: null as string | null,
+    person_source: null as 'profile' | 'student' | null,
   });
 
   const { data: departments = [] } = useQuery({
@@ -139,6 +142,12 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
   };
 
   const handleDniBlur = async () => {
+    // Si ya seleccionamos una persona de la búsqueda, no validamos el DNI como "nuevo"
+    if (formData.profile_id || formData.person_source) {
+      setDniError(null);
+      return;
+    }
+
     if (formData.document_number && formData.document_number.trim() !== '') {
       await validateDni(formData.document_number);
     } else {
@@ -169,12 +178,13 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.document_number && formData.document_number.trim() !== '') {
+    // Solo validamos DNI si NO es una persona seleccionada del buscador
+    if (formData.document_number && formData.document_number.trim() !== '' && !formData.profile_id && !formData.person_source) {
       const isValid = await validateDni(formData.document_number);
       if (!isValid) {
         toast({
-          title: "Error",
-          description: dniError || "El DNI ya existe en el sistema",
+          title: "Miembro ya registrado",
+          description: "Esta persona ya existe con ese DNI. Por favor, búscala en el campo superior 'Buscar persona existente' para vincularla a este nuevo departamento.",
           variant: "destructive",
         });
         return;
@@ -206,8 +216,10 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
         department: formData.department || null,
         department_id: formData.department_id || undefined,
         assigned_class: formData.assigned_class || null,
-        nuevo: formData.nuevo, // Incluir el valor del checkbox
-      });
+        nuevo: formData.nuevo,
+        profile_id: formData.profile_id || undefined,
+        person_source: formData.person_source || undefined,
+      } as any);
 
       toast({
         title: "Miembro agregado",
@@ -261,6 +273,36 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
       )}
 
       <div className={`${!isModal ? 'bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/40 dark:border-slate-700/50 shadow-sm' : ''}`}>
+        <div className="mb-8 p-4 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-900/20">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-400 ml-1 mb-2 block">
+            Buscar persona existente (Opcional)
+          </Label>
+          <PersonSearchInput
+            onSelect={(person: PersonSearchResult) => {
+              setFormData(prev => ({
+                ...prev,
+                first_name: person.first_name,
+                last_name: person.last_name,
+                phone: person.phone || "",
+                address: person.address || "",
+                gender: person.gender || "masculino",
+                birthdate: person.birthdate || format(new Date(), 'yyyy-MM-dd'),
+                document_number: person.document_number || "",
+                profile_id: person.profile_id || (person.source === 'profile' ? person.id : (prev.profile_id)),
+                person_source: person.source
+              }));
+
+              toast({
+                title: "Persona seleccionada",
+                description: `Se han cargado los datos de ${person.first_name} ${person.last_name}.`,
+              });
+            }}
+          />
+          <p className="text-[10px] text-muted-foreground mt-2 px-1 italic">
+            Evita duplicados buscando si la persona ya es líder o miembro de otro departamento.
+          </p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -285,6 +327,18 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
               />
             </div>
           </div>
+
+          {(formData.profile_id || formData.person_source) && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-xl flex items-center gap-3">
+              <div className="bg-blue-500 p-2 rounded-lg text-white">
+                <Check className="h-4 w-4" />
+              </div>
+              <p className="text-xs text-blue-800 dark:text-blue-300">
+                Persona vinculada correctamente. Se creará una nueva inscripción en este departamento manteniendo su historial previo.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="document_number" error={!!dniError}>DNI</Label>
             <Input
@@ -301,7 +355,13 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
               error={!!dniError}
               inputMode="numeric"
               pattern="[0-9]*"
+              disabled={!!formData.profile_id || !!formData.person_source}
             />
+            {(formData.profile_id || formData.person_source) && (
+              <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1 italic">
+                El DNI está bloqueado porque se está usando una persona existente.
+              </p>
+            )}
             {dniError && (
               <p className="text-sm font-medium text-destructive mt-1">{dniError}</p>
             )}

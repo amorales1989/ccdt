@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { jsPDF } from "jspdf";
 import { useAuth } from "@/contexts/AuthContext";
@@ -212,6 +212,23 @@ const ListarAlumnos = () => {
     },
     resolver: zodResolver(formSchema),
   });
+
+  const watchedDepartmentId = form.watch("department_id");
+  const editModalClasses = React.useMemo(() => {
+    if (!watchedDepartmentId || !departments) return [];
+    const dept = departments.find(d => d.id === watchedDepartmentId);
+    return dept?.classes || [];
+  }, [watchedDepartmentId, departments]);
+
+  // Limpiar la clase asignada si cambia el departamento
+  useEffect(() => {
+    if (isEditModalOpen && watchedDepartmentId) {
+      const currentClass = form.getValues("assigned_class");
+      if (currentClass && !editModalClasses.includes(currentClass)) {
+        form.setValue("assigned_class", "");
+      }
+    }
+  }, [watchedDepartmentId, editModalClasses, form, isEditModalOpen]);
 
   useEffect(() => {
     refetch();
@@ -740,7 +757,11 @@ const ListarAlumnos = () => {
                 Autorizado
               </Badge>
             )}
-
+            {((student as any).active_enrollments_count > 1) && (
+              <div title="Miembro en múltiples departamentos">
+                <User className="h-3 w-3 text-purple-500" />
+              </div>
+            )}
           </div>
         </TableCell>
         {!isMobile && (
@@ -1330,7 +1351,7 @@ const ListarAlumnos = () => {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value=" ">Ninguna</SelectItem>
-                              {classes?.map((className) => (
+                              {editModalClasses?.map((className) => (
                                 <SelectItem key={String(className)} value={String(className)}>
                                   {String(className)}
                                 </SelectItem>

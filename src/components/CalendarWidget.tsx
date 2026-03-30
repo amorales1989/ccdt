@@ -288,8 +288,8 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
 
                 {/* Content Side */}
                 <div className="flex-1 px-4 flex flex-col justify-center min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                  <div className="flex flex-wrap items-start gap-2 mb-1">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
                       {event.title}
                     </h3>
                     {event.time && (
@@ -310,7 +310,7 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
                       </span>
                     </div>
                   ) : (
-                    <p className="text-[#8492a6] dark:text-slate-400 truncate text-xs font-medium">
+                    <p className="text-[#8492a6] dark:text-slate-400 text-xs font-medium">
                       {event.description || "Sin descripción adicional"}
                     </p>
                   )}

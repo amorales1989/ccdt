@@ -62,7 +62,13 @@ serve(async (req) => {
             role: userData.role,
             departments: userData.departments,
             department_id: departmentId,
-            assigned_class: userData.assigned_class
+            assigned_class: userData.assigned_class,
+            phone: userData.phone,
+            birthdate: userData.birthdate,
+            gender: userData.gender,
+            address: userData.address,
+            document_number: userData.document_number,
+            is_member: userData.is_member || false
           }
         })
         if (createError) throw createError
@@ -94,7 +100,13 @@ serve(async (req) => {
             role: userData.role,
             departments: userData.departments,
             department_id: updatedDepartmentId,
-            assigned_class: userData.assigned_class
+            assigned_class: userData.assigned_class,
+            phone: userData.phone,
+            birthdate: userData.birthdate,
+            gender: userData.gender,
+            address: userData.address,
+            document_number: userData.document_number,
+            is_member: userData.is_member || false
           }
         }
 
