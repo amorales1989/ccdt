@@ -121,18 +121,18 @@ const PromoverAlumnos = () => {
   const { data: students = [], isLoading, refetch } = useQuery({
     queryKey: ["students", selectedDepartmentId, selectedClass],
     queryFn: async () => {
-      if (isAdminOrSecretaria && !selectedDepartmentId) {
+      if (!selectedDepartmentId) {
         return [];
       }
 
-      let query = supabase.from("students").select("*, departments:department_id(name, id)");
+      let query = supabase
+        .from("students")
+        .select("*, departments:department_id(name, id)")
+        .eq("department_id", selectedDepartmentId)
+        .is("deleted_at", null);
 
-      if (selectedDepartmentId) {
-        query = query.eq("department_id", selectedDepartmentId);
-
-        if (selectedClass) {
-          query = query.eq("assigned_class", selectedClass);
-        }
+      if (selectedClass && selectedClass !== "all") {
+        query = query.eq("assigned_class", selectedClass);
       }
 
       const { data, error } = await query;
@@ -173,6 +173,7 @@ const PromoverAlumnos = () => {
             birthdate,
             department_id, 
             assigned_class,
+            deleted_at,
             departments:department_id(name)
           )
         `)
@@ -180,12 +181,14 @@ const PromoverAlumnos = () => {
 
       if (error) throw error;
 
-      return data?.map((auth: any) => ({
-        ...auth.student,
-        department: auth.student?.departments?.name,
-        authorized: true,
-        authorized_to: profile?.departments?.[0] || ""
-      })) || [];
+      return (data || [])
+        .filter((auth: any) => auth.student && !auth.student.deleted_at)
+        .map((auth: any) => ({
+          ...auth.student,
+          department: auth.student?.departments?.name,
+          authorized: true,
+          authorized_to: profile?.departments?.[0] || ""
+        })) || [];
     },
     enabled: Boolean(profile?.department_id),
   });
@@ -538,429 +541,515 @@ const PromoverAlumnos = () => {
   };
 
   return (
-    <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl mb-6">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
+    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
+      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto animate-fade-in space-y-6">
 
-        <div className="relative z-10 flex items-center gap-4">
-          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
-            <FolderUp className="h-8 w-8" />
-          </div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black text-foreground tracking-tight">Gestión de Miembros</h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Gestión de Miembros</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
               Promové o autorizá a los miembros a diferentes departamentos.
             </p>
           </div>
         </div>
-      </section>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "promote" | "authorize")} className="w-full">
-        <TabsList className="mb-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl p-1 h-auto flex flex-wrap sm:flex-nowrap">
-          <TabsTrigger value="promote" className="rounded-xl flex-1 py-3 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/40 dark:data-[state=active]:text-purple-300 font-medium">Promover Miembros</TabsTrigger>
-          <TabsTrigger value="authorize" className="rounded-xl flex-1 py-3 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/40 dark:data-[state=active]:text-purple-300 font-medium">Autorizar Miembros</TabsTrigger>
-        </TabsList>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "promote" | "authorize")} className="w-full">
+          <TabsList className="mb-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl p-1 h-auto flex flex-wrap sm:flex-nowrap w-full sm:w-auto">
+            <TabsTrigger
+              value="promote"
+              className="rounded-xl flex-1 py-2.5 px-5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 transition-all"
+            >
+              <FolderUp className="h-4 w-4 mr-2" />
+              Promover
+            </TabsTrigger>
+            <TabsTrigger
+              value="authorize"
+              className="rounded-xl flex-1 py-2.5 px-5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 transition-all"
+            >
+              <UserCheck className="h-4 w-4 mr-2" />
+              Autorizar
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="promote">
-          {renderFilters()}
+          {/* ============ TAB PROMOVER ============ */}
+          <TabsContent value="promote" className="space-y-5">
 
-          {isAdminOrSecretaria && !selectedDepartmentId ? (
-            <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-12 text-center">
-              <FolderUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Selecciona un departamento</h3>
-              <p className="text-muted-foreground">
-                Por favor, selecciona un departamento para ver los miembros que puedes promover.
-              </p>
-            </Card>
-          ) : (
-            <>
-              {!isAdminOrSecretaria && userDepartment && (
-                <div className="bg-muted/30 p-4 rounded-lg mb-6">
-                  <p className="text-sm text-muted-foreground">
-                    Mostrando miembros de: <span className="font-medium capitalize">{formatDepartment(userDepartment)}</span>
-                    {userClass && (
-                      <> - Clase: <span className="font-medium">{userClass}</span></>
-                    )}
-                  </p>
-                </div>
-              )}
-
-              {isAdminOrSecretaria && selectedDepartment && (
-                <div className="bg-muted/30 p-4 rounded-lg mb-6">
-                  <p className="text-sm text-muted-foreground">
-                    Mostrando miembros de: <span className="font-medium capitalize">{formatDepartment(selectedDepartment)}</span>
-                    {selectedClass && (
-                      <> - Clase: <span className="font-medium">{selectedClass}</span></>
-                    )}
-                  </p>
-                </div>
-              )}
-
-              <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6 overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="select-all"
-                      checked={selectAll}
-                      onCheckedChange={handleSelectAllChange}
-                    />
-                    <Label htmlFor="select-all" className="flex items-center gap-1 cursor-pointer">
-                      <ListChecks className="h-4 w-4" />
-                      Seleccionar todos
-                    </Label>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedStudents.length} miembros seleccionados
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <Table className="w-full">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12"></TableHead>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>Edad</TableHead>
-                        <TableHead>Departamento</TableHead>
-                        <TableHead>Clase</TableHead>
-                        <TableHead>Autorizado en</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4">
-                            Cargando...
-                          </TableCell>
-                        </TableRow>
-                      ) : students.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4">
-                            No hay miembros para mostrar
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        students.map((student) => (
-                          <TableRow key={student.id}>
-                            <TableCell>
-                              <Checkbox
-                                checked={selectedStudents.includes(student.id)}
-                                onCheckedChange={() => handleStudentCheckboxChange(student.id)}
-                              />
-                            </TableCell>
-                            <TableCell>{getFullName(student)}</TableCell>
-                            <TableCell>{calculateAge(student.birthdate)}</TableCell>
-                            <TableCell>{formatDepartment(student.department)}</TableCell>
-                            <TableCell>{student.assigned_class || "Sin asignar"}</TableCell>
-                            <TableCell>
-                              {getStudentAuthorizedDepartments(student.id).length > 0 ? (
-                                <div className="flex flex-wrap gap-1">
-                                  {getStudentAuthorizedDepartments(student.id).map(dept => (
-                                    <Badge key={dept} variant="outline" className="bg-green-50">
-                                      {formatDepartment(dept)}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              ) : (
-                                "Ninguno"
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-
-              <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6">
-                <h3 className="text-lg font-semibold mb-4">Opciones de Promoción</h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Departamento actual</Label>
-                      <div className="p-2 border rounded-md bg-muted/30">
-                        {formatDepartment(selectedDepartment)}
-                      </div>
-                    </div>
-
-                    {selectedClass && (
-                      <div className="space-y-2">
-                        <Label>Clase actual</Label>
-                        <div className="p-2 border rounded-md bg-muted/30">
-                          {selectedClass}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Promover a departamento</Label>
-                      <Select
-                        value={targetDepartment}
-                        onValueChange={handleTargetDepartmentChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona departamento destino" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.name}>
-                              {formatDepartment(dept.name)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {targetDepartmentHasClasses && (
-                      <div className="space-y-2">
-                        <Label>Promover a clase</Label>
-                        <Select
-                          value={targetClass || undefined}
-                          onValueChange={handleTargetClassChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecciona clase destino" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {targetAvailableClasses.map((className) => (
-                              <SelectItem key={className} value={className}>
-                                {className}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-8 flex justify-end">
-                  <Button
-                    onClick={handlePromote}
-                    disabled={
-                      selectedStudents.length === 0 ||
-                      !targetDepartment ||
-                      (targetDepartmentHasClasses && !targetClass)
-                    }
-                    className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl px-6"
-                  >
-                    <FolderUp className="h-5 w-5 mr-2" />
-                    Promover {selectedStudents.length} {selectedStudents.length === 1 ? 'miembro' : 'miembros'}
-                  </Button>
-                </div>
-              </Card>
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="authorize">
-          {renderFilters()}
-
-          {isAdminOrSecretaria && !selectedDepartmentId ? (
-            <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-12 text-center">
-              <UserCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Selecciona un departamento</h3>
-              <p className="text-muted-foreground">
-                Por favor, selecciona un departamento para ver los miembros que puedes autorizar.
-              </p>
-            </Card>
-          ) : (
-            <>
-              <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6 overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="select-all-auth"
-                      checked={selectAll}
-                      onCheckedChange={handleSelectAllChange}
-                    />
-                    <Label htmlFor="select-all-auth" className="flex items-center gap-1 cursor-pointer">
-                      <ListChecks className="h-4 w-4" />
-                      Seleccionar todos
-                    </Label>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedStudents.length} miembros seleccionados
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <Table className="w-full">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12"></TableHead>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>Edad</TableHead>
-                        <TableHead>Departamento</TableHead>
-                        <TableHead>Clase</TableHead>
-                        <TableHead>Autorizado en</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4">
-                            Cargando...
-                          </TableCell>
-                        </TableRow>
-                      ) : students.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4">
-                            No hay miembros para mostrar
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        students.map((student) => (
-                          <TableRow key={student.id}>
-                            <TableCell>
-                              <Checkbox
-                                checked={selectedStudents.includes(student.id)}
-                                onCheckedChange={() => handleStudentCheckboxChange(student.id)}
-                              />
-                            </TableCell>
-                            <TableCell>{getFullName(student)}</TableCell>
-                            <TableCell>{calculateAge(student.birthdate)}</TableCell>
-                            <TableCell>{formatDepartment(student.department)}</TableCell>
-                            <TableCell>{student.assigned_class || "Sin asignar"}</TableCell>
-                            <TableCell>
-                              {getStudentAuthorizedDepartments(student.id).length > 0 ? (
-                                <div className="flex flex-wrap gap-1">
-                                  {getStudentAuthorizedDepartments(student.id).map(dept => (
-                                    <Badge key={dept} variant="outline" className="bg-green-50 flex items-center gap-1">
-                                      {formatDepartment(dept)}
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-4 w-4 rounded-full"
-                                        onClick={async () => {
-                                          const deptObj = departments.find(d => d.name === dept);
-                                          if (deptObj) {
-                                            await handleRemoveAuthorization(student.id, deptObj.id);
-                                          }
-                                        }}
-                                      >
-                                        <span className="text-xs">×</span>
-                                      </Button>
-                                    </Badge>
-                                  ))}
-                                </div>
-                              ) : (
-                                "Ninguno"
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-
-              <Card className="p-4 md:p-6 mb-6">
-                <h3 className="text-lg font-semibold mb-4">Opciones de Autorización</h3>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Autorizar para departamento</Label>
-                    <Select
-                      value={targetDepartment}
-                      onValueChange={handleTargetDepartmentChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona departamento destino" />
+            {/* Filtros de origen */}
+            {isAdminOrSecretaria && (
+              <div className="glass-card p-5">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-primary mb-4 flex items-center gap-2">
+                  <ListChecks className="h-3.5 w-3.5" /> Departamento de origen
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
+                    <Select value={selectedDepartment} onValueChange={handleDepartmentChange}>
+                      <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
+                        <SelectValue placeholder="Selecciona un departamento" />
                       </SelectTrigger>
                       <SelectContent>
                         {departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.name}>
-                            {formatDepartment(dept.name)}
-                          </SelectItem>
+                          <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {targetDepartmentHasClasses && (
-                    <div className="space-y-2">
-                      <Label>Clase específica (opcional)</Label>
-                      <Select
-                        value={targetClass || undefined}
-                        onValueChange={handleTargetClassChange}
-                      >
-                        <SelectTrigger>
+                  {selectedDepartment && availableClasses.length > 0 && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clase</label>
+                      <Select value={selectedClass || undefined} onValueChange={handleClassChange}>
+                        <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                           <SelectValue placeholder="Todas las clases" />
                         </SelectTrigger>
                         <SelectContent>
-                          {targetAvailableClasses.map((className) => (
-                            <SelectItem key={className} value={className}>
-                              {className}
-                            </SelectItem>
+                          <SelectItem value="all">Todas las clases</SelectItem>
+                          {availableClasses.map((className) => (
+                            <SelectItem key={className} value={className}>{className}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                   )}
-
-                  <div className="mt-8 flex justify-end">
-                    <Button
-                      onClick={handleAuthorize}
-                      disabled={selectedStudents.length === 0 || !targetDepartment}
-                      className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl px-6"
-                    >
-                      <UserCheck className="h-5 w-5 mr-2" />
-                      Autorizar {selectedStudents.length} {selectedStudents.length === 1 ? 'miembro' : 'miembros'}
-                    </Button>
-                  </div>
                 </div>
-              </Card>
+              </div>
+            )}
 
-              {!isAdminOrSecretaria && (
-                <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6 overflow-hidden">
-                  <h3 className="text-lg font-semibold mb-4">Miembros autorizados en tu departamento</h3>
+            {isAdminOrSecretaria && !selectedDepartmentId ? (
+              <div className="glass-card p-12 text-center">
+                <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <FolderUp className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-black text-slate-700 dark:text-slate-300 mb-1">Seleccioná un departamento</h3>
+                <p className="text-slate-400 text-sm">Elegí el departamento de origen para ver los miembros disponibles.</p>
+              </div>
+            ) : (
+              <>
+                {/* Contexto del filtro activo */}
+                {((!isAdminOrSecretaria && userDepartment) || (isAdminOrSecretaria && selectedDepartment)) && (
+                  <div className="flex items-center gap-2 px-1">
+                    <span className="text-xs text-slate-500 font-medium">Mostrando miembros de:</span>
+                    <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-black">
+                      {formatDepartment(isAdminOrSecretaria ? selectedDepartment : userDepartment)}
+                    </span>
+                    {(isAdminOrSecretaria ? selectedClass : userClass) && (
+                      <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
+                        Clase: {isAdminOrSecretaria ? selectedClass : userClass}
+                      </span>
+                    )}
+                  </div>
+                )}
 
+                {/* Tabla de miembros */}
+                <div className="glass-card overflow-hidden">
+                  <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="select-all"
+                        checked={selectAll}
+                        onCheckedChange={handleSelectAllChange}
+                        className="rounded-md"
+                      />
+                      <Label htmlFor="select-all" className="text-xs font-black uppercase tracking-[0.15em] text-slate-500 cursor-pointer flex items-center gap-1.5">
+                        <ListChecks className="h-3.5 w-3.5 text-primary" />
+                        Seleccionar todos
+                      </Label>
+                      <Badge variant="outline" className="ml-2 bg-slate-50 text-slate-500 border-slate-200 font-bold px-2 py-0.5 text-[10px]">
+                        {students.length} miembros
+                      </Badge>
+                    </div>
+                    {selectedStudents.length > 0 && (
+                      <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                        {selectedStudents.length} seleccionados
+                      </span>
+                    )}
+                  </div>
                   <div className="overflow-x-auto">
-                    <Table className="w-full">
+                    <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead>Nombre</TableHead>
-                          <TableHead>Edad</TableHead>
-                          <TableHead>Departamento Original</TableHead>
-                          <TableHead>Clase Original</TableHead>
+                        <TableRow className="bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50/50">
+                          <TableHead className="w-12"></TableHead>
+                          <TableHead className="font-bold text-slate-600 dark:text-slate-400">Nombre</TableHead>
+                          {!isMobile && <TableHead className="font-bold text-slate-600 dark:text-slate-400">Edad</TableHead>}
+                          {!isMobile && <TableHead className="font-bold text-slate-600 dark:text-slate-400">Departamento</TableHead>}
+                          <TableHead className="font-bold text-slate-600 dark:text-slate-400">Clase</TableHead>
+                          {!isMobile && <TableHead className="font-bold text-slate-600 dark:text-slate-400">Autorizado en</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {authorizedStudentsList.length === 0 ? (
+                        {isLoading ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center py-4">
-                              No hay miembros autorizados en tu departamento
-                            </TableCell>
+                            <TableCell colSpan={6} className="text-center py-8 text-slate-400">Cargando miembros...</TableCell>
+                          </TableRow>
+                        ) : students.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-slate-400">No hay miembros para mostrar</TableCell>
                           </TableRow>
                         ) : (
-                          authorizedStudentsList.map((student: any) => (
-                            <TableRow key={student.id} className="bg-green-50">
-                              <TableCell className="font-medium flex items-center gap-2">
-                                <UserCheck className="h-4 w-4 text-green-600" />
-                                {getFullName(student)}
+                          students.map((student) => (
+                            <TableRow
+                              key={student.id}
+                              className={`transition-colors hover:bg-primary/5 cursor-pointer ${selectedStudents.includes(student.id) ? 'bg-primary/5' : ''}`}
+                              onClick={() => handleStudentCheckboxChange(student.id)}
+                            >
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={selectedStudents.includes(student.id)}
+                                  onCheckedChange={() => handleStudentCheckboxChange(student.id)}
+                                  className="rounded-md"
+                                />
                               </TableCell>
-                              <TableCell>{calculateAge(student.birthdate)}</TableCell>
-                              <TableCell>{formatDepartment(student.department)}</TableCell>
-                              <TableCell>{student.assigned_class || "Sin asignar"}</TableCell>
+                              <TableCell className="font-medium text-slate-800 dark:text-slate-200">{getFullName(student)}</TableCell>
+                              {!isMobile && <TableCell className="text-slate-500">{calculateAge(student.birthdate)}</TableCell>}
+                              {!isMobile && <TableCell className="text-slate-500">{formatDepartment(student.department)}</TableCell>}
+                              <TableCell className="text-slate-500">{student.assigned_class || <span className="text-slate-300 italic text-xs">Sin asignar</span>}</TableCell>
+                              {!isMobile && (
+                                <TableCell>
+                                  {getStudentAuthorizedDepartments(student.id).length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {getStudentAuthorizedDepartments(student.id).map(dept => (
+                                        <Badge key={dept} className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold">
+                                          {formatDepartment(dept)}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-300 italic text-xs">Ninguno</span>
+                                  )}
+                                </TableCell>
+                              )}
                             </TableRow>
                           ))
                         )}
                       </TableBody>
                     </Table>
                   </div>
-                </Card>
-              )}
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+                </div>
+
+                {/* Panel de promoción */}
+                <div className="glass-card p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-primary mb-4 flex items-center gap-2">
+                    <FolderUp className="h-3.5 w-3.5" /> Opciones de Promoción
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Origen */}
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Departamento actual</label>
+                        <div className="h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center text-slate-600 text-sm font-medium">
+                          {formatDepartment(selectedDepartment) || <span className="italic text-slate-300">Sin seleccionar</span>}
+                        </div>
+                      </div>
+                      {selectedClass && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Clase actual</label>
+                          <div className="h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center text-slate-600 text-sm font-medium">
+                            {selectedClass}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Destino */}
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Promover a departamento</label>
+                        <Select value={targetDepartment} onValueChange={handleTargetDepartmentChange}>
+                          <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
+                            <SelectValue placeholder="Selecciona departamento destino" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {departments.map((dept) => (
+                              <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {targetDepartmentHasClasses && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Promover a clase</label>
+                          <Select value={targetClass || undefined} onValueChange={handleTargetClassChange}>
+                            <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
+                              <SelectValue placeholder="Selecciona clase destino" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {targetAvailableClasses.map((className) => (
+                                <SelectItem key={className} value={className}>{className}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-end">
+                    <Button
+                      onClick={handlePromote}
+                      disabled={selectedStudents.length === 0 || !targetDepartment || (targetDepartmentHasClasses && !targetClass)}
+                      className="button-gradient rounded-xl font-black px-6 h-11 shadow-lg shadow-primary/20 disabled:opacity-50"
+                    >
+                      <FolderUp className="h-4 w-4 mr-2" />
+                      Promover {selectedStudents.length > 0 ? `(${selectedStudents.length})` : ''}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </TabsContent>
+
+          {/* ============ TAB AUTORIZAR ============ */}
+          <TabsContent value="authorize" className="space-y-5">
+
+            {/* Filtros de origen */}
+            {isAdminOrSecretaria && (
+              <div className="glass-card p-5">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-primary mb-4 flex items-center gap-2">
+                  <ListChecks className="h-3.5 w-3.5" /> Departamento de origen
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
+                    <Select value={selectedDepartment} onValueChange={handleDepartmentChange}>
+                      <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
+                        <SelectValue placeholder="Selecciona un departamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {selectedDepartment && availableClasses.length > 0 && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clase</label>
+                      <Select value={selectedClass || undefined} onValueChange={handleClassChange}>
+                        <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
+                          <SelectValue placeholder="Todas las clases" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas las clases</SelectItem>
+                          {availableClasses.map((className) => (
+                            <SelectItem key={className} value={className}>{className}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {isAdminOrSecretaria && !selectedDepartmentId ? (
+              <div className="glass-card p-12 text-center">
+                <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <UserCheck className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-black text-slate-700 dark:text-slate-300 mb-1">Seleccioná un departamento</h3>
+                <p className="text-slate-400 text-sm">Elegí el departamento de origen para ver los miembros disponibles.</p>
+              </div>
+            ) : (
+              <>
+                {/* Tabla de miembros para autorizar */}
+                <div className="glass-card overflow-hidden">
+                  <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="select-all-auth"
+                        checked={selectAll}
+                        onCheckedChange={handleSelectAllChange}
+                        className="rounded-md"
+                      />
+                      <Label htmlFor="select-all-auth" className="text-xs font-black uppercase tracking-[0.15em] text-slate-500 cursor-pointer flex items-center gap-1.5">
+                        <ListChecks className="h-3.5 w-3.5 text-primary" />
+                        Seleccionar todos
+                      </Label>
+                      <Badge variant="outline" className="ml-2 bg-slate-50 text-slate-500 border-slate-200 font-bold px-2 py-0.5 text-[10px]">
+                        {students.length} miembros
+                      </Badge>
+                    </div>
+                    {selectedStudents.length > 0 && (
+                      <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                        {selectedStudents.length} seleccionados
+                      </span>
+                    )}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50/50">
+                          <TableHead className="w-12"></TableHead>
+                          <TableHead className="font-bold text-slate-600 dark:text-slate-400">Nombre</TableHead>
+                          {!isMobile && <TableHead className="font-bold text-slate-600 dark:text-slate-400">Edad</TableHead>}
+                          {!isMobile && <TableHead className="font-bold text-slate-600 dark:text-slate-400">Departamento</TableHead>}
+                          <TableHead className="font-bold text-slate-600 dark:text-slate-400">Clase</TableHead>
+                          {!isMobile && <TableHead className="font-bold text-slate-600 dark:text-slate-400">Autorizado en</TableHead>}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {isLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-slate-400">Cargando miembros...</TableCell>
+                          </TableRow>
+                        ) : students.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-slate-400">No hay miembros para mostrar</TableCell>
+                          </TableRow>
+                        ) : (
+                          students.map((student) => (
+                            <TableRow
+                              key={student.id}
+                              className={`transition-colors hover:bg-primary/5 cursor-pointer ${selectedStudents.includes(student.id) ? 'bg-primary/5' : ''}`}
+                              onClick={() => handleStudentCheckboxChange(student.id)}
+                            >
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={selectedStudents.includes(student.id)}
+                                  onCheckedChange={() => handleStudentCheckboxChange(student.id)}
+                                  className="rounded-md"
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium text-slate-800 dark:text-slate-200">{getFullName(student)}</TableCell>
+                              {!isMobile && <TableCell className="text-slate-500">{calculateAge(student.birthdate)}</TableCell>}
+                              {!isMobile && <TableCell className="text-slate-500">{formatDepartment(student.department)}</TableCell>}
+                              <TableCell className="text-slate-500">{student.assigned_class || <span className="text-slate-300 italic text-xs">Sin asignar</span>}</TableCell>
+                              {!isMobile && (
+                                <TableCell>
+                                  {getStudentAuthorizedDepartments(student.id).length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {getStudentAuthorizedDepartments(student.id).map(dept => (
+                                        <Badge
+                                          key={dept}
+                                          className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold flex items-center gap-1 pr-1"
+                                        >
+                                          {formatDepartment(dept)}
+                                          <button
+                                            className="ml-0.5 hover:text-red-500 transition-colors"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              const deptObj = departments.find(d => d.name === dept);
+                                              if (deptObj) await handleRemoveAuthorization(student.id, deptObj.id);
+                                            }}
+                                          >
+                                            ×
+                                          </button>
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-300 italic text-xs">Ninguno</span>
+                                  )}
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Panel de autorización */}
+                <div className="glass-card p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-primary mb-4 flex items-center gap-2">
+                    <UserCheck className="h-3.5 w-3.5" /> Opciones de Autorización
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Autorizar para departamento</label>
+                      <Select value={targetDepartment} onValueChange={handleTargetDepartmentChange}>
+                        <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
+                          <SelectValue placeholder="Selecciona departamento destino" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {targetDepartmentHasClasses && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clase específica (opcional)</label>
+                        <Select value={targetClass || undefined} onValueChange={handleTargetClassChange}>
+                          <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
+                            <SelectValue placeholder="Todas las clases" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {targetAvailableClasses.map((className) => (
+                              <SelectItem key={className} value={className}>{className}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-6 flex justify-end">
+                    <Button
+                      onClick={handleAuthorize}
+                      disabled={selectedStudents.length === 0 || !targetDepartment}
+                      className="button-gradient rounded-xl font-black px-6 h-11 shadow-lg shadow-primary/20 disabled:opacity-50"
+                    >
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Autorizar {selectedStudents.length > 0 ? `(${selectedStudents.length})` : ''}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Tabla de miembros ya autorizados (solo no admin) */}
+                {!isAdminOrSecretaria && (
+                  <div className="glass-card overflow-hidden">
+                    <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-primary flex items-center gap-2">
+                        <UserCheck className="h-3.5 w-3.5" /> Miembros autorizados en tu departamento
+                      </p>
+                      <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 font-bold px-2 py-0.5 text-[10px]">
+                        {authorizedStudentsList.length} miembros
+                      </Badge>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                            <TableHead className="font-bold text-slate-600">Nombre</TableHead>
+                            <TableHead className="font-bold text-slate-600">Edad</TableHead>
+                            <TableHead className="font-bold text-slate-600">Departamento Original</TableHead>
+                            <TableHead className="font-bold text-slate-600">Clase Original</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {authorizedStudentsList.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center py-8 text-slate-400">
+                                No hay miembros autorizados en tu departamento
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            authorizedStudentsList.map((student: any) => (
+                              <TableRow key={student.id} className="hover:bg-primary/5 transition-colors">
+                                <TableCell className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                  <UserCheck className="h-4 w-4 text-emerald-500" />
+                                  {getFullName(student)}
+                                </TableCell>
+                                <TableCell className="text-slate-500">{calculateAge(student.birthdate)}</TableCell>
+                                <TableCell className="text-slate-500">{formatDepartment(student.department)}</TableCell>
+                                <TableCell className="text-slate-500">{student.assigned_class || <span className="italic text-slate-300 text-xs">Sin asignar</span>}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };

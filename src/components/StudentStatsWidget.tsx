@@ -118,7 +118,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
             <div className="flex flex-col items-center justify-center text-center mb-10 gap-4 mt-6">
                 <div>
                     <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                        Resumen Institucional
+                        {statsTitle}
                     </h1>
                 </div>
 
@@ -201,59 +201,116 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                     </Carousel>
                 </div>
             ) : (
-                <div className={`grid gap-6 ${isSingleCard ? 'place-items-center' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
-                    {departmentsWithStats.map(([dept, stats], index) => {
-                        const departmentObj = departments.find(d => d.name === dept);
-                        const hasClasses = departmentObj?.classes && departmentObj.classes.length > 0;
-                        const malePercent = stats.total > 0 ? (stats.male / stats.total) * 100 : 0;
-                        const femalePercent = stats.total > 0 ? (stats.female / stats.total) * 100 : 0;
+                <div className={`grid gap-6 ${isSingleCard && profile?.role !== 'director' ? 'place-items-center' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
+                    {profile?.role === 'director' && departmentsWithStats.length === 1 ? (
+                        // If Director, show cards for each class
+                        <>
+                            {departments.find(d => d.name === departmentsWithStats[0][0])?.classes?.map((className, idx) => {
+                                const classStats = getStatsForClass(departmentsWithStats[0][0], className);
+                                const malePercent = classStats.total > 0 ? (classStats.male / classStats.total) * 100 : 0;
+                                const femalePercent = classStats.total > 0 ? (classStats.female / classStats.total) * 100 : 0;
 
-                        return (
-                            <div
-                                key={dept}
-                                className={`bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:shadow-md transition-all duration-300 group ${isSingleCard ? 'w-full max-w-md' : ''}`}
-                                onClick={() => isDirectorOrAdminOrSecretary && hasClasses && departmentObj ? handleDepartmentClick(departmentObj) : null}
-                            >
-                                <div className="mb-8">
-                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 text-center">
-                                        {formatDepartmentName(dept)}
-                                    </h3>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-baseline gap-2">
-                                            <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.total}</span>
-                                            <span className="text-sm font-semibold text-slate-500">MIEMBROS</span>
+                                return (
+                                    <div
+                                        key={className}
+                                        className="bg-white dark:bg-slate-800 rounded-3xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:shadow-md transition-all duration-300 group flex flex-col justify-between w-full max-w-[260px] mx-auto"
+                                        onClick={() => onClassClick(departmentsWithStats[0][0], className)}
+                                    >
+                                        <div className="text-center">
+                                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 line-clamp-1">
+                                                {className}
+                                            </h3>
                                         </div>
-                                        <div className="h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-                                            <PersonStanding className="h-6 w-6" />
+
+                                        <div className="flex items-center justify-between px-2">
+                                            <div className="flex items-baseline ">
+                                                <span className="text-4xl font-black text-slate-900 dark:text-white leading-none">{classStats.total}</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase">Miembros</span>
+                                            </div>
+
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
+                                                <div
+                                                    className="h-full bg-indigo-500 transition-all duration-1000"
+                                                    style={{ width: `${malePercent}%` }}
+                                                ></div>
+                                                <div
+                                                    className="h-full bg-fuchsia-400 transition-all duration-1000"
+                                                    style={{ width: `${femalePercent}%` }}
+                                                ></div>
+                                            </div>
+                                            <div className="flex justify-between text-[11px] font-bold text-slate-500 px-1">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                                                    <span>{classStats.male} Varones</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-400"></div>
+                                                    <span>{classStats.female} Mujeres</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </>
+                    ) : (
+                        // Standard view for Admin/Secre/Etc
+                        departmentsWithStats.map(([dept, stats], index) => {
+                            const departmentObj = departments.find(d => d.name === dept);
+                            const hasClasses = departmentObj?.classes && departmentObj.classes.length > 0;
+                            const malePercent = stats.total > 0 ? (stats.male / stats.total) * 100 : 0;
+                            const femalePercent = stats.total > 0 ? (stats.female / stats.total) * 100 : 0;
+
+                            return (
+                                <div
+                                    key={dept}
+                                    className={`bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:shadow-md transition-all duration-300 group ${isSingleCard ? 'w-full max-w-md' : ''}`}
+                                    onClick={() => isDirectorOrAdminOrSecretary && hasClasses && departmentObj ? handleDepartmentClick(departmentObj) : null}
+                                >
+                                    <div className="mb-8">
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 text-center">
+                                            {formatDepartmentName(dept)}
+                                        </h3>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-4xl font-black text-slate-900 dark:text-white mr-4" >{stats.total}</span>
+                                                <span className="text-sm font-semibold text-slate-500"> MIEMBROS</span>
+                                            </div>
+                                            <div className="h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                                <PersonStanding className="h-6 w-6" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
+                                            <div
+                                                className="h-full bg-indigo-500 transition-all duration-1000"
+                                                style={{ width: `${malePercent}%` }}
+                                            ></div>
+                                            <div
+                                                className="h-full bg-fuchsia-400 transition-all duration-1000"
+                                                style={{ width: `${femalePercent}%` }}
+                                            ></div>
+                                        </div>
+                                        <div className="flex justify-between text-sm font-medium text-slate-500">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                                <span>Masculino {stats.male}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-fuchsia-400"></div>
+                                                <span>Femenino {stats.female}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div className="space-y-3">
-                                    <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
-                                        <div
-                                            className="h-full bg-indigo-500 transition-all duration-1000"
-                                            style={{ width: `${malePercent}%` }}
-                                        ></div>
-                                        <div
-                                            className="h-full bg-fuchsia-400 transition-all duration-1000"
-                                            style={{ width: `${femalePercent}%` }}
-                                        ></div>
-                                    </div>
-                                    <div className="flex justify-between text-sm font-medium text-slate-500">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                            <span>Masculino {stats.male}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-fuchsia-400"></div>
-                                            <span>Femenino {stats.female}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })
+                    )}
                 </div>
             )}
 

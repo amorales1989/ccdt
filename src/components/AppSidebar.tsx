@@ -8,6 +8,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenu,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -32,14 +35,14 @@ import { ProfileEditor } from "@/components/ProfileEditor";
 const getItems = (role: string | undefined, profile: any) => {
   const selectedDepartment = localStorage.getItem('selectedDepartment');
   if (selectedDepartment === 'calendario' || profile?.departments?.[0] === 'calendario') {
-    const calendarItems: { title: string; url: string; icon: any }[] = [
+    const calendarItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[] }[] = [
       { title: "Inicio", url: "/", icon: Home },
       { title: "Calendario", url: "/calendario", icon: FileText }
     ];
     return calendarItems;
   }
 
-  const baseItems: { title: string; url: string; icon: any }[] = [
+  const baseItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[] }[] = [
     { title: "Inicio", url: "/", icon: Home },
     { title: "Lista de Miembros", url: "/listar", icon: Users },
     { title: "Calendario", url: "/calendario", icon: FileText },
@@ -62,9 +65,29 @@ const getItems = (role: string | undefined, profile: any) => {
   if (role === "admin" || role === "secretaria" || role === "director") {
     if (role === "admin" || role === "secretaria") {
       baseItems.push(
-        { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
+        {
+          title: "Estadísticas",
+          url: "/estadisticas",
+          icon: BarChart3,
+          subItems: [
+            { title: "Por Edad", url: "/estadisticas?view=age" },
+            { title: "Por Clases", url: "/estadisticas?view=class" }
+          ]
+        },
         { title: "Autorizaciones", url: "/autorizaciones", icon: FileOutput },
         { title: "Departamentos", url: "/departamentos", icon: FolderIcon }
+      );
+    } else if (role === "director") {
+      baseItems.push(
+        {
+          title: "Estadísticas",
+          url: "/estadisticas",
+          icon: BarChart3,
+          subItems: [
+            { title: "Por Edad", url: "/estadisticas?view=age" },
+            { title: "Por Clases", url: "/estadisticas?view=class" }
+          ]
+        }
       );
     }
     baseItems.push(
@@ -97,11 +120,63 @@ const NavItem = ({
   isActive,
   onClick
 }: {
-  item: { title: string; url: string; icon: any };
+  item: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[] };
   isActive: boolean;
   onClick?: () => void;
 }) => {
   const iconColor = iconBgMap[item.title] || "bg-gray-100 text-gray-500";
+  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+
+  // Auto-expand if sub-item is active
+  useEffect(() => {
+    if (item.subItems?.some(sub => location.pathname + location.search === sub.url)) {
+      setIsOpen(true);
+    }
+  }, [location.pathname, location.search, item.subItems]);
+
+  if (item.subItems) {
+    return (
+      <div className="space-y-1">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 group ${isActive
+            ? "bg-primary text-white shadow-md shadow-primary/20"
+            : "text-muted-foreground hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-primary"
+            }`}
+        >
+          <div className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 shrink-0 ${isActive ? "bg-white/20" : iconColor
+            }`}>
+            <item.icon className="h-3.5 w-3.5" />
+          </div>
+          <span className="font-semibold text-[13px] flex-1 leading-tight text-left">{item.title}</span>
+          <ChevronRight className={`h-3.5 w-3.5 opacity-70 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
+        </button>
+
+        {isOpen && (
+          <div className="ml-4 pl-4 border-l border-purple-100 dark:border-purple-900/30 space-y-1 mt-1">
+            {item.subItems.map(sub => {
+              const isSubActive = location.pathname + location.search === sub.url;
+              return (
+                <Link
+                  key={sub.title}
+                  to={sub.url}
+                  onClick={onClick}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 text-[12px] font-bold ${isSubActive
+                    ? "text-primary bg-purple-50 dark:bg-purple-900/20"
+                    : "text-muted-foreground hover:text-primary hover:bg-purple-50/50"
+                    }`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full ${isSubActive ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                  {sub.title}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Link

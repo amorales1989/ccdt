@@ -4,9 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { getAttendance, getDepartmentByName } from "@/lib/api";
-import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X, Save, MoreVertical, PersonStanding, CheckCircle2 } from "lucide-react";
+import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X, Save, MoreVertical, PersonStanding, CheckCircle2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from 'xlsx';
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
   { label: "Últimos 7 días", value: "7days" },
-  { label: "Últimos 30 días", value: "30days" },
+  { label: "Este mes", value: "thisMonth" },
   { label: "Rango personalizado", value: "custom" }
 ];
 
@@ -68,6 +68,7 @@ const HistorialAsistencia = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
+  const isDirector = profile?.role === 'director';
   const userDepartment = profile?.departments?.[0];
   const userDepartmentId = profile?.department_id;
   const userClass = profile?.assigned_class;
@@ -86,13 +87,13 @@ const HistorialAsistencia = () => {
   const availableClasses = departmentData?.classes || [];
 
   useEffect(() => {
-    if (!isAdminOrSecretaria && userDepartment) {
+    if ((isDirector || !isAdminOrSecretaria) && userDepartment) {
       setSelectedDepartment(userDepartment);
-      if (userClass) {
+      if (!isDirector && userClass) {
         setSelectedClass(userClass);
       }
     }
-  }, [isAdminOrSecretaria, userDepartment, userClass]);
+  }, [isAdminOrSecretaria, isDirector, userDepartment, userClass]);
 
   const handleDateRangeChange = (value: string) => {
     setSelectedRange(value);
@@ -109,17 +110,10 @@ const HistorialAsistencia = () => {
         setEndDate(today);
         setSelectedDate(today);
         break;
-      case "30days":
-        setStartDate(subDays(today, 30));
-        setEndDate(today);
+      case "thisMonth":
+        setStartDate(startOfMonth(today));
+        setEndDate(endOfMonth(today));
         setSelectedDate(today);
-        break;
-      case "custom":
-        // For non-admin/secretaria users, we'll use a single date
-        if (!isAdminOrSecretaria) {
-          setStartDate(today);
-          setEndDate(today);
-        }
         break;
     }
   };
@@ -127,27 +121,19 @@ const HistorialAsistencia = () => {
   const handleStartDateSelect = (date: Date | undefined) => {
     if (date) {
       setStartDate(date);
-
       if (date > endDate) {
         setEndDate(date);
       }
-
+      setSelectedRange("custom");
       setStartDateOpen(false);
-
-      setTimeout(() => {
-        setEndDateOpen(true);
-      }, 100);
     }
   };
 
   const handleEndDateSelect = (date: Date | undefined) => {
     if (date) {
       setEndDate(date);
-
-      if (date < startDate) {
-        setStartDate(date);
-      }
-
+      setSelectedRange("custom");
+      if (date < startDate) setStartDate(date);
       setEndDateOpen(false);
     }
   };
@@ -157,6 +143,7 @@ const HistorialAsistencia = () => {
       setSelectedDate(date);
       setStartDate(date);
       setEndDate(date);
+      setSelectedRange("custom");
       setSingleDateOpen(false);
     }
   };
@@ -183,6 +170,10 @@ const HistorialAsistencia = () => {
         departmentIdToUse = userDepartmentId;
       }
 
+      if (isDirector && selectedClass === "all") {
+        return [];
+      }
+
       const attendanceData = await getAttendance(
         formattedStartDate,
         formattedEndDate,
@@ -202,11 +193,8 @@ const HistorialAsistencia = () => {
     queryKey: ["date-attendance", editDate ? format(editDate, "yyyy-MM-dd") : "", userDepartmentId, userClass, selectedDepartment, selectedClass],
     queryFn: async () => {
       if (!editDate) return [];
-
       const formattedDate = format(editDate, "yyyy-MM-dd");
-
       let departmentIdToUse = null;
-
       if (isAdminOrSecretaria && selectedDepartment !== "all") {
         const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
         if (departmentData && departmentData.id) {
@@ -215,15 +203,12 @@ const HistorialAsistencia = () => {
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
       }
-
       const attendanceData = await getAttendance(formattedDate, formattedDate, "", departmentIdToUse);
-
       if (isAdminOrSecretaria && selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
       } else if (!isAdminOrSecretaria && userClass) {
         return attendanceData.filter(record => record.assigned_class === userClass);
       }
-
       return attendanceData;
     },
     enabled: isEditMode && !!editDate
@@ -233,7 +218,6 @@ const HistorialAsistencia = () => {
     queryKey: ["students-for-attendance", userDepartmentId, selectedDepartment, selectedClass],
     queryFn: async () => {
       let departmentIdToUse = null;
-
       if (isAdminOrSecretaria && selectedDepartment !== "all") {
         const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
         if (departmentData && departmentData.id) {
@@ -242,9 +226,7 @@ const HistorialAsistencia = () => {
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
       }
-
       if (!departmentIdToUse) return [];
-
       let query = supabase
         .from('students')
         .select('*, departments:department_id(name)')
@@ -255,14 +237,11 @@ const HistorialAsistencia = () => {
         const classFilter = (isAdminOrSecretaria && selectedClass !== "all") ? selectedClass : userClass;
         query = query.eq('assigned_class', classFilter);
       }
-
       const { data, error } = await query;
-
       if (error) {
         console.error("Error fetching students:", error);
         return [];
       }
-
       return data || [];
     },
     enabled: isEditMode && Boolean(userDepartmentId || (isAdminOrSecretaria && selectedDepartment !== "all"))
@@ -275,46 +254,18 @@ const HistorialAsistencia = () => {
   }, [departmentStudents, isEditMode]);
 
   useEffect(() => {
-    if (isEditMode && dateAttendance.length > 0 && allStudents.length > 0) {
-      const attendanceMap = new Map();
-      dateAttendance.forEach(record => {
-        attendanceMap.set(record.student_id, record);
-      });
-
-      const fullAttendanceRecords = [...dateAttendance];
-
-      allStudents.forEach(student => {
-        if (!attendanceMap.has(student.id)) {
-          const currentDate = new Date().toISOString();
-
-          const newRecord: Attendance = {
-            id: `new-${student.id}`,
-            student_id: student.id,
-            status: false,
-            date: format(editDate, "yyyy-MM-dd"),
-            department_id: student.department_id,
-            assigned_class: student.assigned_class,
-            department: student.departments?.name,
-            department_name: student.departments?.name,
-            students: {
-              ...student,
-              name: `${student.first_name} ${student.last_name || ''}`,
-              is_deleted: false,
-              department: student.departments?.name
-            },
-            created_at: currentDate,
-            updated_at: currentDate
-          };
-          fullAttendanceRecords.push(newRecord);
-        }
-      });
-
-      setEditRecords(fullAttendanceRecords);
+    if (isEditMode) {
+      if (dateAttendance && dateAttendance.length > 0) {
+        setEditRecords([...dateAttendance]);
+      } else {
+        setEditRecords([]);
+      }
     }
-  }, [dateAttendance, allStudents, isEditMode, editDate]);
+  }, [dateAttendance, isEditMode, editDate]);
 
   const handleEditDateSelect = (date: Date | undefined) => {
     if (date) {
+      setEditRecords([]); // Limpiar registros previos al cambiar de fecha
       setEditDate(date);
       setEditDateOpen(false);
       refetchDateAttendance();
@@ -335,8 +286,6 @@ const HistorialAsistencia = () => {
     setSavingAttendance(true);
     try {
       const promises = editRecords.map(record => {
-        const isNewRecord = record.id.toString().startsWith('new-');
-
         return markAttendance({
           student_id: record.student_id,
           date: record.date,
@@ -346,17 +295,13 @@ const HistorialAsistencia = () => {
           ...(record.event_id && { event_id: record.event_id })
         });
       });
-
       await Promise.all(promises);
-
       toast({
         title: "Asistencia actualizada",
         description: "Los cambios han sido guardados exitosamente.",
       });
-
       setIsEditMode(false);
       setRefreshTrigger(prev => prev + 1);
-
       await refetchDateAttendance();
       await refetchAttendance();
     } catch (error) {
@@ -371,24 +316,13 @@ const HistorialAsistencia = () => {
     }
   };
 
-  const filteredAttendance = attendance.filter(record => {
-    if (searchQuery === "") return true;
-
-    if (!record.students) {
-      return "miembro eliminado".includes(searchQuery.toLowerCase());
-    }
-
-    return record.students.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.students.last_name?.toLowerCase().includes(searchQuery.toLowerCase());
-  });
-
   const attendanceStats = {
-    present: filteredAttendance.filter(record => record.status).length,
-    absent: filteredAttendance.filter(record => !record.status).length
+    present: attendance.filter(record => record.status).length,
+    absent: attendance.filter(record => !record.status).length
   };
 
   const handleExportToExcel = () => {
-    const data = filteredAttendance.map(record => ({
+    const data = attendance.map(record => ({
       Nombre: record.students ? `${record.students.first_name} ${record.students.last_name || ''}` : "Miembro eliminado",
       Estado: record.status ? "Presente" : "Ausente",
       Fecha: adjustDateForDisplay(record.date),
@@ -411,9 +345,10 @@ const HistorialAsistencia = () => {
   };
 
   const enterEditMode = () => {
+    setEditRecords([]); // Limpiar cualquier residuo de sesiones previas de edición
     setIsEditMode(true);
-    setEditDate(new Date());
-    setEditDateOpen(true);
+    setEditDate(startDate); // Empezar con la fecha que el usuario ya estaba visualizando
+    setEditDateOpen(false);
   };
 
   const exitEditMode = () => {
@@ -422,388 +357,310 @@ const HistorialAsistencia = () => {
   };
 
   return (
-    <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl mb-6">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
+    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
+      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto">
 
-        <div className="relative z-10 flex items-center gap-4">
-          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
-            <CalendarIcon className="h-8 w-8" />
-          </div>
+        {/* Header */}
+        <div className="mb-6 animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black text-foreground tracking-tight">Historial de Asistencias</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Consultá y gestioná el registro de asistencias de las distintas áreas.
+            <h1 className="text-2xl md:text-3xl font-black text-primary tracking-tight mb-1">
+              Historial de Asistencias
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Consultá y gestioná el registro histórico de las distintas áreas.
             </p>
           </div>
-        </div>
-      </section>
 
-      <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-[300px_1fr]">
-        <div className="space-y-4">
-          {isEditMode ? (
-            <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl overflow-hidden">
-              <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200/40 dark:border-slate-700/40">
-                <CardTitle className="text-lg md:text-xl text-slate-800 dark:text-slate-100">Editar Asistencia</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Seleccionar Fecha</label>
+          <div className="flex gap-2">
+            {!isEditMode && (
+              <Button
+                onClick={enterEditMode}
+                className="button-gradient shadow-lg shadow-primary/20 rounded-xl font-bold flex-1 sm:flex-none"
+              >
+                <PenSquare className="mr-2 h-4 w-4" />
+                Editar Historial
+              </Button>
+            )}
+            {isAdminOrSecretaria && !isEditMode && (
+              <Button
+                onClick={handleExportToExcel}
+                disabled={!attendance.length}
+                variant="outline"
+                className="border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-xl font-bold flex-1 sm:flex-none"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Excel
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Stats and Filter Row */}
+        <div className="flex flex-col lg:flex-row gap-4 mb-8">
+          <div className="glass-card flex items-center gap-6 px-6 py-4 lg:w-auto overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
+                <UserCheck className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="whitespace-nowrap">
+                <div className="text-xl font-black text-green-600 leading-none">
+                  {isEditMode ? editRecords.filter(r => r.status).length : attendanceStats.present}
+                </div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Presentes</div>
+              </div>
+            </div>
+            <div className="w-px h-10 bg-gray-100 shrink-0" />
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <UserX className="h-5 w-5 text-red-500" />
+              </div>
+              <div className="whitespace-nowrap">
+                <div className="text-xl font-black text-red-500 leading-none">
+                  {isEditMode ? editRecords.filter(r => !r.status).length : attendanceStats.absent}
+                </div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ausentes</div>
+              </div>
+            </div>
+            <div className="w-px h-10 bg-gray-100 shrink-0" />
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div className="whitespace-nowrap">
+                <div className="text-xl font-black text-primary leading-none">
+                  {isEditMode ? editRecords.length : attendance.length}
+                </div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Registros</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-card flex-1 flex flex-col md:flex-row items-center gap-3 px-4 py-4 md:py-0">
+            {isEditMode ? (
+              <div className="flex flex-col md:flex-row items-center gap-3 w-full">
+                <div className="flex items-center gap-3 w-full md:w-auto h-full pr-4 md:border-r border-gray-100">
                   <MuiDatePickerField
                     value={editDate}
                     onChange={handleEditDateSelect}
                     open={editDateOpen}
                     onOpenChange={setEditDateOpen}
-                    placeholder="Seleccionar fecha"
+                    className="bg-transparent border-none outline-none font-bold text-sm text-gray-700 w-full"
+                  />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground italic px-2">
+                  Editando registros para la fecha seleccionada
+                </p>
+                <div className="flex gap-2 w-full md:w-auto ml-auto">
+                  <Button variant="ghost" onClick={exitEditMode} className="font-bold text-rose-500 hover:bg-rose-50 hover:text-rose-600">
+                    Cancelar
+                  </Button>
+                  <Button onClick={saveAttendanceChanges} disabled={savingAttendance || editRecords.length === 0} className="button-gradient rounded-xl font-black">
+                    {savingAttendance ? "Guardando..." : "Aplicar"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 w-full py-2">
+                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[150px]">
+                  <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
+                  <select
+                    value={selectedRange}
+                    onChange={(e) => handleDateRangeChange(e.target.value)}
+                    className="bg-transparent border-none outline-none text-[13px] w-full font-semibold cursor-pointer"
+                  >
+                    {dateRangeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[150px]">
+                  <div className="text-[10px] font-black text-primary shrink-0">DESDE</div>
+                  <MuiDatePickerField
+                    value={startDate}
+                    onChange={handleStartDateSelect}
+                    open={startDateOpen}
+                    onOpenChange={setStartDateOpen}
+                    className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700 w-full"
                   />
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={exitEditMode}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    className="w-full"
-                    onClick={saveAttendanceChanges}
-                    disabled={savingAttendance || editRecords.length === 0}
-                  >
-                    {savingAttendance ? "Guardando..." : "Guardar Cambios"}
-                  </Button>
+                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[150px]">
+                  <div className="text-[10px] font-black text-primary shrink-0">HASTA</div>
+                  <MuiDatePickerField
+                    value={endDate}
+                    onChange={handleEndDateSelect}
+                    open={endDateOpen}
+                    onOpenChange={setEndDateOpen}
+                    className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700 w-full"
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl overflow-hidden">
-              <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200/40 dark:border-slate-700/40 pb-4">
-                <CardTitle className="text-lg md:text-xl flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                  <Search className="h-5 w-5 text-purple-500" />
-                  Filtros
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-4">
-                  {isAdminOrSecretaria && (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Departamento</label>
-                        <Select value={selectedDepartment} onValueChange={(value) => {
-                          setSelectedDepartment(value);
-                          setSelectedClass("all");
-                        }}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Seleccionar departamento" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            {departments.map((dept) => (
-                              <SelectItem key={dept.value} value={dept.value}>
-                                {dept.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
 
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Clase</label>
-                        <Select
-                          value={selectedClass}
-                          onValueChange={setSelectedClass}
-                          disabled={selectedDepartment === "all"}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Seleccionar clase" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todas</SelectItem>
-                            {availableClasses.map((className) => (
-                              <SelectItem key={className} value={className}>
-                                {className}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </>
-                  )}
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Período</label>
-                    <Select value={selectedRange} onValueChange={handleDateRangeChange}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Seleccionar período" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dateRangeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {isAdminOrSecretaria && (
+                  <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent">
+                    <PersonStanding className="h-4 w-4 text-indigo-500 shrink-0" />
+                    <select
+                      value={selectedDepartment}
+                      onChange={(e) => {
+                        setSelectedDepartment(e.target.value);
+                        setSelectedClass("all");
+                      }}
+                      className="bg-transparent border-none outline-none text-[13px] w-full font-semibold cursor-pointer"
+                    >
+                      <option value="all">Todos los Deptos</option>
+                      {departments.map((dept) => <option key={dept.value} value={dept.value}>{dept.label}</option>)}
+                    </select>
                   </div>
+                )}
 
-                  {selectedRange === "custom" && (
-                    isAdminOrSecretaria ? (
-                      <>
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Fecha Inicio</label>
-                          <MuiDatePickerField
-                            value={startDate}
-                            onChange={handleStartDateSelect}
-                            open={startDateOpen}
-                            onOpenChange={setStartDateOpen}
-                            placeholder="Seleccionar fecha"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Fecha Fin</label>
-                          <MuiDatePickerField
-                            value={endDate}
-                            onChange={handleEndDateSelect}
-                            open={endDateOpen}
-                            onOpenChange={setEndDateOpen}
-                            placeholder="Seleccionar fecha"
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Fecha</label>
-                        <MuiDatePickerField
-                          value={selectedDate}
-                          onChange={handleSingleDateSelect}
-                          open={singleDateOpen}
-                          onOpenChange={setSingleDateOpen}
-                          placeholder="Seleccionar fecha"
-                        />
-                      </div>
-                    )
-                  )}
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Buscar por nombre</label>
-                    <div className="relative">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Nombre del miembro"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-8"
-                        disabled={attendance.length === 0}
-                      />
-                    </div>
+                {(isAdminOrSecretaria || isDirector) && (
+                  <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent">
+                    <Users className="h-4 w-4 text-blue-500 shrink-0" />
+                    <select
+                      value={selectedClass}
+                      onChange={(e) => setSelectedClass(e.target.value)}
+                      disabled={selectedDepartment === "all"}
+                      className="bg-transparent border-none outline-none text-[13px] w-full font-semibold cursor-pointer"
+                    >
+                      <option value="all">{isDirector ? "Seleccionar Clase" : "Todas las Clases"}</option>
+                      {availableClasses.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl">
-            <div className="flex justify-around items-center gap-4">
-              <div className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-green-500" />
-                <span>Presentes: {isEditMode ? editRecords.filter(r => r.status).length : attendanceStats.present}</span>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <UserX className="h-5 w-5 text-red-500" />
-                <span>Ausentes: {isEditMode ? editRecords.filter(r => !r.status).length : attendanceStats.absent}</span>
-              </div>
-            </div>
-          </Card>
+            )}
+          </div>
         </div>
 
-        <Card className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/50 shadow-lg shadow-purple-500/5 rounded-3xl overflow-hidden h-fit">
-          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200/40 dark:border-slate-700/40">
-            <CardTitle className="text-lg md:text-xl text-slate-800 dark:text-slate-100">
-              {isEditMode
-                ? `Editar Asistencia del ${format(editDate, "dd/MM/yyyy")}`
-                : isAdminOrSecretaria
-                  ? `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`
-                  : selectedRange === "custom"
-                    ? `Asistencia del ${format(selectedDate, "dd/MM/yyyy")}`
-                    : `Asistencia del ${format(startDate, "dd/MM/yyyy")} al ${format(endDate, "dd/MM/yyyy")}`
-              }
-            </CardTitle>
-            <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3">
-              {!isEditMode && (
-                <Button
-                  onClick={enterEditMode}
-                  className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl"
-                >
-                  <PenSquare className="mr-2 h-4 w-4" />
-                  Editar Asistencia
-                </Button>
-              )}
-              {isAdminOrSecretaria && !isEditMode && (
-                <Button
-                  onClick={handleExportToExcel}
-                  disabled={!filteredAttendance.length}
-                  variant="outline"
-                  className="w-full sm:w-auto border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-xl"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar Excel
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isEditMode ? (
-              isLoadingDepartmentStudents || dateAttendanceLoading ? (
-                <div className="flex flex-col gap-3">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl opacity-50" />
-                  ))}
+        <div className="animate-fade-in">
+          {isEditMode ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Editando Asistencia · {editRecords.length} Registros
                 </div>
-              ) : !editRecords?.length ? (
-                <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-                  <UserX className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-muted-foreground font-medium">No hay registros de asistencia para esta fecha.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {editRecords
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {isLoadingDepartmentStudents || dateAttendanceLoading ? (
+                  Array.from({ length: 9 }).map((_, i) => (
+                    <div key={i} className="glass-card h-20 animate-pulse opacity-40" />
+                  ))
+                ) : !editRecords?.length ? (
+                  <div className="col-span-full py-20 text-center glass-card border-dashed">
+                    <UserX className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground font-medium">Sin resultados para la fecha seleccionada.</p>
+                  </div>
+                ) : (
+                  editRecords
                     .sort((a, b) => {
-                      // Sort by gender (females first) then by name
                       const gA = (a.students?.gender || '').toLowerCase();
                       const gB = (b.students?.gender || '').toLowerCase();
                       if (gA !== gB) {
-                        if (gA === "femenino") return -1;
-                        if (gB === "femenino") return 1;
+                        return gA === "femenino" ? -1 : 1;
                       }
                       return (a.students?.first_name || '').localeCompare(b.students?.first_name || '');
                     })
                     .map((record) => {
                       const student = record.students;
                       const isFemale = (student?.gender || '').toLowerCase() === 'femenino';
-                      const isAuthorized = student?.is_authorized;
-
                       return (
-                        <div
-                          key={record.id}
-                          className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-all duration-300 animate-slide-in"
-                        >
-                          {/* Gender dot */}
-                          <div className={`w-3 h-3 rounded-full shrink-0 ${isFemale ? 'bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.4)]' : 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.4)]'}`} />
-
-                          {/* Name + badges */}
+                        <div key={record.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-all duration-300 group">
+                          <div className={`w-3 h-3 rounded-full shrink-0 ${isFemale ? 'bg-pink-400' : 'bg-blue-400'} group-hover:scale-125 transition-transform`} />
                           <div className="flex-1 min-w-0">
-                            <span className="font-bold text-base text-slate-800 dark:text-slate-100 truncate block">
+                            <span className="font-bold text-base text-slate-800 dark:text-slate-100 truncate block leading-tight">
                               {getFullName(student)}
                             </span>
-                            <div className="flex gap-2 mt-1 flex-wrap">
-                              {isAuthorized && (
-                                <Badge className="text-[10px] px-2 py-0.5 h-auto bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-none font-black uppercase tracking-wider">
-                                  Autorizado
-                                </Badge>
-                              )}
-                              {student?.nuevo && (
-                                <Badge className="text-[10px] px-2 py-0.5 h-auto bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-none font-black uppercase tracking-wider">
-                                  Nuevo
-                                </Badge>
-                              )}
+                            <div className="flex gap-2 mt-1.5 flex-wrap">
+                              <Badge className="text-[9px] px-2 py-0 h-4 bg-slate-100 text-slate-500 border-none font-bold uppercase tracking-wider">
+                                {record.assigned_class || 'Sin clase'}
+                              </Badge>
+                              {student?.is_authorized && <Badge className="text-[9px] px-2 py-0 h-4 bg-green-100 text-green-700 border-none font-bold uppercase tracking-wider">Autorizado</Badge>}
+                              {student?.nuevo && <Badge className="text-[9px] px-2 py-0 h-4 bg-blue-100 text-blue-700 border-none font-bold uppercase tracking-wider">Nuevo</Badge>}
                             </div>
                           </div>
-
-                          {/* Single attendance toggle */}
                           <button
                             onClick={() => toggleAttendanceStatus(record.id)}
                             disabled={savingAttendance}
-                            className={`w-12 h-12 rounded-2xl font-black text-lg transition-all duration-300 shrink-0 flex items-center justify-center transform active:scale-90 ${record.status
-                              ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/20'
-                              : 'bg-rose-50 text-rose-500 dark:bg-rose-900/20 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30'
-                              }`}
+                            className={`w-12 h-12 rounded-2xl font-black text-lg transition-all duration-300 shrink-0 flex items-center justify-center transform active:scale-95 ${record.status ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/20' : 'bg-rose-50 text-rose-500 hover:bg-rose-100'}`}
                           >
                             {record.status ? 'P' : 'A'}
                           </button>
                         </div>
                       );
-                    })}
+                    })
+                )}
+              </div>
 
-                  <div className="pt-6">
-                    <Button
-                      onClick={saveAttendanceChanges}
-                      disabled={savingAttendance || editRecords.length === 0}
-                      className="w-full h-14 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xl shadow-purple-500/20 font-black text-lg rounded-2xl transition-all duration-300"
-                    >
-                      {savingAttendance ? (
-                        <div className="flex items-center gap-3">
-                          <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-                          Guardando cambios...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Save className="h-6 w-6" />
-                          Guardar Cambios
-                        </div>
-                      )}
-                    </Button>
-                  </div>
+              {!isLoadingDepartmentStudents && editRecords.length > 0 && (
+                <div className="flex justify-center pt-8">
+                  <Button onClick={saveAttendanceChanges} disabled={savingAttendance} className="w-full max-w-md h-14 button-gradient rounded-2xl font-black text-lg shadow-xl shadow-primary/20">
+                    {savingAttendance ? "Guardando cambios..." : "Guardar Cambios"}
+                  </Button>
                 </div>
-              )
-            ) : (
-              attendanceLoading ? (
-                <p className="text-muted-foreground">Cargando...</p>
-              ) : !filteredAttendance?.length ? (
-                <p className="text-muted-foreground">No hay registros de asistencia para este período.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
+              )}
+            </div>
+          ) : (
+            <Card className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/50 shadow-lg rounded-3xl overflow-hidden">
+              <div className="overflow-x-auto no-scrollbar">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50/50">
+                      <TableHead className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest pl-8">Miembro</TableHead>
+                      <TableHead className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest">Estado</TableHead>
+                      <TableHead className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest">Fecha</TableHead>
+                      {!isMobile && (
+                        <>
+                          <TableHead className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest">Departamento</TableHead>
+                          <TableHead className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest pr-8">Clase</TableHead>
+                        </>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {attendanceLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell colSpan={5} className="py-8"><div className="h-6 w-full bg-slate-100 animate-pulse rounded-full" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : (attendance || []).length === 0 ? (
                       <TableRow>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Fecha</TableHead>
-                        {!isMobile && (
-                          <>
-                            <TableHead>Departamento</TableHead>
-                            <TableHead>Clase</TableHead>
-                          </>
-                        )}
+                        <TableCell colSpan={5} className="py-20 text-center text-muted-foreground italic">
+                          No se encontraron registros de asistencia para este período.
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAttendance.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-medium">{getFullName(record.students)}</TableCell>
+                    ) : (
+                      (attendance || []).map((record) => (
+                        <TableRow key={record.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/40 transition-colors">
+                          <TableCell className="font-bold text-slate-800 dark:text-slate-100 pl-8">{getFullName(record.students)}</TableCell>
                           <TableCell>
-                            <span className={`flex items-center gap-2 ${record.status ? "text-green-500" : "text-red-500"}`}>
-                              {record.status ? (
-                                <UserCheck className="h-4 w-4" />
-                              ) : (
-                                <UserX className="h-4 w-4" />
-                              )}
-                              {!isMobile && (record.status ? "Presente" : "Ausente")}
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-tighter ${record.status ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-600"}`}>
+                              {record.status ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              {record.status ? "Presente" : "Ausente"}
                             </span>
                           </TableCell>
-                          <TableCell>{adjustDateForDisplay(record.date)}</TableCell>
+                          <TableCell className="font-medium text-slate-600 dark:text-slate-400">{adjustDateForDisplay(record.date)}</TableCell>
                           {!isMobile && (
                             <>
-                              <TableCell className="capitalize">
+                              <TableCell className="capitalize text-slate-500 text-xs font-bold">
                                 {record.students?.departments?.name
                                   ? record.students.departments.name.replace(/_/g, ' ')
-                                  : (record.department ? record.department.replace(/_/g, ' ') : 'Sin departamento')}
+                                  : (record.department ? record.department.replace(/_/g, ' ') : 'Sin depto')}
                               </TableCell>
-                              <TableCell>
-                                {record.assigned_class || 'Sin asignar'}
+                              <TableCell className="text-slate-500 text-xs font-bold pr-8">
+                                {record.assigned_class || '—'}
                               </TableCell>
                             </>
                           )}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )
-            )}
-          </CardContent>
-        </Card>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

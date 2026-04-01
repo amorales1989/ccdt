@@ -425,528 +425,409 @@ export default function Calendario() {
   }
 
   return (
-    <div className="animate-fade-in space-y-8 pb-8 p-4 md:p-6 max-w-7xl mx-auto">
-      <div className="flex justify-center mb-8">
-        <CustomTabs
-          value={activeTab}
-          onChange={setActiveTab}
-          options={[
-            { value: "calendario", label: "Calendario", icon: CalendarIcon },
-            { value: "solicitudes", label: `Solicitudes ${filteredRequests.length > 0 ? "(" + filteredRequests.length + ")" : ""}`, icon: ClipboardCheck }
-          ]}
-        />
-      </div>
+    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
+      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto">
 
-      {activeTab === "calendario" && (
-        <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl">
-          {/* Decorative background blurs */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
-
-          <div className="relative z-10">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 border-b border-purple-200/60 dark:border-slate-700/60 pb-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
-                  <CalendarIcon className="h-8 w-8" />
-                </div>
-                <div>
-                  <h2 className="text-3xl font-black text-foreground tracking-tight">Calendario de Eventos</h2>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    {(isSecretaria || isAdmin || isSecrCalendario) ? "Gestiona los eventos y solicitudes" : "Consulta y solicita nuevas fechas"}
-                  </p>
-                </div>
-              </div>
-              {/* Solo mostrar el botón de crear si puede crear eventos */}
-              {canCreateEvents && (
-                <Dialog
-                  open={dialogOpen}
-                  onOpenChange={(open) => {
-                    setDialogOpen(open);
-                    if (!open) setSelectedEvent(null);
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl">
-                      <CalendarPlus className="mr-2 h-4 w-4" />
-                      Agregar Evento
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="w-[95vw] max-w-2xl sm:max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-0 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-                    <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-
-                    <div className="p-6 sm:p-8 relative z-10">
-                      <DialogHeader className="mb-6">
-                        <DialogTitle className="flex items-center gap-3 text-2xl text-slate-800 dark:text-slate-100">
-                          <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl text-purple-600 dark:text-purple-400">
-                            {selectedEvent ? <CalendarIcon className="h-6 w-6" /> : <CalendarPlus className="h-6 w-6" />}
-                          </div>
-                          {selectedEvent ? "Editar Evento" : "Crear Nuevo Evento"}
-                          {selectedEvent && getStatusBadge(selectedEvent)}
-                        </DialogTitle>
-                      </DialogHeader>
-
-                      {/* Mostrar información de la solicitud si es aplicable */}
-                      {selectedEvent && canCreateEvents && (selectedEvent as any).solicitud && (
-                        <div className="mb-4 p-3 bg-muted/50 rounded-md">
-                          <h4 className="font-semibold text-sm mb-2">Información de la Solicitud:</h4>
-                          <p className="text-sm text-muted-foreground">
-                            <strong>Departamento:</strong> {(selectedEvent as any).departamento || 'No especificado'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            <strong>Estado:</strong> {(selectedEvent as any).estado || 'Pendiente'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            <strong>Fecha:</strong> {format(parseISO(selectedEvent.date), "dd/MM/yyyy", { locale: es })}
-                            {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.date && (
-                              <> - {format(parseISO(selectedEvent.end_date), "dd/MM/yyyy", { locale: es })}</>
-                            )}
-                          </p>
-                          {(selectedEvent.time || selectedEvent.end_time) && (
-                            <p className="text-sm text-muted-foreground">
-                              <strong>Hora:</strong> {selectedEvent.time || 'N/A'} {selectedEvent.end_time ? `- ${selectedEvent.end_time} hs` : 'hs'}
-                            </p>
-                          )}
-                          {selectedEvent.description && (
-                            <p className="text-sm text-muted-foreground">
-                              <strong>Descripción:</strong> {selectedEvent.description}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Solo mostrar el formulario si no es una solicitud rechazada */}
-                      {!(selectedEvent && (selectedEvent as any).estado === 'rechazada') && (
-                        <EventForm
-                          onSubmit={handleCreateEvent}
-                          initialData={selectedEvent || undefined}
-                          isRequestMode={!(isSecretaria || isAdmin || isSecrCalendario)}
-                          onSuccess={() => {
-                            setDialogOpen(false);
-                            setSelectedEvent(null);
-                          }}
-                        />
-                      )}
-
-                      {/* Mensaje para solicitudes rechazadas */}
-                      {selectedEvent && (selectedEvent as any).estado === 'rechazada' && (
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-md text-center">
-                          <p className="text-red-800 font-medium">Esta solicitud ha sido rechazada y no puede ser modificada.</p>
-                        </div>
-                      )}
-
-                      {/* Botones para gestionar solicitudes */}
-                      {selectedEvent && canCreateEvents && (selectedEvent as any).solicitud &&
-                        ((selectedEvent as any).estado === 'pendiente' || !(selectedEvent as any).estado) && (
-                          <DialogFooter className="mt-8 flex justify-between gap-3">
-                            <div className="flex flex-col sm:flex-row gap-3 w-full">
-                              <Button
-                                variant="default"
-                                className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-md shadow-green-500/20 rounded-xl"
-                                onClick={() => handleApproveRequest(selectedEvent!.id)}
-                              >
-                                Otorgar Fecha
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                className="w-full sm:w-auto shadow-md shadow-red-500/20 rounded-xl"
-                                onClick={() => {
-                                  handleRejectRequest(selectedEvent!.id);
-                                  setDialogOpen(false);
-                                }}
-                              >
-                                Rechazar Fecha
-                              </Button>
-                            </div>
-                          </DialogFooter>
-                        )}
-
-                      {/* Botón de eliminar para eventos/solicitudes (no rechazadas) */}
-                      {selectedEvent && canCreateEvents && !(canCreateEvents && (selectedEvent as any).solicitud) &&
-                        (selectedEvent as any).estado !== 'rechazada' && (
-                          <DialogFooter className="mt-4 flex justify-between">
-                            <Button
-                              variant="destructive"
-                              type="button"
-                              onClick={(e) => handleDeleteClick(selectedEvent!, e)}
-                              className="flex items-center"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Eliminar Evento
-                            </Button>
-                          </DialogFooter>
-                        )}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-
-              {/* Botón separado para solicitar fecha si no puede crear eventos */}
-              {!canCreateEvents && (
-                <Dialog
-                  open={dialogOpen}
-                  onOpenChange={(open) => {
-                    setDialogOpen(open);
-                    if (!open) setSelectedEvent(null);
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      Solicitar Fecha
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="w-[95vw] max-w-xl sm:max-w-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-0 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-                    <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-
-                    <div className="p-6 sm:p-8 relative z-10">
-                      <DialogHeader className="mb-6">
-                        <DialogTitle className="flex items-center gap-3 text-2xl text-slate-800 dark:text-slate-100">
-                          <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl text-purple-600 dark:text-purple-400">
-                            {selectedEvent ? <CalendarIcon className="h-6 w-6" /> : <CalendarPlus className="h-6 w-6" />}
-                          </div>
-                          {selectedEvent
-                            ? "Editar Solicitud"
-                            : "Solicitar Nueva Fecha"
-                          }
-                          {selectedEvent && getStatusBadge(selectedEvent)}
-                        </DialogTitle>
-                      </DialogHeader>
-
-                      {/* Solo mostrar el formulario si puede editar el evento o está creando uno nuevo */}
-                      {(!selectedEvent || canEditEvent(selectedEvent)) &&
-                        !(selectedEvent && (selectedEvent as any).estado === 'rechazada') && (
-                          <EventForm
-                            onSubmit={handleCreateEvent}
-                            initialData={selectedEvent || undefined}
-                            isRequestMode={true}
-                            onSuccess={() => {
-                              setDialogOpen(false);
-                              setSelectedEvent(null);
-                            }}
-                          />
-                        )}
-
-                      {/* Mensaje para solicitudes rechazadas */}
-                      {selectedEvent && (selectedEvent as any).estado === 'rechazada' && (
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-md text-center">
-                          <p className="text-red-800 font-medium">Esta solicitud ha sido rechazada y no puede ser modificada.</p>
-                        </div>
-                      )}
-
-                      {/* Botón de eliminar solo para solicitudes propias */}
-                      {selectedEvent && canEditEvent(selectedEvent) && (selectedEvent as any).estado !== 'rechazada' && (
-                        <DialogFooter className="mt-4 flex justify-between">
-                          <Button
-                            variant="destructive"
-                            type="button"
-                            onClick={(e) => handleDeleteClick(selectedEvent!, e)}
-                            className="flex items-center w-full sm:w-auto shadow-md shadow-red-500/20 rounded-xl"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar Solicitud
-                          </Button>
-                        </DialogFooter>
-                      )}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-
-            <div className="mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Calendario visual (Izquierda) */}
-                <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/40 dark:border-slate-700/50 shadow-sm p-4 flex justify-center h-fit">
-                  <MuiCalendar
-                    selectedDate={selectedDate}
-                    onDateSelect={setSelectedDate}
-                    onMonthChange={handleMonthChange}
-                    eventDates={eventDates}
-                    renderDayWithEvents={(date, dayEvents) => {
-                      return (
-                        <HoverCard>
-                          <HoverCardTrigger asChild>
-                            <span
-                              style={{
-                                position: 'absolute',
-                                inset: 0,
-                                cursor: 'pointer',
-                              }}
-                            />
-                          </HoverCardTrigger>
-                          <HoverCardContent className="w-80 dark:bg-gray-800 dark:border-gray-700" style={{ zIndex: 9999 }}>
-                            <div className="space-y-2">
-                              {dayEvents.map((event) => {
-                                const isPastEvent = isBefore(parseISO(event.date), new Date());
-                                return (
-                                  <div
-                                    key={event.id}
-                                    className={`p-2 rounded-md cursor-pointer ${isPastEvent
-                                      ? 'bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70'
-                                      : 'bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70'
-                                      }`}
-                                    onClick={() => handleEventClick(event)}
-                                  >
-                                    <div className="flex justify-between items-start">
-                                      <div className="flex-1">
-                                        <div className="flex items-center">
-                                          <h4 className="font-semibold dark:text-white">{event.title}</h4>
-                                          {getStatusBadge(event)}
-                                        </div>
-                                        {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
-                                          <p className="text-xs text-muted-foreground mt-1">
-                                            Solicitado por: {(event as any).departamento}
-                                          </p>
-                                        )}
-                                      </div>
-                                      {canCreateEvents && canEditEvent(event) && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-7 w-7 p-0 ml-2"
-                                          onClick={(e) => handleDeleteClick(event, e)}
-                                        >
-                                          <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                    <p className="text-sm text-muted-foreground whitespace-pre-line dark:text-gray-300">{event.description}</p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </HoverCardContent>
-                        </HoverCard>
-                      );
-                    }}
-                  />
-                </div>
-
-                {/* Lista de eventos del mes (Derecha) */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 mb-6">
-                    <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-                      {(isSecretaria || isAdmin || isSecrCalendario) ? "Eventos" : "Fechas solicitadas"} de {format(selectedDate || new Date(), 'MMMM yyyy', { locale: es })}
-                    </h3>
-                  </div>
-                  <div className="space-y-4">
-                    {currentMonthEvents.length > 0 ? (
-                      <div className="overflow-hidden rounded-2xl border border-white/40 dark:border-slate-700/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm shadow-sm">
-                        <div className="bg-indigo-50/80 dark:bg-indigo-900/20">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="hover:bg-transparent border-b-indigo-100 dark:border-b-indigo-900/30">
-                                <TableHead className="font-semibold text-indigo-700 dark:text-indigo-300 w-16">Fecha</TableHead>
-                                <TableHead className="font-semibold text-indigo-700 dark:text-indigo-300">Título</TableHead>
-                                <TableHead className="font-semibold text-indigo-700 dark:text-indigo-300 w-16">Hora</TableHead>
-                                {canCreateEvents && <TableHead className="font-semibold text-indigo-700 dark:text-indigo-300 w-10"></TableHead>}
-                              </TableRow>
-                            </TableHeader>
-                          </Table>
-                        </div>
-                        <ScrollArea className="h-[250px]">
-                          <Table>
-                            <TableBody>
-                              {currentMonthEvents.map((event) => (
-                                <TableRow
-                                  key={event.id}
-                                  className={"hover:bg-muted/50 cursor-pointer transition-colors duration-200 " + (isAfter(parseISO(event.date), new Date())
-                                    ? "bg-[#F2FCE2] hover:bg-[#F2FCE2]/80 dark:bg-[#2a4e27]/50 dark:hover:bg-[#2a4e27]/70"
-                                    : "bg-[#ea384c]/10 hover:bg-[#ea384c]/20 dark:bg-[#4e2a2a]/50 dark:hover:bg-[#4e2a2a]/70"
-                                  )}
-                                  onClick={() => handleEventClick(event)}
-                                >
-                                  <TableCell className="font-medium">
-                                    {format(parseISO(event.date), 'dd/MM')}
-                                    {event.end_date && event.end_date !== event.date && (
-                                      <span className="text-[10px] block opacity-70">
-                                        al {format(parseISO(event.end_date), 'dd/MM')}
-                                      </span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center">
-                                      <span>{event.title}</span>
-                                      {getStatusBadge(event)}
-                                    </div>
-                                    {canCreateEvents && (event as any).solicitud && (event as any).departamento && (
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        Solicitado por: {(event as any).departamento}
-                                      </p>
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="w-16 text-xs px-2">
-                                    {event.time || "-"}
-                                    {event.end_time && (
-                                      <span className="block opacity-70">-{event.end_time}</span>
-                                    )}
-                                  </TableCell>
-                                  {canCreateEvents && (
-                                    <TableCell className="w-10">
-                                      {canEditEvent(event) && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-7 w-7 p-0"
-                                          onClick={(e) => handleDeleteClick(event, e)}
-                                        >
-                                          <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/90" />
-                                        </Button>
-                                      )}
-                                    </TableCell>
-                                  )}
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </ScrollArea>
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground dark:text-gray-400">
-                        {(isSecretaria || isAdmin || isSecrCalendario) ? "No hay eventos este mes" : "No hay fechas solicitadas este mes"}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Header */}
+        <div className="mb-6 animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Calendario de Eventos</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+              {(isSecretaria || isAdmin || isSecrCalendario) ? "Gestioná los eventos y solicitudes de la congregación." : "Consultá y solicitá nuevas fechas para tus actividades."}
+            </p>
           </div>
-        </section>
-      )}
-
-      {activeTab === "solicitudes" && (
-        <div className="space-y-8 mt-0 focus-visible:outline-none focus-visible:ring-0">
-          <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl">
-            <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
-
-            <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white flex-shrink-0">
-                  <ClipboardCheck className="h-8 w-8" />
-                </div>
-                <div>
-                  <h2 className="text-3xl font-black text-foreground tracking-tight">
-                    {canCreateEvents ? "Solicitudes Pendientes" : "Mis Solicitudes"}
-                  </h2>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    {canCreateEvents ? "Gestiona las solicitudes de fechas para eventos" : "Revisa el estado de tus últimas peticiones"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <div className="space-y-4">
-            {filteredRequests.length === 0 ? (
-              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-md p-12 text-center relative overflow-hidden">
-                <div className="bg-white/60 dark:bg-slate-800/60 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-purple-100 dark:border-slate-700">
-                  <Clock4 className="h-10 w-10 text-purple-400 dark:text-purple-500" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">No hay solicitudes</h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  {canCreateEvents ? "Todas las solicitudes han sido procesadas o no hay nuevas por revisar." : "Aún no has realizado ninguna solicitud de evento."}
-                </p>
-              </div>
-            ) : (
-              filteredRequests.map((request: any) => (
-                <div
-                  key={request.id}
-                  className="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden p-5"
-                  onClick={() => handleEventClick(request)}
-                >
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-bold text-lg group-hover:text-purple-600 transition-colors uppercase">{request.title}</h3>
-                        {getStatusBadge(request)}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground font-medium">
-                        <div className="flex items-center gap-1.5"><CalendarIcon className="h-4 w-4 text-purple-500" /> {format(parseISO(request.date), 'dd/MM/yyyy')} {request.end_date && request.end_date !== request.date && `- ${format(parseISO(request.end_date), 'dd/MM/yyyy')}`}</div>
-                        <div className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-indigo-500" /> {request.time || 'N/A'} {request.end_time && `- ${request.end_time}`}</div>
-                        <div className="flex items-center gap-1.5"><Building className="h-4 w-4 text-pink-500" /> {request.departamento || 'N/A'}</div>
-                        {canCreateEvents && request.solicitante && (
-                          <div className="flex items-center gap-1.5"><User className="h-4 w-4 text-blue-500" /> {getUserName(request.solicitante)}</div>
-                        )}
-                      </div>
-                    </div>
+          <div className="flex items-center gap-3">
+            {canCreateEvents ? (
+              <Dialog
+                open={dialogOpen}
+                onOpenChange={(open) => {
+                  setDialogOpen(open);
+                  if (!open) setSelectedEvent(null);
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button className="button-gradient shadow-lg shadow-primary/20 rounded-xl font-bold px-6 h-12">
+                    <CalendarPlus className="mr-2 h-5 w-5" />
+                    Nuevo Evento
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="w-[95vw] max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-0 max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 sm:p-8">
+                    <DialogHeader className="mb-6">
+                      <DialogTitle className="flex items-center gap-3 text-2xl font-black text-slate-800 dark:text-slate-100">
+                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2.5 rounded-2xl text-purple-600 dark:text-purple-400">
+                          {selectedEvent ? <CalendarIcon className="h-6 w-6" /> : <CalendarPlus className="h-6 w-6" />}
+                        </div>
+                        {selectedEvent ? "Editar Evento" : "Crear Nuevo Evento"}
+                        {selectedEvent && getStatusBadge(selectedEvent)}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <EventForm
+                      onSubmit={handleCreateEvent}
+                      initialData={selectedEvent || undefined}
+                      isRequestMode={false}
+                      onSuccess={() => {
+                        setDialogOpen(false);
+                        setSelectedEvent(null);
+                      }}
+                    />
                   </div>
-                </div>
-              ))
+                </DialogContent>
+              </Dialog>
+            ) : (
+              <Dialog
+                open={dialogOpen}
+                onOpenChange={(open) => {
+                  setDialogOpen(open);
+                  if (!open) setSelectedEvent(null);
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button className="button-gradient shadow-lg shadow-primary/20 rounded-xl font-bold px-6 h-12">
+                    <CalendarIcon className="mr-2 h-5 w-5" />
+                    Solicitar Fecha
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="w-[95vw] max-w-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-0 max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 sm:p-8">
+                    <DialogHeader className="mb-6">
+                      <DialogTitle className="flex items-center gap-3 text-2xl font-black text-slate-800 dark:text-slate-100">
+                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2.5 rounded-2xl text-purple-600 dark:text-purple-400">
+                          <CalendarPlus className="h-6 w-6" />
+                        </div>
+                        Solicitar Nueva Fecha
+                      </DialogTitle>
+                    </DialogHeader>
+                    <EventForm
+                      onSubmit={handleCreateEvent}
+                      initialData={selectedEvent || undefined}
+                      isRequestMode={true}
+                      onSuccess={() => {
+                        setDialogOpen(false);
+                        setSelectedEvent(null);
+                      }}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             )}
           </div>
         </div>
-      )}
 
-      <DeleteConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={confirmDelete}
-        title="Confirmar eliminación"
-        description={`¿Estás seguro de que deseas eliminar ${(isSecretaria || isAdmin || isSecrCalendario) ? "este evento" : "esta solicitud"}? Esta acción no se puede deshacer.`}
-      />
-
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-md sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-red-200/50 dark:border-red-900/30 rounded-3xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-red-500" />
-              Motivo de Rechazo
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                Ingrese el motivo del rechazo:
-              </label>
-              <Textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Motivo del rechazo..."
-                className="min-h-[120px] resize-none rounded-2xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:ring-red-500/20"
-                maxLength={500}
-              />
-              <div className="text-xs text-muted-foreground mt-2 text-right">
-                {rejectReason.length}/500 caracteres
+        {/* Stats and Tabs Row */}
+        <div className="flex flex-col lg:flex-row gap-4 mb-8">
+          <div className="glass-card flex items-center gap-6 px-6 py-4 lg:w-auto overflow-x-auto no-scrollbar shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+                <CalendarIcon className="h-5 w-5 text-primary" />
+              </div>
+              <div className="whitespace-nowrap">
+                <div className="text-xl font-black text-primary leading-none">
+                  {currentMonthEvents.length}
+                </div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Eventos Mes</div>
               </div>
             </div>
-
-            {selectedRequest && (
-              <div className="bg-red-50/50 dark:bg-red-950/20 p-4 rounded-2xl border border-red-100 dark:border-red-900/30 font-medium">
-                <p className="text-sm text-muted-foreground">Solicitud a rechazar:</p>
-                <p className="font-bold uppercase">{selectedRequest.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  {format(parseISO(selectedRequest.date), 'dd/MM/yyyy')}
-                  {(selectedRequest.time || selectedRequest.end_time) && ` - ${selectedRequest.time || 'N/A'}${selectedRequest.end_time ? ` - ${selectedRequest.end_time}` : ''}`}
-                </p>
+            <div className="w-px h-10 bg-gray-100 shrink-0" />
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0">
+                <Clock4 className="h-5 w-5 text-yellow-600" />
               </div>
-            )}
+              <div className="whitespace-nowrap">
+                <div className="text-xl font-black text-yellow-600 leading-none">
+                  {filteredRequests.length}
+                </div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Solicitudes</div>
+              </div>
+            </div>
           </div>
 
-          <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setRejectDialogOpen(false);
-                setRejectReason("Fecha no disponible");
-              }}
-              className="rounded-xl w-full sm:w-auto"
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmReject}
-              disabled={!rejectReason.trim()}
-              className="flex items-center gap-2 rounded-xl w-full sm:w-auto font-bold"
-            >
-              <X className="h-4 w-4" />
-              Confirmar Rechazo
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="glass-card flex-1 flex items-center justify-center lg:justify-start px-2 py-2 overflow-x-auto no-scrollbar">
+            <CustomTabs
+              value={activeTab}
+              onChange={setActiveTab}
+              options={[
+                { value: "calendario", label: "Calendario", icon: CalendarIcon },
+                { value: "solicitudes", label: `Solicitudes`, icon: ClipboardCheck }
+              ]}
+            />
+          </div>
+        </div>
+
+        {activeTab === "calendario" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
+            {/* Calendario visual (Izquierda - 5 cols) */}
+            <div className="lg:col-span-5">
+              <Card className="glass-card border-none shadow-xl overflow-hidden p-2 h-fit bg-white/40">
+                <MuiCalendar
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                  onMonthChange={handleMonthChange}
+                  eventDates={eventDates}
+                  renderDayWithEvents={(date, dayEvents) => {
+                    return (
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <span className="absolute inset-0 cursor-pointer" />
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-80 glass-card-dark" style={{ zIndex: 9999 }}>
+                          <div className="space-y-3 p-1">
+                            {dayEvents.map((event) => {
+                              const isPastEvent = isBefore(parseISO(event.date), startOfDay(new Date()));
+                              return (
+                                <div
+                                  key={event.id}
+                                  className={`p-4 rounded-2xl cursor-pointer transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700 ${isPastEvent
+                                    ? 'bg-rose-50/50 hover:bg-rose-50 dark:bg-rose-950/20'
+                                    : 'bg-indigo-50/50 hover:bg-indigo-50 dark:bg-indigo-950/20'
+                                    }`}
+                                  onClick={() => handleEventClick(event)}
+                                >
+                                  <div className="flex justify-between items-start mb-1.5">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 uppercase tracking-tight">{event.title}</h4>
+                                      {getStatusBadge(event)}
+                                    </div>
+                                    {canCreateEvents && canEditEvent(event) && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0 -mt-1 -mr-1 text-rose-500 hover:text-rose-600 hover:bg-rose-100"
+                                        onClick={(e) => handleDeleteClick(event, e)}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{event.description || 'Sin descripción'}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    );
+                  }}
+                />
+              </Card>
+            </div>
+
+            {/* Lista de eventos del mes (Derecha - 7 cols) */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                  Próximos Eventos
+                </h3>
+                <Badge variant="outline" className="rounded-lg bg-white/50 border-slate-200 text-slate-500 font-bold uppercase text-[9px] tracking-widest px-3 py-1">
+                  {format(selectedDate || new Date(), 'MMMM yyyy', { locale: es })}
+                </Badge>
+              </div>
+
+              <ScrollArea className="h-[calc(100vh-450px)] min-h-[400px] pr-4">
+                <div className="space-y-4">
+                  {currentMonthEvents.length > 0 ? (
+                    currentMonthEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        onClick={() => handleEventClick(event)}
+                        className="glass-card hover:bg-white/80 transition-all p-5 cursor-pointer group animate-fade-in"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="flex flex-col items-center justify-center w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 font-black shrink-0 border border-slate-100 dark:border-slate-800 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-300 shadow-sm">
+                            <span className="text-lg leading-none">{format(parseISO(event.date), 'dd')}</span>
+                            <span className="text-[10px] uppercase opacity-70">{format(parseISO(event.date), 'MMM', { locale: es })}</span>
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <h4 className="font-bold text-base text-slate-800 dark:text-slate-100 truncate uppercase tracking-tight">
+                                {event.title}
+                              </h4>
+                            </div>
+
+                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5 text-primary opacity-70" />
+                                {event.time || "N/A"}{event.end_time ? ` - ${event.end_time} hs` : " hs"}
+                              </div>
+                              {(event as any).departamento && (
+                                <div className="flex items-center gap-1.5">
+                                  <Building className="h-3.5 w-3.5 text-primary opacity-70" />
+                                  {(event as any).departamento}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-2">
+                            {canCreateEvents && canEditEvent(event) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(event, e);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="glass-card p-12 text-center border-dashed bg-white/20">
+                      <CalendarIcon className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+                      <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No hay eventos para este mes</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-[0.2em] flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4 text-primary" />
+                {canCreateEvents ? "Solicitudes Pendientes" : "Mis Solicitudes"}
+              </h3>
+              <Badge variant="outline" className="rounded-lg bg-white/50 border-slate-200 text-slate-500 font-bold uppercase text-[9px] tracking-widest px-3 py-1">
+                {filteredRequests.length} Total
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredRequests.length === 0 ? (
+                <div className="col-span-full glass-card p-20 text-center border-dashed bg-white/20">
+                  <Clock4 className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">
+                    {canCreateEvents ? "No hay solicitudes pendientes" : "No has realizado solicitudes"}
+                  </p>
+                </div>
+              ) : (
+                filteredRequests.map((request: any) => (
+                  <div
+                    key={request.id}
+                    onClick={() => handleEventClick(request)}
+                    className="glass-card hover:bg-white/80 transition-all p-5 cursor-pointer group flex flex-col justify-between h-full"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <h4 className="font-bold text-base text-slate-800 dark:text-slate-100 truncate uppercase tracking-tight">
+                          {request.title}
+                        </h4>
+                        {getStatusBadge(request)}
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                          <CalendarIcon className="h-3.5 w-3.5 text-primary opacity-70" />
+                          {format(parseISO(request.date), 'dd/MM/yyyy')}
+                          {request.end_date && request.end_date !== request.date && (
+                            <span className="opacity-70 lowercase">al {format(parseISO(request.end_date), 'dd/MM/yyyy')}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                          <Clock className="h-3.5 w-3.5 text-indigo-500 opacity-70" />
+                          {request.time || 'N/A'} {request.end_time && `- ${request.end_time} hs`}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                          <Building className="h-3.5 w-3.5 text-pink-500 opacity-70" />
+                          {request.departamento || 'No especificado'}
+                        </div>
+                        {canCreateEvents && request.solicitante && (
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <User className="h-3.5 w-3.5 text-blue-500 opacity-70" />
+                            {getUserName(request.solicitante)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-auto flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                        Creado: {format(new Date(request.created_at || request.date), 'dd MMM', { locale: es })}
+                      </span>
+                      <Button variant="ghost" size="sm" className="h-7 px-3 text-[10px] font-black uppercase text-primary hover:bg-primary/5 rounded-lg">
+                        Ver Detalles
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        <DeleteConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={confirmDelete}
+          title="Confirmar eliminación"
+          description={`¿Estás seguro de que deseas eliminar ${(isSecretaria || isAdmin || isSecrCalendario) ? "este evento" : "esta solicitud"}? Esta acción no se puede deshacer.`}
+        />
+
+        <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+          <DialogContent className="w-[95vw] max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-red-200/50 dark:border-red-900/30 rounded-3xl p-6 sm:p-8 overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-black text-slate-800 dark:text-slate-100">
+                <XCircle className="h-6 w-6 text-red-500" />
+                Motivo de Rechazo
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6 mt-4">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">
+                  Mensaje para el solicitante:
+                </label>
+                <Textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Explique el motivo del rechazo..."
+                  className="min-h-[120px] resize-none rounded-2xl bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:ring-red-500/20 font-medium"
+                  maxLength={500}
+                />
+              </div>
+
+              {selectedRequest && (
+                <div className="bg-red-50/50 dark:bg-red-950/20 p-4 rounded-2xl border border-red-100 dark:border-red-900/30">
+                  <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] mb-1">Solicitud:</p>
+                  <p className="font-bold text-slate-800 dark:text-white uppercase">{selectedRequest.title}</p>
+                  <p className="text-xs font-semibold text-slate-500">
+                    {format(parseISO(selectedRequest.date), 'dd/MM/yyyy')}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-3 mt-8">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRejectDialogOpen(false);
+                  setRejectReason("Fecha no disponible");
+                }}
+                className="rounded-xl w-full font-bold h-11"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmReject}
+                disabled={!rejectReason.trim()}
+                className="rounded-xl w-full font-bold h-11 shadow-lg shadow-red-500/20"
+              >
+                Confirmar Rechazo
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

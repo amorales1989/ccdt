@@ -1,21 +1,30 @@
 
 import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area, LabelList } from "recharts";
 import { Users, TrendingUp, DollarSign, Award, Loader2, Info, FileDown, Building2, ShieldCheck } from "lucide-react";
 import { format, subMonths, differenceInYears } from "date-fns";
 import { es } from "date-fns/locale";
 import { exportStatsReport } from "@/lib/statsPdfUtils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Filter, RotateCcw } from "lucide-react";
 
 const COLORS = ["#002366", "#003a8c", "#0050b3", "#096dd9", "#1890ff", "#40a9ff", "#69c0ff"];
 
 const GLOBAL_ROLES = ["admin", "secretaria"];
 
 export default function Estadisticas() {
+    const [searchParams] = useSearchParams();
+    const currentView = searchParams.get("view") || "age";
+
+    const [selectedClass, setSelectedClass] = React.useState<string>("all");
+    const [selectedAgeRange, setSelectedAgeRange] = React.useState<string>("all");
 
     // 0. Get current user profile (for role+department scoping)
     const { data: currentProfile, isLoading: loadingProfile } = useQuery({
@@ -82,7 +91,7 @@ export default function Estadisticas() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('departments')
-                .select('name')
+                .select('name, classes')
                 .eq('id', scopedDeptId)
                 .single();
             if (error) throw error;
@@ -94,10 +103,47 @@ export default function Estadisticas() {
     const processedData = useMemo(() => {
         if (!students.length && !attendance.length) return null;
 
-        const totalStudents = students.length;
+        // Filter students by class and age
+        const filteredStudents = students.filter(s => {
+            const classMatch = selectedClass === "all" || s.assigned_class === selectedClass;
+
+            let ageMatch = true;
+            if (selectedAgeRange !== "all") {
+                if (!s.birthdate) {
+                    ageMatch = false; // Or handle "Sin datos" if needed
+                } else {
+                    const age = differenceInYears(new Date(), new Date(s.birthdate));
+                    if (selectedAgeRange === "0-11") ageMatch = age <= 11;
+                    else if (selectedAgeRange === "12-17") ageMatch = age >= 12 && age <= 17;
+                    else if (selectedAgeRange === "18-29") ageMatch = age >= 18 && age <= 29;
+                    else if (selectedAgeRange === "30-44") ageMatch = age >= 30 && age <= 44;
+                    else if (selectedAgeRange === "45-59") ageMatch = age >= 45 && age <= 59;
+                    else if (selectedAgeRange === "60-79") ageMatch = age >= 60 && age <= 79;
+                    else if (selectedAgeRange === "80+") ageMatch = age >= 80;
+                }
+            }
+
+            return classMatch && ageMatch;
+        });
+
+        // Filter attendance by class (and indirectly by students if we wanted, but usually status is enough)
+        // However, if we filter by class, we should only see attendance for students in that class
+        const filteredAttendance = attendance.filter(a => {
+            const classMatch = selectedClass === "all" || a.assigned_class === selectedClass;
+            // Age filtering for attendance is harder unless we join with students
+            // For now, let's filter attendance by class as it's directly on the record
+            return classMatch;
+        });
+
+        // Filter profiles by class
+        const filteredProfiles = profiles.filter(p => {
+            return selectedClass === "all" || p.assigned_class === selectedClass;
+        });
+
+        const totalStudents = filteredStudents.length;
 
         // Gender Distribution
-        const genderCount = students.reduce((acc: Record<string, number>, s) => {
+        const genderCount = filteredStudents.reduce((acc: Record<string, number>, s) => {
             const g = s.gender?.toLowerCase() || 'desconocido';
             acc[g] = (acc[g] || 0) + 1;
             return acc;
@@ -118,7 +164,7 @@ export default function Estadisticas() {
             "80+ años": 0,
             "Sin datos": 0
         };
-        students.forEach(s => {
+        filteredStudents.forEach(s => {
             if (!s.birthdate) { ageGroups["Sin datos"]++; return; }
             try {
                 const age = differenceInYears(new Date(), new Date(s.birthdate));
@@ -138,7 +184,7 @@ export default function Estadisticas() {
             const d = subMonths(new Date(), 11 - i);
             return { monthKey: format(d, 'yyyy-MM'), name: format(d, 'MMM', { locale: es }), count: 0, total: 0 };
         });
-        students.forEach(s => {
+        filteredStudents.forEach(s => {
             if (!s.created_at) return;
             const m = format(new Date(s.created_at), 'yyyy-MM');
             const idx = last12Months.findIndex(lm => lm.monthKey === m);
@@ -146,15 +192,15 @@ export default function Estadisticas() {
         });
 
         const firstMonthKey = last12Months[0].monthKey;
-        let runningTotal = students.filter(s => s.created_at && format(new Date(s.created_at), 'yyyy-MM') < firstMonthKey).length;
+        let runningTotal = filteredStudents.filter(s => s.created_at && format(new Date(s.created_at), 'yyyy-MM') < firstMonthKey).length;
         last12Months.forEach(m => { runningTotal += m.count; m.total = runningTotal; });
 
         // Attendance
-        const presentRecords = attendance.filter(a => a.status === true).length;
-        const attendanceRate = attendance.length > 0 ? ((presentRecords / attendance.length) * 100).toFixed(1) : "0";
+        const presentRecords = filteredAttendance.filter(a => a.status === true).length;
+        const attendanceRate = filteredAttendance.length > 0 ? ((presentRecords / filteredAttendance.length) * 100).toFixed(1) : "0";
 
         // Roles
-        const rolesCount = profiles.reduce((acc: Record<string, number>, p) => {
+        const rolesCount = filteredProfiles.reduce((acc: Record<string, number>, p) => {
             const r = p.role || 'Otros';
             acc[r] = (acc[r] || 0) + 1;
             return acc;
@@ -163,17 +209,36 @@ export default function Estadisticas() {
             .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
             .sort((a, b) => b.value - a.value);
 
+        // Exact Age Distribution (0 to maxAge)
+        const ages = filteredStudents
+            .filter(s => s.birthdate)
+            .map(s => differenceInYears(new Date(), new Date(s.birthdate)));
+
+        const maxAge = ages.length > 0 ? Math.max(...ages) : 0;
+        const exactAgeData = Array.from({ length: maxAge + 1 }, (_, i) => ({
+            name: `${i} ${i === 1 ? 'año' : 'años'}`,
+            value: ages.filter(age => age === i).length
+        }));
+
+        // Class Distribution (based on department classes)
+        const classDistributionData = (deptInfo?.classes || []).map((c: string) => ({
+            name: c,
+            value: filteredStudents.filter(s => s.assigned_class === c).length
+        }));
+
         return {
             totalStudents,
             genderData,
             ageData,
+            exactAgeData,
+            classDistributionData,
             last12Months,
             attendanceRate,
             roleData,
-            totalVolunteers: profiles.filter(p => p.role === 'lider' || p.role === 'maestro').length,
-            newStudents: students.filter(s => s.nuevo).length
+            totalVolunteers: filteredProfiles.filter(p => p.role === 'lider' || p.role === 'maestro').length,
+            newStudents: filteredStudents.filter((s: any) => s.nuevo).length
         };
-    }, [students, attendance, profiles]);
+    }, [students, attendance, profiles, selectedClass, selectedAgeRange, deptInfo]);
 
     const [isExporting, setIsExporting] = React.useState(false);
 
@@ -208,7 +273,6 @@ export default function Estadisticas() {
     return (
         <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
 
-            {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
                     { title: "Membresía Activa", value: data?.totalStudents || "0", icon: Users, trend: "Miembros actuales", color: "text-blue-600", bg: "bg-blue-50" },
@@ -258,29 +322,51 @@ export default function Estadisticas() {
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }} dy={15} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }} />
                                 <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)' }} itemStyle={{ color: '#002366', fontWeight: 900, fontSize: '14px' }} />
-                                <Area type="monotone" dataKey="total" name="Miembros" stroke="#002366" strokeWidth={5} fillOpacity={1} fill="url(#colorTotal)" />
+                                <Area type="monotone" dataKey="total" name="Miembros" stroke="#002366" strokeWidth={5} fillOpacity={1} fill="url(#colorTotal)">
+                                    <LabelList dataKey="total" position="top" offset={10} content={(props: any) => {
+                                        const { x, y, value, index, data } = props;
+                                        // Only show label for every 3rd point or the last one to avoid clutter in AreaChart
+                                        if (index % 3 !== 0 && index !== data.length - 1) return null;
+                                        return <text x={x} y={y - 10} fill="#002366" fontSize={10} fontWeight={900} textAnchor="middle">{value}</text>;
+                                    }} />
+                                </Area>
                             </AreaChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
 
-                {/* Age group Bar Chart */}
+                {/* Dynamic Distribution Bar Chart */}
                 <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl">
                     <CardHeader className="pb-2 pt-10 px-10">
                         <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-indigo-600 animate-pulse"></div>
-                            <CardTitle className="text-2xl font-black tracking-tight text-[#002366] dark:text-white">Capas Generacionales</CardTitle>
+                            <CardTitle className="text-2xl font-black tracking-tight text-[#002366] dark:text-white">
+                                {currentView === "age" ? "Distribución por Edad Exacta" : "Distribución por Clases"}
+                            </CardTitle>
                         </div>
-                        <CardDescription className="text-slate-500 font-medium">Distribución por rangos etarios ministeriales</CardDescription>
+                        <CardDescription className="text-slate-500 font-medium">
+                            {currentView === "age"
+                                ? "Muestra la cantidad de miembros por cada año de edad"
+                                : "Muestra la distribución de miembros en las clases del departamento"}
+                        </CardDescription>
                     </CardHeader>
-                    <CardContent className="h-[400px] pt-8 px-6" id="age-chart">
+                    <CardContent className="h-[400px] pt-8 px-6" id="distribution-chart">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.ageData}>
+                            <BarChart data={currentView === "age" ? data?.exactAgeData : data?.classDistributionData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} dy={15} />
+                                <XAxis
+                                    dataKey="name"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 9, fontWeight: 700, fill: '#64748b' }}
+                                    dy={15}
+                                    interval={currentView === "age" ? 4 : 0} // Reduce ticks for age view to avoid overlap
+                                />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }} />
                                 <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '20px', border: 'none' }} />
-                                <Bar dataKey="value" name="Miembros" fill="#002366" radius={[14, 14, 0, 0]} barSize={55} />
+                                <Bar dataKey="value" name="Miembros" fill="#002366" radius={[14, 14, 0, 0]} barSize={currentView === "age" ? undefined : 55}>
+                                    <LabelList dataKey="value" position="top" style={{ fill: '#002366', fontSize: 10, fontWeight: 900 }} />
+                                </Bar>
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
@@ -298,7 +384,15 @@ export default function Estadisticas() {
                     <CardContent className="h-[350px] pt-6 flex items-center justify-center" id="gender-chart">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
-                                <Pie data={data?.genderData} innerRadius={75} outerRadius={110} paddingAngle={10} dataKey="value" stroke="none">
+                                <Pie
+                                    data={data?.genderData}
+                                    innerRadius={75}
+                                    outerRadius={110}
+                                    paddingAngle={10}
+                                    dataKey="value"
+                                    stroke="none"
+                                    label={({ name, value }) => `${name}: ${value}`}
+                                >
                                     {data?.genderData.map((_, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
@@ -326,7 +420,9 @@ export default function Estadisticas() {
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 800, fill: '#1e293b' }} width={120} />
                                 <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '20px' }} />
-                                <Bar dataKey="value" name="Personal" fill="#002366" radius={[0, 10, 10, 0]} barSize={30} />
+                                <Bar dataKey="value" name="Personal" fill="#002366" radius={[0, 10, 10, 0]} barSize={30}>
+                                    <LabelList dataKey="value" position="right" offset={10} style={{ fill: '#002366', fontSize: 11, fontWeight: 800 }} />
+                                </Bar>
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>

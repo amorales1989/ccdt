@@ -68,6 +68,7 @@ export interface Event {
 export interface EventWithBirthday extends Event {
   isBirthday?: boolean;
   daysUntilBirthday?: number;
+  assigned_class?: string;
 }
 
 export interface Attendance {

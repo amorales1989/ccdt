@@ -28,28 +28,34 @@ const TomarAsistencia = () => {
   const [showAlert, setShowAlert] = useState(false);
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [authorizedStudents, setAuthorizedStudents] = useState<Record<string, boolean>>({});
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [deptClasses, setDeptClasses] = useState<string[]>([]);
 
+  const isDirector = profile?.role === "director";
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
-  const currentDepartment = profile?.departments?.[0];
+  const currentDepartmentName = profile?.departments?.[0];
   const userClass = profile?.assigned_class;
 
   useEffect(() => {
-    const fetchDepartmentId = async () => {
-      if (currentDepartment) {
+    const fetchDepartmentDetails = async () => {
+      if (currentDepartmentName) {
         try {
           const { data, error } = await supabase
             .from("departments")
-            .select("id")
-            .eq("name", currentDepartment)
+            .select("id, classes")
+            .eq("name", currentDepartmentName)
             .single();
-          if (!error && data) setDepartmentId(data.id);
+          if (!error && data) {
+            setDepartmentId(data.id);
+            setDeptClasses(data.classes || []);
+          }
         } catch (error) {
-          console.error("Error in fetchDepartmentId:", error);
+          console.error("Error in fetchDepartmentDetails:", error);
         }
       }
     };
-    fetchDepartmentId();
-  }, [currentDepartment]);
+    fetchDepartmentDetails();
+  }, [currentDepartmentName]);
 
   useEffect(() => {
     const fetchAuthorizedStudents = async () => {
@@ -75,17 +81,25 @@ const TomarAsistencia = () => {
   }, [departmentId]);
 
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
-    queryKey: ["students-attendance", departmentId, userClass],
+    queryKey: ["students-attendance", departmentId, userClass, selectedClass],
     queryFn: async () => {
+      if (!departmentId) return [];
+
+      // For director, if no class selected, return empty
+      if (isDirector && !selectedClass) return [];
+
       let departmentQuery = supabase
         .from("students")
         .select("*, departments:department_id(name, id)")
         .is('deleted_at', null);
 
       if (!isAdminOrSecretaria) {
-        if (!departmentId) return [];
         departmentQuery = departmentQuery.eq("department_id", departmentId);
-        if (userClass) departmentQuery = departmentQuery.eq("assigned_class", userClass);
+
+        const classToFilter = isDirector ? selectedClass : userClass;
+        if (classToFilter) {
+          departmentQuery = departmentQuery.eq("assigned_class", classToFilter);
+        }
       }
 
       const { data: departmentStudents, error } = await departmentQuery;
@@ -118,11 +132,11 @@ const TomarAsistencia = () => {
         return (a.first_name || '').localeCompare(b.first_name || '');
       });
     },
-    enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(departmentId)),
+    enabled: Boolean(profile) && (Boolean(departmentId)),
   });
 
-  const regularStudents = students?.filter(s => !s.nuevo) || [];
-  const newStudents = students?.filter(s => s.nuevo === true) || [];
+  const regularStudents = (students as any[])?.filter(s => !s.nuevo) || [];
+  const newStudents = (students as any[])?.filter(s => s.nuevo === true) || [];
   const hasNewStudents = newStudents.length > 0;
 
   const presentCount = Object.values(asistencias).filter(Boolean).length;
@@ -184,7 +198,7 @@ const TomarAsistencia = () => {
     }
   };
 
-  if (!isAdminOrSecretaria && !currentDepartment) {
+  if (!isAdminOrSecretaria && !currentDepartmentName) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[60vh]">
         <div className="glass-card p-8 text-center max-w-sm animate-fade-in">
@@ -316,6 +330,28 @@ const TomarAsistencia = () => {
               className="bg-transparent text-sm font-semibold text-gray-700 border-none outline-none w-full"
             />
           </div>
+
+          {/* Class Filter for Director/Admin */}
+          {isDirector && deptClasses.length > 0 && (
+            <div className="glass-card flex items-center gap-3 px-4 py-3 sm:w-auto">
+              <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4 text-indigo-600" />
+              </div>
+              <select
+                value={selectedClass}
+                onChange={e => {
+                  setSelectedClass(e.target.value);
+                  setAsistencias({}); // Reset attendance when class changes
+                }}
+                className="bg-transparent text-sm font-semibold text-gray-700 border-none outline-none w-full appearance-none cursor-pointer"
+              >
+                <option value="">Seleccionar Clase</option>
+                {deptClasses.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Student List */}
@@ -353,11 +389,11 @@ const TomarAsistencia = () => {
       </div>
 
       {/* Floating Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 to-transparent">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 to-transparent flex justify-center">
         <Button
           onClick={handleSaveAttendance}
           disabled={isLoading || !selectedDate || students.length === 0}
-          className="w-full h-12 button-gradient shadow-xl shadow-primary/20 font-bold text-base rounded-2xl"
+          className="w-full max-w-md h-12 button-gradient shadow-xl shadow-primary/20 font-bold text-base rounded-2xl"
         >
           {isLoading ? (
             <div className="flex items-center gap-2">

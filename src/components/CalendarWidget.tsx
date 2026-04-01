@@ -304,10 +304,15 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
                   </div>
 
                   {event.isBirthday ? (
-                    <div>
+                    <div className="flex items-center gap-2">
                       <span className="inline-block bg-pink-50 text-[#ff4b72] font-bold px-2 py-0.5 text-[9px] rounded-full tracking-wide">
                         {event.description}
                       </span>
+                      {event.assigned_class && (
+                        <span className="inline-block bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 text-[9px] rounded-full tracking-wide">
+                          {event.assigned_class}
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <p className="text-[#8492a6] dark:text-slate-400 text-xs font-medium">

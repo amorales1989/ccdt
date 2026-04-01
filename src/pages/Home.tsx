@@ -228,10 +228,11 @@ const Home = () => {
 
     const birthdayEvents = upcomingBirthdays.map(birthday => ({
       id: `birthday-${birthday.first_name}-${birthday.last_name}`,
-      title: `Cumpleaños: ${birthday.fullName}`,
+      title: `${birthday.fullName}`,
       date: birthday.calculatedDate, // CRITICAL: Use calculatedDate for sorting
       description: 'Cumpleaños',
-      isBirthday: true
+      isBirthday: true,
+      assigned_class: birthday.assigned_class
     }) as EventWithBirthday);
 
     return [...regularEvents, ...birthdayEvents].sort((a, b) => {

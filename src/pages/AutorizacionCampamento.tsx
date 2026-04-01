@@ -400,25 +400,30 @@ const AutorizacionCampamento = () => {
   const finDia = finFormatted ? finFormatted.split('/')[0] : "____";
 
   return (
-    <div className="container mx-auto py-6 max-w-[1400px]">
-      <h1 className="text-2xl font-bold mb-6 text-center">Autorización Campamento de Adolescentes</h1>
+    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
+      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto">
 
-      <div className="flex flex-col xl:flex-row gap-6 items-start">
+        {/* Header */}
+        <div className="mb-6 animate-fade-in">
+          <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Autorización de Campamento</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            Completá los datos para generar la autorización en PDF.
+          </p>
+        </div>
 
-        {/* Lado izquierdo: Formulario */}
-        <div className="w-full xl:w-1/2 space-y-6">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Users className="h-6 w-6 text-blue-600" />
+        <div className="flex flex-col xl:flex-row gap-6 items-start">
+
+          {/* Lado izquierdo: Formulario */}
+          <div className="w-full xl:w-1/2 space-y-4">
+            <div className="glass-card p-6">
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2 mb-5">
+                <Users className="h-4 w-4" />
                 Datos del Campamento
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </h2>
               <div onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <Label htmlFor="fechaInicio" className="text-sm font-medium">Fecha de inicio <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="fechaInicio" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha de inicio <span className="text-red-500">*</span></Label>
                     <MuiDatePickerField
                       value={formData.fechaInicio ? parseISO(formData.fechaInicio) : undefined}
                       onChange={(date) =>
@@ -432,7 +437,7 @@ const AutorizacionCampamento = () => {
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="fechaFin" className="text-sm font-medium">Fecha de fin <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="fechaFin" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha de fin <span className="text-red-500">*</span></Label>
                     <MuiDatePickerField
                       value={formData.fechaFin ? parseISO(formData.fechaFin) : undefined}
                       onChange={(date) =>
@@ -446,23 +451,23 @@ const AutorizacionCampamento = () => {
                   </div>
 
                   <div className="space-y-1 md:col-span-2">
-                    <Label htmlFor="lugar" className="text-sm font-medium">Lugar del campamento <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="lugar" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lugar del campamento <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Input
                         id="lugar"
                         name="lugar"
                         value={formData.lugar}
                         onChange={handleInputChange}
-                        className="pl-10"
+                        className="pl-10 rounded-xl bg-slate-50 border-slate-200"
                         placeholder="Dirección completa del campamento"
                       />
-                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
                     </div>
                     {errors.lugar && <p className="text-xs text-red-500">{errors.lugar}</p>}
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="costo" className="text-sm font-medium">Costo ($) <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="costo" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Costo ($) <span className="text-red-500">*</span></Label>
                     <Input
                       id="costo"
                       name="costo"
@@ -470,12 +475,13 @@ const AutorizacionCampamento = () => {
                       value={formData.costo}
                       onChange={handleInputChange}
                       placeholder="Ej: 15.000"
+                      className="rounded-xl bg-slate-50 border-slate-200"
                     />
                     {errors.costo && <p className="text-xs text-red-500">{errors.costo}</p>}
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="fechaLimite" className="text-sm font-medium">Fecha límite de inscripción <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="fechaLimite" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha límite de inscripción <span className="text-red-500">*</span></Label>
                     <MuiDatePickerField
                       value={formData.fechaLimite ? parseISO(formData.fechaLimite) : undefined}
                       onChange={(date) =>
@@ -489,54 +495,58 @@ const AutorizacionCampamento = () => {
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="horaSalida1" className="text-sm font-medium">Primera hora de salida <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="horaSalida1" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Primera hora de salida <span className="text-red-500">*</span></Label>
                     <Input
                       id="horaSalida1"
                       name="horaSalida1"
                       type="time"
                       value={formData.horaSalida1}
                       onChange={handleInputChange}
+                      className="rounded-xl bg-slate-50 border-slate-200"
                     />
                     {errors.horaSalida1 && <p className="text-xs text-red-500">{errors.horaSalida1}</p>}
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="horaSalida2" className="text-sm font-medium">Segunda hora de salida</Label>
+                    <Label htmlFor="horaSalida2" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Segunda hora de salida</Label>
                     <Input
                       id="horaSalida2"
                       name="horaSalida2"
                       type="time"
                       value={formData.horaSalida2}
                       onChange={handleInputChange}
+                      className="rounded-xl bg-slate-50 border-slate-200"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="horaRegreso" className="text-sm font-medium">Hora de regreso <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="horaRegreso" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hora de regreso <span className="text-red-500">*</span></Label>
                     <Input
                       id="horaRegreso"
                       name="horaRegreso"
                       type="time"
                       value={formData.horaRegreso}
                       onChange={handleInputChange}
+                      className="rounded-xl bg-slate-50 border-slate-200"
                     />
                     {errors.horaRegreso && <p className="text-xs text-red-500">{errors.horaRegreso}</p>}
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="liderDirector" className="text-sm font-medium">Nombre del Director/Responsable <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="liderDirector" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Director/Responsable <span className="text-red-500">*</span></Label>
                     <Input
                       id="liderDirector"
                       name="liderDirector"
                       value={formData.liderDirector}
                       onChange={handleInputChange}
                       placeholder="Nombre del director/responsable"
+                      className="rounded-xl bg-slate-50 border-slate-200"
                     />
                     {errors.liderDirector && <p className="text-xs text-red-500">{errors.liderDirector}</p>}
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="telefono" className="text-sm font-medium">Teléfono de contacto <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="telefono" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Teléfono de contacto <span className="text-red-500">*</span></Label>
                     <Input
                       id="telefono"
                       name="telefono"
@@ -544,16 +554,17 @@ const AutorizacionCampamento = () => {
                       value={formData.telefono}
                       onChange={handleInputChange}
                       placeholder="Número de teléfono"
+                      className="rounded-xl bg-slate-50 border-slate-200"
                     />
                     {errors.telefono && <p className="text-xs text-red-500">{errors.telefono}</p>}
                   </div>
                 </div>
 
-                {/* Nuevo campo para elementos */}
+                {/* Lista de elementos */}
                 <div className="space-y-1">
-                  <Label htmlFor="elementos" className="text-sm font-medium flex items-center gap-2">
-                    <List className="h-4 w-4 text-blue-600" />
-                    Lista de elementos que debe llevar cada campamentista
+                  <Label htmlFor="elementos" className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <List className="h-4 w-4 text-primary" />
+                    Lista de elementos a llevar
                   </Label>
                   <Textarea
                     id="elementos"
@@ -562,97 +573,97 @@ const AutorizacionCampamento = () => {
                     onChange={handleInputChange}
                     placeholder="Escriba cada elemento en una línea separada..."
                     rows={10}
-                    className="resize-vertical"
+                    className="resize-vertical rounded-xl bg-slate-50 border-slate-200"
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-slate-400">
                     Escriba cada elemento en una línea separada. Si deja vacío, se usará la lista por defecto.
                   </p>
                 </div>
 
-                <div className="flex justify-center pt-4">
+                <div className="flex justify-end pt-4">
                   <Button
                     onClick={handleSubmit}
                     disabled={loading}
-                    className="w-full md:w-auto px-8 py-3 text-lg"
+                    className="button-gradient rounded-xl font-black px-8 h-12 shadow-lg shadow-primary/20"
                   >
                     <FileText className="w-5 h-5 mr-2" />
-                    {loading ? "Generando PDF..." : "Generar PDF de Autorización"}
+                    {loading ? "Generando PDF..." : "Generar PDF"}
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
-        {/* Lado derecho: Previsualización */}
-        <div className="w-full xl:w-1/2 sticky top-6">
-          <Card className="shadow-lg overflow-hidden border-slate-200">
-            <CardHeader className="bg-slate-50 border-b border-slate-100 py-4">
-              <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-600 uppercase tracking-wider">
-                <FileText className="h-4 w-4 text-indigo-500" />
-                Vista Previa del Documento
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 bg-slate-100/50 flex justify-center py-8 overflow-hidden hidden md:flex">
-              {/* Vista previa A4 aproximada */}
-              <div className="w-[100%] max-w-[650px] bg-white p-8 sm:p-12 shadow-md font-sans text-black relative scale-[0.70] sm:scale-[0.80] md:scale-90 xl:scale-100 origin-top">
-
-                {/* Encabezado */}
-                {authPdfHeader.filter((l: any) => l.enabled).map((line: any, idx: number) => (
-                  <div key={idx} className={idx === 0 ? "flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2" : "mb-1"}>
-                    <div className={idx === 0 ? "font-bold text-base flex-1" : "text-sm text-gray-800"}>
-                      {line.text}
-                    </div>
-                    {idx === 0 && (
-                      <div className="font-bold text-base text-gray-800 whitespace-nowrap">
-                        {getCurrentDate()}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                <div className="mt-8 mb-4">
-                  <strong className="text-base block">Señores Padres:</strong>
-                </div>
-
-                <div className="text-sm mt-4 text-gray-800 space-y-4">
-                  <p className="text-justify leading-relaxed">
-                    Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para adolescentes que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio <strong>{formData.lugar || "_________________"}</strong>.
-                  </p>
-                  <p className="text-justify leading-relaxed">
-                    El campamento se realizará los días <strong>{inicioDia} al {finDia} de {mesNombre} del {año}</strong>. Vamos a salir de la Iglesia el día viernes {inicioDia}, a las {formData.horaSalida1 || "____"}hs{formData.horaSalida2 ? ` y ${formData.horaSalida2}hs` : ''}. y estaremos regresando el día Domingo {finDia}, a las {formData.horaRegreso || "____"}hs., aproximadamente.
-                  </p>
-                  <p className="text-justify leading-relaxed">
-                    El costo es de: <strong>${formData.costo || "______"}.-</strong>
-                  </p>
-                </div>
-
-                <div className="mt-8 border-t-2 border-dashed border-gray-300 pt-8 opacity-50 flex flex-col items-center">
-                  <p className="text-xs text-gray-400 font-bold tracking-widest uppercase mb-2">Resto del documento</p>
-                  <div className="h-2 bg-gray-100 rounded w-full mb-2"></div>
-                  <div className="h-2 bg-gray-100 rounded w-5/6 mb-2"></div>
-                  <div className="h-2 bg-gray-100 rounded w-4/6"></div>
-                </div>
-
+          {/* Lado derecho: Previsualización */}
+          <div className="w-full xl:w-1/2 sticky top-6 space-y-4">
+            <div className="glass-card overflow-hidden">
+              <div className="px-6 pt-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  Vista Previa del Documento
+                </h3>
               </div>
-            </CardContent>
-            <CardContent className="p-8 text-center text-muted-foreground flex md:hidden items-center justify-center">
-              Vista previa disponible en pantallas más grandes
-            </CardContent>
-          </Card>
+              <div className="p-4 bg-slate-50/50 flex justify-center py-8 overflow-hidden hidden md:flex">
+                {/* Vista previa A4 aproximada */}
+                <div className="w-[100%] max-w-[650px] bg-white p-8 sm:p-12 shadow-md font-sans text-black relative scale-[0.70] sm:scale-[0.80] md:scale-90 xl:scale-100 origin-top rounded-lg border border-slate-100">
 
-          {/* Información importante reubicada */}
-          <div className="mt-6 p-5 bg-blue-50/80 rounded-2xl border border-blue-200 shadow-sm flex flex-col gap-2">
-            <h3 className="font-bold text-blue-800 flex items-center gap-2">
-              <Info className="h-5 w-5" />
-              Información importante
-            </h3>
-            <ul className="text-sm text-blue-800/90 space-y-1.5 ml-1 leading-relaxed">
-              <li>• El PDF incluye la carta para padres completa.</li>
-              <li>• Contiene el formulario de inscripción y autorización.</li>
-              <li>• La lista de elementos es editable y personalizable.</li>
-              <li>• Si dejas el campo vacío, se usará la lista predeterminada.</li>
-            </ul>
+                  {/* Encabezado */}
+                  {authPdfHeader.filter((l: any) => l.enabled).map((line: any, idx: number) => (
+                    <div key={idx} className={idx === 0 ? "flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2" : "mb-1"}>
+                      <div className={idx === 0 ? "font-bold text-base flex-1" : "text-sm text-gray-800"}>
+                        {line.text}
+                      </div>
+                      {idx === 0 && (
+                        <div className="font-bold text-base text-gray-800 whitespace-nowrap">
+                          {getCurrentDate()}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <div className="mt-8 mb-4">
+                    <strong className="text-base block">Señores Padres:</strong>
+                  </div>
+
+                  <div className="text-sm mt-4 text-gray-800 space-y-4">
+                    <p className="text-justify leading-relaxed">
+                      Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para adolescentes que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio <strong>{formData.lugar || "_________________"}</strong>.
+                    </p>
+                    <p className="text-justify leading-relaxed">
+                      El campamento se realizará los días <strong>{inicioDia} al {finDia} de {mesNombre} del {año}</strong>. Vamos a salir de la Iglesia el día viernes {inicioDia}, a las {formData.horaSalida1 || "____"}hs{formData.horaSalida2 ? ` y ${formData.horaSalida2}hs` : ''}. y estaremos regresando el día Domingo {finDia}, a las {formData.horaRegreso || "____"}hs., aproximadamente.
+                    </p>
+                    <p className="text-justify leading-relaxed">
+                      El costo es de: <strong>${formData.costo || "______"}.-</strong>
+                    </p>
+                  </div>
+
+                  <div className="mt-8 border-t-2 border-dashed border-gray-300 pt-8 opacity-50 flex flex-col items-center">
+                    <p className="text-xs text-gray-400 font-bold tracking-widest uppercase mb-2">Resto del documento</p>
+                    <div className="h-2 bg-gray-100 rounded w-full mb-2"></div>
+                    <div className="h-2 bg-gray-100 rounded w-5/6 mb-2"></div>
+                    <div className="h-2 bg-gray-100 rounded w-4/6"></div>
+                  </div>
+
+                </div>
+              </div>
+              <div className="p-8 text-center text-muted-foreground flex md:hidden items-center justify-center">
+                Vista previa disponible en pantallas más grandes
+              </div>
+            </div>
+
+            {/* Información importante */}
+            <div className="glass-card p-5 border-l-4 border-primary flex flex-col gap-2">
+              <h3 className="font-black text-slate-700 text-sm flex items-center gap-2 uppercase tracking-wider">
+                <Info className="h-4 w-4 text-primary" />
+                Información importante
+              </h3>
+              <ul className="text-sm text-slate-500 space-y-1.5 ml-1 leading-relaxed">
+                <li>• El PDF incluye la carta para padres completa.</li>
+                <li>• Contiene el formulario de inscripción y autorización.</li>
+                <li>• La lista de elementos es editable y personalizable.</li>
+                <li>• Si dejas el campo vacío, se usará la lista predeterminada.</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

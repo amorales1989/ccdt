@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
@@ -16,24 +16,35 @@ dayjs.locale("es");
 interface MuiDatePickerFieldProps {
     value?: Date;
     onChange: (date: Date | undefined) => void;
-    label?: string;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     placeholder?: string;
     className?: string;
-    disabled?: Date;
 }
 
 export function MuiDatePickerField({
     value,
     onChange,
-    label,
     open,
     onOpenChange,
     placeholder = "Seleccionar fecha",
     className,
 }: MuiDatePickerFieldProps) {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+    // Usamos un estado interno para el valor para evitar que el calendario se resetee 
+    // al mes actual si el componente padre se re-renderiza con el mismo prop.
+    const [internalDate, setInternalDate] = useState<Dayjs | null>(value ? dayjs(value) : dayjs());
+
+    // Sincronizar con el prop solo si el prop cambia de verdad (basado en el día)
+    useEffect(() => {
+        if (value) {
+            const newDate = dayjs(value);
+            if (!internalDate || !newDate.isSame(internalDate, 'day')) {
+                setInternalDate(newDate);
+            }
+        }
+    }, [value]);
 
     const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
         setAnchorEl(e.currentTarget);
@@ -47,6 +58,7 @@ export function MuiDatePickerField({
 
     const handleDateChange = (newValue: Dayjs | null) => {
         if (newValue) {
+            setInternalDate(newValue);
             onChange(newValue.toDate());
         }
         handleClose();
@@ -56,11 +68,17 @@ export function MuiDatePickerField({
         <>
             <Button
                 variant="outline"
-                className={cn("w-full justify-start text-left font-normal", !value && "text-muted-foreground", className)}
+                className={cn(
+                    "w-full justify-start text-left font-semibold border-none bg-transparent hover:bg-transparent hover:text-primary transition-colors shadow-none px-0 text-slate-700 dark:text-slate-200",
+                    !value && "text-muted-foreground",
+                    className
+                )}
                 onClick={handleButtonClick}
             >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(value, "dd/MM/yyyy", { locale: es }) : placeholder}
+                <CalendarIcon className="mr-2 h-4 w-4 text-primary shrink-0" />
+                <span className="truncate">
+                    {value ? format(value, "dd/MM/yyyy", { locale: es }) : placeholder}
+                </span>
             </Button>
 
             <Popover
@@ -69,28 +87,29 @@ export function MuiDatePickerField({
                 onClose={handleClose}
                 anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
                 transformOrigin={{ vertical: "top", horizontal: "left" }}
+                disablePortal={false}
                 slotProps={{
                     paper: {
                         sx: {
-                            borderRadius: "12px",
-                            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                            mt: 0.5,
+                            borderRadius: "16px",
+                            boxShadow: "0 10px 40px rgba(0,0,0,0.12)",
+                            mt: 1,
+                            overflow: 'hidden'
                         },
                     },
                 }}
             >
-                <Paper elevation={0}>
+                <Paper elevation={0} sx={{ p: 1 }}>
                     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
                         <DateCalendar
-                            value={value ? dayjs(value) : null}
+                            value={internalDate}
                             onChange={handleDateChange}
                             sx={{
                                 "& .MuiPickersDay-root.Mui-selected": {
-                                    backgroundColor: "#7c3aed",
-                                    "&:hover": { backgroundColor: "#6d28d9" },
+                                    backgroundColor: "#7c3aed !important",
                                 },
                                 "& .MuiPickersDay-today": {
-                                    border: "1px solid #a855f7",
+                                    borderColor: "#a855f7",
                                     backgroundColor: "rgba(168,85,247,0.08)",
                                 },
                                 "& .MuiPickersArrowSwitcher-button": {
@@ -98,15 +117,11 @@ export function MuiDatePickerField({
                                 },
                                 "& .MuiPickersCalendarHeader-label": {
                                     fontFamily: "inherit",
-                                    fontWeight: 600,
+                                    fontWeight: 700,
                                     textTransform: "capitalize",
-                                },
-                                "& .MuiDayCalendar-weekDayLabel": {
-                                    fontFamily: "inherit",
                                 },
                                 "& .MuiPickersDay-root": {
                                     fontFamily: "inherit",
-                                    borderRadius: "6px",
                                 },
                             }}
                         />

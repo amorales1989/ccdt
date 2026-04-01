@@ -76,6 +76,7 @@ const ListarAlumnos = () => {
     department: '',
     class: '',
   });
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'age', direction: 'asc' | 'desc' } | null>(null);
 
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -92,50 +93,6 @@ const ListarAlumnos = () => {
     queryFn: getStudents,
   });
 
-  // Filtrar miembros según el rol y permisos del usuario
-  const students = React.useMemo(() => {
-    if (!allStudents?.length) return [];
-
-    let filteredStudents = allStudents;
-
-    // Si es admin o secretaria, mostrar todos los miembros
-    if (profile?.role === 'secretaria' || profile?.role === 'admin') {
-      return filteredStudents.map(student => ({
-        ...student,
-        department: student.departments?.name || student.department
-      }));
-    }
-
-    // Si es director, filtrar por departamento (todo el departamento)
-    if (profile?.role === 'director' && profile?.department_id) {
-      filteredStudents = allStudents.filter(student =>
-        student.department_id === profile.department_id
-      );
-    }
-
-    // Para otros roles, filtrar por departamento y clase
-    if (profile?.department_id && profile?.assigned_class) {
-      filteredStudents = allStudents.filter(student =>
-        student.department_id === profile.department_id &&
-        student.assigned_class === profile.assigned_class
-      );
-    }
-
-    // TODO: Aquí puedes agregar lógica para miembros autorizados de otros departamentos
-    // cuando implementes ese endpoint en tu backend
-
-    return filteredStudents.map(student => ({
-      ...student,
-      department: student.departments?.name || student.department
-    }));
-  }, [allStudents, profile]);
-
-  // ============ CONSULTA DE DEPARTAMENTOS USANDO BACKEND API ============
-  const { data: departments } = useQuery({
-    queryKey: ["departments"],
-    queryFn: getDepartments,
-  });
-
   // ============ CONSULTA DE AUTORIZACIONES - MANTENER SUPABASE POR AHORA ============
   const { data: authorizations } = useQuery({
     queryKey: ["authorizations"],
@@ -148,6 +105,125 @@ const ListarAlumnos = () => {
       return data || [];
     },
   });
+
+  // Filtrar miembros según el rol y permisos del usuario
+  const students = React.useMemo(() => {
+    if (!allStudents?.length) return [];
+
+    const filteredStudentsBase = allStudents.filter(s => !s.deleted_at);
+
+    // Si es admin o secretaria, mostrar todos los miembros
+    if (profile?.role === 'secretaria' || profile?.role === 'admin') {
+      return filteredStudentsBase.map(student => ({
+        ...student,
+        department: student.departments?.name || student.department
+      }));
+    }
+
+    // Identificar a los autorizados específicamente para mi departamento/clase
+    const myAuthorizedStudentIds = authorizations
+      ? authorizations
+        .filter((auth: any) =>
+          auth.department_id === profile?.department_id &&
+          (!auth.class || auth.class === profile?.assigned_class || auth.class === "all")
+        )
+        .map((auth: any) => auth.student_id)
+      : [];
+
+    // Unir mis miembros regulares con los autorizados
+    let filteredList = filteredStudentsBase.filter(student => {
+      // Caso 1: Miembro regular de mi departamento (y clase si soy maestro)
+      const isRegular = (
+        (profile?.role === 'director' && student.department_id === profile?.department_id) ||
+        (profile?.department_id && profile?.assigned_class &&
+          student.department_id === profile.department_id &&
+          student.assigned_class === profile.assigned_class)
+      );
+
+      // Caso 2: Miembro de otro departamento pero autorizado al mío
+      const isAuthorized = myAuthorizedStudentIds.includes(student.id);
+
+      return isRegular || isAuthorized;
+    });
+
+    return filteredList.map(student => {
+      const isAuthorizedToMe = myAuthorizedStudentIds.includes(student.id) && student.department_id !== profile?.department_id;
+      return {
+        ...student,
+        department: student.departments?.name || student.department,
+        isAuthorized: isAuthorizedToMe
+      };
+    });
+  }, [allStudents, profile, authorizations]);
+
+  const calculateAge = React.useCallback((dateOfBirth: string): number | null => {
+    if (!dateOfBirth) return null;
+    const parsedDate = parse(dateOfBirth, 'yyyy-MM-dd', new Date());
+
+    if (!isValid(parsedDate)) {
+      return null;
+    }
+
+    return differenceInYears(new Date(), parsedDate);
+  }, []);
+
+  const filteredStudents = React.useMemo(() => {
+    return students?.filter(student => {
+      const nameFilter = filters.name.toLowerCase();
+      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+      const departmentFilter = filters.department;
+      const classFilter = filters.class;
+
+      const nameMatch = fullName.includes(nameFilter);
+      const departmentMatch = departmentFilter ?
+        (student.departments?.name === departmentFilter || student.department === departmentFilter) : true;
+      const classMatch = classFilter ? student.assigned_class === classFilter : true;
+
+      return nameMatch && departmentMatch && classMatch;
+    });
+  }, [students, filters]);
+
+  const sortedStudents = React.useMemo(() => {
+    if (!filteredStudents) return [];
+    if (!sortConfig) return filteredStudents;
+
+    return [...filteredStudents].sort((a, b) => {
+      if (sortConfig.key === 'name') {
+        const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
+        if (nameA < nameB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (nameA > nameB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      }
+      if (sortConfig.key === 'age') {
+        const ageA = calculateAge(a.birthdate || '') || 0;
+        const ageB = calculateAge(b.birthdate || '') || 0;
+        if (ageA < ageB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (ageA > ageB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      }
+      return 0;
+    });
+  }, [filteredStudents, sortConfig, calculateAge]);
+
+  const regularStudents = sortedStudents?.filter(student => !student.nuevo) || [];
+  const newStudents = sortedStudents?.filter(student => student.nuevo === true) || [];
+  const hasNewStudents = newStudents.length > 0;
+
+  const handleSort = (key: 'name' | 'age') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // ============ CONSULTA DE DEPARTAMENTOS USANDO BACKEND API ============
+  const { data: departments } = useQuery({
+    queryKey: ["departments"],
+    queryFn: getDepartments,
+  });
+
 
   // ============ CONSULTA DE CLASES - USAR DEPARTAMENTOS Y STUDENTS ============
   const { data: classes } = useQuery({
@@ -260,16 +336,6 @@ const ListarAlumnos = () => {
     }
   }, [profile, navigate, searchParams, departments]);
 
-  const calculateAge = (dateOfBirth: string): number | null => {
-    if (!dateOfBirth) return null;
-    const parsedDate = parse(dateOfBirth, 'yyyy-MM-dd', new Date());
-
-    if (!isValid(parsedDate)) {
-      return null;
-    }
-
-    return differenceInYears(new Date(), parsedDate);
-  };
 
   // NUEVA FUNCIÓN DE EXPORTAR
   const exportToExcel = () => {
@@ -646,25 +712,6 @@ const ListarAlumnos = () => {
     reader.readAsBinaryString(excelFile);
   };
 
-  const filteredStudents = students?.filter(student => {
-    const nameFilter = filters.name.toLowerCase();
-    const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
-    const departmentFilter = filters.department;
-    const classFilter = filters.class;
-
-    const nameMatch = fullName.includes(nameFilter);
-    const departmentMatch = departmentFilter ?
-      (student.departments?.name === departmentFilter || student.department === departmentFilter) : true;
-    const classMatch = classFilter ? student.assigned_class === classFilter : true;
-
-    return nameMatch && departmentMatch && classMatch;
-  });
-
-  // Separar miembros en dos grupos: normales y nuevos
-  const regularStudents = filteredStudents?.filter(student => !student.nuevo) || [];
-  const newStudents = filteredStudents?.filter(student => student.nuevo === true) || [];
-  const hasNewStudents = newStudents.length > 0;
-
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({
@@ -737,23 +784,23 @@ const ListarAlumnos = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  // Función para renderizar una fila de miembro
   const renderStudentRow = (student: Student) => (
     <React.Fragment key={student.id}>
       <TableRow
-        className={`cursor-pointer hover:bg-gray-50 ${student.isAuthorized ? 'bg-green-50' : ''} ${student.nuevo ? 'bg-blue-50' : ''}`}
+        className={`cursor-pointer transition-colors hover:bg-primary/5 ${student.isAuthorized ? 'bg-emerald-50/60 dark:bg-emerald-900/10' : ''
+          } ${student.nuevo ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''}`}
         onClick={() => handleStudentClick(student.id)}
       >
         <TableCell className="font-medium">
           <div className="flex items-center gap-2">
             {expandedStudentId === student.id ? (
-              <CircleChevronUp className="h-4 w-4 text-gray-500" />
+              <CircleChevronUp className="h-4 w-4 text-primary" />
             ) : (
-              <CircleChevronDown className="h-4 w-4 text-gray-500" />
+              <CircleChevronDown className="h-4 w-4 text-slate-400" />
             )}
             <span>{student.first_name} {student.last_name}</span>
             {student.isAuthorized && (
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
+              <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-[10px] font-bold">
                 Autorizado
               </Badge>
             )}
@@ -765,16 +812,16 @@ const ListarAlumnos = () => {
           </div>
         </TableCell>
         {!isMobile && (
-          <TableCell>{student.departments?.name || student.department || 'Sin departamento'}</TableCell>
+          <TableCell className="text-slate-600 dark:text-slate-400">{student.departments?.name || student.department || 'Sin departamento'}</TableCell>
         )}
-        <TableCell>{calculateAge(student.birthdate) || 'N/A'}</TableCell>
+        <TableCell className="text-slate-600 dark:text-slate-400">{calculateAge(student.birthdate) || 'N/A'}</TableCell>
         <TableCell className="text-right">
           {renderActionButtons(student)}
         </TableCell>
       </TableRow>
       {expandedStudentId === student.id && (
         <TableRow>
-          <TableCell colSpan={4} className="bg-gray-50">
+          <TableCell colSpan={4} className="bg-slate-50/80 dark:bg-slate-900/50 p-0">
             <StudentDetails student={student} />
           </TableCell>
         </TableRow>
@@ -828,8 +875,8 @@ const ListarAlumnos = () => {
     } else {
       // En desktop, mostrar botones directamente
       return (
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          {canManageStudents && !student.isAuthorized && (
+        <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+          {canManageStudents && !student.isAuthorized ? (
             <>
               <CustomTooltip title="Editar">
                 <Button
@@ -853,6 +900,11 @@ const ListarAlumnos = () => {
                 </Button>
               </CustomTooltip>
             </>
+          ) : (
+            <>
+              <div className="w-8 h-8 invisible" />
+              <div className="w-8 h-8 invisible" />
+            </>
           )}
           <CustomTooltip title="WhatsApp">
             <Button
@@ -866,19 +918,6 @@ const ListarAlumnos = () => {
               </svg>
             </Button>
           </CustomTooltip>
-
-          {student.nuevo && (
-            <CustomTooltip title="Marcar como no nuevo">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-            </CustomTooltip>
-          )}
 
           <CustomTooltip title="Descargar Informe PDF">
             <Button
@@ -902,510 +941,608 @@ const ListarAlumnos = () => {
             </Button>
           </CustomTooltip>
 
+          {student.nuevo ? (
+            <CustomTooltip title="Marcar como no nuevo">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            </CustomTooltip>
+          ) : (
+            <div className="w-8 h-8 invisible" />
+          )}
+
         </div>
       );
     }
   };
 
   return (
-    <div className="animate-fade-in space-y-8 pb-8">
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-lg">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
+    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
+      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto animate-fade-in space-y-6">
 
-        <div className="relative z-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-            <div className="text-center sm:text-left">
-              <h2 className="text-3xl font-black text-foreground tracking-tight">Directorio de Miembros</h2>
-              <p className="text-muted-foreground text-sm mt-1">Gestión general e información detallada</p>
-            </div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Directorio de Miembros</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Gestión general e información detallada</p>
+          </div>
 
-            <div className="flex items-center space-x-2">
-              {canFilter && (
-                <CustomTooltip title="Filtrar miembros">
-                  <Button variant="outline" className="bg-white/80 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 shadow-sm text-foreground hover:text-foreground" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </CustomTooltip>
-              )}
-              {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director') && (
-                <CustomTooltip title="Exportar a Excel">
-                  <Button variant="outline" className="bg-white/80 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 shadow-sm text-foreground hover:text-foreground" onClick={exportToExcel}>
-                    <FileDown className="h-4 w-4" />
-                  </Button>
-                </CustomTooltip>
-              )}
-              <CustomTooltip title="Agregar nuevo miembro">
-                <Button onClick={() => setIsAddModalOpen(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Nuevo
+          <div className="flex items-center gap-2">
+            {canFilter && (
+              <CustomTooltip title="Filtrar miembros">
+                <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm h-10" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                  <Filter className="h-4 w-4" />
                 </Button>
               </CustomTooltip>
-            </div>
+            )}
+            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director') && (
+              <CustomTooltip title="Exportar a Excel">
+                <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm h-10" onClick={exportToExcel}>
+                  <FileDown className="h-4 w-4" />
+                </Button>
+              </CustomTooltip>
+            )}
+            <Button onClick={() => setIsAddModalOpen(true)} className="button-gradient rounded-xl font-black h-10 px-5 shadow-lg shadow-primary/20">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Nuevo Miembro
+            </Button>
           </div>
+        </div>
 
-          {canFilter && (
-            <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-              <CollapsibleTrigger asChild>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        {canFilter && (
+          <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <CollapsibleTrigger asChild></CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="glass-card p-5">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-4 flex items-center gap-2">
+                  <Filter className="h-3.5 w-3.5" /> Filtros
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</Label>
+                    <Select
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value, class: '' }))}
+                      value={filters.department || "all"}
+                      disabled={profile?.role === 'director'}
+                    >
+                      <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
+                        <SelectValue placeholder="Seleccione un departamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {profile?.role !== 'director' && <SelectItem value="all">Todos</SelectItem>}
+                        {departments?.filter(dept => profile?.role !== 'director' || profile.department_id === dept.id).map((department) => (
+                          <SelectItem key={department.id} value={department.name}>
+                            {department.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div>
-                  <Label htmlFor="department">Departamento</Label>
-                  <Select
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value, class: '' }))}
-                    value={filters.department || "all"}
-                    disabled={profile?.role === 'director'}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleccione un departamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {profile?.role !== 'director' && <SelectItem value="all">Todos</SelectItem>}
-                      {departments?.filter(dept => profile?.role !== 'director' || profile.department_id === dept.id).map((department) => (
-                        <SelectItem key={department.id} value={department.name}>
-                          {department.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Anexo/Clase</Label>
+                    <Select
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, class: value === "all" ? "" : value }))}
+                      value={filters.class || "all"}
+                      key={filters.department}
+                    >
+                      <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
+                        <SelectValue placeholder="Seleccione una clase" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {classes?.map((className) => (
+                          <SelectItem key={String(className)} value={String(className)}>
+                            {String(className)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div>
-                  <Label htmlFor="class">Anexo/Clase</Label>
-                  <Select
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, class: value === "all" ? "" : value }))}
-                    value={filters.class || "all"}
-                    key={filters.department} // Forzar re-render cuando cambie el departamento
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleccione una clase" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      {classes?.map((className) => (
-                        <SelectItem key={String(className)} value={String(className)}>
-                          {String(className)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-end">
-                  <Button
-                    className="bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-950 dark:hover:bg-slate-900 shadow-lg rounded-full px-6 transition-all active:scale-95"
-                    size="sm"
-                    onClick={handleClearFilters}
-                  >
-                    Limpiar Filtros
-                  </Button>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          <div className="overflow-hidden mt-6 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-2xl shadow-sm">
-            <Table>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium">Nombre</TableCell>
-                  {!isMobile && (
-                    <TableCell className="font-medium">Departamento</TableCell>
-                  )}
-                  <TableCell className="font-medium">Edad</TableCell>
-                  <TableCell className={`flex justify-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>Acciones</TableCell>
-                </TableRow>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                    </TableCell>
-                  </TableRow>
-                ) : isError ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      Error al cargar los miembros.
-                    </TableCell>
-                  </TableRow>
-                ) : (regularStudents.length === 0 && newStudents.length === 0) ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      No hay miembros registrados.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  <>
-                    {/* Renderizar miembros regulares */}
-                    {regularStudents.map((student) => renderStudentRow(student))}
-
-                    {/* Línea separadora y miembros nuevos */}
-                    {hasNewStudents && (
-                      <>
-                        <TableRow>
-                          <TableCell colSpan={4} className="py-4">
-                            <div className="flex items-center justify-center">
-                              <div className="flex-grow border-t border-gray-300"></div>
-                              <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                                Nuevos Miembros
-                              </span>
-                              <div className="flex-grow border-t border-gray-300"></div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {newStudents.map((student) => renderStudentRow(student))}
-                      </>
-                    )}
-                  </>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <Dialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
-            <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
-              <DialogHeader>
-                <DialogTitle>Promover Miembros</DialogTitle>
-                <DialogDescription>
-                  Seleccione el departamento al que desea promover los miembros seleccionados.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="department" className="text-right">
-                    Departamento
-                  </Label>
-                  <Select onValueChange={setSelectedDepartment} defaultValue={selectedDepartment ?? ""}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Seleccione un departamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments?.map((department) => (
-                        <SelectItem key={department.id} value={department.id}>
-                          {department.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <div></div>
-                  <Button variant="outline" onClick={handlePromoteAll} className="col-span-3 justify-start">
-                    {studentsToPromote.length === (students?.length || 0) ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                  </Button>
-                </div>
-                <div>
-                  {studentsToPromote.length > 0 && (
-                    <div>
-                      Miembros a promover:
-                      <div className="mt-2">
-                        {studentsToPromote.map(studentId => {
-                          const student = students?.find(s => s.id === studentId);
-                          return (
-                            student && (
-                              <Badge key={student.id} className="mr-2">{student.first_name} {student.last_name}</Badge>
-                            )
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex items-end">
+                    <Button
+                      variant="outline"
+                      className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 font-bold h-10 px-6"
+                      onClick={handleClearFilters}
+                    >
+                      Limpiar Filtros
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setIsPromoteModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" onClick={promoteStudents} disabled={isPromoting}>
-                  {isPromoting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Promover
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
-          <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
-            <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
-              <DialogHeader>
-                <DialogTitle>Importar Miembros desde Excel</DialogTitle>
-                <DialogDescription>
-                  Seleccione un archivo .xlsx para importar los miembros.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="excelFile" className="text-right">
-                    Archivo Excel
-                  </Label>
-                  <Input
-                    type="file"
-                    id="excelFile"
-                    accept=".xlsx"
-                    onChange={handleFileChange}
-                    className="col-span-3"
+        <div className="glass-card overflow-hidden">
+          <Table>
+            <TableBody>
+              <TableRow className="bg-slate-50/50 dark:bg-slate-800/50">
+                <TableCell
+                  className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group"
+                  onClick={() => handleSort('name')}
+                >
+                  Nombre
+                  <div className={`transition-opacity ${sortConfig?.key === 'name' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                    {sortConfig?.key === 'name' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                  </div>
+                </TableCell>
+                {!isMobile && (
+                  <TableCell className="font-bold text-slate-700 dark:text-slate-300">Departamento</TableCell>
+                )}
+                <TableCell
+                  className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group"
+                  onClick={() => handleSort('age')}
+                >
+                  Edad
+                  <div className={`transition-opacity ${sortConfig?.key === 'age' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                    {sortConfig?.key === 'age' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                  </div>
+                </TableCell>
+                <TableCell className={`font-bold text-slate-700 dark:text-slate-300 text-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>Acciones</TableCell>
+              </TableRow>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center">
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                  </TableCell>
+                </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center">
+                    Error al cargar los miembros.
+                  </TableCell>
+                </TableRow>
+              ) : (regularStudents.length === 0 && newStudents.length === 0) ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center">
+                    No hay miembros registrados.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <>
+                  {/* Renderizar miembros regulares */}
+                  {regularStudents.map((student) => renderStudentRow(student))}
+
+                  {/* Línea separadora y miembros nuevos */}
+                  {hasNewStudents && (
+                    <>
+                      <TableRow>
+                        <TableCell colSpan={4} className="py-4">
+                          <div className="flex items-center justify-center">
+                            <div className="flex-grow border-t border-gray-300"></div>
+                            <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                              Nuevos Miembros
+                            </span>
+                            <div className="flex-grow border-t border-gray-300"></div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {newStudents.map((student) => renderStudentRow(student))}
+                    </>
+                  )}
+                </>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <Dialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
+          <DialogContent className="w-[95vw] max-w-lg sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 gap-0 rounded-2xl border-slate-200">
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <DialogTitle className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
+                <div className="bg-primary/10 p-2 rounded-xl">
+                  <Upload className="h-5 w-5 text-primary" />
+                </div>
+                Promover Miembros
+              </DialogTitle>
+              <DialogDescription className="text-slate-500 mt-1.5 text-sm">
+                Seleccioná el departamento destino y los miembros a promover.
+              </DialogDescription>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-5">
+
+              {/* Departamento destino */}
+              <div className="space-y-2">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Departamento destino</p>
+                <Select onValueChange={setSelectedDepartment} defaultValue={selectedDepartment ?? ""}>
+                  <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200 h-11">
+                    <SelectValue placeholder="Seleccione un departamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments?.map((department) => (
+                      <SelectItem key={department.id} value={department.id}>
+                        {department.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Selección de miembros */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Miembros seleccionados</p>
+                  <button
+                    onClick={handlePromoteAll}
+                    className="text-xs font-bold text-primary hover:text-primary/70 transition-colors"
+                  >
+                    {studentsToPromote.length === (students?.length || 0) ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                  </button>
+                </div>
+
+                {/* Lista scrolleable de miembros */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+                  <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
+                    {students && students.length > 0 ? students.map((student) => {
+                      const isSelected = studentsToPromote.includes(student.id);
+                      return (
+                        <button
+                          key={student.id}
+                          onClick={() => handlePromote(student.id)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all ${isSelected
+                            ? 'bg-primary/8 text-primary font-semibold'
+                            : 'hover:bg-white text-slate-700'
+                            }`}
+                        >
+                          <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSelected
+                            ? 'bg-primary border-primary'
+                            : 'border-slate-300 bg-white'
+                            }`}>
+                            {isSelected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                          </div>
+                          <span className="text-sm">{student.first_name} {student.last_name}</span>
+                          {student.departments?.name && (
+                            <span className="ml-auto text-xs text-slate-400 flex-shrink-0">{student.departments.name}</span>
+                          )}
+                        </button>
+                      );
+                    }) : (
+                      <p className="text-center text-slate-400 text-sm py-6">No hay miembros disponibles</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Resumen de seleccionados */}
+              {studentsToPromote.length > 0 && (
+                <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 space-y-2">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">
+                    {studentsToPromote.length} {studentsToPromote.length === 1 ? 'miembro' : 'miembros'} a promover
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {studentsToPromote.map(studentId => {
+                      const student = students?.find(s => s.id === studentId);
+                      return student ? (
+                        <span
+                          key={student.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold"
+                        >
+                          {student.first_name} {student.last_name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-6 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 font-bold px-5"
+                onClick={() => setIsPromoteModalOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={promoteStudents}
+                disabled={isPromoting || studentsToPromote.length === 0 || !selectedDepartment}
+                className="button-gradient rounded-xl font-black px-6 shadow-lg shadow-primary/20 disabled:opacity-50"
+              >
+                {isPromoting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                Promover {studentsToPromote.length > 0 ? `(${studentsToPromote.length})` : ''}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+          <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+            <DialogHeader>
+              <DialogTitle>Importar Miembros desde Excel</DialogTitle>
+              <DialogDescription>
+                Seleccione un archivo .xlsx para importar los miembros.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="excelFile" className="text-right">
+                  Archivo Excel
+                </Label>
+                <Input
+                  type="file"
+                  id="excelFile"
+                  accept=".xlsx"
+                  onChange={handleFileChange}
+                  className="col-span-3"
+                />
+              </div>
+              {excelError && (
+                <div className="text-red-500 col-span-4">{excelError}</div>
+              )}
+              {importModalState === "success" && importResults.errors.length > 0 && (
+                <div>
+                  Errores:
+                  <ul>
+                    {importResults.errors.map((error, index) => (
+                      <li key={index} className="text-red-500">{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => setIsImportModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" onClick={handleImport} disabled={importModalState === "loading" || !excelFile}>
+                {importModalState === "loading" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Importar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+            <DialogHeader>
+              <DialogTitle>Editar Miembro</DialogTitle>
+              <DialogDescription>
+                Realice los cambios necesarios en la información del miembro.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleUpdate)} className="grid gap-4 py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="first_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nombre*</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nombre" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="last_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Apellido</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Apellido" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Género</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccione el género" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="masculino">Masculino</SelectItem>
+                            <SelectItem value="femenino">Femenino</SelectItem>
+                            <SelectItem value="otro">Otro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="birthdate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha de Nacimiento</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="document_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Número de Documento</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Número de documento"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              field.onChange(value);
+                            }}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* ⭐ ACTUALIZADO: phone en lugar de phone_number */}
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Teléfono" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+
+
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dirección</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Dirección" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="department_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Departamento</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          disabled={profile?.role === 'maestro' || profile?.role === 'director'}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccione un departamento" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {departments?.map((department) => (
+                              <SelectItem key={department.id} value={department.id}>
+                                {department.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="assigned_class"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Clase</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccione una clase" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value=" ">Ninguna</SelectItem>
+                            {editModalClasses?.map((className) => (
+                              <SelectItem key={String(className)} value={String(className)}>
+                                {String(className)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
-                {excelError && (
-                  <div className="text-red-500 col-span-4">{excelError}</div>
-                )}
-                {importModalState === "success" && importResults.errors.length > 0 && (
-                  <div>
-                    Errores:
-                    <ul>
-                      {importResults.errors.map((error, index) => (
-                        <li key={index} className="text-red-500">{error}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setIsImportModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" onClick={handleImport} disabled={importModalState === "loading" || !excelFile}>
-                  {importModalState === "loading" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Importar
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
-          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-            <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
-              <DialogHeader>
-                <DialogTitle>Editar Miembro</DialogTitle>
-                <DialogDescription>
-                  Realice los cambios necesarios en la información del miembro.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleUpdate)} className="grid gap-4 py-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="first_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nombre*</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Nombre" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <div className="flex justify-end">
+                  <Button type="submit">Guardar</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
 
-                    <FormField
-                      control={form.control}
-                      name="last_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Apellido</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Apellido" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-primary">Agregar Nuevo Miembro</DialogTitle>
+              <DialogDescription>
+                Complete el formulario para registrar un nuevo miembro en la congregación.
+              </DialogDescription>
+            </DialogHeader>
+            <AgregarAlumno
+              isModal={true}
+              onSuccess={() => {
+                setIsAddModalOpen(false);
+                queryClient.invalidateQueries({ queryKey: ["students"] });
+              }}
+            />
+          </DialogContent>
+        </Dialog>
 
-                    <FormField
-                      control={form.control}
-                      name="gender"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Género</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccione el género" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="masculino">Masculino</SelectItem>
-                              <SelectItem value="femenino">Femenino</SelectItem>
-                              <SelectItem value="otro">Otro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="birthdate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fecha de Nacimiento</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                              value={field.value || ''}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="document_number"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Número de Documento</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Número de documento"
-                              {...field}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, '');
-                                field.onChange(value);
-                              }}
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* ⭐ ACTUALIZADO: phone en lugar de phone_number */}
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Teléfono</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Teléfono" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-
-
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Dirección</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Dirección" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="department_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Departamento</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={profile?.role === 'maestro' || profile?.role === 'director'}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccione un departamento" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {departments?.map((department) => (
-                                <SelectItem key={department.id} value={department.id}>
-                                  {department.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="assigned_class"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Clase</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccione una clase" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value=" ">Ninguna</SelectItem>
-                              {editModalClasses?.map((className) => (
-                                <SelectItem key={String(className)} value={String(className)}>
-                                  {String(className)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button type="submit">Guardar</Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-black text-primary">Agregar Nuevo Miembro</DialogTitle>
-                <DialogDescription>
-                  Complete el formulario para registrar un nuevo miembro en la congregación.
-                </DialogDescription>
-              </DialogHeader>
-              <AgregarAlumno
-                isModal={true}
-                onSuccess={() => {
-                  setIsAddModalOpen(false);
-                  queryClient.invalidateQueries({ queryKey: ["students"] });
-                }}
-              />
-            </DialogContent>
-          </Dialog>
-
-          <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
-            <AlertDialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta acción eliminará al miembro de forma permanente.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete}>Eliminar</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </section>
+        <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+          <AlertDialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción eliminará al miembro de forma permanente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Eliminar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 };

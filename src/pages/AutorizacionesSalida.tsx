@@ -59,27 +59,19 @@ const AutorizacionesSalida = () => {
   }
 
   return (
-    <div className="animate-fade-in space-y-8 pb-8 p-4 md:p-6">
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-8 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl max-w-7xl mx-auto">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
+    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
+      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto">
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-8 border-b border-purple-200/60 dark:border-slate-700/60 pb-6">
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M12 18v-6" /><path d="m9 15 3 3 3-3" /></svg>
-            </div>
-            <div>
-              <h1 className="text-3xl font-black text-foreground tracking-tight">Autorizaciones</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Generá y gestioná las autorizaciones para las distintas actividades.
-              </p>
-            </div>
-          </div>
+        {/* Header */}
+        <div className="mb-8 animate-fade-in">
+          <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Autorizaciones</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            Generá y gestioná las autorizaciones para las distintas actividades.
+          </p>
         </div>
-      </section>
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        {/* Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <AuthorizationOption
             title="Autorización de Campamento"
             description="Genera autorizaciones para campamentos"
