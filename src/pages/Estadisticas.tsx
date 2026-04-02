@@ -324,9 +324,11 @@ export default function Estadisticas() {
                                 <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '20px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)' }} itemStyle={{ color: '#002366', fontWeight: 900, fontSize: '14px' }} />
                                 <Area type="monotone" dataKey="total" name="Miembros" stroke="#002366" strokeWidth={5} fillOpacity={1} fill="url(#colorTotal)">
                                     <LabelList dataKey="total" position="top" offset={10} content={(props: any) => {
-                                        const { x, y, value, index, data } = props;
+                                        const { x, y, value, index } = props;
+                                        // Use outer scope data (processedData/data) carefully
+                                        const totalPoints = data?.last12Months?.length || 0;
                                         // Only show label for every 3rd point or the last one to avoid clutter in AreaChart
-                                        if (index % 3 !== 0 && index !== data.length - 1) return null;
+                                        if (index % 3 !== 0 && index !== totalPoints - 1) return null;
                                         return <text x={x} y={y - 10} fill="#002366" fontSize={10} fontWeight={900} textAnchor="middle">{value}</text>;
                                     }} />
                                 </Area>
@@ -393,7 +395,7 @@ export default function Estadisticas() {
                                     stroke="none"
                                     label={({ name, value }) => `${name}: ${value}`}
                                 >
-                                    {data?.genderData.map((_, index) => (
+                                    {data?.genderData?.map((_, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
