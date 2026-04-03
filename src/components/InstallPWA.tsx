@@ -5,7 +5,14 @@ import { Button } from '@/components/ui/button';
 
 export const InstallPWA = () => {
   const { isInstallable, isInstalled, promptInstall } = useInstallPrompt();
-  const [showBanner, setShowBanner] = useState(true);
+  const [showBanner, setShowBanner] = useState(() => {
+    return localStorage.getItem('hideInstallPWA') !== 'true';
+  });
+
+  const handleHidePermanently = () => {
+    localStorage.setItem('hideInstallPWA', 'true');
+    setShowBanner(false);
+  };
 
   const handleInstall = async () => {
     const accepted = await promptInstall();
@@ -26,7 +33,7 @@ export const InstallPWA = () => {
             <Download className="w-6 h-6 text-primary" />
           </div>
         </div>
-        
+
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-foreground">
             Instalar CCDT App
@@ -34,8 +41,14 @@ export const InstallPWA = () => {
           <p className="text-xs text-muted-foreground mt-0.5">
             Accede más rápido desde tu pantalla principal
           </p>
+          <button
+            onClick={handleHidePermanently}
+            className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 mt-1 block"
+          >
+            No mostrar más
+          </button>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button
             onClick={handleInstall}
@@ -44,7 +57,7 @@ export const InstallPWA = () => {
           >
             Instalar
           </Button>
-          
+
           <Button
             onClick={() => setShowBanner(false)}
             size="sm"
