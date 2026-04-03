@@ -402,9 +402,9 @@ export default function Configuration() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl p-1.5 rounded-2xl border border-white/20 dark:border-slate-800/50 h-14 w-full md:w-fit shadow-xl inline-flex">
           {[
-            { id: 'general', label: 'Identidad Visual', icon: LayoutGrid },
-            { id: 'authorizations', label: 'PDF Autorizaciones', icon: FileText },
-            { id: 'whatsapp', label: 'Conexión WhatsApp', icon: Smartphone }
+            { id: 'general', label: 'Marca', icon: LayoutGrid },
+            { id: 'authorizations', label: 'Membrete', icon: FileText },
+            { id: 'whatsapp', label: 'Whatsapp', icon: Smartphone }
           ].map((tab) => (
             <TabsTrigger
               key={tab.id}
@@ -418,8 +418,8 @@ export default function Configuration() {
         </TabsList>
 
         <TabsContent value="general" className="mt-0 outline-none space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2 bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-indigo-500/5 overflow-hidden font-inter">
+          <div className="w-full max-w-4xl mx-auto">
+            <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-indigo-500/5 overflow-hidden font-inter">
               <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
                 <div className="flex items-center gap-4">
                   <div className="bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-2xl text-indigo-600 dark:text-indigo-400 shadow-xl shadow-indigo-500/10">
@@ -496,34 +496,7 @@ export default function Configuration() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-indigo-500/5 overflow-hidden h-fit">
-              <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
-                <div className="flex items-center gap-4">
-                  <div className="bg-amber-100 dark:bg-amber-900/40 p-3 rounded-2xl text-amber-600 dark:amber-400">
-                    <Sun className="h-6 w-6" />
-                  </div>
-                  <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Apariencia</h3>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 md:p-8 space-y-6">
-                <div className="p-6 rounded-2xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 flex flex-col items-center gap-6 text-center">
-                  <div className={`p-4 rounded-2xl shadow-2xl ${theme === 'dark' ? 'bg-slate-800 text-amber-400' : 'bg-white text-indigo-600'}`}>
-                    {theme === 'dark' ? <Moon className="h-10 w-10" /> : <Sun className="h-10 w-10" />}
-                  </div>
-                  <div>
-                    <h4 className="font-black text-slate-800 dark:text-white uppercase tracking-tighter text-sm">Tema del Sistema</h4>
-                    <p className="text-[10px] text-slate-500 mt-1">Cambia el modo de visualización.</p>
-                  </div>
-                  <Button
-                    onClick={toggleTheme}
-                    variant="outline"
-                    className="w-full h-11 rounded-xl border-slate-200 dark:border-slate-800 font-black uppercase text-[10px] tracking-widest transition-transform active:scale-95"
-                  >
-                    Set {theme === 'dark' ? 'Light' : 'Dark'} Mode
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
         </TabsContent>
 

@@ -588,6 +588,23 @@ export const notifyRequestResponse = async (requestData: {
     throw error;
   }
 };
+
+export const notifyMassiveApprovedEvent = async (requestData: {
+  eventTitle: string;
+  eventDate: string;
+  description?: string;
+}) => {
+  try {
+    const response = await apiCall('/events/notify-massive', {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error notifying massive approved event:', error);
+    throw error;
+  }
+};
 // ============ FUNCIONES DE FCM (FIREBASE CLOUD MESSAGING) ============
 
 export const registrarTokenFcm = async (tokenData: {

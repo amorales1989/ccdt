@@ -30,7 +30,10 @@ export const CustomTabs = ({ value, onChange, options, className = "" }: CustomT
                     },
                     '& .MuiTabs-flexContainer': {
                         gap: '8px',
-                        justifyContent: 'center',
+                        justifyContent: 'flex-start',
+                        '@media (min-width: 640px)': {
+                            justifyContent: 'center',
+                        }
                     },
                 }}
             >

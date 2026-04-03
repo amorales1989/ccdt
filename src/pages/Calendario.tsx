@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MuiCalendar } from "@/components/MuiCalendar";
 import { Badge } from "@/components/ui/badge";
-import { getEvents, deleteEvent, updateEvent, notifyNewRequest, getUsers, notifyRequestResponse } from "@/lib/api";
+import { getEvents, deleteEvent, updateEvent, notifyNewRequest, getUsers, notifyRequestResponse, notifyMassiveApprovedEvent } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
@@ -309,6 +309,17 @@ export default function Calendario() {
             });
           } catch (e) { console.error(e); }
         }
+      }
+
+      // IMPORTANTE: Disparar notificación masiva de aprobación.
+      if (event) {
+        try {
+          await notifyMassiveApprovedEvent({
+            eventTitle: event.title,
+            eventDate: event.date,
+            description: event.description || ''
+          });
+        } catch (e) { console.error("Error en notifyMassiveApprovedEvent:", e); }
       }
 
       queryClient.invalidateQueries({ queryKey: ['events'] });

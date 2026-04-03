@@ -1065,27 +1065,33 @@ const ListarAlumnos = () => {
             <TableBody>
               <TableRow className="bg-slate-50/50 dark:bg-slate-800/50">
                 <TableCell
-                  className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group"
+                  className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
                   onClick={() => handleSort('name')}
                 >
-                  Nombre
-                  <div className={`transition-opacity ${sortConfig?.key === 'name' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
-                    {sortConfig?.key === 'name' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                  <div className="flex items-center gap-1">
+                    Nombre
+                    <div className={`transition-opacity ${sortConfig?.key === 'name' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                      {sortConfig?.key === 'name' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                    </div>
                   </div>
                 </TableCell>
                 {!isMobile && (
                   <TableCell className="font-bold text-slate-700 dark:text-slate-300">Departamento</TableCell>
                 )}
                 <TableCell
-                  className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group"
+                  className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
                   onClick={() => handleSort('age')}
                 >
-                  Edad
-                  <div className={`transition-opacity ${sortConfig?.key === 'age' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
-                    {sortConfig?.key === 'age' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                  <div className="flex items-center gap-1">
+                    Edad
+                    <div className={`transition-opacity ${sortConfig?.key === 'age' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                      {sortConfig?.key === 'age' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                    </div>
                   </div>
                 </TableCell>
-                <TableCell className={`font-bold text-slate-700 dark:text-slate-300 text-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>Acciones</TableCell>
+                <TableCell className={`font-bold text-slate-700 dark:text-slate-300 text-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>
+                  {!isMobile && "Acciones"}
+                </TableCell>
               </TableRow>
               {isLoading ? (
                 <TableRow>
