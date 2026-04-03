@@ -153,6 +153,15 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
   };
 
   const handleSubmit = async (data: EventFormData) => {
+    if (!data.title || data.title.trim() === '') {
+      form.setError('title', { type: 'manual', message: 'El título es obligatorio' });
+      return;
+    }
+
+    if (isRequestMode && isCustomDepartment && !customDepartmentValue.trim()) {
+      return; // No enviar si el departamento personalizado está vacío
+    }
+
     setIsSubmitting(true);
     try {
       // La fecha ya viene en formato YYYY-MM-DD desde el input
@@ -164,8 +173,8 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
       const formattedData = {
         ...data,
         date: dateStr,
-        end_date: data.end_date,
-        end_time: data.end_time,
+        end_date: data.end_date || null,
+        end_time: data.end_time || null,
         // Agregar campos específicos para solicitudes
         ...(isRequestMode && {
           departamento: finalDepartment,
@@ -270,6 +279,10 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
         <FormField
           control={form.control}
           name="title"
+          rules={{
+            required: "El título es obligatorio",
+            validate: value => value?.trim() !== '' || "El título no puede estar vacío"
+          }}
           render={({ field }) => (
             <FormItem>
               <FormLabel>{isRequestMode ? "Título de la Solicitud" : "Título del Evento"}</FormLabel>
@@ -287,6 +300,7 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
             <FormField
               control={form.control}
               name="departamento"
+              rules={{ required: "El departamento es obligatorio" }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Departamento que solicita</FormLabel>
@@ -347,6 +361,7 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
           <FormField
             control={form.control}
             name="date"
+            rules={{ required: "La fecha de inicio es obligatoria" }}
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Fecha Inicio</FormLabel>

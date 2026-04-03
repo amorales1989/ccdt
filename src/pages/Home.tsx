@@ -250,7 +250,7 @@ const Home = () => {
   };
 
   const handlePendingRequestsClick = () => {
-    navigate("/solicitudes");
+    navigate("/calendario", { state: { activeTab: "solicitudes" } });
   };
 
   // Si es departamento calendario, solo mostrar el calendario y el botón de solicitudes si hay

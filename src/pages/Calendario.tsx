@@ -4,6 +4,7 @@ import { MuiCalendar } from "@/components/MuiCalendar";
 import { Badge } from "@/components/ui/badge";
 import { getEvents, deleteEvent, updateEvent, notifyNewRequest, getUsers, notifyRequestResponse, notifyMassiveApprovedEvent } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +34,8 @@ import { ClipboardCheck, CheckCircle, XCircle, AlertCircle, Clock4, Building, Us
 import { EventForm } from "@/components/EventForm";
 
 export default function Calendario() {
-  const [activeTab, setActiveTab] = useState("calendario");
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState((location.state as any)?.activeTab || "calendario");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -43,6 +45,7 @@ export default function Calendario() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("Fecha no disponible");
   const [selectedRequest, setSelectedRequest] = useState<Event | null>(null);
+  const [requestDetailOpen, setRequestDetailOpen] = useState(false);
   const { toast } = useToast();
   const { profile } = useAuth();
 
@@ -58,8 +61,14 @@ export default function Calendario() {
 
   const { data: allEvents = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
-    queryFn: getEvents
+    queryFn: getEvents,
   });
+
+  useEffect(() => {
+    if ((location.state as any)?.activeTab) {
+      setActiveTab((location.state as any).activeTab);
+    }
+  }, [location.state]);
 
   // Filtrar solicitudes según permisos (Lógica de solicitudes.tsx)
   const filteredRequests = useMemo(() => {
@@ -245,8 +254,14 @@ export default function Calendario() {
   };
 
   const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setDialogOpen(true);
+    const isPendingRequest = (event as any).solicitud === true && (event as any).estado === 'solicitud';
+    if (isPendingRequest && canCreateEvents) {
+      setSelectedRequest(event);
+      setRequestDetailOpen(true);
+    } else {
+      setSelectedEvent(event);
+      setDialogOpen(true);
+    }
   };
 
   const handleDeleteClick = (event: Event, e: React.MouseEvent) => {
@@ -781,6 +796,87 @@ export default function Calendario() {
           title="Confirmar eliminación"
           description={`¿Estás seguro de que deseas eliminar ${(isSecretaria || isAdmin || isSecrCalendario) ? "este evento" : "esta solicitud"}? Esta acción no se puede deshacer.`}
         />
+
+        <Dialog open={requestDetailOpen} onOpenChange={setRequestDetailOpen}>
+          <DialogContent className="w-[95vw] max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-0 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 sm:p-8">
+              <DialogHeader className="mb-6">
+                <DialogTitle className="flex items-center gap-3 text-2xl font-black text-slate-800 dark:text-slate-100">
+                  <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2.5 rounded-2xl text-yellow-600 dark:text-yellow-400">
+                    <Clock4 className="h-6 w-6" />
+                  </div>
+                  Detalles de la Solicitud
+                  <Badge className="ml-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Pendiente</Badge>
+                </DialogTitle>
+              </DialogHeader>
+
+              {selectedRequest && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Título</p>
+                      <p className="font-bold text-slate-800 dark:text-slate-100 text-lg uppercase">{selectedRequest.title}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Departamento</p>
+                      <p className="font-bold text-slate-800 dark:text-slate-100 uppercase">{(selectedRequest as any).departamento || 'Sin departamento'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</p>
+                      <p className="font-bold text-slate-800 dark:text-slate-100 uppercase">
+                        {format(parseISO(selectedRequest.date), 'dd/MM/yyyy')}
+                        {selectedRequest.end_date && selectedRequest.end_date !== selectedRequest.date && (
+                          <span className="opacity-70 lowercase"> al {format(parseISO(selectedRequest.end_date), 'dd/MM/yyyy')}</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horario</p>
+                      <p className="font-bold text-slate-800 dark:text-slate-100 uppercase">
+                        {selectedRequest.time || 'N/A'} {selectedRequest.end_time && `- ${selectedRequest.end_time} hs`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Descripción</p>
+                    <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      <p className="text-slate-600 dark:text-slate-300 font-medium">
+                        {selectedRequest.description || 'Sin descripción'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        handleRejectRequest(selectedRequest.id);
+                        setRequestDetailOpen(false);
+                      }}
+                      className="w-full sm:w-auto font-bold text-red-500 hover:text-red-600 hover:bg-red-50 border-red-100"
+                    >
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Rechazar Solicitud
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        handleApproveRequest(selectedRequest.id);
+                        setRequestDetailOpen(false);
+                      }}
+                      className="w-full sm:w-auto font-bold bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20"
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Aprobar y Publicar
+                    </Button>
+                  </DialogFooter>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
           <DialogContent className="w-[95vw] max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-red-200/50 dark:border-red-900/30 rounded-3xl p-6 sm:p-8 overflow-y-auto">
