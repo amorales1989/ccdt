@@ -29,6 +29,7 @@ import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { RegisterUserModal } from "@/components/RegisterUserModal";
 import { FileUp } from "lucide-react";
+import { useCompany } from "@/contexts/CompanyContext";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -48,6 +49,7 @@ const GestionUsuarios = () => {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const { companyId } = useCompany();
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -84,11 +86,12 @@ const GestionUsuarios = () => {
   }
 
   const { data: departments = [] } = useQuery({
-    queryKey: ['departments'],
+    queryKey: ['departments', companyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
         .select('*')
+        .eq('company_id', companyId)
         .order('name');
 
       if (error) throw error;
@@ -97,12 +100,13 @@ const GestionUsuarios = () => {
   });
 
   const { data: users = [], isLoading } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['users', companyId],
     queryFn: async () => {
       console.log("Fetching profiles...");
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .eq('company_id', companyId);
 
       if (error) {
         console.error("Error fetching profiles:", error);
@@ -170,7 +174,7 @@ const GestionUsuarios = () => {
       await Promise.all(
         entries.map(async ([userId, newClass]) => {
           const finalClass = newClass === null ? "" : newClass;
-          const { error } = await supabase.from('profiles').update({ assigned_class: finalClass }).eq('id', userId);
+          const { error } = await supabase.from('profiles').update({ assigned_class: finalClass }).eq('id', userId).eq('company_id', companyId);
           if (error) {
             throw new Error("No se pudo actualizar la clase: " + error.message);
           }
@@ -197,10 +201,10 @@ const GestionUsuarios = () => {
 
   const bulkResetMutation = useMutation({
     mutationFn: async (department: string) => {
-      // In Supabase, the .contains filter for arrays works with an array as the second argument
       const { data, error } = await supabase
         .from('profiles')
         .update({ assigned_class: null })
+        .eq('company_id', companyId)
         .contains('departments', [department])
         .in('role', ['maestro', 'lider']);
 
@@ -242,7 +246,8 @@ const GestionUsuarios = () => {
           role: updatedUser.role,
           departments: [departmentType],
           department_id: departmentId,
-          assigned_class: selectedClass
+          assigned_class: selectedClass,
+          company_id: companyId
         }
       };
 
@@ -270,7 +275,8 @@ const GestionUsuarios = () => {
           department_id: departmentId,
           assigned_class: selectedClass
         })
-        .eq('id', updatedUser.id);
+        .eq('id', updatedUser.id)
+        .eq('company_id', companyId);
 
       if (profileError) throw profileError;
     },

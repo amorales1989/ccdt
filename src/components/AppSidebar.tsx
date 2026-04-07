@@ -27,6 +27,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { STORAGE_URL } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -388,8 +389,8 @@ export function AppSidebar() {
   const [logoPath, setLogoPath] = useState("/fire.png");
 
   const { data: company } = useQuery({
-    queryKey: ['company'],
-    queryFn: () => getCompany(1),
+    queryKey: ['company', getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId()),
     enabled: !!user
   });
 

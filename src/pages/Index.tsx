@@ -12,6 +12,7 @@ import type { DepartmentType } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 
@@ -30,8 +31,8 @@ export default function Index() {
   const { toast } = useToast();
 
   const { data: company } = useQuery({
-    queryKey: ['company'],
-    queryFn: () => getCompany(1),
+    queryKey: ['company', getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId()),
     staleTime: 1000 * 60 * 30, // 30 minutes
   });
 

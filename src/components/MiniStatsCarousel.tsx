@@ -8,6 +8,7 @@ import { es } from "date-fns/locale";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Loader2 } from "lucide-react";
 import Autoplay from "embla-carousel-autoplay";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface MiniStatsCarouselProps {
     students: any[];
@@ -24,12 +25,13 @@ export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouse
     const plugin = React.useRef(
         Autoplay({ delay: 4000, stopOnInteraction: true })
     );
+    const { companyId } = useCompany();
 
     // Fetch Profiles
     const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
-        queryKey: ['stats-profiles', scopedDeptId],
+        queryKey: ['stats-profiles', scopedDeptId, companyId],
         queryFn: async () => {
-            let q = supabase.from('profiles').select('*');
+            let q = supabase.from('profiles').select('*').eq('company_id', companyId);
             if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
             const { data, error } = await q;
             if (error) throw error;

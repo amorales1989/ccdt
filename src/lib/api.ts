@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { StudentObservation } from "@/types/database";
 import type { Attendance, Student, Department, DepartmentType, Event, Profile } from "@/types/database";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 
 
 // Configuración de la API base
@@ -16,6 +17,7 @@ const API_BASE_URL = getApiBaseUrl();
 // Función helper para hacer llamadas a la API
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
+  const companyId = getPersistentCompanyId();
 
   // Obtener el token de autenticación de Supabase
   const { data: { session } } = await supabase.auth.getSession();
@@ -24,6 +26,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      'X-Company-Id': companyId.toString(),
       ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
@@ -74,7 +77,8 @@ export const getAttendance = async (
             deleted_at,
             departments:department_id(name)
           )
-        `);
+        `)
+      .eq('company_id', getPersistentCompanyId());
 
     if (startDate && endDate) {
       query = query.gte('date', startDate).lte('date', endDate);
@@ -126,6 +130,7 @@ export const getCompany = async (id: number) => {
       .from('companies')
       .select('*')
       .eq('id', id)
+      .eq('id', getPersistentCompanyId())
       .single();
 
     if (error) throw error;
@@ -142,6 +147,7 @@ export const updateCompany = async (id: number, updates: any) => {
       .from('companies')
       .update(updates)
       .eq('id', id)
+      .eq('id', getPersistentCompanyId())
       .select()
       .single();
 
@@ -328,6 +334,7 @@ export const getDepartments = async (): Promise<Department[]> => {
     const { data, error } = await supabase
       .from('departments')
       .select('*')
+      .eq('company_id', getPersistentCompanyId())
       .order('name');
 
     if (error) throw error;
@@ -344,6 +351,7 @@ export const updateDepartment = async (id: string, updates: Partial<Department>)
       .from('departments')
       .update(updates)
       .eq('id', id)
+      .eq('company_id', getPersistentCompanyId())
       .select()
       .single();
 
@@ -363,7 +371,7 @@ export const createDepartment = async (department: {
   try {
     const { data, error } = await supabase
       .from('departments')
-      .insert(department)
+      .insert({ ...department, company_id: getPersistentCompanyId() })
       .select()
       .single();
 
@@ -380,7 +388,8 @@ export const deleteDepartment = async (id: string) => {
     const { error } = await supabase
       .from('departments')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('company_id', getPersistentCompanyId());
 
     if (error) throw error;
     return true;
@@ -396,6 +405,7 @@ export const getDepartmentByName = async (name: string) => {
       .from('departments')
       .select('*')
       .eq('name', name)
+      .eq('company_id', getPersistentCompanyId())
       .single();
 
     if (error) throw error;
@@ -421,6 +431,7 @@ export const markAttendance = async (attendanceData: {
       .select('*')
       .eq('student_id', attendanceData.student_id)
       .eq('date', attendanceData.date)
+      .eq('company_id', getPersistentCompanyId())
       .maybeSingle();
 
     if (fetchError) throw fetchError;
@@ -435,6 +446,7 @@ export const markAttendance = async (attendanceData: {
           assigned_class: attendanceData.assigned_class
         })
         .eq('id', existingAttendance.id)
+        .eq('company_id', getPersistentCompanyId())
         .select()
         .single();
 
@@ -449,7 +461,8 @@ export const markAttendance = async (attendanceData: {
           date: attendanceData.date,
           department_id: attendanceData.department_id,
           assigned_class: attendanceData.assigned_class,
-          event_id: attendanceData.event_id
+          event_id: attendanceData.event_id,
+          company_id: getPersistentCompanyId()
         })
         .select()
         .single();
@@ -470,6 +483,7 @@ export const getEvents = async (): Promise<Event[]> => {
     const { data, error } = await supabase
       .from('events')
       .select('*')
+      .eq('company_id', getPersistentCompanyId())
       .order('date');
     if (error) throw error;
     return data || [];
@@ -483,7 +497,7 @@ export const createEvent = async (event: { title: string; date: string } & Parti
   try {
     const { data, error } = await supabase
       .from('events')
-      .insert(event)
+      .insert({ ...event, company_id: getPersistentCompanyId() })
       .select()
       .single();
 
@@ -501,6 +515,7 @@ export const updateEvent = async (id: string, event: Partial<Event>) => {
       .from('events')
       .update(event)
       .eq('id', id)
+      .eq('company_id', getPersistentCompanyId())
       .select()
       .single();
 
@@ -517,7 +532,8 @@ export const deleteEvent = async (id: string) => {
     const { error } = await supabase
       .from('events')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('company_id', getPersistentCompanyId());
 
     if (error) throw error;
     return true;
@@ -531,7 +547,8 @@ export const getUsers = async (): Promise<Profile[]> => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*');
+      .select('*')
+      .eq('company_id', getPersistentCompanyId());
 
     if (error) throw error;
 

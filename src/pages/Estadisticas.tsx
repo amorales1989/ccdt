@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, RotateCcw } from "lucide-react";
+import { useCompany } from "@/contexts/CompanyContext";
 
 const COLORS = ["#002366", "#003a8c", "#0050b3", "#096dd9", "#1890ff", "#40a9ff", "#69c0ff"];
 
@@ -25,10 +26,11 @@ export default function Estadisticas() {
 
     const [selectedClass, setSelectedClass] = React.useState<string>("all");
     const [selectedAgeRange, setSelectedAgeRange] = React.useState<string>("all");
+    const { companyId } = useCompany();
 
     // 0. Get current user profile (for role+department scoping)
     const { data: currentProfile, isLoading: loadingProfile } = useQuery({
-        queryKey: ['stats-current-profile'],
+        queryKey: ['stats-current-profile', companyId],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return null;
@@ -36,6 +38,7 @@ export default function Estadisticas() {
                 .from('profiles')
                 .select('*')
                 .eq('id', user.id)
+                .eq('company_id', companyId)
                 .single();
             if (error) throw error;
             return data;
@@ -47,10 +50,10 @@ export default function Estadisticas() {
 
     // 1. Fetch Students (scoped by department if needed)
     const { data: students = [], isLoading: loadingStudents } = useQuery({
-        queryKey: ['stats-students', scopedDeptId],
+        queryKey: ['stats-students', scopedDeptId, companyId],
         enabled: !loadingProfile,
         queryFn: async () => {
-            let q = supabase.from('students').select('*');
+            let q = supabase.from('students').select('*').eq('company_id', companyId);
             if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
             const { data, error } = await q;
             if (error) throw error;
@@ -60,10 +63,10 @@ export default function Estadisticas() {
 
     // 2. Fetch Attendance (scoped by department if needed)
     const { data: attendance = [], isLoading: loadingAttendance } = useQuery({
-        queryKey: ['stats-attendance', scopedDeptId],
+        queryKey: ['stats-attendance', scopedDeptId, companyId],
         enabled: !loadingProfile,
         queryFn: async () => {
-            let q = supabase.from('attendance').select('*');
+            let q = supabase.from('attendance').select('*').eq('company_id', companyId);
             if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
             const { data, error } = await q;
             if (error) throw error;
@@ -73,10 +76,10 @@ export default function Estadisticas() {
 
     // 3. Fetch Profiles - for global view only show all, for scoped show same dept
     const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
-        queryKey: ['stats-profiles', scopedDeptId],
+        queryKey: ['stats-profiles', scopedDeptId, companyId],
         enabled: !loadingProfile,
         queryFn: async () => {
-            let q = supabase.from('profiles').select('*');
+            let q = supabase.from('profiles').select('*').eq('company_id', companyId);
             if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
             const { data, error } = await q;
             if (error) throw error;
@@ -86,13 +89,14 @@ export default function Estadisticas() {
 
     // 4. Fetch dept name if scoped
     const { data: deptInfo } = useQuery({
-        queryKey: ['stats-dept', scopedDeptId],
+        queryKey: ['stats-dept', scopedDeptId, companyId],
         enabled: !!scopedDeptId,
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('departments')
                 .select('name, classes')
                 .eq('id', scopedDeptId)
+                .eq('company_id', companyId)
                 .single();
             if (error) throw error;
             return data;

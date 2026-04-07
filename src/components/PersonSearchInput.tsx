@@ -19,6 +19,7 @@ import {
 import { supabase } from "@/integrations/supabase/client"
 import { useQuery } from "@tanstack/react-query"
 import { Badge } from "@/components/ui/badge"
+import { getPersistentCompanyId } from "@/contexts/CompanyContext"
 
 export type PersonSearchResult = {
     id: string
@@ -59,6 +60,7 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                 .from('profiles')
                 .select('*')
                 .or(`first_name.ilike.${term},last_name.ilike.${term},document_number.ilike.${term}`)
+                .eq('company_id', getPersistentCompanyId())
                 .limit(5) as { data: any[], error: any }
 
             // Search students
@@ -66,6 +68,7 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                 .from('students')
                 .select('*')
                 .or(`first_name.ilike.${term},last_name.ilike.${term},document_number.ilike.${term}`)
+                .eq('company_id', getPersistentCompanyId())
                 .limit(5) as { data: any[], error: any }
 
             const flattened: PersonSearchResult[] = [

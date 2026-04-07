@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import AuthorizationOption from "@/components/AuthorizationOption";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { generateBlankFichaSalud } from "@/lib/pdfUtils";
 
 const AutorizacionesSalida = () => {
@@ -16,8 +17,8 @@ const AutorizacionesSalida = () => {
   const { toast } = useToast();
 
   const { data: company } = useQuery({
-    queryKey: ['company'],
-    queryFn: () => getCompany(1)
+    queryKey: ['company', getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId())
   });
 
   const handleDownloadFicha = () => {

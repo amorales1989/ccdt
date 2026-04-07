@@ -7,6 +7,7 @@ import { Calendar, Clock, MapPin, Users, Phone, User, FileText, Info } from "luc
 import { jsPDF } from "jspdf";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { format, parseISO } from "date-fns";
 
@@ -15,8 +16,8 @@ const AutorizacionRhema = () => {
   const [loading, setLoading] = useState(false);
 
   const { data: company } = useQuery({
-    queryKey: ['company'],
-    queryFn: () => getCompany(1)
+    queryKey: ['company', getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId())
   });
   const [formData, setFormData] = useState({
     fechaEvento: "",

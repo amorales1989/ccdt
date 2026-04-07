@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import type { User, Session } from "@supabase/supabase-js";
 import type { DepartmentType, AppRole } from "@/types/database";
 
@@ -108,6 +109,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data) {
+        // Validación multi-tenant: Restringir acceso si el company_id del usuario no coincide con la URL actual
+        const currentCompanyId = getPersistentCompanyId();
+        const userCompanyId = (data as any)?.company_id;
+        if (userCompanyId && userCompanyId !== currentCompanyId) {
+          console.error(`Tenant mismatch! User ${userId} belongs to company ${userCompanyId} but was accessing ${currentCompanyId}. Signing out...`);
+          await supabase.auth.signOut();
+          setProfile(null);
+          setUser(null);
+          setSession(null);
+          throw new Error("company_mismatch");
+        }
+
         const typedProfile: Profile = {
           ...data,
           departments: data.departments as DepartmentType[] || [],
@@ -126,11 +139,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signIn(email: string, password: string) {
     console.log("Attempting sign in for:", email);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) throw error;
+
+    // Validación multi-tenant en el momento exacto del login
+    if (authData?.user) {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authData.user.id)
+        .single();
+
+      const currentCompanyId = getPersistentCompanyId();
+      const userCompanyId = (profileData as any)?.company_id;
+
+      if (userCompanyId && userCompanyId !== currentCompanyId) {
+        console.error(`Tenant mismatch on login! User belongs to ${userCompanyId} but tried to login to ${currentCompanyId}`);
+        await supabase.auth.signOut();
+        throw new Error("company_mismatch");
+      }
+    }
+
     setLastActivity(Date.now());
   }
 
@@ -155,7 +187,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           ...userData,
           departments: formattedDepartments,
-          department_id: userData.department_id
+          department_id: userData.department_id,
+          company_id: getPersistentCompanyId()
         },
       },
     });

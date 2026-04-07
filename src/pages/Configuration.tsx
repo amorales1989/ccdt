@@ -15,6 +15,7 @@ import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, R
 import { Badge } from "@/components/ui/badge";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 
 export default function Configuration() {
   const { profile } = useAuth();
@@ -49,12 +50,12 @@ export default function Configuration() {
   ]);
 
   const { data: company, isLoading: isCompanyLoading } = useQuery({
-    queryKey: ['company'],
-    queryFn: () => getCompany(1)
+    queryKey: ['company', getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId())
   });
 
   const { mutate: updateCompanyMutate } = useMutation({
-    mutationFn: (updates: any) => updateCompany(1, updates),
+    mutationFn: (updates: any) => updateCompany(getPersistentCompanyId(), updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
       toast({
@@ -95,8 +96,16 @@ export default function Configuration() {
     });
 
     const companyData = company as any;
-    if (companyData.auth_pdf_header && Array.isArray(companyData.auth_pdf_header)) {
+    if (companyData.auth_pdf_header && Array.isArray(companyData.auth_pdf_header) && companyData.auth_pdf_header.length > 0) {
       setAuthPdfHeader(companyData.auth_pdf_header as { text: string, enabled: boolean }[]);
+    } else {
+      // Si está vacío o es nulo, inicializar con 4 líneas vacías para que el usuario las complete
+      setAuthPdfHeader([
+        { text: "", enabled: false },
+        { text: "", enabled: false },
+        { text: "", enabled: false },
+        { text: "", enabled: false }
+      ]);
     }
   }, [company]);
 
@@ -104,7 +113,7 @@ export default function Configuration() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await getWhatsappStatus(1); // Usando id 1 como en el resto de la página
+        const res = await getWhatsappStatus(getPersistentCompanyId());
         if (res.success) {
           setWhatsappInfo({ status: res.status, qr: res.qr });
         }
@@ -121,7 +130,7 @@ export default function Configuration() {
   const handleConnectWhatsapp = async () => {
     try {
       setIsConnectingWhatsapp(true);
-      await connectWhatsapp(1);
+      await connectWhatsapp(getPersistentCompanyId());
       toast({
         title: "Conectando...",
         description: "Iniciando proceso de conexión de WhatsApp",
@@ -139,7 +148,7 @@ export default function Configuration() {
 
   const handleDisconnectWhatsapp = async () => {
     try {
-      await disconnectWhatsapp(1);
+      await disconnectWhatsapp(getPersistentCompanyId());
       toast({
         title: "WhatsApp",
         description: "Se ha solicitado la desconexión",
@@ -165,7 +174,7 @@ export default function Configuration() {
 
     try {
       setIsSendingTest(true);
-      await testWhatsappMessage(1, testPhoneNumber, testMessage);
+      await testWhatsappMessage(getPersistentCompanyId(), testPhoneNumber, testMessage);
       toast({
         title: "Mensaje enviado",
         description: "El mensaje de prueba se ha enviado exitosamente",
@@ -477,20 +486,48 @@ export default function Configuration() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-center p-6 rounded-3xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 shadow-inner group/logo relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover/logo:opacity-100 transition-opacity duration-700"></div>
-                    {logoPreview ? (
-                      <img
-                        src={logoPreview}
-                        alt="Logo Preview"
-                        className="max-h-32 w-auto object-contain drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform duration-500 relative z-10"
-                        onClick={() => handleShowImagePreview(logoPreview)}
-                      />
-                    ) : (
-                      <div className="h-24 w-24 bg-slate-100 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-300 relative z-10">
-                        <Upload className="h-8 w-8 opacity-20" />
+                  <div className="flex flex-col gap-6">
+                    <div className="flex items-center justify-center p-6 rounded-3xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 shadow-inner group/logo relative overflow-hidden flex-1 min-h-[200px]">
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover/logo:opacity-100 transition-opacity duration-700"></div>
+                      {logoPreview ? (
+                        <img
+                          src={logoPreview}
+                          alt="Logo Preview"
+                          className="max-h-32 w-auto object-contain drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform duration-500 relative z-10"
+                          onClick={() => handleShowImagePreview(logoPreview)}
+                        />
+                      ) : (
+                        <div className="h-24 w-24 bg-slate-100 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-300 relative z-10">
+                          <Upload className="h-8 w-8 opacity-20" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-white/10 dark:border-slate-800/50 space-y-4">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ajustes de Interfaz</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-bold text-slate-700 dark:text-slate-200">Mostrar nombre y logo</Label>
+                        <p className="text-[10px] text-slate-500 font-medium tracking-tight">Hacer visible la marca en el menú lateral</p>
                       </div>
-                    )}
+                      <Switch
+                        checked={generalSettings.showName}
+                        onCheckedChange={() => handleGeneralSettingChange('showName')}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-bold text-slate-700 dark:text-slate-200">Notificaciones</Label>
+                        <p className="text-[10px] text-slate-500 font-medium tracking-tight">Activar avisos y alertas del sistema</p>
+                      </div>
+                      <Switch
+                        checked={generalSettings.notifications}
+                        onCheckedChange={() => handleGeneralSettingChange('notifications')}
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>

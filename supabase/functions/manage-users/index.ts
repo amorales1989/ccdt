@@ -174,7 +174,8 @@ serve(async (req) => {
                   role: u.role || 'maestro',
                   departments: u.department ? [u.department] : [],
                   department_id: departmentId,
-                  assigned_class: u.assigned_class || ''
+                  assigned_class: u.assigned_class || '',
+                  company_id: u.company_id
                 }
               });
 
@@ -239,7 +240,8 @@ serve(async (req) => {
                 const { error: profileError } = await supabaseClient
                   .from('profiles')
                   .update({ department_id: departmentData.id })
-                  .eq('id', user.id);
+                  .eq('id', user.id)
+                  .eq('company_id', user.user_metadata?.company_id);
 
                 if (profileError) {
                   console.error(`Error updating profile for user ${user.id}:`, profileError);

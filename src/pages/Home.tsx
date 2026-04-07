@@ -28,6 +28,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 
 interface ClassStats {
   male: number;
@@ -56,8 +57,9 @@ const Home = () => {
   const selectedDepartmentStorage = localStorage.getItem('selectedDepartment');
   const isCalendarDepartment = selectedDepartmentStorage === 'calendario' || profile?.departments?.[0] === 'calendario';
 
+  const companyId = getPersistentCompanyId();
   const { data: events = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['events'],
+    queryKey: ['events', companyId],
     queryFn: getEvents,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -76,7 +78,7 @@ const Home = () => {
   }, [isCalendarDepartment, navigate, location.pathname, profile]);
   // Solo cargar miembros si NO es departamento calendario
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['students', 'stats', profile?.id], // Usar prefix 'students' para que se invalide correctamente
+    queryKey: ['students', 'stats', profile?.id, companyId], // Usar prefix 'students' para que se invalide correctamente
     queryFn: async () => {
       if (!profile) return [];
 
@@ -93,7 +95,7 @@ const Home = () => {
   });
 
   const { data: departments = [], isLoading: departmentsLoading } = useQuery({
-    queryKey: ['departments'],
+    queryKey: ['departments', companyId],
     queryFn: getDepartments,
     enabled: !isCalendarDepartment && !!profile?.id, // Solo ejecutar si NO es departamento calendario y hay perfil cargado
     staleTime: 1000 * 60 * 15, // 15 minutos (datos estáticos)

@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { useToast } from "@/components/ui/use-toast";
 import { createTheme, ThemeProvider as MUIThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -25,15 +26,15 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Fetch the company settings to get the dark mode preference
   const { data: company } = useQuery({
-    queryKey: ["company"],
-    queryFn: () => getCompany(1),
+    queryKey: ["company", getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId()),
   });
 
   // Update company settings when dark mode is toggled
   const { mutate } = useMutation({
-    mutationFn: (darkMode: boolean) => updateCompany(1, { dark_mode: darkMode }),
+    mutationFn: (darkMode: boolean) => updateCompany(getPersistentCompanyId(), { dark_mode: darkMode }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company"] });
+      queryClient.invalidateQueries({ queryKey: ["company", getPersistentCompanyId()] });
     },
     onError: () => {
       toast({

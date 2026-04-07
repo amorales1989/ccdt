@@ -158,12 +158,12 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                                                 <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 text-center">
                                                     {formatDepartmentName(dept)}
                                                 </h3>
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-baseline gap-2">
+                                                <div className="flex items-center justify-center sm:justify-between">
+                                                    <div className="flex items-baseline justify-center gap-2">
                                                         <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.total}</span>
                                                         <span className="text-sm font-semibold text-slate-500">MIEMBROS</span>
                                                     </div>
-                                                    <div className="h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                                    <div className="hidden sm:flex h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
                                                         <PersonStanding className="h-6 w-6" />
                                                     </div>
                                                 </div>
@@ -201,7 +201,14 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                     </Carousel>
                 </div>
             ) : (
-                <div className={`grid gap-6 ${isSingleCard && profile?.role !== 'director' ? 'place-items-center' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
+                <div className={`grid gap-6 mx-auto w-full ${profile?.role === 'director' && departmentsWithStats.length === 1
+                        ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
+                        : departmentsWithStats.length === 1
+                            ? 'grid-cols-1 max-w-md'
+                            : departmentsWithStats.length === 2
+                                ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl'
+                                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-[1100px]'
+                    }`}>
                     {profile?.role === 'director' && departmentsWithStats.length === 1 ? (
                         // If Director, show cards for each class
                         <>
@@ -222,12 +229,11 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                                             </h3>
                                         </div>
 
-                                        <div className="flex items-center justify-between px-2">
-                                            <div className="flex items-baseline ">
+                                        <div className="flex items-center justify-center px-2">
+                                            <div className="flex items-baseline justify-center gap-1.5">
                                                 <span className="text-4xl font-black text-slate-900 dark:text-white leading-none">{classStats.total}</span>
                                                 <span className="text-[10px] font-black text-slate-400 uppercase">Miembros</span>
                                             </div>
-
                                         </div>
 
                                         <div className="space-y-3">
@@ -274,12 +280,12 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                                         <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 text-center">
                                             {formatDepartmentName(dept)}
                                         </h3>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-baseline gap-2">
-                                                <span className="text-4xl font-black text-slate-900 dark:text-white mr-4" >{stats.total}</span>
-                                                <span className="text-sm font-semibold text-slate-500"> MIEMBROS</span>
+                                        <div className="flex items-center justify-center sm:justify-between">
+                                            <div className="flex items-baseline justify-center gap-2">
+                                                <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.total}</span>
+                                                <span className="text-sm font-semibold text-slate-500">MIEMBROS</span>
                                             </div>
-                                            <div className="h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                            <div className="hidden sm:flex h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
                                                 <PersonStanding className="h-6 w-6" />
                                             </div>
                                         </div>

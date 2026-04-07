@@ -24,6 +24,7 @@ import { StudentDetails } from "@/components/StudentDetails";
 import { Badge } from "@/components/ui/badge";
 import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations } from "@/lib/api";
 import AgregarAlumno from "@/pages/AgregarAlumno";
+import { useCompany } from "@/contexts/CompanyContext";
 import {
   Form,
   FormControl,
@@ -62,6 +63,7 @@ const ListarAlumnos = () => {
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [excelError, setExcelError] = useState<string | null>(null);
@@ -86,18 +88,19 @@ const ListarAlumnos = () => {
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { companyId } = useCompany();
 
   // ============ CONSULTA PRINCIPAL DE MIEMBROS USANDO BACKEND API ============
   const { data: allStudents, isLoading, isError, refetch } = useQuery({
-    queryKey: ["students"],
+    queryKey: ["students", companyId],
     queryFn: getStudents,
   });
 
   // ============ CONSULTA DE AUTORIZACIONES - MANTENER SUPABASE POR AHORA ============
   const { data: authorizations } = useQuery({
-    queryKey: ["authorizations"],
+    queryKey: ["authorizations", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("student_authorizations").select("*");
+      const { data, error } = await supabase.from("student_authorizations").select("*").eq('company_id', companyId);
       if (error) {
         console.error("Error fetching authorizations:", error);
         return [];
@@ -220,14 +223,14 @@ const ListarAlumnos = () => {
 
   // ============ CONSULTA DE DEPARTAMENTOS USANDO BACKEND API ============
   const { data: departments } = useQuery({
-    queryKey: ["departments"],
+    queryKey: ["departments", companyId],
     queryFn: getDepartments,
   });
 
 
   // ============ CONSULTA DE CLASES - USAR DEPARTAMENTOS Y STUDENTS ============
   const { data: classes } = useQuery({
-    queryKey: ["classes", filters.department],
+    queryKey: ["classes", filters.department, companyId],
     queryFn: async () => {
       // 1. Obtener clases del departamento si está seleccionado
       const selectedDeptObj = departments?.find(d =>
@@ -397,7 +400,7 @@ const ListarAlumnos = () => {
         description: "El miembro ya no está marcado como nuevo.",
         variant: "success",
       });
-      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students", companyId] });
     } catch (error: any) {
       console.error("Error updating student:", error);
       toast({
@@ -543,6 +546,7 @@ const ListarAlumnos = () => {
   // ============ FUNCIÓN PARA ACTUALIZAR USANDO BACKEND API ============
   const handleUpdate = async (values: any) => {
     if (!studentToEdit) return;
+    setIsUpdating(true);
     try {
       console.log("Raw form values:", values);
 
@@ -553,13 +557,15 @@ const ListarAlumnos = () => {
         variant: "success",
       });
       setIsEditModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students", companyId] });
     } catch (error: any) {
       toast({
         title: "Error al actualizar",
         description: error.message || "Hubo un error al actualizar el miembro.",
         variant: "destructive",
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -580,7 +586,7 @@ const ListarAlumnos = () => {
       });
       setDeleteAlertOpen(false);
       setStudentToDelete(null);
-      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students", companyId] });
     } catch (error: any) {
       toast({
         title: "Error al eliminar",
@@ -634,7 +640,7 @@ const ListarAlumnos = () => {
       setIsPromoteModalOpen(false);
       setStudentsToPromote([]);
       setSelectedDepartment(null);
-      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students", companyId] });
     } catch (error: any) {
       toast({
         title: "Error al promover",
@@ -757,7 +763,7 @@ const ListarAlumnos = () => {
         console.error("Errores de importación:", result.errors);
       }
 
-      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students", companyId] });
     }
   };
 
@@ -1509,7 +1515,16 @@ const ListarAlumnos = () => {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit">Guardar</Button>
+                  <Button type="submit" disabled={isUpdating}>
+                    {isUpdating ? (
+                      <>
+                        <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        Guardando...
+                      </>
+                    ) : (
+                      "Guardar"
+                    )}
+                  </Button>
                 </div>
               </form>
             </Form>
@@ -1528,7 +1543,7 @@ const ListarAlumnos = () => {
               isModal={true}
               onSuccess={() => {
                 setIsAddModalOpen(false);
-                queryClient.invalidateQueries({ queryKey: ["students"] });
+                queryClient.invalidateQueries({ queryKey: ["students", companyId] });
               }}
             />
           </DialogContent>

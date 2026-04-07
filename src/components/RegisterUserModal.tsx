@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,11 +62,12 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
 
     // Fetch departments
     const { data: departments = [] } = useQuery({
-        queryKey: ['departments'],
+        queryKey: ['departments', getPersistentCompanyId()],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('departments')
                 .select('*')
+                .eq('company_id', getPersistentCompanyId())
                 .order('name');
 
             if (error) throw error;

@@ -11,8 +11,9 @@ import type { DepartmentType } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Mail, Lock, ArrowRight, ActivitySquare, Church } from "lucide-react";
+import { Mail, Lock, ArrowRight, ActivitySquare, Church, Loader2 } from "lucide-react";
 
 
 export default function Auth() {
@@ -24,14 +25,15 @@ export default function Auth() {
   const [logoPath, setLogoPath] = useState("/fire.png"); // Default logo
   const [companyName, setCompanyName] = useState("");
   const [showCompanyName, setShowCompanyName] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
 
   const { data: company } = useQuery({
-    queryKey: ['company'],
-    queryFn: () => getCompany(1)
+    queryKey: ['company', getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId())
   });
 
   useEffect(() => {
@@ -76,6 +78,7 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoggingIn(true);
     try {
       await signIn(email, password); // Intentar iniciar sesión
 
@@ -83,11 +86,13 @@ export default function Auth() {
 
       // Si el perfil tiene más de un departamento, no continuamos
       if (profile?.departments && profile.departments.length > 1) {
+        setIsLoggingIn(false);
         return;
       }
 
       console.log("Login exitoso, verificando departamentos:", profile?.departments);
     } catch (error: any) {
+      setIsLoggingIn(false);
       console.error("Error de autenticación:", error);
       let errorMessage = "Ha ocurrido un error";
 
@@ -97,6 +102,8 @@ export default function Auth() {
         errorMessage = "Por favor confirma tu correo electrónico antes de iniciar sesión";
       } else if (error.message.includes("Invalid login credentials")) {
         errorMessage = "Credenciales inválidas";
+      } else if (error.message.includes("company_mismatch")) {
+        errorMessage = "Error de acceso: Tu usuario no pertenece a esta congregación.";
       }
 
       toast({
@@ -269,10 +276,19 @@ export default function Auth() {
             <Button
               type="submit"
               className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 group"
-              disabled={loading}
+              disabled={loading || isLoggingIn}
             >
-              {loading ? "Verificando..." : "Ingresar"}
-              <ArrowRight className="ml-2 h-5 w-5 opacity-70 group-hover:translate-x-1 group-hover:opacity-100 transition-all" />
+              {loading || isLoggingIn ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  Ingresar al Sistema
+                  <ArrowRight className="ml-2 h-5 w-5 opacity-70 group-hover:translate-x-1 group-hover:opacity-100 transition-all" />
+                </>
+              )}
             </Button>
 
             <div className="pt-4 text-center border-t border-slate-100 dark:border-slate-800">

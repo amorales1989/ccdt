@@ -16,6 +16,7 @@ import { format, parseISO } from "date-fns";
 import { UserPlus, User, MapPin, Phone, Hash, CalendarDays, KeyRound, Building2, Search, Check } from "lucide-react";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { PersonSearchInput, PersonSearchResult } from "@/components/PersonSearchInput";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 
 interface AgregarAlumnoProps {
   onSuccess?: () => void;
@@ -48,8 +49,9 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
     person_source: null as 'profile' | 'student' | null,
   });
 
+  const companyId = getPersistentCompanyId();
   const { data: departments = [] } = useQuery({
-    queryKey: ["departments"],
+    queryKey: ["departments", companyId],
     queryFn: getDepartments,
   });
 
@@ -96,6 +98,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
               .from("departments")
               .select("id")
               .eq("name", department)
+              .eq("company_id", companyId)
               .single();
 
             if (error) {
