@@ -128,6 +128,17 @@ serve(async (req) => {
         })
 
       case 'delete':
+        // First delete from profiles table
+        const { error: profileError } = await supabaseClient
+          .from('profiles')
+          .delete()
+          .eq('id', userId)
+
+        if (profileError) {
+          console.error('Error deleting profile:', profileError)
+          // We continue to try deleting the auth user even if profile deletion fails
+        }
+
         const { data: deleteData, error: deleteError } = await supabaseClient.auth.admin.deleteUser(
           userId
         )

@@ -350,13 +350,6 @@ const NavigationContent = ({
         )}
         <div className="flex items-center gap-1">
           <button
-            onClick={toggleTheme}
-            className="flex items-center justify-center h-9 w-9 rounded-lg transition-all duration-200 text-muted-foreground hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-primary shrink-0"
-            title={theme === 'dark' ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-          >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-          <button
             onClick={handleSignOut}
             className="flex items-center gap-2 flex-1 px-2.5 py-1.5 rounded-lg transition-all duration-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 group text-left"
           >

@@ -40,7 +40,9 @@ type Profile = {
   role: AppRole;
   departments: DepartmentType[];
   assigned_class?: string;
-  email?: string;
+  department_id?: string;
+  phone?: string;
+  email: string;
 };
 
 const GestionUsuarios = () => {
@@ -122,13 +124,16 @@ const GestionUsuarios = () => {
         throw adminError;
       }
 
-      const usersData = profiles.map(profile => {
-        const adminData = adminUsersData.find((user: any) => user.id === profile.id);
-        return {
-          ...profile,
-          email: adminData?.email || ''
-        };
-      });
+      const usersData = profiles
+        .map(profile => {
+          const adminData = adminUsersData.find((user: any) => user.id === profile.id);
+          if (!adminData) return null;
+          return {
+            ...profile,
+            email: adminData?.email || ''
+          };
+        })
+        .filter((user) => user !== null) as Profile[];
 
       console.log("Fetched profiles:", usersData);
       return usersData as Profile[];
@@ -410,11 +415,31 @@ const GestionUsuarios = () => {
             </p>
           </div>
         </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setShowImportDialog(true)}
+            className="flex items-center gap-2 h-10 px-5 rounded-xl border border-purple-200 bg-white text-purple-600 hover:bg-purple-50 hover:text-purple-700 font-bold text-sm transition-all shadow-sm"
+          >
+            <FileUp className="h-4 w-4" />
+            <span className="hidden sm:inline">Importar Usuarios</span>
+            <span className="sm:hidden">Importar</span>
+          </Button>
+          <RegisterUserModal onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}>
+            <Button
+              className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 font-bold text-sm transition-all flex-shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Nuevo</span>
+              <span className="sm:hidden">Nuevo</span>
+            </Button>
+          </RegisterUserModal>
+        </div>
       </div>
 
       <div className="space-y-6 relative z-10 w-full">
         <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-4 w-full">
-          <div className="flex items-center gap-4 w-full justify-between">
+          <div className="flex items-center gap-4 w-full">
             <CustomTabs
               value={activeTab}
               onChange={setActiveTab}
@@ -423,25 +448,6 @@ const GestionUsuarios = () => {
                 { value: "asignacion", label: "Asignación de Clases", icon: GraduationCap }
               ]}
             />
-
-            {/* Desktop-only: Nuevo Usuario button aligned far right of tabs */}
-            <div className="hidden lg:flex items-center gap-3">
-              <Button
-                onClick={() => setShowImportDialog(true)}
-                className="flex items-center gap-2 h-10 px-5 rounded-xl border border-purple-200 bg-white text-purple-600 hover:bg-purple-50 hover:text-purple-700 font-bold text-sm transition-all shadow-sm"
-              >
-                <FileUp className="h-4 w-4" />
-                Importar Usuarios
-              </Button>
-              <RegisterUserModal onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}>
-                <Button
-                  className="flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 font-bold text-sm transition-all flex-shrink-0"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nuevo Usuario
-                </Button>
-              </RegisterUserModal>
-            </div>
           </div>
 
           {activeTab === "listado" && (
