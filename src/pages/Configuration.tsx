@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 
 export default function Configuration() {
   const { profile } = useAuth();
@@ -364,12 +365,7 @@ export default function Configuration() {
   }
 
   if (isCompanyLoading) {
-    return (
-      <div className="container mx-auto py-8 flex justify-center items-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <span className="ml-2">Cargando configuración...</span>
-      </div>
-    );
+    return <LoadingOverlay message="Cargando configuración..." />;
   }
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 p-4 md:p-8 pb-32 animate-fade-in max-w-[1600px] mx-auto">

@@ -1,3 +1,4 @@
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserCheck, UserX, Calendar, Users, CheckCircle2, Save } from "lucide-react";
@@ -213,13 +214,7 @@ const TomarAsistencia = () => {
   }
 
   if (isLoadingStudents) {
-    return (
-      <div className="p-6 space-y-4">
-        {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} className="glass-card h-16 animate-pulse opacity-50" />
-        ))}
-      </div>
-    );
+    return <LoadingOverlay message="Cargando miembros..." />;
   }
 
   const displayDate = format(addDays(new Date(selectedDate), 1), "EEEE, dd 'de' MMMM yyyy", { locale: es });

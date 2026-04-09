@@ -3,6 +3,7 @@ import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area, LabelList } from "recharts";
 import { Users, TrendingUp, DollarSign, Award, Loader2, Info, FileDown, Building2, ShieldCheck } from "lucide-react";
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, RotateCcw } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
+import type { Student, Profile } from "@/types/database";
 
 const COLORS = ["#002366", "#003a8c", "#0050b3", "#096dd9", "#1890ff", "#40a9ff", "#69c0ff"];
 
@@ -34,8 +36,8 @@ export default function Estadisticas() {
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return null;
-            const { data, error } = await supabase
-                .from('profiles')
+            const { data, error } = await (supabase
+                .from('profiles') as any)
                 .select('*')
                 .eq('id', user.id)
                 .eq('company_id', companyId)
@@ -53,11 +55,11 @@ export default function Estadisticas() {
         queryKey: ['stats-students', scopedDeptId, companyId],
         enabled: !loadingProfile,
         queryFn: async () => {
-            let q = supabase.from('students').select('*').eq('company_id', companyId);
+            let q = (supabase.from('students') as any).select('*').eq('company_id', companyId);
             if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
             const { data, error } = await q;
             if (error) throw error;
-            return data;
+            return data as Student[];
         }
     });
 
@@ -66,11 +68,11 @@ export default function Estadisticas() {
         queryKey: ['stats-attendance', scopedDeptId, companyId],
         enabled: !loadingProfile,
         queryFn: async () => {
-            let q = supabase.from('attendance').select('*').eq('company_id', companyId);
+            let q = (supabase.from('attendance') as any).select('*').eq('company_id', companyId);
             if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
             const { data, error } = await q;
             if (error) throw error;
-            return data;
+            return data as any[];
         }
     });
 
@@ -79,11 +81,11 @@ export default function Estadisticas() {
         queryKey: ['stats-profiles', scopedDeptId, companyId],
         enabled: !loadingProfile,
         queryFn: async () => {
-            let q = supabase.from('profiles').select('*').eq('company_id', companyId);
+            let q = (supabase.from('profiles') as any).select('*').eq('company_id', companyId);
             if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
             const { data, error } = await q;
             if (error) throw error;
-            return data;
+            return data as Profile[];
         }
     });
 
@@ -92,8 +94,8 @@ export default function Estadisticas() {
         queryKey: ['stats-dept', scopedDeptId, companyId],
         enabled: !!scopedDeptId,
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('departments')
+            const { data, error } = await (supabase
+                .from('departments') as any)
                 .select('name, classes')
                 .eq('id', scopedDeptId)
                 .eq('company_id', companyId)
@@ -154,7 +156,7 @@ export default function Estadisticas() {
         }, {});
         const genderData: { name: string; value: number }[] = Object.entries(genderCount).map(([name, value]) => ({
             name: name === 'masculino' ? 'Masculino' : name === 'femenino' ? 'Femenino' : 'Desconocido',
-            value
+            value: value as number
         }));
 
         // Age Groups
@@ -210,7 +212,7 @@ export default function Estadisticas() {
             return acc;
         }, {});
         const roleData: { name: string; value: number }[] = Object.entries(rolesCount)
-            .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
+            .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value: value as number }))
             .sort((a, b) => b.value - a.value);
 
         // Exact Age Distribution (0 to maxAge)
@@ -263,12 +265,7 @@ export default function Estadisticas() {
     };
 
     if (loadingProfile || loadingStudents || loadingAttendance || loadingProfiles) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                <Loader2 className="h-10 w-10 text-primary animate-spin" />
-                <p className="text-muted-foreground font-medium animate-pulse text-lg tracking-tight">Consolidando registros ministeriales...</p>
-            </div>
-        );
+        return <LoadingOverlay message="Consolidando registros ministeriales..." />;
     }
 
     const data = processedData;

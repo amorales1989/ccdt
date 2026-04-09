@@ -1,3 +1,4 @@
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, PersonStanding, MoreVertical, MapPin, Search, CheckCircle2, Bell, Calendar, Clock } from "lucide-react";
@@ -100,6 +101,9 @@ const Home = () => {
     enabled: !isCalendarDepartment && !!profile?.id, // Solo ejecutar si NO es departamento calendario y hay perfil cargado
     staleTime: 1000 * 60 * 15, // 15 minutos (datos estáticos)
   });
+  if (loading || (studentsLoading && !isCalendarDepartment) || (departmentsLoading && !isCalendarDepartment)) {
+    return <LoadingOverlay message="Cargando panel..." />;
+  }
 
   const studentsBasicInfo = useMemo(() => {
     if (isCalendarDepartment) return []; // Retornar array vacío si es calendario

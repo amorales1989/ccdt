@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -158,12 +159,7 @@ const Departamentos = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Layers className="h-10 w-10 text-primary animate-pulse" />
-        <p className="text-muted-foreground font-medium animate-pulse">Cargando departamentos...</p>
-      </div>
-    );
+    return <LoadingOverlay message="Cargando departamentos..." />;
   }
 
   return (

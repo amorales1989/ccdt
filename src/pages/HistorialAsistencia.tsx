@@ -18,6 +18,7 @@ import { DepartmentType, Attendance } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { markAttendance } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -355,6 +356,10 @@ const HistorialAsistencia = () => {
     setIsEditMode(false);
     setEditRecords([]);
   };
+
+  if (attendanceLoading && !isEditMode) {
+    return <LoadingOverlay message="Cargando historial..." />;
+  }
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">

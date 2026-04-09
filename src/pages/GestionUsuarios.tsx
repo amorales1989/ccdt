@@ -90,7 +90,7 @@ const GestionUsuarios = () => {
   const { data: departments = [] } = useQuery({
     queryKey: ['departments', companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('departments')
         .select('*')
         .eq('company_id', companyId)
@@ -105,8 +105,8 @@ const GestionUsuarios = () => {
     queryKey: ['users', companyId],
     queryFn: async () => {
       console.log("Fetching profiles...");
-      const { data: profiles, error } = await supabase
-        .from('profiles')
+      const { data: profiles, error } = await (supabase
+        .from('profiles') as any)
         .select('*')
         .eq('company_id', companyId);
 
@@ -392,7 +392,7 @@ const GestionUsuarios = () => {
   const hasPendingChanges = Object.keys(pendingAssignments).length > 0;
 
   if (isLoading) {
-    return <div className="p-6">Cargando...</div>;
+    return <LoadingOverlay message="Cargando usuarios..." />;
   }
 
   return (

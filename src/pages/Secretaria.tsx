@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 
 const Secretaria = () => {
   const { toast } = useToast();
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Redirect if not admin or secretaria
   if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
     navigate('/');
@@ -54,46 +55,49 @@ const Secretaria = () => {
   };
 
   return (
-    <div className="p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Panel de Secretaria</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p>Bienvenido, {profile?.first_name}!</p>
-          
-          <Button onClick={() => navigate("/agregar-miembro")} className="w-full">
-            Agregar Miembro
-          </Button>
-          <Button onClick={() => navigate("/listar-miembros")} className="w-full">
-            Listar Miembros
-          </Button>
-          <Button onClick={() => navigate("/attendance")} className="w-full">
-            Gestionar Asistencia
-          </Button>
-          <Button onClick={() => navigate("/eventos")} className="w-full">
-            Gestionar Eventos
-          </Button>
-          {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
-            <>
-              <Button onClick={() => navigate("/gestion-usuarios")} className="w-full">
-                Gestión de Usuarios
-              </Button>
-              <Button onClick={() => navigate("/departamentos")} className="w-full">
-                Gestionar Departamentos
-              </Button>
-              <Button 
-                onClick={updateAllUserDepartmentIds} 
-                disabled={isLoading} 
-                variant="outline" 
-                className="w-full mb-4">
-                {isLoading ? "Actualizando..." : "Actualizar IDs de departamentos para todos los usuarios"}
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <>
+      {isLoading && <LoadingOverlay message="Actualizando departamentos..." />}
+      <div className="p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Panel de Secretaria</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>Bienvenido, {profile?.first_name}!</p>
+
+            <Button onClick={() => navigate("/agregar-miembro")} className="w-full">
+              Agregar Miembro
+            </Button>
+            <Button onClick={() => navigate("/listar-miembros")} className="w-full">
+              Listar Miembros
+            </Button>
+            <Button onClick={() => navigate("/attendance")} className="w-full">
+              Gestionar Asistencia
+            </Button>
+            <Button onClick={() => navigate("/eventos")} className="w-full">
+              Gestionar Eventos
+            </Button>
+            {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
+              <>
+                <Button onClick={() => navigate("/gestion-usuarios")} className="w-full">
+                  Gestión de Usuarios
+                </Button>
+                <Button onClick={() => navigate("/departamentos")} className="w-full">
+                  Gestionar Departamentos
+                </Button>
+                <Button
+                  onClick={updateAllUserDepartmentIds}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="w-full mb-4">
+                  {isLoading ? "Actualizando..." : "Actualizar IDs de departamentos para todos los usuarios"}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 };
 

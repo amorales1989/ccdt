@@ -1,3 +1,4 @@
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MuiCalendar } from "@/components/MuiCalendar";
@@ -439,15 +440,7 @@ export default function Calendario() {
   };
 
   if (isLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="p-6">
-            <p>Cargando calendario...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <LoadingOverlay message="Cargando calendario..." />;
   }
 
   return (

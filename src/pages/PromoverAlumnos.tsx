@@ -1,4 +1,5 @@
 
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -680,7 +681,9 @@ const PromoverAlumnos = () => {
                       <TableBody>
                         {isLoading ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-slate-400">Cargando miembros...</TableCell>
+                            <TableCell colSpan={6} className="text-center py-20">
+                              <LoadingOverlay message="Cargando miembros..." />
+                            </TableCell>
                           </TableRow>
                         ) : students.length === 0 ? (
                           <TableRow>

@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { jsPDF } from "jspdf";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears, parse, isValid, parseISO } from "date-fns";
@@ -100,7 +101,7 @@ const ListarAlumnos = () => {
   const { data: authorizations } = useQuery({
     queryKey: ["authorizations", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("student_authorizations").select("*").eq('company_id', companyId);
+      const { data, error } = await (supabase.from("student_authorizations") as any).select("*").eq('company_id', companyId);
       if (error) {
         console.error("Error fetching authorizations:", error);
         return [];
@@ -966,6 +967,10 @@ const ListarAlumnos = () => {
       );
     }
   };
+
+  if (isLoading) {
+    return <LoadingOverlay message="Cargando miembros..." />;
+  }
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
