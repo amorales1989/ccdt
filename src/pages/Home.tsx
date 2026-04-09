@@ -101,9 +101,6 @@ const Home = () => {
     enabled: !isCalendarDepartment && !!profile?.id, // Solo ejecutar si NO es departamento calendario y hay perfil cargado
     staleTime: 1000 * 60 * 15, // 15 minutos (datos estáticos)
   });
-  if (loading || (studentsLoading && !isCalendarDepartment) || (departmentsLoading && !isCalendarDepartment)) {
-    return <LoadingOverlay message="Cargando panel..." />;
-  }
 
   const studentsBasicInfo = useMemo(() => {
     if (isCalendarDepartment) return []; // Retornar array vacío si es calendario
@@ -258,6 +255,10 @@ const Home = () => {
   const handlePendingRequestsClick = () => {
     navigate("/calendario", { state: { activeTab: "solicitudes" } });
   };
+
+  if (loading || (studentsLoading && !isCalendarDepartment) || (departmentsLoading && !isCalendarDepartment)) {
+    return <LoadingOverlay message="Cargando panel..." />;
+  }
 
   // Si es departamento calendario, solo mostrar el calendario y el botón de solicitudes si hay
   if (isCalendarDepartment) {

@@ -312,7 +312,7 @@ export default function Estadisticas() {
                     </CardHeader>
                     <CardContent className="h-[400px] pt-8 px-6" id="membership-chart">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data?.last12Months}>
+                            <AreaChart data={data?.last12Months} margin={{ top: 20, right: 20, left: 10, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#002366" stopOpacity={0.2} />
@@ -355,7 +355,7 @@ export default function Estadisticas() {
                     </CardHeader>
                     <CardContent className="h-[400px] pt-8 px-6" id="distribution-chart">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={currentView === "age" ? data?.exactAgeData : data?.classDistributionData}>
+                            <BarChart data={currentView === "age" ? data?.exactAgeData : data?.classDistributionData} margin={{ top: 20, right: 20, left: 10, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis
                                     dataKey="name"
@@ -384,13 +384,13 @@ export default function Estadisticas() {
                         </div>
                         <CardDescription className="text-slate-500 font-medium">Composición por género de la membresía</CardDescription>
                     </CardHeader>
-                    <CardContent className="h-[350px] pt-6 flex items-center justify-center" id="gender-chart">
+                    <CardContent className="h-[350px] p-6 flex items-center justify-center" id="gender-chart">
                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            <PieChart margin={{ top: 20, right: 40, left: 40, bottom: 20 }}>
                                 <Pie
                                     data={data?.genderData}
-                                    innerRadius={75}
-                                    outerRadius={110}
+                                    innerRadius={60}
+                                    outerRadius={90}
                                     paddingAngle={10}
                                     dataKey="value"
                                     stroke="none"
