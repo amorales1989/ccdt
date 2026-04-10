@@ -445,7 +445,7 @@ export function AppSidebar() {
 
           <div className="flex items-center gap-2">
             <img src="/fire.png" alt="Icon" className="h-7 w-7 object-contain" />
-            <span className="font-black text-lg text-primary tracking-tight">CCDT</span>
+            <span className="font-black text-lg text-primary tracking-tight">Nexus</span>
           </div>
         </div>
 

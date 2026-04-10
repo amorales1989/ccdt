@@ -217,7 +217,7 @@ export default function Auth() {
               <Avatar className="h-20 w-20 bg-transparent">
                 <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
                 <AvatarFallback className="bg-transparent">
-                  <img src="/fire.png" alt="CCDTS" className="h-full w-full object-contain drop-shadow-md" />
+                  <img src="/fire.png" alt="Nexus" className="h-full w-full object-contain drop-shadow-md" />
                 </AvatarFallback>
               </Avatar>
             </div>

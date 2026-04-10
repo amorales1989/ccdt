@@ -1,7 +1,7 @@
 {
-  "name": "CCDT - Sistema de Gestión",
-  "short_name": "CCDT",
-  "description": "Sistema de gestión educativa CCDT",
+  "name": "Nexus - Sistema de Gestión",
+  "short_name": "Nexus",
+  "description": "Sistema de gestión educativa Nexus",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -22,6 +22,9 @@
     }
   ],
   "screenshots": [],
-  "categories": ["education", "productivity"],
+  "categories": [
+    "education",
+    "productivity"
+  ],
   "lang": "es-AR"
 }

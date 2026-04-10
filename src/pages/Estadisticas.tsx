@@ -253,7 +253,7 @@ export default function Estadisticas() {
         setIsExporting(true);
         try {
             const chartIds = ["membership-chart", "age-chart", "gender-chart", "roles-chart"];
-            const companyName = deptInfo ? `Dpto. ${deptInfo.name}` : "CCDT";
+            const companyName = deptInfo ? `Dpto. ${deptInfo.name}` : "Nexus";
             await exportStatsReport(processedData, chartIds, companyName);
             toast.success("Reporte PDF generado exitosamente");
         } catch (error) {
