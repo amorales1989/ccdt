@@ -132,8 +132,8 @@ const PromoverAlumnos = () => {
         .eq("department_id", selectedDepartmentId)
         .is("deleted_at", null);
 
-      if (selectedClass && selectedClass !== "all") {
-        query = query.eq("assigned_class", selectedClass);
+      if (selectedClass !== "all") {
+        query = query.eq("assigned_class", selectedClass || "");
       }
 
       const { data, error } = await query;

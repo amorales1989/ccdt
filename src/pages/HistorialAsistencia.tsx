@@ -207,8 +207,8 @@ const HistorialAsistencia = () => {
       const attendanceData = await getAttendance(formattedDate, formattedDate, "", departmentIdToUse);
       if (isAdminOrSecretaria && selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
-      } else if (!isAdminOrSecretaria && userClass) {
-        return attendanceData.filter(record => record.assigned_class === userClass);
+      } else if (!isAdminOrSecretaria) {
+        return attendanceData.filter(record => record.assigned_class === (userClass || ""));
       }
       return attendanceData;
     },
@@ -234,9 +234,10 @@ const HistorialAsistencia = () => {
         .eq('department_id', departmentIdToUse)
         .is('deleted_at', null);
 
-      if ((isAdminOrSecretaria && selectedClass !== "all") || (!isAdminOrSecretaria && userClass)) {
-        const classFilter = (isAdminOrSecretaria && selectedClass !== "all") ? selectedClass : userClass;
-        query = query.eq('assigned_class', classFilter);
+      if (isAdminOrSecretaria && selectedClass !== "all") {
+        query = query.eq('assigned_class', selectedClass);
+      } else if (!isAdminOrSecretaria) {
+        query = query.eq('assigned_class', userClass || "");
       }
       const { data, error } = await query;
       if (error) {

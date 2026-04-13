@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -75,15 +75,23 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
         }
     });
 
+    const prevSelectedDeptRef = useRef<string | null>(null);
+
     // Update available classes when department changes
     useEffect(() => {
         if (selectedDepartment) {
             const department = departments.find(d => d.name === selectedDepartment);
             setAvailableClasses(department?.classes || []);
-            setSelectedClass(""); // Reset selected class when department changes
+
+            // Only reset if the selected department ACTUALLY changed from one value to another
+            if (prevSelectedDeptRef.current !== null && prevSelectedDeptRef.current !== selectedDepartment) {
+                setSelectedClass("");
+            }
+            prevSelectedDeptRef.current = selectedDepartment;
         } else {
             setAvailableClasses([]);
             setSelectedClass("");
+            prevSelectedDeptRef.current = null;
         }
     }, [selectedDepartment, departments]);
 
@@ -112,14 +120,14 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                 departments: [selectedDepartment],
                 department_id,
                 assigned_class: selectedClass || undefined,
-                phone,
-                birthdate,
-                gender,
-                address,
-                document_number: documentNumber,
+                phone: phone || undefined,
+                birthdate: birthdate || undefined,
+                gender: gender || undefined,
+                address: address || undefined,
+                document_number: documentNumber || undefined,
                 is_member: (role as string) === 'miembro' || personSource === 'student',
-                profile_id: profileId,
-                person_source: personSource
+                profile_id: profileId || undefined,
+                person_source: personSource || undefined
             };
 
             await signUp(email, password, profileData);

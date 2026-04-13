@@ -98,8 +98,10 @@ const TomarAsistencia = () => {
         departmentQuery = departmentQuery.eq("department_id", departmentId);
 
         const classToFilter = isDirector ? selectedClass : userClass;
-        if (classToFilter) {
-          departmentQuery = departmentQuery.eq("assigned_class", classToFilter);
+        if (isDirector && classToFilter === "all") {
+          // no filter
+        } else {
+          departmentQuery = departmentQuery.eq("assigned_class", classToFilter || "");
         }
       }
 

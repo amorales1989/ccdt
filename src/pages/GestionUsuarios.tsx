@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -156,15 +156,22 @@ const GestionUsuarios = () => {
     setCurrentPage(1);
   }, [searchTerm, listDepartmentFilter]);
 
+  const prevAssignmentDeptRef = useRef<string | null>(null);
+
   // Handle assignment classes
   useEffect(() => {
     if (assignmentDept) {
       const department = departments.find(d => d.name === assignmentDept);
       setAssignmentClasses(department?.classes || []);
-      setAssignmentClass("");
+
+      if (prevAssignmentDeptRef.current !== null && prevAssignmentDeptRef.current !== assignmentDept) {
+        setAssignmentClass("");
+      }
+      prevAssignmentDeptRef.current = assignmentDept;
     } else {
       setAssignmentClasses([]);
       setAssignmentClass("");
+      prevAssignmentDeptRef.current = null;
     }
   }, [assignmentDept, departments]);
 
