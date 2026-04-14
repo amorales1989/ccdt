@@ -56,6 +56,15 @@ export default function Auth() {
     }
 
     if (profile) {
+      if (profile.role === 'colaborador') {
+        toast({
+          title: "Acceso denegado",
+          description: "Los colaboradores no tienen acceso a la aplicación.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       console.log("Perfil cargado correctamente:", profile);
       if (profile.departments && profile.departments.length > 1) {
         setUserDepartments(profile.departments);

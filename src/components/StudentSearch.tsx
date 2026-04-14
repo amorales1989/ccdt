@@ -102,7 +102,7 @@ export const StudentSearch = ({ students }: StudentSearchProps) => {
 
       {selectedStudent && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in p-4" onClick={(e) => { if (e.target === e.currentTarget) setSelectedStudent(null) }}>
-          <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden relative" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl shadow-2xl relative" onClick={e => e.stopPropagation()}>
             <Button variant="ghost" size="icon" className="absolute top-4 right-4 z-10 bg-white/50 backdrop-blur hover:bg-white" onClick={() => setSelectedStudent(null)}>
               <Plus className="h-4 w-4 rotate-45" />
             </Button>

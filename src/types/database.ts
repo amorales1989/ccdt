@@ -131,7 +131,7 @@ export interface Profile {
   assigned_class?: string;
 }
 
-export type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria" | "secr.-calendario";
+export type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador";
 
 export interface StudentAuthorization {
   id: string;

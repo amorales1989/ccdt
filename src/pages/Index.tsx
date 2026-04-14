@@ -58,6 +58,17 @@ export default function Index() {
     }
 
     if (profile) {
+      if (profile.role === 'colaborador') {
+        toast({
+          title: "Acceso denegado",
+          description: "Los colaboradores no tienen acceso a la aplicación.",
+          variant: "destructive",
+        });
+        signIn("", ""); // Reset state (though signOut is better if available)
+        // Accessing signOut from useAuth might be better
+        return;
+      }
+
       if (profile.departments && profile.departments.length > 1) {
         setUserDepartments(profile.departments);
         setShowDepartmentSelect(true); // Mostrar selector si tiene más de un departamento

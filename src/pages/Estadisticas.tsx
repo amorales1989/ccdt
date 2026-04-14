@@ -55,7 +55,10 @@ export default function Estadisticas() {
         queryKey: ['stats-students', scopedDeptId, companyId],
         enabled: !loadingProfile,
         queryFn: async () => {
-            let q = (supabase.from('students') as any).select('*').eq('company_id', companyId);
+            let q = (supabase.from('students') as any)
+                .select('*')
+                .eq('company_id', companyId)
+                .is('deleted_at', null);
             if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
             const { data, error } = await q;
             if (error) throw error;
@@ -109,7 +112,7 @@ export default function Estadisticas() {
     const processedData = useMemo(() => {
         if (!students.length && !attendance.length) return null;
 
-        // Filter students by class and age
+        // Filter students by class and age (they are already filtered by deleted_at null in the query)
         const filteredStudents = students.filter(s => {
             const classMatch = selectedClass === "all" || s.assigned_class === selectedClass;
 
@@ -132,13 +135,13 @@ export default function Estadisticas() {
             return classMatch && ageMatch;
         });
 
-        // Filter attendance by class (and indirectly by students if we wanted, but usually status is enough)
-        // However, if we filter by class, we should only see attendance for students in that class
+        const activeStudentIds = new Set(filteredStudents.map(s => s.id));
+
+        // Filter attendance by class and only for active students
         const filteredAttendance = attendance.filter(a => {
             const classMatch = selectedClass === "all" || a.assigned_class === selectedClass;
-            // Age filtering for attendance is harder unless we join with students
-            // For now, let's filter attendance by class as it's directly on the record
-            return classMatch;
+            const studentMatch = activeStudentIds.has(a.student_id);
+            return classMatch && studentMatch;
         });
 
         // Filter profiles by class
@@ -249,12 +252,12 @@ export default function Estadisticas() {
     const [isExporting, setIsExporting] = React.useState(false);
 
     const handleExport = async () => {
-        if (!processedData) return;
+        if (!data) return;
         setIsExporting(true);
         try {
-            const chartIds = ["membership-chart", "age-chart", "gender-chart", "roles-chart"];
+            const chartIds = ["membership-chart", "distribution-chart", "gender-chart", "roles-chart"];
             const companyName = deptInfo ? `Dpto. ${deptInfo.name}` : "Nexus";
-            await exportStatsReport(processedData, chartIds, companyName);
+            await exportStatsReport(data, chartIds, companyName);
             toast.success("Reporte PDF generado exitosamente");
         } catch (error) {
             console.error("Error exporting report:", error);
@@ -268,11 +271,30 @@ export default function Estadisticas() {
         return <LoadingOverlay message="Consolidando registros ministeriales..." />;
     }
 
-    const data = processedData;
+    const defaultData = {
+        totalStudents: 0,
+        genderData: [],
+        ageData: [],
+        exactAgeData: [],
+        classDistributionData: [],
+        last12Months: [],
+        attendanceRate: "0",
+        roleData: [],
+        totalVolunteers: 0,
+        newStudents: 0
+    };
+
+    const data = processedData || defaultData;
     const deptLabel = deptInfo?.name ? deptInfo.name.charAt(0).toUpperCase() + deptInfo.name.slice(1) : null;
 
     return (
         <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
+            {data.totalStudents === 0 && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-center gap-3 text-amber-800 dark:text-amber-200 shadow-sm">
+                    <Info className="h-5 w-5" />
+                    <p className="font-bold text-sm">Aún no hay métricas para mostrar en esta vista (0 miembros activos).</p>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[

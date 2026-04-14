@@ -74,6 +74,7 @@ const GestionUsuarios = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [isCleanupDialogOpen, setIsCleanupDialogOpen] = useState(false);
 
   useEffect(() => {
     if (profile?.role === 'director' && profile.departments?.[0]) {
@@ -218,13 +219,14 @@ const GestionUsuarios = () => {
         .update({ assigned_class: null })
         .eq('company_id', companyId)
         .contains('departments', [department])
-        .in('role', ['maestro', 'lider']);
+        .in('role', ['maestro', 'lider', 'colaborador']);
 
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      setIsCleanupDialogOpen(false);
       toast({
         title: "Éxito",
         description: "Todas las clases del departamento han sido limpiadas",
@@ -377,7 +379,7 @@ const GestionUsuarios = () => {
 
   // Assignment logic filtering (accounts for pending local changes)
   const assignmentFilteredUsers = users.filter(user =>
-    (user.role === 'maestro' || user.role === 'lider') &&
+    (user.role === 'maestro' || user.role === 'lider' || user.role === 'colaborador') &&
     user.departments?.includes(assignmentDept as DepartmentType)
   );
 
@@ -611,6 +613,7 @@ const GestionUsuarios = () => {
                                             <SelectItem value="maestro">Maestro</SelectItem>
                                             <SelectItem value="lider">Líder</SelectItem>
                                             <SelectItem value="director">Director</SelectItem>
+                                            <SelectItem value="colaborador">Colaborador</SelectItem>
                                             <SelectItem value="secretaria">Secretaria</SelectItem>
                                             <SelectItem value="secr.-calendario">Secr.-calendario</SelectItem>
                                             <SelectItem value="admin">Administrador</SelectItem>
@@ -760,7 +763,7 @@ const GestionUsuarios = () => {
                   <span>{assignmentFilteredUsers.length}</span>
                 </div>
 
-                <Dialog>
+                <Dialog open={isCleanupDialogOpen} onOpenChange={setIsCleanupDialogOpen}>
                   <DialogTrigger asChild>
                     <Button
                       variant="outline"
