@@ -68,7 +68,8 @@ serve(async (req) => {
             gender: userData.gender,
             address: userData.address,
             document_number: userData.document_number,
-            is_member: userData.is_member || false
+            is_member: userData.is_member || false,
+            company_id: userData.company_id
           }
         })
         if (createError) throw createError

@@ -37,6 +37,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
     const [lastName, setLastName] = useState("");
     const [role, setRole] = useState<AppRole>("maestro");
     const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
+    const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
     const [selectedClass, setSelectedClass] = useState<string>("");
     const [availableClasses, setAvailableClasses] = useState<string[]>([]);
     const [phone, setPhone] = useState("");
@@ -52,13 +53,15 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
     const { toast } = useToast();
 
     const isDirector = profile?.role === 'director';
+    const isDirectorGeneral = profile?.role === 'director_general';
+    const isVicedirector = profile?.role === 'vicedirector';
 
     useEffect(() => {
-        if (isDirector && profile.departments?.[0]) {
+        if ((isDirector || isVicedirector) && profile.departments?.[0]) {
             setSelectedDepartment(profile.departments[0]);
             setRole("maestro");
         }
-    }, [isDirector, profile]);
+    }, [isDirector, isVicedirector, profile]);
 
     // Fetch departments
     const { data: departments = [] } = useQuery({
@@ -108,8 +111,10 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
         setRole("maestro");
         if (!isDirector) {
             setSelectedDepartment(null);
+            setSelectedDepartments([]);
         } else if (profile?.departments?.[0]) {
             setSelectedDepartment(profile.departments[0]);
+            setSelectedDepartments([profile.departments[0]]);
         }
         setSelectedClass("");
         setAvailableClasses([]);
@@ -128,7 +133,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!selectedDepartment) {
+        if (role !== 'director_general' && !selectedDepartment) {
             toast({
                 title: "Error",
                 description: "Por favor seleccione un departamento",
@@ -137,8 +142,20 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
             return;
         }
 
+        if (role === 'director_general' && selectedDepartments.length === 0) {
+            toast({
+                title: "Error",
+                description: "Por favor seleccione al menos un departamento",
+                variant: "destructive",
+            });
+            return;
+        }
+
         try {
-            const departmentObj = departments.find(d => d.name === selectedDepartment);
+            const departmentObj = role === 'director_general'
+                ? departments.find(d => d.name === selectedDepartments[0])
+                : departments.find(d => d.name === selectedDepartment);
+
             const department_id = departmentObj?.id || "";
 
             // Generar credenciales si es colaborador y no se proporcionaron
@@ -166,9 +183,9 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                 first_name: firstName,
                 last_name: lastName,
                 role,
-                departments: [selectedDepartment],
+                departments: role === 'director_general' ? selectedDepartments : [selectedDepartment],
                 department_id,
-                assigned_class: (selectedClass && selectedClass !== 'none') ? selectedClass : undefined,
+                assigned_class: (selectedClass && selectedClass !== 'none' && role !== 'director_general') ? selectedClass : undefined,
                 phone: phone || undefined,
                 birthdate: birthdate || undefined,
                 gender: gender || undefined,
@@ -181,7 +198,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
             };
 
             // Usamos la Edge Function para evitar que el administrador sea deslogueado
-            const { error: registerError } = await supabase.functions.invoke('manage-users', {
+            const { data: registerData, error: registerError } = await supabase.functions.invoke('manage-users', {
                 body: {
                     action: 'create',
                     userData: {
@@ -193,6 +210,23 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
             });
 
             if (registerError) throw registerError;
+
+            // Update profile with additional fields to ensure they are saved
+            const newUser = registerData?.user;
+            if (newUser?.id) {
+                const { error: profileUpdateError } = await supabase
+                    .from('profiles')
+                    .update({
+                        birthdate: birthdate || undefined,
+                        document_number: documentNumber || undefined,
+                        gender: gender || undefined
+                    })
+                    .eq('id', newUser.id);
+
+                if (profileUpdateError) {
+                    console.error("Error updating profile after creation:", profileUpdateError);
+                }
+            }
 
             toast({
                 title: "Registro exitoso",
@@ -300,9 +334,36 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                                     id="documentNumber"
                                     value={documentNumber}
                                     onChange={(e) => setDocumentNumber(e.target.value)}
+                                    required
                                     placeholder="Ej. 12345678"
                                     className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="birthdate" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Fecha de Nacimiento</Label>
+                                <Input
+                                    id="birthdate"
+                                    type="date"
+                                    value={birthdate}
+                                    onChange={(e) => setBirthdate(e.target.value)}
+                                    required
+                                    className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="gender" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Género</Label>
+                                <Select value={gender} onValueChange={setGender} required>
+                                    <SelectTrigger id="gender" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 transition-all">
+                                        <SelectValue placeholder="Seleccionar género" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="masculino">Masculino</SelectItem>
+                                        <SelectItem value="femenino">Femenino</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Teléfono</Label>
@@ -367,16 +428,25 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                                         <SelectValue placeholder="Selecciona un rol" />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl shadow-xl">
-                                        {isDirector ? (
+                                        {isDirector || isVicedirector ? (
                                             <>
                                                 <SelectItem value="maestro">Maestro</SelectItem>
                                                 <SelectItem value="colaborador">Colaborador</SelectItem>
+                                            </>
+                                        ) : isDirectorGeneral ? (
+                                            <>
+                                                <SelectItem value="maestro">Maestro</SelectItem>
+                                                <SelectItem value="colaborador">Colaborador</SelectItem>
+                                                <SelectItem value="director">Director</SelectItem>
+                                                <SelectItem value="vicedirector">Vicedirector</SelectItem>
                                             </>
                                         ) : (
                                             <>
                                                 <SelectItem value="maestro">Maestro</SelectItem>
                                                 <SelectItem value="lider">Líder</SelectItem>
                                                 <SelectItem value="director">Director</SelectItem>
+                                                <SelectItem value="vicedirector">Vicedirector</SelectItem>
+                                                <SelectItem value="director_general">Director General</SelectItem>
                                                 <SelectItem value="colaborador">Colaborador</SelectItem>
                                                 <SelectItem value="secretaria">Secretaria</SelectItem>
                                                 <SelectItem value="secr.-calendario">Secr.-calendario</SelectItem>
@@ -388,27 +458,55 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="department" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Departamento</Label>
-                                <Select
-                                    value={selectedDepartment || undefined}
-                                    onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
-                                    disabled={isDirector && (profile?.departments?.length || 0) <= 1}
-                                >
-                                    <SelectTrigger className={`h-12 rounded-xl border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${(isDirector && (profile?.departments?.length || 0) <= 1) ? "bg-slate-100 dark:bg-slate-800 opacity-80 cursor-not-allowed" : "bg-slate-50"}`}>
-                                        <SelectValue placeholder="Selecciona un departamento" />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl shadow-xl">
-                                        {departments.filter(d => !isDirector || profile?.departments?.includes(d.name)).map((dept) => (
-                                            <SelectItem key={dept.id} value={dept.name}>
-                                                {dept.name}
-                                            </SelectItem>
+                                <Label htmlFor="department" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
+                                    {role === 'director_general' ? "Departamentos Asignados" : "Departamento"}
+                                </Label>
+
+                                {role === 'director_general' ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700">
+                                        {departments.filter(d => !isDirector && !isDirectorGeneral && !isVicedirector || profile?.departments?.includes(d.name)).map((dept) => (
+                                            <div key={dept.id} className="flex items-center space-x-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`dept-${dept.id}`}
+                                                    checked={selectedDepartments.includes(dept.name)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedDepartments([...selectedDepartments, dept.name]);
+                                                        } else {
+                                                            setSelectedDepartments(selectedDepartments.filter(name => name !== dept.name));
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                                />
+                                                <label htmlFor={`dept-${dept.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                                    {dept.name}
+                                                </label>
+                                            </div>
                                         ))}
-                                    </SelectContent>
-                                </Select>
+                                    </div>
+                                ) : (
+                                    <Select
+                                        value={selectedDepartment || undefined}
+                                        onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
+                                        disabled={(isDirector || isVicedirector || isDirectorGeneral) && (profile?.departments?.length || 0) <= 1}
+                                    >
+                                        <SelectTrigger className={`h-12 rounded-xl border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${((isDirector || isVicedirector || isDirectorGeneral) && (profile?.departments?.length || 0) <= 1) ? "bg-slate-100 dark:bg-slate-800 opacity-80 cursor-not-allowed" : "bg-slate-50"}`}>
+                                            <SelectValue placeholder="Selecciona un departamento" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl shadow-xl">
+                                            {departments.filter(d => (!isDirector && !isVicedirector && !isDirectorGeneral) || profile?.departments?.includes(d.name)).map((dept) => (
+                                                <SelectItem key={dept.id} value={dept.name}>
+                                                    {dept.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
                         </div>
 
-                        {selectedDepartment && (
+                        {selectedDepartment && role !== 'director_general' && (
                             <div className="space-y-2 pt-2 animate-fade-in">
                                 <Label htmlFor="class" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Clase Asignada (Opcional)</Label>
                                 <Select value={selectedClass || 'none'} onValueChange={setSelectedClass}>

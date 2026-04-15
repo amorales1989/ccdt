@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PersonStanding, CheckCircle2, Plus, Bell } from "lucide-react";
+import { PersonStanding, Bell } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import type { DepartmentType, Student, Department } from "@/types/database";
+import { ClassStatsCard } from "./ClassStatsCard";
 
 interface ClassStats {
     male: number;
@@ -43,13 +44,21 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
     const { profile, isAdminOrSecretary, isTeacherOrLeader } = auth;
     const { students, departments, pendingRequests } = data;
     const { onPendingRequestsClick, onClassClick } = actions;
-    const isDirectorOrAdminOrSecretary = isAdminOrSecretary || profile?.role === "director";
+    const isDirectorOrAdminOrSecretary = isAdminOrSecretary || profile?.role === "director" || profile?.role === "director_general" || profile?.role === "vicedirector";
 
-    const userDepartments = profile?.departments || [];
+    const userDepartments = useMemo(() => {
+        const depts = profile?.departments || [];
+        if (depts.length === 0 && profile?.department_id) {
+            const dept = departments.find(d => d.id === profile.department_id);
+            if (dept) return [dept.name];
+        }
+        return depts;
+    }, [profile?.departments, profile?.department_id, departments]);
+
     const userAssignedClass = profile?.assigned_class;
 
     const filteredStudents = isTeacherOrLeader && userAssignedClass
-        ? students.filter(s => s.assigned_class === userAssignedClass || s.isAuthorized)
+        ? students.filter(s => s.assigned_class === userAssignedClass)
         : students;
 
     let departmentsToShow: DepartmentType[] = [];
@@ -70,9 +79,10 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
         }
 
         let deptStudents = filteredStudents.filter(s => {
-            const studentDept = s.department && s.departments?.name ? s.departments.name : s.department;
-            return studentDept === dept || s.isAuthorized;
+            const studentDept = s.departments?.name || s.department;
+            return studentDept === dept;
         });
+
         acc[dept] = {
             male: deptStudents.filter(s => s.gender === "masculino").length,
             female: deptStudents.filter(s => s.gender === "femenino").length,
@@ -82,6 +92,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
     }, {} as DepartmentStatsMap);
 
     const formatDepartmentName = (name: string) => {
+        if (!name) return "";
         return name.replace(/_/g, ' ').split(' ').map(word =>
             word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ');
@@ -89,7 +100,6 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
 
     const departmentsWithStats = Object.entries(studentsByDepartment);
     const isSingleCard = departmentsWithStats.length === 1;
-    const showClassLabel = isTeacherOrLeader && userAssignedClass;
 
     let statsTitle = "";
     if (isTeacherOrLeader && userAssignedClass) {
@@ -101,7 +111,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
     }
 
     const getStatsForClass = (deptName: string, className: string): ClassStats => {
-        const deptStudents = filteredStudents.filter(s => {
+        const deptStudents = students.filter(s => {
             const studentDept = s.departments?.name || s.department;
             return studentDept === deptName && s.assigned_class === className;
         });
@@ -122,7 +132,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                     </h1>
                 </div>
 
-                {isAdminOrSecretary && pendingRequests.length > 0 && (
+                {isDirectorOrAdminOrSecretary && pendingRequests.length > 0 && (
                     <Button
                         onClick={onPendingRequestsClick}
                         className="bg-primary hover:bg-primary/90 text-white rounded-full px-6 py-5 shadow-lg shadow-primary/20 transition-all font-semibold"
@@ -135,186 +145,85 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
 
             {departmentsWithStats.length > 3 ? (
                 <div className="px-10 relative">
-                    <Carousel
-                        opts={{
-                            align: "start",
-                        }}
-                        className="w-full"
-                    >
+                    <Carousel opts={{ align: "start" }} className="w-full">
                         <CarouselContent className="">
                             {departmentsWithStats.map(([dept, stats], index) => {
                                 const departmentObj = departments.find(d => d.name === dept);
                                 const hasClasses = departmentObj?.classes && departmentObj.classes.length > 0;
-                                const malePercent = stats.total > 0 ? (stats.male / stats.total) * 100 : 0;
-                                const femalePercent = stats.total > 0 ? (stats.female / stats.total) * 100 : 0;
 
                                 return (
                                     <CarouselItem key={dept} className="pl-6 md:basis-1/2 lg:basis-1/3">
-                                        <div
-                                            className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:shadow-md transition-all duration-300 group h-full"
-                                            style={{ animationDelay: `${index * 0.1}s` }}
-                                        >
-                                            <div className="mb-8">
-                                                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 text-center">
-                                                    {formatDepartmentName(dept)}
-                                                </h3>
-                                                <div className="flex items-center justify-center sm:justify-between">
-                                                    <div className="flex items-baseline justify-center gap-2">
-                                                        <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.total}</span>
-                                                        <span className="text-sm font-semibold text-slate-500">MIEMBROS</span>
-                                                    </div>
-                                                    <div className="hidden sm:flex h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-                                                        <PersonStanding className="h-6 w-6" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
-                                                    <div
-                                                        className="h-full bg-indigo-500 transition-all duration-1000"
-                                                        style={{ width: `${malePercent}%` }}
-                                                    ></div>
-                                                    <div
-                                                        className="h-full bg-fuchsia-400 transition-all duration-1000"
-                                                        style={{ width: `${femalePercent}%` }}
-                                                    ></div>
-                                                </div>
-                                                <div className="flex justify-between text-sm font-medium text-slate-500">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                                        <span>Masculino {stats.male}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2 h-2 rounded-full bg-fuchsia-400"></div>
-                                                        <span>Femenino {stats.female}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <ClassStatsCard
+                                            className={formatDepartmentName(dept)}
+                                            stats={stats}
+                                            onClick={() => isDirectorOrAdminOrSecretary && hasClasses && departmentObj ? handleDepartmentClick(departmentObj) : () => { }}
+                                        />
                                     </CarouselItem>
                                 );
                             })}
                         </CarouselContent>
-                        <CarouselPrevious className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white hover:bg-slate-100 text-slate-800 shadow-md" />
-                        <CarouselNext className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white hover:bg-slate-100 text-slate-800 shadow-md" />
+                        <CarouselPrevious className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white text-slate-800 shadow-md" />
+                        <CarouselNext className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white text-slate-800 shadow-md" />
                     </Carousel>
                 </div>
             ) : (
-                <div className={`grid gap-6 mx-auto w-full ${profile?.role === 'director' && departmentsWithStats.length === 1
-                        ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
-                        : departmentsWithStats.length === 1
-                            ? 'grid-cols-1 max-w-md'
-                            : departmentsWithStats.length === 2
-                                ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl'
-                                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-[1100px]'
+                <div className={`grid gap-6 mx-auto w-full ${isDirectorOrAdminOrSecretary && departmentsWithStats.length === 1 && departments.find(d => d.name === departmentsWithStats[0][0])?.classes?.length && departments.find(d => d.name === departmentsWithStats[0][0])!.classes!.length > 1
+                    ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
+                    : departmentsWithStats.length === 1
+                        ? 'grid-cols-1 max-w-md'
+                        : departmentsWithStats.length === 2
+                            ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl'
+                            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-[1100px]'
                     }`}>
-                    {profile?.role === 'director' && departmentsWithStats.length === 1 ? (
-                        // If Director, show cards for each class
+
+                    {(profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') && departmentsWithStats.length === 1 ? (
                         <>
-                            {departments.find(d => d.name === departmentsWithStats[0][0])?.classes?.map((className, idx) => {
-                                const classStats = getStatsForClass(departmentsWithStats[0][0], className);
-                                const malePercent = classStats.total > 0 ? (classStats.male / classStats.total) * 100 : 0;
-                                const femalePercent = classStats.total > 0 ? (classStats.female / classStats.total) * 100 : 0;
-
-                                return (
-                                    <div
-                                        key={className}
-                                        className="bg-white dark:bg-slate-800 rounded-3xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:shadow-md transition-all duration-300 group flex flex-col justify-between w-full max-w-[260px] mx-auto"
-                                        onClick={() => onClassClick(departmentsWithStats[0][0], className)}
-                                    >
-                                        <div className="text-center">
-                                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 line-clamp-1">
-                                                {className}
-                                            </h3>
-                                        </div>
-
-                                        <div className="flex items-center justify-center px-2">
-                                            <div className="flex items-baseline justify-center gap-1.5">
-                                                <span className="text-4xl font-black text-slate-900 dark:text-white leading-none">{classStats.total}</span>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase">Miembros</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
-                                                <div
-                                                    className="h-full bg-indigo-500 transition-all duration-1000"
-                                                    style={{ width: `${malePercent}%` }}
-                                                ></div>
-                                                <div
-                                                    className="h-full bg-fuchsia-400 transition-all duration-1000"
-                                                    style={{ width: `${femalePercent}%` }}
-                                                ></div>
-                                            </div>
-                                            <div className="flex justify-between text-[11px] font-bold text-slate-500 px-1">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                                                    <span>{classStats.male} Varones</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-400"></div>
-                                                    <span>{classStats.female} Mujeres</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {departments.find(d => d.name === departmentsWithStats[0][0])?.classes?.map((className) => (
+                                <ClassStatsCard
+                                    key={className}
+                                    className={className}
+                                    stats={getStatsForClass(departmentsWithStats[0][0], className)}
+                                    onClick={() => onClassClick(departmentsWithStats[0][0], className)}
+                                />
+                            ))}
                         </>
+                    ) : (profile?.role === 'maestro' || profile?.role === 'lider' || profile?.role === 'colaborador') ? (
+                        userAssignedClass ? (
+                            <ClassStatsCard
+                                className={userAssignedClass}
+                                stats={getStatsForClass(userDepartments[0], userAssignedClass)}
+                                onClick={() => onClassClick(userDepartments[0], userAssignedClass)}
+                                isSingleCard={true}
+                            />
+                        ) : (
+                            <div className="col-span-full py-12 px-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white/50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                                <div className="max-w-md mx-auto space-y-4">
+                                    <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mb-2">
+                                        <PersonStanding className="h-8 w-8 opacity-20" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                                        Aún no tienes una clase asignada
+                                    </h3>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+                                        Para ver tus estadísticas y tomar asistencia, solicita a tu director que te asigne una clase en la gestión de usuarios.
+                                    </p>
+                                </div>
+                            </div>
+                        )
                     ) : (
-                        // Standard view for Admin/Secre/Etc
-                        departmentsWithStats.map(([dept, stats], index) => {
+                        departmentsWithStats.map(([dept, stats]) => {
                             const departmentObj = departments.find(d => d.name === dept);
                             const hasClasses = departmentObj?.classes && departmentObj.classes.length > 0;
-                            const malePercent = stats.total > 0 ? (stats.male / stats.total) * 100 : 0;
-                            const femalePercent = stats.total > 0 ? (stats.female / stats.total) * 100 : 0;
 
                             return (
-                                <div
+                                <ClassStatsCard
                                     key={dept}
-                                    className={`bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:shadow-md transition-all duration-300 group ${isSingleCard ? 'w-full max-w-md' : ''}`}
-                                    onClick={() => isDirectorOrAdminOrSecretary && hasClasses && departmentObj ? handleDepartmentClick(departmentObj) : null}
-                                >
-                                    <div className="mb-8">
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 text-center">
-                                            {formatDepartmentName(dept)}
-                                        </h3>
-                                        <div className="flex items-center justify-center sm:justify-between">
-                                            <div className="flex items-baseline justify-center gap-2">
-                                                <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.total}</span>
-                                                <span className="text-sm font-semibold text-slate-500">MIEMBROS</span>
-                                            </div>
-                                            <div className="hidden sm:flex h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-                                                <PersonStanding className="h-6 w-6" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
-                                            <div
-                                                className="h-full bg-indigo-500 transition-all duration-1000"
-                                                style={{ width: `${malePercent}%` }}
-                                            ></div>
-                                            <div
-                                                className="h-full bg-fuchsia-400 transition-all duration-1000"
-                                                style={{ width: `${femalePercent}%` }}
-                                            ></div>
-                                        </div>
-                                        <div className="flex justify-between text-sm font-medium text-slate-500">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                                <span>Masculino {stats.male}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-fuchsia-400"></div>
-                                                <span>Femenino {stats.female}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
+                                    className={formatDepartmentName(dept)}
+                                    stats={stats}
+                                    onClick={() => isDirectorOrAdminOrSecretary && hasClasses && departmentObj ? handleDepartmentClick(departmentObj) : () => { }}
+                                    isSingleCard={departmentsWithStats.length === 1}
+                                />
+                            )
                         })
                     )}
                 </div>
@@ -322,7 +231,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
 
             {selectedDepartment && (
                 <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-                    <DialogContent className="w-[95vw] max-w-4xl sm:max-w-4xl glass-card border-none p-0 max-h-[90vh] overflow-y-auto overflow-x-hidden shadow-2xl">
+                    <DialogContent className="w-[95vw] max-w-4xl glass-card border-none p-0 max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div className="bg-primary/10 p-8 border-b border-primary/20">
                             <DialogHeader>
                                 <DialogTitle className="text-2xl font-black text-primary mb-1">
@@ -331,41 +240,29 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                                 <p className="text-muted-foreground">Desglose de miembros por clase asignada</p>
                             </DialogHeader>
                         </div>
-
-                        <div className="p-8 max-h-[70vh] overflow-y-auto">
+                        <div className="p-8">
                             {selectedDepartment.classes && selectedDepartment.classes.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {selectedDepartment.classes.map((className, idx) => {
+                                    {selectedDepartment.classes.map((className) => {
                                         const classStats = getStatsForClass(selectedDepartment.name || '', className);
                                         return (
                                             <div
                                                 key={className}
-                                                className="bg-accent/5 dark:bg-accent/10 border border-accent/20 rounded-xl p-6 cursor-pointer hover:bg-background hover:shadow-xl hover:border-primary/30 transition-all duration-300 animate-fade-in"
-                                                style={{ animationDelay: `${idx * 0.05}s` }}
+                                                className="bg-accent/5 dark:bg-accent/10 border border-accent/20 rounded-xl p-6 cursor-pointer hover:bg-background transition-all"
                                                 onClick={() => onClassClick(selectedDepartment.name || '', className)}
                                             >
                                                 <div className="flex justify-between items-center mb-6">
-                                                    <h4 className="text-lg font-bold text-foreground">{className}</h4>
-                                                    <div className="bg-primary text-white px-3 py-1 rounded-full text-xs font-black">
-                                                        {classStats.total} TOTAL
-                                                    </div>
+                                                    <h4 className="text-lg font-bold">{className}</h4>
+                                                    <Badge variant="secondary" className="bg-primary text-white">{classStats.total} TOTAL</Badge>
                                                 </div>
-
-                                                <div className="flex justify-around gap-8">
-                                                    <div className="flex flex-col items-center group/gender">
-                                                        <div className="bg-[#3A82AF]/10 p-3 rounded-2xl group-hover/gender:bg-[#3A82AF]/20 transition-colors mb-2">
-                                                            <PersonStanding className="h-8 w-8 text-[#3A82AF]" />
-                                                        </div>
-                                                        <span className="text-2xl font-black text-[#3A82AF]">{classStats.male}</span>
-                                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Varones</span>
+                                                <div className="flex justify-around">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-2xl font-black text-blue-500">{classStats.male}</span>
+                                                        <span className="text-[10px] opacity-50 uppercase">Varones</span>
                                                     </div>
-
-                                                    <div className="flex flex-col items-center group/gender">
-                                                        <div className="bg-[#E83E8C]/10 p-3 rounded-2xl group-hover/gender:bg-[#E83E8C]/20 transition-colors mb-2">
-                                                            <PersonStanding className="h-8 w-8 text-[#E83E8C]" />
-                                                        </div>
-                                                        <span className="text-2xl font-black text-[#E83E8C]">{classStats.female}</span>
-                                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Mujeres</span>
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-2xl font-black text-pink-500">{classStats.female}</span>
+                                                        <span className="text-[10px] opacity-50 uppercase">Mujeres</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -373,9 +270,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                                     })}
                                 </div>
                             ) : (
-                                <div className="text-center py-12 opacity-50">
-                                    <p className="text-lg font-medium">No hay clases configuradas</p>
-                                </div>
+                                <div className="text-center py-12 opacity-50 italic">No hay clases configuradas</div>
                             )}
                         </div>
                     </DialogContent>

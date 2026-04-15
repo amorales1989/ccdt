@@ -32,19 +32,26 @@ const TomarAsistencia = () => {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [deptClasses, setDeptClasses] = useState<string[]>([]);
 
-  const isDirector = profile?.role === "director";
+  const isDirector = profile?.role === "director" || profile?.role === "director_general" || profile?.role === "vicedirector";
+  const isDirectorGeneral = profile?.role === "director_general";
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
-  const currentDepartmentName = profile?.departments?.[0];
+  const [selectedDepartmentName, setSelectedDepartmentName] = useState<string | null>(null);
   const userClass = profile?.assigned_class;
 
   useEffect(() => {
+    if (profile?.departments && profile.departments.length > 0 && !selectedDepartmentName) {
+      setSelectedDepartmentName(profile.departments[0]);
+    }
+  }, [profile, selectedDepartmentName]);
+
+  useEffect(() => {
     const fetchDepartmentDetails = async () => {
-      if (currentDepartmentName) {
+      if (selectedDepartmentName) {
         try {
           const { data, error } = await supabase
             .from("departments")
             .select("id, classes")
-            .eq("name", currentDepartmentName)
+            .eq("name", selectedDepartmentName)
             .single();
           if (!error && data) {
             setDepartmentId(data.id);
@@ -56,7 +63,7 @@ const TomarAsistencia = () => {
       }
     };
     fetchDepartmentDetails();
-  }, [currentDepartmentName]);
+  }, [selectedDepartmentName]);
 
   useEffect(() => {
     const fetchAuthorizedStudents = async () => {
@@ -201,7 +208,7 @@ const TomarAsistencia = () => {
     }
   };
 
-  if (!isAdminOrSecretaria && !currentDepartmentName) {
+  if (!isAdminOrSecretaria && (!profile?.departments || profile.departments.length === 0)) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[60vh]">
         <div className="glass-card p-8 text-center max-w-sm animate-fade-in">
@@ -328,8 +335,30 @@ const TomarAsistencia = () => {
             />
           </div>
 
+          {/* Department Filter for Director General */}
+          {isDirectorGeneral && profile?.departments && profile.departments.length > 1 && (
+            <div className="glass-card flex items-center gap-3 px-4 py-3 sm:w-auto">
+              <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4 text-emerald-600" />
+              </div>
+              <select
+                value={selectedDepartmentName || ""}
+                onChange={e => {
+                  setSelectedDepartmentName(e.target.value);
+                  setSelectedClass("");
+                  setAsistencias({});
+                }}
+                className="bg-transparent text-sm font-semibold text-gray-700 border-none outline-none w-full appearance-none cursor-pointer"
+              >
+                {profile.departments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Class Filter for Director/Admin */}
-          {isDirector && deptClasses.length > 0 && (
+          {isDirector && (
             <div className="glass-card flex items-center gap-3 px-4 py-3 sm:w-auto">
               <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
                 <Users className="h-4 w-4 text-indigo-600" />

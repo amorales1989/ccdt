@@ -266,34 +266,61 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           assigned_class: string | null
+          birthdate: string | null
+          company_id: number | null
           department_id: string | null
           departments: string[] | null
+          document_number: string | null
+          email: string | null
           first_name: string | null
+          gender: string | null
           id: string
+          is_member: boolean | null
+          last_active_at: string | null
           last_name: string | null
           phone: string | null
           role: Database["public"]["Enums"]["app_role"]
+          roles: string[] | null
         }
         Insert: {
+          address?: string | null
           assigned_class?: string | null
+          birthdate?: string | null
+          company_id?: number | null
           department_id?: string | null
           departments?: string[] | null
+          document_number?: string | null
+          email?: string | null
           first_name?: string | null
+          gender?: string | null
           id?: string
+          is_member?: boolean | null
+          last_active_at?: string | null
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          roles?: string[] | null
         }
         Update: {
+          address?: string | null
           assigned_class?: string | null
+          birthdate?: string | null
+          company_id?: number | null
           department_id?: string | null
           departments?: string[] | null
+          document_number?: string | null
+          email?: string | null
           first_name?: string | null
+          gender?: string | null
           id?: string
+          is_member?: boolean | null
+          last_active_at?: string | null
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          roles?: string[] | null
         }
         Relationships: [
           {
@@ -486,7 +513,16 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "lider" | "director" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador"
+      app_role:
+      | "admin"
+      | "lider"
+      | "director"
+      | "director_general"
+      | "maestro"
+      | "secretaria"
+      | "secr.-calendario"
+      | "colaborador"
+      | "vicedirector"
       department_type:
       | "escuelita"
       | "adolescentes"

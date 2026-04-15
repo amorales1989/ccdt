@@ -60,10 +60,12 @@ const getItems = (role: string | undefined, profile: any) => {
     }
   }
 
-  baseItems.push({ title: "Promover Miembros", url: "/promover", icon: FolderUp });
+  if (role !== "maestro") {
+    baseItems.push({ title: "Promover Miembros", url: "/promover", icon: FolderUp });
+  }
   baseItems.push({ title: "Historial", url: "/historial", icon: History });
 
-  if (role === "admin" || role === "secretaria" || role === "director") {
+  if (role === "admin" || role === "secretaria" || role === "director" || role === "director_general" || role === "vicedirector") {
     if (role === "admin" || role === "secretaria") {
       baseItems.push(
         {
@@ -78,7 +80,7 @@ const getItems = (role: string | undefined, profile: any) => {
         { title: "Autorizaciones", url: "/autorizaciones", icon: FileOutput },
         { title: "Departamentos", url: "/departamentos", icon: FolderIcon }
       );
-    } else if (role === "director") {
+    } else if (role === "director" || role === "director_general" || role === "vicedirector") {
       baseItems.push(
         {
           title: "Estadísticas",
@@ -241,7 +243,9 @@ const NavigationContent = ({
     }
   };
 
-  if (profile?.departments && profile.departments.length > 1 && !selectedDepartment && !isAdminOrSecretary) {
+  const isDirectorGeneral = profile?.role === 'director_general';
+
+  if (profile?.departments && profile.departments.length > 1 && !selectedDepartment && !isAdminOrSecretary && !isDirectorGeneral) {
     return (
       <div className="p-4 flex flex-col gap-3 h-full justify-center">
         <div className="flex flex-col items-center gap-4 p-6 rounded-2xl bg-purple-50 border border-purple-100">

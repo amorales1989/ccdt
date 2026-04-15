@@ -84,8 +84,8 @@ const ListarAlumnos = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const profile = useAuth().profile;
-  const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'director';
-  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro' || profile?.role === 'director';
+  const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'director' || profile?.role === 'director_general';
+  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'director_general';
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -138,7 +138,8 @@ const ListarAlumnos = () => {
     let filteredList = filteredStudentsBase.filter(student => {
       // Caso 1: Miembro regular de mi departamento (y clase si soy maestro)
       const isRegular = (
-        (profile?.role === 'director' && student.department_id === profile?.department_id) ||
+        ((profile?.role === 'director' || profile?.role === 'director_general') &&
+          (profile?.departments?.includes(student.departments?.name || student.department) || student.department_id === profile?.department_id)) ||
         (profile?.department_id && profile?.assigned_class &&
           student.department_id === profile.department_id &&
           student.assigned_class === profile.assigned_class)
@@ -331,14 +332,16 @@ const ListarAlumnos = () => {
         class: classParam || ''
       }));
       setIsFilterOpen(true);
-    } else if (profile?.role === 'director' && profile?.department_id && departments) {
-      const directorDept = departments.find(d => d.id === profile.department_id);
+    } else if ((profile?.role === 'director' || profile?.role === 'director_general') && departments) {
+      if (isFilterOpen) return;
+
+      const directorDept = profile.department_id ? departments.find(d => d.id === profile.department_id) : null;
       if (directorDept) {
         setFilters(prev => ({ ...prev, department: directorDept.name }));
         setIsFilterOpen(true);
       }
     }
-  }, [profile, navigate, searchParams, departments]);
+  }, [profile, navigate, searchParams, departments, isFilterOpen]);
 
 
   // NUEVA FUNCIÓN DE EXPORTAR
@@ -1019,14 +1022,19 @@ const ListarAlumnos = () => {
                     <Select
                       onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value, class: '' }))}
                       value={filters.department || "all"}
-                      disabled={profile?.role === 'director'}
+                      disabled={profile?.role === 'director' || profile?.role === 'vicedirector'}
                     >
                       <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
                         <SelectValue placeholder="Seleccione un departamento" />
                       </SelectTrigger>
                       <SelectContent>
-                        {profile?.role !== 'director' && <SelectItem value="all">Todos</SelectItem>}
-                        {departments?.filter(dept => profile?.role !== 'director' || profile.department_id === dept.id).map((department) => (
+                        {profile?.role !== 'director' && profile?.role !== 'vicedirector' && <SelectItem value="all">Todos</SelectItem>}
+                        {departments?.filter(dept => {
+                          if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
+                          if (profile?.role === 'director' || profile?.role === 'vicedirector') return profile.department_id === dept.id;
+                          if (profile?.role === 'director_general') return profile.departments?.includes(dept.name);
+                          return false;
+                        }).map((department) => (
                           <SelectItem key={department.id} value={department.name}>
                             {department.name}
                           </SelectItem>

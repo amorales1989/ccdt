@@ -16,7 +16,7 @@ interface MiniStatsCarouselProps {
 }
 
 const COLORS = ["#002366", "#003a8c", "#0050b3", "#096dd9", "#1890ff", "#40a9ff", "#69c0ff"];
-const GLOBAL_ROLES = ["admin", "secretaria"];
+const GLOBAL_ROLES = ["admin", "secretaria", "director_general"];
 
 export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouselProps) {
     const isGlobalView = !currentProfile || GLOBAL_ROLES.includes(currentProfile.role);

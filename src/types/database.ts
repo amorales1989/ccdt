@@ -129,9 +129,12 @@ export interface Profile {
   email?: string;
   phone?: string;
   assigned_class?: string;
+  birthdate?: string;
+  gender?: string;
+  document_number?: string;
 }
 
-export type AppRole = "admin" | "lider" | "director" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador";
+export type AppRole = "admin" | "lider" | "director" | "director_general" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador" | "vicedirector";
 
 export interface StudentAuthorization {
   id: string;

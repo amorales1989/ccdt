@@ -43,6 +43,9 @@ type Profile = {
   department_id?: string;
   phone?: string;
   email: string;
+  birthdate?: string;
+  document_number?: string;
+  gender?: string;
 };
 
 const GestionUsuarios = () => {
@@ -58,6 +61,7 @@ const GestionUsuarios = () => {
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -76,14 +80,18 @@ const GestionUsuarios = () => {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [isCleanupDialogOpen, setIsCleanupDialogOpen] = useState(false);
 
+  const isDirector = profile?.role === 'director';
+  const isDirectorGeneral = profile?.role === 'director_general';
+  const isVicedirector = profile?.role === 'vicedirector';
+
   useEffect(() => {
-    if (profile?.role === 'director' && profile.departments?.[0]) {
+    if ((isDirector || isVicedirector) && profile?.departments?.[0]) {
       setListDepartmentFilter(profile.departments[0]);
       setAssignmentDept(profile.departments[0]);
     }
-  }, [profile]);
+  }, [profile, isDirector, isVicedirector]);
 
-  if (profile?.role !== 'admin' && profile?.role !== 'secretaria' && profile?.role !== 'director') {
+  if (profile?.role !== 'admin' && profile?.role !== 'secretaria' && !isDirector && !isDirectorGeneral && !isVicedirector) {
     navigate('/');
     return null;
   }
@@ -243,13 +251,15 @@ const GestionUsuarios = () => {
 
   const updateUserMutation = useMutation({
     mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
-      const selectedDepartmentObject = departments.find(d => d.name === selectedDepartment);
-      if (!selectedDepartmentObject) {
+      const deptsToUpdate = updatedUser.role === 'director_general' ? selectedDepartments : [selectedDepartment as DepartmentType];
+      const primaryDeptName = deptsToUpdate[0];
+      const selectedDepartmentObject = departments.find(d => d.name === primaryDeptName);
+
+      if (!selectedDepartmentObject && updatedUser.role !== 'admin') {
         throw new Error("Departamento no válido");
       }
 
-      const departmentType = selectedDepartmentObject.name as DepartmentType;
-      const departmentId = selectedDepartmentObject.id;
+      const departmentId = selectedDepartmentObject?.id;
 
       const updateData: any = {
         action: 'update',
@@ -258,10 +268,13 @@ const GestionUsuarios = () => {
           first_name: updatedUser.first_name,
           last_name: updatedUser.last_name,
           role: updatedUser.role,
-          departments: [departmentType],
+          departments: deptsToUpdate,
           department_id: departmentId,
-          assigned_class: selectedClass,
-          company_id: companyId
+          assigned_class: updatedUser.role === 'director_general' ? "" : selectedClass,
+          company_id: companyId,
+          birthdate: updatedUser.birthdate,
+          document_number: updatedUser.document_number,
+          gender: updatedUser.gender
         }
       };
 
@@ -285,9 +298,12 @@ const GestionUsuarios = () => {
           first_name: updatedUser.first_name,
           last_name: updatedUser.last_name,
           role: updatedUser.role,
-          departments: [departmentType],
+          departments: deptsToUpdate,
           department_id: departmentId,
-          assigned_class: selectedClass
+          assigned_class: updatedUser.role === 'director_general' ? "" : selectedClass,
+          birthdate: updatedUser.birthdate,
+          document_number: updatedUser.document_number,
+          gender: updatedUser.gender
         })
         .eq('id', updatedUser.id)
         .eq('company_id', companyId);
@@ -304,6 +320,7 @@ const GestionUsuarios = () => {
       setNewEmail("");
       setNewPassword("");
       setSelectedDepartment(null);
+      setSelectedDepartments([]);
       setSelectedClass("");
     },
     onError: (error) => {
@@ -349,10 +366,11 @@ const GestionUsuarios = () => {
       if (!userDepts.includes(listDepartmentFilter as DepartmentType)) {
         return false;
       }
-    } else if (profile?.role === 'director') {
+    } else if (profile?.role === 'director' || profile?.role === 'director_general') {
       const userDepts = user.departments || [];
-      const directorDept = profile.departments?.[0];
-      if (directorDept && !userDepts.includes(directorDept as DepartmentType)) {
+      const managedDepts = profile?.departments || [];
+      // Si el usuario no tiene ningún departamento en común con los del director, filtrar
+      if (managedDepts.length > 0 && !userDepts.some(d => managedDepts.includes(d as DepartmentType))) {
         return false;
       }
     }
@@ -485,7 +503,11 @@ const GestionUsuarios = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {profile?.role !== 'director' && <SelectItem value="all">Todos los Deptos.</SelectItem>}
-                    {departments.filter(dept => profile?.role !== 'director' || profile.departments?.includes(dept.name as DepartmentType)).map((dept) => (
+                    {departments.filter(dept => {
+                      if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
+                      if (profile?.role === 'director' || profile?.role === 'director_general') return profile.departments?.includes(dept.name as DepartmentType);
+                      return false;
+                    }).map((dept) => (
                       <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -568,6 +590,7 @@ const GestionUsuarios = () => {
                                         setIsEditing(true);
                                         setNewEmail(user.email || "");
                                         setSelectedDepartment(user.departments?.[0] || null);
+                                        setSelectedDepartments(user.departments || []);
                                         setSelectedClass(user.assigned_class || "");
                                       }}
                                     >
@@ -596,6 +619,30 @@ const GestionUsuarios = () => {
                                         <Label htmlFor="email">Email</Label>
                                         <Input id="email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} disabled={updateUserMutation.isPending} />
                                       </div>
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <Label htmlFor="document_number">DNI / Documento</Label>
+                                          <Input id="document_number" value={selectedUser?.document_number || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, document_number: e.target.value } : null)} required disabled={updateUserMutation.isPending} />
+                                        </div>
+                                        <div>
+                                          <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
+                                          <Input id="birthdate" type="date" value={selectedUser?.birthdate || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, birthdate: e.target.value } : null)} required disabled={updateUserMutation.isPending} />
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="phone">Teléfono</Label>
+                                        <Input id="phone" value={selectedUser?.phone || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, phone: e.target.value } : null)} disabled={updateUserMutation.isPending} />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="gender">Género</Label>
+                                        <Select value={selectedUser?.gender || "masculino"} onValueChange={(value) => setSelectedUser(prev => prev ? { ...prev, gender: value } : null)} disabled={updateUserMutation.isPending}>
+                                          <SelectTrigger><SelectValue placeholder="Seleccionar género" /></SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="masculino">Masculino</SelectItem>
+                                            <SelectItem value="femenino">Femenino</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
                                       <div className="relative">
                                         <Label htmlFor="password">Nueva Contraseña</Label>
                                         <div className="relative">
@@ -610,32 +657,78 @@ const GestionUsuarios = () => {
                                         <Select value={selectedUser?.role} onValueChange={(value: AppRole) => setSelectedUser(prev => prev ? { ...prev, role: value } : null)} disabled={updateUserMutation.isPending}>
                                           <SelectTrigger><SelectValue placeholder="Seleccionar rol" /></SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="maestro">Maestro</SelectItem>
-                                            <SelectItem value="lider">Líder</SelectItem>
-                                            <SelectItem value="director">Director</SelectItem>
-                                            <SelectItem value="colaborador">Colaborador</SelectItem>
-                                            <SelectItem value="secretaria">Secretaria</SelectItem>
-                                            <SelectItem value="secr.-calendario">Secr.-calendario</SelectItem>
-                                            <SelectItem value="admin">Administrador</SelectItem>
+                                            {isDirector || isVicedirector ? (
+                                              <>
+                                                <SelectItem value="maestro">Maestro</SelectItem>
+                                                <SelectItem value="colaborador">Colaborador</SelectItem>
+                                              </>
+                                            ) : isDirectorGeneral ? (
+                                              <>
+                                                <SelectItem value="maestro">Maestro</SelectItem>
+                                                <SelectItem value="colaborador">Colaborador</SelectItem>
+                                                <SelectItem value="director">Director</SelectItem>
+                                                <SelectItem value="vicedirector">Vicedirector</SelectItem>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <SelectItem value="maestro">Maestro</SelectItem>
+                                                <SelectItem value="lider">Líder</SelectItem>
+                                                <SelectItem value="director">Director</SelectItem>
+                                                <SelectItem value="vicedirector">Vicedirector</SelectItem>
+                                                <SelectItem value="director_general">Director General</SelectItem>
+                                                <SelectItem value="colaborador">Colaborador</SelectItem>
+                                                <SelectItem value="secretaria">Secretaria</SelectItem>
+                                                <SelectItem value="secr.-calendario">Secr.-calendario</SelectItem>
+                                                <SelectItem value="admin">Administrador</SelectItem>
+                                              </>
+                                            )}
                                           </SelectContent>
                                         </Select>
                                       </div>
                                       <div>
-                                        <Label htmlFor="department">Departamento</Label>
-                                        <Select
-                                          value={selectedDepartment || undefined}
-                                          onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
-                                          disabled={profile?.role === 'director' || updateUserMutation.isPending}
-                                        >
-                                          <SelectTrigger><SelectValue placeholder="Seleccionar departamento" /></SelectTrigger>
-                                          <SelectContent>
-                                            {departments.map((dept) => (
-                                              <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                                        <Label htmlFor="department">
+                                          {selectedUser?.role === 'director_general' ? "Departamentos Asignados" : "Departamento"}
+                                        </Label>
+
+                                        {selectedUser?.role === 'director_general' ? (
+                                          <div className="grid grid-cols-1 gap-2 p-3 mt-2 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 max-h-40 overflow-y-auto">
+                                            {departments.filter(d => !isDirector && !isDirectorGeneral && !isVicedirector || profile?.departments?.includes(d.name)).map((dept) => (
+                                              <div key={dept.id} className="flex items-center space-x-2">
+                                                <input
+                                                  type="checkbox"
+                                                  id={`edit-dept-${dept.id}`}
+                                                  checked={selectedDepartments.includes(dept.name)}
+                                                  onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                      setSelectedDepartments([...selectedDepartments, dept.name]);
+                                                    } else {
+                                                      setSelectedDepartments(selectedDepartments.filter(name => name !== dept.name));
+                                                    }
+                                                  }}
+                                                  className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                                />
+                                                <label htmlFor={`edit-dept-${dept.id}`} className="text-sm font-medium leading-none cursor-pointer">
+                                                  {dept.name}
+                                                </label>
+                                              </div>
                                             ))}
-                                          </SelectContent>
-                                        </Select>
+                                          </div>
+                                        ) : (
+                                          <Select
+                                            value={selectedDepartment || undefined}
+                                            onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
+                                            disabled={(isDirector || isVicedirector) || updateUserMutation.isPending}
+                                          >
+                                            <SelectTrigger><SelectValue placeholder="Seleccionar departamento" /></SelectTrigger>
+                                            <SelectContent>
+                                              {departments.filter(d => (!isDirector && !isVicedirector && !isDirectorGeneral) || profile?.departments?.includes(d.name)).map((dept) => (
+                                                <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        )}
                                       </div>
-                                      {selectedDepartment && availableClasses.length > 0 && (
+                                      {selectedDepartment && availableClasses.length > 0 && selectedUser?.role !== 'director_general' && (
                                         <div>
                                           <Label htmlFor="class">Clase</Label>
                                           <Select value={selectedClass} onValueChange={setSelectedClass} disabled={updateUserMutation.isPending}>
@@ -734,7 +827,11 @@ const GestionUsuarios = () => {
                     <SelectValue placeholder="Seleccionar Depto." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                    {departments.filter(dept => profile?.role !== 'director' || profile.departments?.includes(dept.name as DepartmentType)).map((dept) => (
+                    {departments.filter(dept => {
+                      if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
+                      if (profile?.role === 'director' || profile?.role === 'director_general') return profile.departments?.includes(dept.name as DepartmentType);
+                      return false;
+                    }).map((dept) => (
                       <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
                     ))}
                   </SelectContent>

@@ -69,7 +69,7 @@ export default function Index() {
         return;
       }
 
-      if (profile.departments && profile.departments.length > 1) {
+      if (profile.departments && profile.departments.length > 1 && profile.role !== 'director_general') {
         setUserDepartments(profile.departments);
         setShowDepartmentSelect(true); // Mostrar selector si tiene más de un departamento
       } else if (profile.departments && profile.departments.length === 1) {

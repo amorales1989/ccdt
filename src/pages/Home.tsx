@@ -84,9 +84,14 @@ const Home = () => {
       if (!profile) return [];
 
       const params: any = {};
-      if (profile.role !== 'admin' && profile.role !== 'secretaria') {
+      if (profile.role !== 'admin' && profile.role !== 'secretaria' && profile.role !== 'secr.-calendario' && profile.role !== 'director_general' && profile.role !== 'vicedirector') {
         params.department_id = profile.department_id;
-        params.assigned_class = profile.assigned_class;
+
+        // Solo filtramos por clase si el usuario es maestro o líder
+        // Los directores deben poder ver todas las clases de su departamento
+        if (profile.role === 'maestro' || profile.role === 'lider' || profile.role === 'colaborador') {
+          params.assigned_class = profile.assigned_class;
+        }
       }
 
       return getStudents(params);
@@ -113,15 +118,34 @@ const Home = () => {
     }));
   }, [students, isCalendarDepartment]);
 
+  // Obtener departamentos del usuario de forma robusta
+  const userDepartments = useMemo(() => {
+    const depts = profile?.departments || [];
+    if (depts.length === 0 && (profile?.role === 'director' || profile?.role === 'director_general') && profile?.department_id) {
+      const dept = departments.find(d => d.id === profile.department_id);
+      if (dept) return [dept.name];
+    }
+    return depts;
+  }, [profile?.departments, profile?.department_id, profile?.role, departments]);
+
   // Calcular solicitudes pendientes
   const pendingRequests = useMemo(() => {
+    const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
+
     return events.filter(event => {
       const esSolicitud = (event as any).solicitud === true || (event as any).solicitud === 'true';
       const estado = (event as any).estado;
       const esPendiente = !estado || estado === 'solicitud';
-      return esSolicitud && esPendiente;
+
+      if (!esSolicitud || !esPendiente) return false;
+
+      if (isAdminOrSecretary) return true;
+
+      // Filtrar por departamentos asignados para directores
+      const eventDept = (event as any).departamento;
+      return userDepartments.includes(eventDept);
     });
-  }, [events]);
+  }, [events, profile?.role, userDepartments]);
 
   const upcomingBirthdays = useMemo(() => {
     if (isCalendarDepartment) return []; // No mostrar cumpleaños si es calendario
@@ -131,11 +155,11 @@ const Home = () => {
     const currentDay = today.getDate();
     const currentYear = today.getFullYear();
 
-    // Obtener departamentos y clase del usuario
-    const userDepartments = profile?.departments || [];
+    // Obtener clase del usuario
     const userAssignedClass = profile?.assigned_class;
     const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
     const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
+    const isDirectorOrGeneral = profile?.role === "director" || profile?.role === "director_general";
 
     const studentsWithDaysUntilBirthday = studentsBasicInfo
       .filter(student => student.birthdate)
@@ -151,6 +175,11 @@ const Home = () => {
 
         // Verificar si el miembro pertenece a los departamentos del usuario
         const belongsToUserDepartment = userDepartments.includes(studentDept);
+
+        // El Director General solo ve los cumpleaños de las clases "Obreros"
+        if (profile?.role === 'director_general') {
+          return studentClass === 'Obreros';
+        }
 
         // Si el usuario tiene una clase asignada, también verificar la clase
         if (isTeacherOrLeader && userAssignedClass) {
