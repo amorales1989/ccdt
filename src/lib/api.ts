@@ -23,9 +23,11 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
 
+  const isFormData = options.body instanceof FormData;
+
   const response = await fetch(url, {
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       'X-Company-Id': companyId.toString(),
       ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
@@ -205,6 +207,34 @@ export const updateStudent = async (id: string, student: Partial<Student>) => {
     return response.data || response;
   } catch (error) {
     console.error('Error updating student:', error);
+    throw error;
+  }
+};
+
+export const uploadStudentPhoto = async (id: string, file: File) => {
+  try {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const response = await apiCall(`/students/${id}/photo`, {
+      method: 'POST',
+      body: formData,
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error uploading student photo:', error);
+    throw error;
+  }
+};
+
+export const deleteStudentPhoto = async (id: string) => {
+  try {
+    const response = await apiCall(`/students/${id}/photo`, {
+      method: 'DELETE',
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error deleting student photo:', error);
     throw error;
   }
 };

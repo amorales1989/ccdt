@@ -1,33 +1,54 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Student } from "@/types/database";
 import { StudentObservations } from "./StudentObservations";
 import { User, MapPin, Phone, Calendar, Hash, Building2, BookA, UserSquare2 } from "lucide-react";
+import { PhotoUpload } from "./PhotoUpload";
 
 interface StudentDetailsProps {
   student: Student;
+  onPhotoUpdate?: (newUrl: string) => void;
 }
 
-export const StudentDetails = ({ student }: StudentDetailsProps) => {
+export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) => {
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState(student.photo_url);
+
+  const handlePhotoSuccess = (newUrl: string) => {
+    setCurrentPhotoUrl(newUrl);
+    if (onPhotoUpdate) onPhotoUpdate(newUrl);
+  };
+
   const formatDepartment = (dept: string) => {
     return dept.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatBirthdate = (birthdate: string | null) => {
     if (!birthdate) return "";
-
-    // Parse the date without adding an extra day
     const parsedDate = parseISO(birthdate);
-
     return format(parsedDate, "dd MMMM yyyy", { locale: es });
   };
 
   return (
     <div className="bg-gradient-to-br from-indigo-50/50 via-white/80 to-purple-50/50 dark:from-slate-900/80 dark:via-slate-800/80 dark:to-slate-900/80 rounded-2xl m-2 border border-indigo-100/50 dark:border-slate-700/50 shadow-inner overflow-hidden animate-fade-in p-6">
-      <div className="flex flex-col md:flex-row gap-6">
+      <div className="flex flex-col md:flex-row gap-8">
+
+        {/* Columna Foto */}
+        <div className="flex flex-col items-center justify-center pt-2">
+          <PhotoUpload
+            studentId={student.id}
+            currentPhotoUrl={currentPhotoUrl}
+            onUploadSuccess={handlePhotoSuccess}
+            firstName={student.first_name}
+            lastName={student.last_name}
+            gender={student.gender}
+          />
+        </div>
+
+        {/* Separador vertical en escritorio (después de la foto) */}
+        <div className="hidden md:block w-px bg-indigo-100 dark:bg-slate-700 my-2"></div>
 
         {/* Columna Izquierda: Info Personal */}
         <div className="flex-1 space-y-4">
@@ -79,7 +100,7 @@ export const StudentDetails = ({ student }: StudentDetailsProps) => {
           </div>
         </div>
 
-        {/* Separador vertical en escitorio */}
+        {/* Separador vertical en escritorio */}
         <div className="hidden md:block w-px bg-indigo-100 dark:bg-slate-700 my-2"></div>
 
         {/* Columna Derecha: Contacto y Área */}

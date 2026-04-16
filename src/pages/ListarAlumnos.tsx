@@ -23,6 +23,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "@/hooks/use-toast";
 import { StudentDetails } from "@/components/StudentDetails";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations } from "@/lib/api";
 import AgregarAlumno from "@/pages/AgregarAlumno";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -434,6 +435,24 @@ const ListarAlumnos = () => {
   };
 
   const handleDownloadStudentPDF = async (student: Student) => {
+    const getBase64ImageFromURL = (url: string): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.setAttribute("crossOrigin", "anonymous");
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0);
+          const dataURL = canvas.toDataURL("image/jpeg");
+          resolve(dataURL);
+        };
+        img.onerror = (error) => reject(error);
+        img.src = url;
+      });
+    };
+
     try {
       toast({
         title: "Generando PDF",
@@ -461,6 +480,18 @@ const ListarAlumnos = () => {
       doc.setTextColor(31, 41, 55);
       doc.setFont("helvetica", "bold");
       doc.text("Datos Personales", 20, 48);
+
+      // Add Photo if exists
+      if (student.photo_url) {
+        try {
+          const photoBase64 = await getBase64ImageFromURL(student.photo_url);
+          doc.addImage(photoBase64, 'JPEG', pageWidth - 55, 45, 35, 45);
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(pageWidth - 55, 45, 35, 45);
+        } catch (e) {
+          console.error("No se pudo cargar la imagen para el PDF", e);
+        }
+      }
 
       doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
@@ -797,28 +828,36 @@ const ListarAlumnos = () => {
   const renderStudentRow = (student: Student) => (
     <React.Fragment key={student.id}>
       <TableRow
-        className={`cursor-pointer transition-colors hover:bg-primary/5 ${student.isAuthorized ? 'bg-emerald-50/60 dark:bg-emerald-900/10' : ''
-          } ${student.nuevo ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''}`}
+        className={`cursor-pointer transition-colors hover:bg-primary/5 ${student.isAuthorized ? 'bg-emerald-50/60 dark:bg-emerald-900/10' : ''} ${student.nuevo ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''}`}
         onClick={() => handleStudentClick(student.id)}
       >
-        <TableCell className="font-medium">
-          <div className="flex items-center gap-2">
-            {expandedStudentId === student.id ? (
-              <CircleChevronUp className="h-4 w-4 text-primary" />
-            ) : (
-              <CircleChevronDown className="h-4 w-4 text-slate-400" />
-            )}
-            <span>{student.first_name} {student.last_name}</span>
-            {student.isAuthorized && (
-              <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-[10px] font-bold">
-                Autorizado
-              </Badge>
-            )}
-            {((student as any).active_enrollments_count > 1) && (
-              <div title="Miembro en múltiples departamentos">
-                <User className="h-3 w-3 text-purple-500" />
+        <TableCell className="font-medium p-4">
+          <div className="flex items-center gap-3 text-sm">
+            <Avatar className="h-10 w-10 border border-slate-200 dark:border-slate-700 shadow-sm flex-shrink-0">
+              <AvatarImage src={student.photo_url || (student.gender?.toLowerCase() === 'femenino' ? '/avatarM.png' : '/avatarH.png')} alt={`${student.first_name}`} className="object-cover" />
+              <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xs font-bold">
+                {student.first_name.charAt(0)}{student.last_name?.charAt(0) || ""}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                {expandedStudentId === student.id ? (
+                  <CircleChevronUp className="h-4 w-4 text-primary" />
+                ) : (
+                  <CircleChevronDown className="h-4 w-4 text-slate-400" />
+                )}
+                <span className="uppercase font-semibold text-slate-900 dark:text-slate-100">{student.first_name} {student.last_name}</span>
               </div>
-            )}
+              <div className="flex gap-2 items-center mt-1 ml-6">
+                {student.isAuthorized && <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-[10px] font-bold h-4">Autorizado</Badge>}
+                {student.nuevo && <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px] font-bold h-4">Nuevo</Badge>}
+                {((student as any).active_enrollments_count > 1) && (
+                  <div title="Miembro en múltiples departamentos">
+                    <User className="h-3 w-3 text-purple-500" />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </TableCell>
         {!isMobile && (
@@ -832,7 +871,10 @@ const ListarAlumnos = () => {
       {expandedStudentId === student.id && (
         <TableRow>
           <TableCell colSpan={4} className="bg-slate-50/80 dark:bg-slate-900/50 p-0">
-            <StudentDetails student={student} />
+            <StudentDetails
+              student={student}
+              onPhotoUpdate={() => refetch()}
+            />
           </TableCell>
         </TableRow>
       )}
