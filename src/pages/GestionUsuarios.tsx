@@ -360,6 +360,11 @@ const GestionUsuarios = () => {
   });
 
   const filteredUsers = users.filter(user => {
+    // El director y vicedirector no pueden ver al director general
+    if ((isDirector || isVicedirector) && user.role === 'director_general') {
+      return false;
+    }
+
     // Filter by department if selected
     if (listDepartmentFilter !== "all") {
       const userDepts = user.departments || [];
