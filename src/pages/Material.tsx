@@ -341,7 +341,7 @@ const Material = () => {
                             <div className="p-4 flex items-center justify-between border-b border-white/10">
                                 <div className="flex flex-col">
                                     <h2 className="text-sm font-black uppercase tracking-tight">{selectedPreview.name}</h2>
-                                    <span className="text-[10px] text-slate-400 uppercase font-bold text-primary">{selectedPreview.age_range} AÑOS — {selectedPreview.departments?.name || "GENERAL"}</span>
+                                    <span className="text-[10px] text-slate-400 uppercase font-bold text-primary">{selectedPreview.age_range === '4-6' ? 'INICIAL' : selectedPreview.age_range} AÑOS — {selectedPreview.departments?.name || "GENERAL"}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 rounded-full" onClick={() => setSelectedPreview(null)}>
@@ -420,7 +420,7 @@ const Material = () => {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="0-3">CUNA (0-3)</SelectItem>
-                                                    <SelectItem value="4-6">PÁRVULOS (4-6)</SelectItem>
+                                                    <SelectItem value="4-6">INICIAL (4-6)</SelectItem>
                                                     <SelectItem value="7-9">PRIMARIOS (7-9)</SelectItem>
                                                     <SelectItem value="10-12">INTERMEDIOS (10-12)</SelectItem>
                                                     <SelectItem value="13-17">ADOLESCENTES</SelectItem>
@@ -490,7 +490,7 @@ const Material = () => {
                         <SelectContent>
                             <SelectItem value="all">TODAS LAS EDADES</SelectItem>
                             <SelectItem value="0-3">CUNA (0-3)</SelectItem>
-                            <SelectItem value="4-6">PÁRVULOS (4-6)</SelectItem>
+                            <SelectItem value="4-6">INICIAL (4-6)</SelectItem>
                             <SelectItem value="7-9">PRIMARIOS (7-9)</SelectItem>
                             <SelectItem value="10-12">INTERMEDIOS (10-12)</SelectItem>
                             <SelectItem value="13-17">ADOLESCENTES</SelectItem>
