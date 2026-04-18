@@ -18,7 +18,7 @@ import {
   Users, UserPlus, ClipboardList, History, Home, Menu,
   FileText, LogOut, UserPlus2, UserRound, FolderIcon,
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
-  BarChart3
+  BarChart3, BookOpen
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -49,7 +49,11 @@ const getItems = (role: string | undefined, profile: any) => {
     { title: "Calendario", url: "/calendario", icon: FileText },
   ];
 
-  if (role !== "secretaria") {
+  if (role === "secretaria" || role === "director_general" || role === "admin") {
+    baseItems.push({ title: "Material Didáctico", url: "/material", icon: BookOpen });
+  }
+
+  if (role !== "secretaria" && role !== "director_general" && role !== "admin") {
     baseItems.push({ title: "Tomar Asistencia", url: "/asistencia", icon: ClipboardList });
   }
 
@@ -116,6 +120,7 @@ const iconBgMap: Record<string, string> = {
   "Departamentos": "bg-amber-100 text-amber-600",
   "Estadísticas": "bg-indigo-100 text-indigo-600",
   "Configuración": "bg-slate-100 text-slate-600",
+  "Material Didáctico": "bg-emerald-100 text-emerald-600",
 };
 
 const NavItem = ({

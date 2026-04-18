@@ -22,6 +22,8 @@ import Notificaciones from "@/pages/Notificaciones";
 import AutorizacionesSalida from "@/pages/AutorizacionesSalida";
 import AutorizacionSimple from "@/pages/AutorizacionSimple";
 import AutorizacionCampamento from "./pages/AutorizacionCampamento";
+import Material from "@/pages/Material";
+
 
 import Estadisticas from "./pages/Estadisticas";
 import { NotificationHandler } from '@/components/NotificationHandler';
@@ -80,6 +82,11 @@ function App() {
                     path: "/calendario",
                     element: <Calendario />,
                   },
+                  {
+                    path: "/material",
+                    element: <Material />,
+                  },
+
 
 
                   {

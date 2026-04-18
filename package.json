@@ -47,6 +47,7 @@
     "@supabase/supabase-js": "^2.48.1",
     "@tanstack/react-query": "^5.65.1",
     "axios": "^1.13.2",
+    "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",

@@ -45,7 +45,7 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
                 <AlertDialogFooter className="mt-4 gap-2">
                     <AlertDialogCancel
                         disabled={isLoading}
-                        className="rounded-xl border-accent/20 hover:bg-accent/10 transition-colors"
+                        className="rounded-xl border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all font-bold px-6 h-10 shadow-sm"
                     >
                         {cancelText}
                     </AlertDialogCancel>

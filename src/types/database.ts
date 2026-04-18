@@ -147,4 +147,21 @@ export interface StudentAuthorization {
   student?: Student;
   department?: Department;
   name?: string;
+  authorization_id?: string;
+}
+
+export interface MaterialDidactico {
+  id: string;
+  company_id: number;
+  name: string;
+  description?: string;
+  file_url: string;
+  age_range: string;
+  file_size?: number;
+  department_id?: string;
+  created_at: string;
+  created_by: string;
+  departments?: {
+    name: string;
+  };
 }

@@ -1031,14 +1031,14 @@ const ListarAlumnos = () => {
           <div className="flex items-center gap-2">
             {canFilter && (
               <CustomTooltip title="Filtrar miembros">
-                <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm h-10" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95" onClick={() => setIsFilterOpen(!isFilterOpen)}>
                   <Filter className="h-4 w-4" />
                 </Button>
               </CustomTooltip>
             )}
             {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director') && (
               <CustomTooltip title="Exportar a Excel">
-                <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm h-10" onClick={exportToExcel}>
+                <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95" onClick={exportToExcel}>
                   <FileDown className="h-4 w-4" />
                 </Button>
               </CustomTooltip>

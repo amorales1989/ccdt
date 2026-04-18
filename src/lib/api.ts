@@ -815,9 +815,58 @@ export const deleteObservation = async (id: string) => {
     const response = await apiCall(`/observations/${id}`, {
       method: 'DELETE',
     });
-    return response.success;
+    return response.data;
   } catch (error) {
     console.error('Error deleting observation:', error);
+    throw error;
+  }
+};
+
+// ============ FUNCIONES DE MATERIAL DIDÁCTICO ============
+
+export const getMaterials = async (params: { department_id?: string; age_range?: string } = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params.department_id) queryParams.append('department_id', params.department_id);
+    if (params.age_range) queryParams.append('age_range', params.age_range);
+
+    const endpoint = `/material${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await apiCall(endpoint);
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching materials:', error);
+    throw error;
+  }
+};
+
+export const createMaterial = async (materialData: {
+  name: string;
+  description?: string;
+  file_url: string;
+  age_range: string;
+  department_id?: string;
+  file_size?: number;
+}) => {
+  try {
+    const response = await apiCall('/material', {
+      method: 'POST',
+      body: JSON.stringify(materialData),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating material:', error);
+    throw error;
+  }
+};
+
+export const deleteMaterial = async (id: string) => {
+  try {
+    const response = await apiCall(`/material/${id}`, {
+      method: 'DELETE',
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting material:', error);
     throw error;
   }
 };
