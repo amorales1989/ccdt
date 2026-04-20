@@ -125,6 +125,7 @@ export interface Profile {
   first_name: string;
   last_name: string;
   role: AppRole;
+  roles: AppRole[];
   departments: DepartmentType[];
   department_id?: string;
   email?: string;
@@ -133,9 +134,10 @@ export interface Profile {
   birthdate?: string;
   gender?: string;
   document_number?: string;
+  company_id?: number;
 }
 
-export type AppRole = "admin" | "lider" | "director" | "director_general" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador" | "vicedirector";
+export type AppRole = "admin" | "lider" | "director" | "director_general" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador" | "vicedirector" | "conserje";
 
 export interface StudentAuthorization {
   id: string;

@@ -9,6 +9,7 @@ type Profile = {
   first_name: string | null;
   last_name: string | null;
   role: AppRole;
+  roles: AppRole[];
   departments: DepartmentType[] | null;
   department_id: string | null;
   assigned_class: string | null;
@@ -18,6 +19,7 @@ type Profile = {
   gender: string | null;
   document_number: string | null;
   address: string | null;
+  company_id: number | null;
 };
 
 type AuthContextType = {
@@ -36,6 +38,7 @@ type AuthContextType = {
   }) => Promise<void>;
   signOut: () => Promise<void>;
   getProfile: (userId: string) => Promise<void>;
+  switchRole: (newRole: AppRole) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -127,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const typedProfile: Profile = {
           ...data,
+          roles: (data.roles as AppRole[]) || [data.role],
           departments: data.departments as DepartmentType[] || [],
           department_id: data.department_id || null,
           email: authUser?.email || null,  // Agregar el email del usuario autenticado
@@ -252,8 +256,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function switchRole(newRole: AppRole) {
+    if (!profile || !user) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ role: newRole })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      setProfile(prev => prev ? { ...prev, role: newRole } : null);
+
+      // Opcional: Recargar la página si los cambios de UI basados en roles son muy profundos
+      // window.location.reload();
+    } catch (error) {
+      console.error("Error switching role:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut, getProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut, getProfile, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

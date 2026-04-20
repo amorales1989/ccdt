@@ -18,7 +18,7 @@ import {
   Users, UserPlus, ClipboardList, History, Home, Menu,
   FileText, LogOut, UserPlus2, UserRound, FolderIcon,
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
-  BarChart3, BookOpen
+  BarChart3, BookOpen, Wrench
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -32,6 +32,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { STORAGE_URL } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProfileEditor } from "@/components/ProfileEditor";
+import { RoleSwitcher } from "./RoleSwitcher";
 
 const getItems = (role: string | undefined, profile: any) => {
   const selectedDepartment = localStorage.getItem('selectedDepartment');
@@ -43,10 +44,19 @@ const getItems = (role: string | undefined, profile: any) => {
     return calendarItems;
   }
 
+  if (role === 'conserje') {
+    return [
+      { title: "Inicio", url: "/", icon: Home },
+      { title: "Calendario", url: "/calendario", icon: FileText },
+      { title: "Mantenimiento", url: "/mantenimiento", icon: Wrench }
+    ];
+  }
+
   const baseItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[] }[] = [
     { title: "Inicio", url: "/", icon: Home },
     { title: "Lista de Miembros", url: "/listar", icon: Users },
     { title: "Calendario", url: "/calendario", icon: FileText },
+    { title: "Mantenimiento", url: "/mantenimiento", icon: Wrench },
   ];
 
   if (role === "secretaria" || role === "director_general" || role === "admin") {
@@ -121,6 +131,7 @@ const iconBgMap: Record<string, string> = {
   "Estadísticas": "bg-indigo-100 text-indigo-600",
   "Configuración": "bg-slate-100 text-slate-600",
   "Material Didáctico": "bg-emerald-100 text-emerald-600",
+  "Mantenimiento": "bg-orange-100 text-orange-600",
 };
 
 const NavItem = ({
@@ -331,6 +342,11 @@ const NavigationContent = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Role Switcher */}
+      <div className="px-3 mb-2 w-full">
+        <RoleSwitcher />
       </div>
 
       {/* Navigation section */}

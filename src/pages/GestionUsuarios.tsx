@@ -38,6 +38,7 @@ type Profile = {
   first_name: string;
   last_name: string;
   role: AppRole;
+  roles?: AppRole[];
   departments: DepartmentType[];
   assigned_class?: string;
   department_id?: string;
@@ -56,6 +57,7 @@ const GestionUsuarios = () => {
   const navigate = useNavigate();
   const { companyId } = useCompany();
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -267,7 +269,8 @@ const GestionUsuarios = () => {
         userData: {
           first_name: updatedUser.first_name,
           last_name: updatedUser.last_name,
-          role: updatedUser.role,
+          role: selectedRoles.length > 0 ? selectedRoles[0] : updatedUser.role,
+          roles: selectedRoles,
           departments: deptsToUpdate,
           department_id: departmentId,
           assigned_class: updatedUser.role === 'director_general' ? "" : selectedClass,
@@ -297,7 +300,8 @@ const GestionUsuarios = () => {
         .update({
           first_name: updatedUser.first_name,
           last_name: updatedUser.last_name,
-          role: updatedUser.role,
+          role: selectedRoles.length > 0 ? selectedRoles[0] : updatedUser.role,
+          roles: selectedRoles,
           departments: deptsToUpdate,
           department_id: departmentId,
           assigned_class: updatedUser.role === 'director_general' ? "" : selectedClass,
@@ -553,9 +557,13 @@ const GestionUsuarios = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50 capitalize text-[10px] font-black tracking-wider">
-                                {user.role}
-                              </Badge>
+                              <div className="flex flex-wrap gap-1">
+                                {(user.roles && user.roles.length > 0 ? user.roles : [user.role]).map((r, i) => (
+                                  <Badge key={i} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50 capitalize text-[10px] font-black tracking-wider">
+                                    {r}
+                                  </Badge>
+                                ))}
+                              </div>
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
                               <div className="flex flex-wrap gap-1">
@@ -592,6 +600,7 @@ const GestionUsuarios = () => {
                                       className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 rounded-full transition-colors"
                                       onClick={() => {
                                         setSelectedUser(user);
+                                        setSelectedRoles(user.roles && user.roles.length > 0 ? user.roles : [user.role]);
                                         setIsEditing(true);
                                         setNewEmail(user.email || "");
                                         setSelectedDepartment(user.departments?.[0] || null);
@@ -658,44 +667,43 @@ const GestionUsuarios = () => {
                                         </div>
                                       </div>
                                       <div>
-                                        <Label htmlFor="role">Rol</Label>
-                                        <Select value={selectedUser?.role} onValueChange={(value: AppRole) => setSelectedUser(prev => prev ? { ...prev, role: value } : null)} disabled={updateUserMutation.isPending}>
-                                          <SelectTrigger><SelectValue placeholder="Seleccionar rol" /></SelectTrigger>
-                                          <SelectContent>
-                                            {isDirector || isVicedirector ? (
-                                              <>
-                                                <SelectItem value="maestro">Maestro</SelectItem>
-                                                <SelectItem value="colaborador">Colaborador</SelectItem>
-                                              </>
-                                            ) : isDirectorGeneral ? (
-                                              <>
-                                                <SelectItem value="maestro">Maestro</SelectItem>
-                                                <SelectItem value="colaborador">Colaborador</SelectItem>
-                                                <SelectItem value="director">Director</SelectItem>
-                                                <SelectItem value="vicedirector">Vicedirector</SelectItem>
-                                              </>
-                                            ) : (
-                                              <>
-                                                <SelectItem value="maestro">Maestro</SelectItem>
-                                                <SelectItem value="lider">Líder</SelectItem>
-                                                <SelectItem value="director">Director</SelectItem>
-                                                <SelectItem value="vicedirector">Vicedirector</SelectItem>
-                                                <SelectItem value="director_general">Director General</SelectItem>
-                                                <SelectItem value="colaborador">Colaborador</SelectItem>
-                                                <SelectItem value="secretaria">Secretaria</SelectItem>
-                                                <SelectItem value="secr.-calendario">Secr.-calendario</SelectItem>
-                                                <SelectItem value="admin">Administrador</SelectItem>
-                                              </>
-                                            )}
-                                          </SelectContent>
-                                        </Select>
+                                        <Label htmlFor="roles">Roles</Label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 mt-2 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 max-h-40 overflow-y-auto">
+                                          {(isDirector || isVicedirector ? (
+                                            ['maestro', 'colaborador']
+                                          ) : isDirectorGeneral ? (
+                                            ['maestro', 'colaborador', 'director', 'vicedirector']
+                                          ) : (
+                                            ['maestro', 'lider', 'director', 'vicedirector', 'director_general', 'colaborador', 'secretaria', 'secr.-calendario', 'conserje', 'admin']
+                                          )).map((roleOption) => (
+                                            <div key={roleOption} className="flex items-center space-x-2">
+                                              <input
+                                                type="checkbox"
+                                                id={`edit-role-${roleOption}`}
+                                                checked={selectedRoles.includes(roleOption as AppRole)}
+                                                onChange={(e) => {
+                                                  if (e.target.checked) {
+                                                    setSelectedRoles([...selectedRoles, roleOption as AppRole]);
+                                                  } else {
+                                                    setSelectedRoles(selectedRoles.filter(r => r !== roleOption));
+                                                  }
+                                                }}
+                                                disabled={updateUserMutation.isPending}
+                                                className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                              />
+                                              <label htmlFor={`edit-role-${roleOption}`} className="text-sm font-medium leading-none cursor-pointer capitalize">
+                                                {roleOption}
+                                              </label>
+                                            </div>
+                                          ))}
+                                        </div>
                                       </div>
                                       <div>
                                         <Label htmlFor="department">
-                                          {selectedUser?.role === 'director_general' ? "Departamentos Asignados" : "Departamento"}
+                                          {selectedRoles.includes('director_general') ? "Departamentos Asignados" : "Departamento"}
                                         </Label>
 
-                                        {selectedUser?.role === 'director_general' ? (
+                                        {selectedRoles.includes('director_general') ? (
                                           <div className="grid grid-cols-1 gap-2 p-3 mt-2 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 max-h-40 overflow-y-auto">
                                             {departments.filter(d => !isDirector && !isDirectorGeneral && !isVicedirector || profile?.departments?.includes(d.name)).map((dept) => (
                                               <div key={dept.id} className="flex items-center space-x-2">

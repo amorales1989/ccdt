@@ -36,7 +36,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
     const [showPassword, setShowPassword] = useState(false);
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
-    const [role, setRole] = useState<AppRole | "">("");
+    const [roles, setRoles] = useState<AppRole[]>([]);
     const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
     const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
     const [selectedClass, setSelectedClass] = useState<string>("");
@@ -60,7 +60,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
     useEffect(() => {
         if ((isDirector || isVicedirector) && profile.departments?.[0]) {
             setSelectedDepartment(profile.departments[0]);
-            setRole("maestro");
+            setRoles(["maestro"]);
         }
     }, [isDirector, isVicedirector, profile]);
 
@@ -109,7 +109,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
         setGender("masculino");
         setAddress("");
         setDocumentNumber("");
-        setRole("maestro");
+        setRoles(["maestro"]);
         if (!isDirector) {
             setSelectedDepartment(null);
             setSelectedDepartments([]);
@@ -158,20 +158,21 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
             description: `Se han vinculado los datos de ${person.first_name} ${person.last_name}.`,
         });
     };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!role) {
+        if (roles.length === 0) {
             toast({
                 title: "Error",
-                description: "Por favor seleccione un rol para el usuario",
+                description: "Por favor seleccione al menos un rol para el usuario",
                 variant: "destructive",
             });
             return;
         }
 
-        if (role !== 'director_general' && !selectedDepartment) {
+        const isDirectorGeneral = roles.includes('director_general');
+
+        if (!isDirectorGeneral && !selectedDepartment) {
             toast({
                 title: "Error",
                 description: "Por favor seleccione un departamento",
@@ -180,7 +181,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
             return;
         }
 
-        if (role === 'director_general' && selectedDepartments.length === 0) {
+        if (isDirectorGeneral && selectedDepartments.length === 0) {
             toast({
                 title: "Error",
                 description: "Por favor seleccione al menos un departamento",
@@ -190,21 +191,22 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
         }
 
         try {
-            const departmentObj = role === 'director_general'
+            const departmentObj = isDirectorGeneral
                 ? departments.find(d => d.name === selectedDepartments[0])
                 : departments.find(d => d.name === selectedDepartment);
 
             const department_id = departmentObj?.id || "";
 
+            const hasColaboradorRole = roles.includes('colaborador');
             // Generar credenciales si es colaborador y no se proporcionaron
             let finalEmail = email;
             let finalPassword = password;
 
-            if (role === 'colaborador' && !email) {
+            if (hasColaboradorRole && !email) {
                 finalEmail = `colab_${crypto.randomUUID().substring(0, 8)}@ccdt.internal`;
             }
 
-            if (role === 'colaborador' && !password) {
+            if (hasColaboradorRole && !password) {
                 finalPassword = Math.random().toString(36).slice(-10);
             }
 
@@ -220,16 +222,17 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
             const profileData = {
                 first_name: firstName,
                 last_name: lastName,
-                role,
-                departments: role === 'director_general' ? selectedDepartments : [selectedDepartment],
+                role: roles[0],
+                roles: roles,
+                departments: isDirectorGeneral ? selectedDepartments : [selectedDepartment],
                 department_id,
-                assigned_class: (selectedClass && selectedClass !== 'none' && role !== 'director_general') ? selectedClass : undefined,
+                assigned_class: (selectedClass && selectedClass !== 'none' && !isDirectorGeneral) ? selectedClass : undefined,
                 phone: phone || undefined,
                 birthdate: birthdate || undefined,
                 gender: gender || undefined,
                 address: address || undefined,
                 document_number: documentNumber || undefined,
-                is_member: (role as string) === 'miembro' || personSource === 'student',
+                is_member: roles.some(r => (r as string) === 'miembro') || personSource === 'student',
                 profile_id: profileId || undefined,
                 person_source: personSource || undefined,
                 company_id: getPersistentCompanyId()
@@ -417,15 +420,15 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
 
                         <div className="space-y-2">
                             <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
-                                Correo Electrónico {role === 'colaborador' && "(Opcional)"}
+                                Correo Electrónico {roles.includes('colaborador') && "(Opcional)"}
                             </Label>
                             <Input
                                 id="email"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                required={role !== 'colaborador'}
-                                placeholder={role === 'colaborador' ? "Opcional para colaboradores" : "ejemplo@correo.com"}
+                                required={!roles.includes('colaborador')}
+                                placeholder={roles.includes('colaborador') ? "Opcional para colaboradores" : "ejemplo@correo.com"}
                                 autoComplete="off"
                                 className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                             />
@@ -433,7 +436,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
 
                         <div className="space-y-2">
                             <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
-                                Contraseña Temporal {role === 'colaborador' && "(Opcional)"}
+                                Contraseña Temporal {roles.includes('colaborador') && "(Opcional)"}
                             </Label>
                             <div className="relative">
                                 <Input
@@ -441,8 +444,8 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    required={role !== 'colaborador'}
-                                    placeholder={role === 'colaborador' ? "Opcional para colaboradores" : "••••••••"}
+                                    required={!roles.includes('colaborador')}
+                                    placeholder={roles.includes('colaborador') ? "Opcional para colaboradores" : "••••••••"}
                                     autoComplete="new-password"
                                     className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12"
                                 />
@@ -460,47 +463,43 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                             <div className="space-y-2">
-                                <Label htmlFor="role" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Rol en el Sistema</Label>
-                                <Select value={role} onValueChange={(value: AppRole) => setRole(value)}>
-                                    <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all">
-                                        <SelectValue placeholder="Seleccione rol" />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl shadow-xl">
-                                        {isDirector || isVicedirector ? (
-                                            <>
-                                                <SelectItem value="maestro">Maestro</SelectItem>
-                                                <SelectItem value="colaborador">Colaborador</SelectItem>
-                                            </>
-                                        ) : isDirectorGeneral ? (
-                                            <>
-                                                <SelectItem value="maestro">Maestro</SelectItem>
-                                                <SelectItem value="colaborador">Colaborador</SelectItem>
-                                                <SelectItem value="director">Director</SelectItem>
-                                                <SelectItem value="vicedirector">Vicedirector</SelectItem>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <SelectItem value="maestro">Maestro</SelectItem>
-                                                <SelectItem value="lider">Líder</SelectItem>
-                                                <SelectItem value="director">Director</SelectItem>
-                                                <SelectItem value="vicedirector">Vicedirector</SelectItem>
-                                                <SelectItem value="director_general">Director General</SelectItem>
-                                                <SelectItem value="colaborador">Colaborador</SelectItem>
-                                                <SelectItem value="secretaria">Secretaria</SelectItem>
-                                                <SelectItem value="secr.-calendario">Secr.-calendario</SelectItem>
-                                                <SelectItem value="admin">Administrador</SelectItem>
-                                            </>
-                                        )}
-                                    </SelectContent>
-                                </Select>
+                                <Label htmlFor="roles" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Roles en el Sistema</Label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700">
+                                    {(isDirector || isVicedirector ? (
+                                        ['maestro', 'colaborador']
+                                    ) : isDirectorGeneral ? (
+                                        ['maestro', 'colaborador', 'director', 'vicedirector']
+                                    ) : (
+                                        ['maestro', 'lider', 'director', 'vicedirector', 'director_general', 'colaborador', 'secretaria', 'secr.-calendario', 'conserje', 'admin']
+                                    )).map((roleOption) => (
+                                        <div key={roleOption} className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                id={`role-${roleOption}`}
+                                                checked={roles.includes(roleOption as AppRole)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setRoles([...roles, roleOption as AppRole]);
+                                                    } else {
+                                                        setRoles(roles.filter(r => r !== roleOption));
+                                                    }
+                                                }}
+                                                className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                            />
+                                            <label htmlFor={`role-${roleOption}`} className="text-sm font-medium leading-none cursor-pointer capitalize">
+                                                {roleOption}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="department" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
-                                    {role === 'director_general' ? "Departamentos Asignados" : "Departamento"}
+                                    {roles.includes('director_general') ? "Departamentos Asignados" : "Departamento"}
                                 </Label>
 
-                                {role === 'director_general' ? (
+                                {roles.includes('director_general') ? (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700">
                                         {departments.filter(d => !isDirector && !isDirectorGeneral && !isVicedirector || profile?.departments?.includes(d.name)).map((dept) => (
                                             <div key={dept.id} className="flex items-center space-x-2">
@@ -544,7 +543,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                             </div>
                         </div>
 
-                        {selectedDepartment && role !== 'director_general' && (
+                        {selectedDepartment && !roles.includes('director_general') && (
                             <div className="space-y-2 pt-2 animate-fade-in">
                                 <Label htmlFor="class" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Clase Asignada (Opcional)</Label>
                                 <Select value={selectedClass || 'none'} onValueChange={setSelectedClass}>

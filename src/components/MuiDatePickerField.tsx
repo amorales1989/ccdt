@@ -71,12 +71,18 @@ export function MuiDatePickerField({
                 </Button>
             </PopoverTrigger>
 
-            <PopoverContent className="w-auto p-2 bg-popover rounded-2xl shadow-2xl border border-border/50" align="start">
+            <PopoverContent
+                className="w-auto p-2 bg-popover rounded-2xl shadow-2xl border border-border/50 z-[100]"
+                align="start"
+                onWheel={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+            >
                 <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
                     <DateCalendar
                         value={internalDate}
                         onChange={handleDateChange}
                         sx={{
+                            width: '320px',
                             "& .MuiPickersDay-root.Mui-selected": {
                                 backgroundColor: "#7c3aed !important",
                             },
@@ -95,6 +101,27 @@ export function MuiDatePickerField({
                             "& .MuiPickersDay-root": {
                                 fontFamily: "inherit",
                             },
+                            // Estilos específicos para solucionar el scroll de años
+                            "& .MuiYearCalendar-root": {
+                                width: '100%',
+                                maxHeight: '280px',
+                                overflowY: 'auto',
+                                padding: '8px 0',
+                                scrollbarWidth: 'thin',
+                                '&::-webkit-scrollbar': {
+                                    width: '6px',
+                                },
+                                '&::-webkit-scrollbar-thumb': {
+                                    backgroundColor: 'rgba(124, 58, 237, 0.2)',
+                                    borderRadius: '10px',
+                                },
+                                '&::-webkit-scrollbar-thumb:hover': {
+                                    backgroundColor: 'rgba(124, 58, 237, 0.4)',
+                                },
+                            },
+                            "& .MuiPickersYear-root": {
+                                flexBasis: '33.3%',
+                            }
                         }}
                     />
                 </LocalizationProvider>

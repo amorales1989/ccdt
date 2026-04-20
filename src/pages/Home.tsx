@@ -107,6 +107,20 @@ const Home = () => {
     staleTime: 1000 * 60 * 15, // 15 minutos (datos estáticos)
   });
 
+  const { data: maintenanceRequests = [] } = useQuery({
+    queryKey: ['maintenance_requests', companyId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("maintenance_requests")
+        .select("*")
+        .eq("company_id", companyId)
+        .in("status", ["pendiente", "en_proceso"]);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId && (profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'conserje'),
+  });
+
   const studentsBasicInfo = useMemo(() => {
     if (isCalendarDepartment) return []; // Retornar array vacío si es calendario
     return students.map(student => ({
@@ -347,8 +361,12 @@ const Home = () => {
       <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 mb-8">
         <StudentStatsWidget
           auth={{ profile, isAdminOrSecretary, isTeacherOrLeader }}
-          data={{ students, departments, pendingRequests }}
-          actions={{ onPendingRequestsClick: handlePendingRequestsClick, onClassClick: handleClassClick }}
+          data={{ students, departments, pendingRequests, maintenanceRequests }}
+          actions={{
+            onPendingRequestsClick: handlePendingRequestsClick,
+            onMaintenanceClick: () => navigate("/mantenimiento"),
+            onClassClick: handleClassClick
+          }}
         />
       </section>
 

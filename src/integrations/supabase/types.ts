@@ -523,6 +523,7 @@ export type Database = {
       | "secr.-calendario"
       | "colaborador"
       | "vicedirector"
+      | "conserje"
       department_type:
       | "escuelita"
       | "adolescentes"
@@ -643,7 +644,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "lider", "director", "maestro", "secretaria", "colaborador"],
+      app_role: ["admin", "lider", "director", "maestro", "secretaria", "colaborador", "director_general", "vicedirector", "secr.-calendario", "conserje"],
       department_type: [
         "escuelita_central",
         "pre_adolescentes",

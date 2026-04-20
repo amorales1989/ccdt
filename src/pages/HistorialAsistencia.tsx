@@ -250,20 +250,33 @@ const HistorialAsistencia = () => {
   });
 
   useEffect(() => {
-    if (isEditMode && departmentStudents.length > 0) {
-      setAllStudents(departmentStudents);
-    }
-  }, [departmentStudents, isEditMode]);
+    if (isEditMode && departmentStudents && departmentStudents.length > 0) {
+      const mergedRecords = departmentStudents.map(student => {
+        // Buscar si ya existe un registro de asistencia para este estudiante en esta fecha
+        const existingRecord = dateAttendance?.find(r => r.student_id === student.id);
 
-  useEffect(() => {
-    if (isEditMode) {
-      if (dateAttendance && dateAttendance.length > 0) {
-        setEditRecords([...dateAttendance]);
-      } else {
-        setEditRecords([]);
-      }
+        if (existingRecord) {
+          // Si existe, lo usamos pero nos aseguramos de que el objeto student esté actualizado
+          return { ...existingRecord, students: student };
+        } else {
+          // Si no existe (es un miembro nuevo o no se tomó asistencia para él), 
+          // creamos un registro "virtual" (ausente por defecto)
+          return {
+            id: `temp-${student.id}`,
+            student_id: student.id,
+            date: format(editDate, "yyyy-MM-dd"),
+            status: false,
+            department_id: student.department_id,
+            assigned_class: student.assigned_class,
+            students: student,
+          } as any;
+        }
+      });
+      setEditRecords(mergedRecords);
+    } else if (isEditMode && departmentStudents && departmentStudents.length === 0 && !isLoadingDepartmentStudents) {
+      setEditRecords([]);
     }
-  }, [dateAttendance, isEditMode, editDate]);
+  }, [dateAttendance, departmentStudents, isEditMode, editDate, isLoadingDepartmentStudents]);
 
   const handleEditDateSelect = (date: Date | undefined) => {
     if (date) {

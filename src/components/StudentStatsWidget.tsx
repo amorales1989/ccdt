@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PersonStanding, Bell } from "lucide-react";
+import { PersonStanding, Bell, Wrench } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import type { DepartmentType, Student, Department } from "@/types/database";
 import { ClassStatsCard } from "./ClassStatsCard";
@@ -25,9 +25,11 @@ export interface StudentStatsWidgetProps {
         students: Student[];
         departments: Department[];
         pendingRequests: any[];
+        maintenanceRequests?: any[];
     };
     actions: {
         onPendingRequestsClick: () => void;
+        onMaintenanceClick?: () => void;
         onClassClick: (departmentName: string, className: string) => void;
     };
 }
@@ -139,6 +141,16 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                     >
                         <Bell className="mr-2 h-4 w-4" />
                         Revisar {pendingRequests.length} Solicitud{pendingRequests.length !== 1 ? 'es' : ''}
+                    </Button>
+                )}
+
+                {(profile?.role === 'conserje' || isAdminOrSecretary) && data.maintenanceRequests && data.maintenanceRequests.length > 0 && (
+                    <Button
+                        onClick={actions.onMaintenanceClick}
+                        className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6 py-5 shadow-lg shadow-orange-500/20 transition-all font-semibold"
+                    >
+                        <Wrench className="mr-2 h-4 w-4" />
+                        {data.maintenanceRequests.length} Reparacion{data.maintenanceRequests.length !== 1 ? 'es' : ''} Pendiente{data.maintenanceRequests.length !== 1 ? 's' : ''}
                     </Button>
                 )}
             </div>
