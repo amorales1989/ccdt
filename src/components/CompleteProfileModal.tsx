@@ -27,6 +27,7 @@ export function CompleteProfileModal() {
         gender: "",
     });
 
+
     useEffect(() => {
         if (profile && !loading) {
             const wasPostponed = sessionStorage.getItem("profile_modal_postponed") === "true";
