@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/es";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -30,107 +29,90 @@ export function MuiDatePickerField({
     placeholder = "Seleccionar fecha",
     className,
 }: MuiDatePickerFieldProps) {
-    // Usamos un estado interno para el valor para evitar que el calendario se resetee 
-    // al mes actual si el componente padre se re-renderiza con el mismo prop.
-    const [internalDate, setInternalDate] = useState<Dayjs | null>(value ? dayjs(value) : dayjs());
+    const [internalDate, setInternalDate] = useState<Dayjs | null>(value ? dayjs(value) : null);
 
-    // Sincronizar con el prop solo si el prop cambia de verdad (basado en el día)
     useEffect(() => {
         if (value) {
             const newDate = dayjs(value);
             if (!internalDate || !newDate.isSame(internalDate, 'day')) {
                 setInternalDate(newDate);
             }
+        } else if (value === undefined && internalDate !== null) {
+            setInternalDate(null);
         }
     }, [value]);
 
     const handleDateChange = (newValue: Dayjs | null) => {
+        setInternalDate(newValue);
         if (newValue) {
-            setInternalDate(newValue);
             onChange(newValue.toDate());
+        } else {
+            onChange(undefined);
         }
-        onOpenChange(false);
     };
 
     return (
-        <Popover open={open} onOpenChange={onOpenChange}>
-            <PopoverTrigger asChild>
-                <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                        "w-full justify-start text-left font-semibold border-none bg-transparent hover:bg-transparent hover:text-primary transition-colors shadow-none px-0 text-slate-700 dark:text-slate-200",
-                        !value && "text-muted-foreground",
-                        className
-                    )}
-                >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-primary shrink-0" />
-                    <span className="truncate">
-                        {value ? format(value, "dd/MM/yyyy", { locale: es }) : placeholder}
-                    </span>
-                </Button>
-            </PopoverTrigger>
-
-            <PopoverContent
-                className="w-[340px] p-2 bg-popover rounded-2xl shadow-2xl border border-border/50 z-[100] overflow-hidden"
-                align="start"
-                onWheel={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                onOpenAutoFocus={(e) => e.preventDefault()} // Evitar que el autofoco bloquee el scroll inicial
-            >
-                <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
-                    <DateCalendar
-                        value={internalDate}
-                        onChange={handleDateChange}
-                        sx={{
-                            width: '320px',
-                            "& .MuiPickersDay-root.Mui-selected": {
-                                backgroundColor: "#7c3aed !important",
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+            <DatePicker
+                open={open}
+                onOpen={() => onOpenChange(true)}
+                onClose={() => onOpenChange(false)}
+                value={internalDate}
+                onChange={handleDateChange}
+                format="DD/MM/YYYY"
+                slotProps={{
+                    popper: {
+                        sx: {
+                            "& .MuiPaper-root": {
+                                borderRadius: "16px",
+                                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                                border: "1px solid rgba(0, 0, 0, 0.05)",
                             },
-                            "& .MuiPickersDay-today": {
-                                borderColor: "#a855f7",
-                                backgroundColor: "rgba(168,85,247,0.08)",
-                            },
-                            "& .MuiPickersArrowSwitcher-button": {
-                                color: "#7c3aed",
-                            },
+                        }
+                    },
+                    mobilePaper: {
+                        sx: {
+                            borderRadius: "24px 24px 0 0",
+                        }
+                    },
+                    calendarHeader: {
+                        sx: {
                             "& .MuiPickersCalendarHeader-label": {
-                                fontFamily: "inherit",
-                                fontWeight: 700,
-                                textTransform: "capitalize",
-                            },
-                            "& .MuiPickersDay-root": {
-                                fontFamily: "inherit",
-                            },
-                            // Estilos específicos para solucionar el scroll de años
-                            "& .MuiYearCalendar-root": {
-                                width: '100%',
-                                maxHeight: '280px',
-                                overflowY: 'auto !important',
-                                padding: '8px 0',
-                                touchAction: 'pan-y !important', // Forzar comportamiento de scroll vertical
-                                pointerEvents: 'auto',
-                                scrollbarWidth: 'thin',
-                                '&::-webkit-scrollbar': {
-                                    width: '6px',
-                                },
-                                '&::-webkit-scrollbar-thumb': {
-                                    backgroundColor: 'rgba(124, 58, 237, 0.2)',
-                                    borderRadius: '10px',
-                                },
-                            },
-                            "& .MuiPickersYear-yearButton": {
-                                fontSize: '0.9rem',
-                                margin: '2px 0',
-                                padding: '8px 0',
-                            },
-                            "& .MuiPickersYear-root": {
-                                flexBasis: '33.3%',
+                                fontWeight: 'bold',
+                                textTransform: 'capitalize'
                             }
-                        }}
-                    />
-                </LocalizationProvider>
-            </PopoverContent>
-        </Popover>
+                        }
+                    },
+                    yearCalendar: {
+                        sx: {
+                            "& .MuiYearCalendar-root": {
+                                maxHeight: "300px",
+                                overflowY: "auto !important",
+                                touchAction: "pan-y !important",
+                            }
+                        }
+                    }
+                }}
+                slots={{
+                    field: () => (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(true)}
+                            className={cn(
+                                "w-full justify-start text-left font-semibold border-none bg-transparent hover:bg-transparent hover:text-primary transition-colors shadow-none px-0 text-slate-700 dark:text-slate-200",
+                                !value && "text-muted-foreground",
+                                className
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4 text-primary shrink-0" />
+                            <span className="truncate">
+                                {value ? format(value, "dd/MM/yyyy", { locale: es }) : placeholder}
+                            </span>
+                        </Button>
+                    )
+                }}
+            />
+        </LocalizationProvider>
     );
 }
