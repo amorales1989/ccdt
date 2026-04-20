@@ -42,9 +42,10 @@ interface PersonSearchInputProps {
     onSelect: (person: PersonSearchResult) => void
     placeholder?: string
     className?: string
+    selectedName?: string
 }
 
-export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o apellido...", className }: PersonSearchInputProps) {
+export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o apellido...", className, selectedName }: PersonSearchInputProps) {
     const [open, setOpen] = React.useState(false)
     const [searchValue, setSearchValue] = React.useState("")
 
@@ -118,11 +119,11 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                         variant="outline"
                         role="combobox"
                         aria-expanded={open}
-                        className="w-full justify-between h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 font-normal hover:bg-slate-100 transition-all text-muted-foreground"
+                        className="w-full justify-between h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 font-normal hover:bg-slate-100 transition-all text-slate-700 dark:text-slate-300"
                     >
                         <div className="flex items-center gap-2">
                             <Search className="h-4 w-4 shrink-0 opacity-50" />
-                            <span>{placeholder}</span>
+                            <span>{selectedName || placeholder}</span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -156,12 +157,14 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                                 {results.map((person) => (
                                     <CommandItem
                                         key={`${person.source}-${person.id}`}
-                                        value={`${person.first_name} ${person.last_name}`}
+                                        value={`${person.first_name} ${person.last_name} ${person.id}`}
                                         onSelect={() => {
                                             onSelect(person)
                                             setOpen(false)
                                         }}
-                                        className="flex items-center justify-between py-3 px-4 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 data-[selected=true]:bg-purple-50 dark:data-[selected=true]:bg-purple-900/20"
+                                        className="group flex items-center justify-between py-2.5 px-3 mx-1.5 my-1 rounded-xl cursor-pointer transition-all duration-200 
+                                                   aria-selected:bg-purple-100 dark:aria-selected:bg-purple-900/40 
+                                                   hover:bg-purple-100 dark:hover:bg-purple-900/40"
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className={cn(
@@ -174,7 +177,7 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                                                 <span className="font-bold text-slate-900 dark:text-white leading-tight">
                                                     {person.first_name} {person.last_name}
                                                 </span>
-                                                <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">
+                                                <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider italic">
                                                     {person.source === 'profile' ? `Líder / ${person.role}` : `Miembro / ${person.department || 'Sin Depto'}`}
                                                 </span>
                                             </div>

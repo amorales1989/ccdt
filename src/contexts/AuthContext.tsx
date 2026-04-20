@@ -14,6 +14,10 @@ type Profile = {
   assigned_class: string | null;
   email: string | null;
   phone: string | null;
+  birthdate: string | null;
+  gender: string | null;
+  document_number: string | null;
+  address: string | null;
 };
 
 type AuthContextType = {
@@ -126,7 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           departments: data.departments as DepartmentType[] || [],
           department_id: data.department_id || null,
           email: authUser?.email || null,  // Agregar el email del usuario autenticado
-          phone: data.phone || null
+          phone: data.phone || null,
+          birthdate: data.birthdate || null,
+          gender: data.gender || null,
+          document_number: data.document_number || null,
+          address: data.address || null
         };
         setProfile(typedProfile);
       }
@@ -205,6 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear local storage first
       localStorage.removeItem('selectedDepartment');
       localStorage.removeItem('selectedDepartmentId');
+      sessionStorage.removeItem('profile_modal_postponed');
 
       // Clear all Supabase auth keys from localStorage
       Object.keys(localStorage).forEach((key) => {

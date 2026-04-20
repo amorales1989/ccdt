@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PhoneCollectionModal } from "./PhoneCollectionModal";
+import { CompleteProfileModal } from "./CompleteProfileModal";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 
@@ -23,6 +24,7 @@ export function Layout() {
               <Outlet />
             </main>
             <PhoneCollectionModal />
+            <CompleteProfileModal />
           </div>
         </SidebarProvider>
       ) : (

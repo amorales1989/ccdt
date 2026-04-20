@@ -263,6 +263,16 @@ export const checkDniExists = async (dni: string) => {
   }
 };
 
+export const lookupPersonByDni = async (dni: string) => {
+  try {
+    const response = await apiCall(`/students/lookup/${encodeURIComponent(dni)}`);
+    return response;
+  } catch (error) {
+    console.error('Error looking up person by DNI:', error);
+    return null;
+  }
+};
+
 export const searchStudents = async (searchTerm: string) => {
   try {
     const response = await apiCall(`/students/search?q=${encodeURIComponent(searchTerm)}`);

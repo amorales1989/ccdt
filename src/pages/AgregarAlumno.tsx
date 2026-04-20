@@ -16,6 +16,7 @@ import { format, parseISO } from "date-fns";
 import { UserPlus, User, MapPin, Phone, Hash, CalendarDays, KeyRound, Building2, Search, Check } from "lucide-react";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { PersonSearchInput, PersonSearchResult } from "@/components/PersonSearchInput";
+import { DniIdentityInput } from "@/components/DniIdentityInput";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 
 interface AgregarAlumnoProps {
@@ -144,8 +145,32 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
     }
   };
 
+  const handleDniFound = (person: any, source: 'student' | 'profile') => {
+    setFormData(prev => ({
+      ...prev,
+      first_name: person.first_name || prev.first_name,
+      last_name: person.last_name || prev.last_name,
+      phone: person.phone || prev.phone,
+      address: person.address || prev.address,
+      gender: person.gender || prev.gender,
+      birthdate: person.birthdate || prev.birthdate,
+      document_number: person.document_number,
+      profile_id: person.profile_id || (source === 'profile' ? person.id : (prev.profile_id)),
+      person_source: source
+    }));
+
+    toast({
+      title: "Persona encontrada",
+      description: `Se han cargado los datos de ${person.first_name} ${person.last_name}.`,
+    });
+
+    // Limpiar errores de DNI ya que acabamos de encontrar a la persona y la vincularemos
+    setDniError(null);
+  };
+
   const handleDniBlur = async () => {
-    // Si ya seleccionamos una persona de la búsqueda, no validamos el DNI como "nuevo"
+    // IMPORTANTE: Usar el valor actual de document_number
+    // Si ya seleccionamos una persona de la búsqueda o del lookup, no validamos
     if (formData.profile_id || formData.person_source) {
       setDniError(null);
       return;
@@ -342,33 +367,22 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="document_number" error={!!dniError}>DNI</Label>
-            <Input
-              id="document_number"
-              value={formData.document_number}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  document_number: e.target.value.replace(/\D/g, '')
-                })
-              }
-              onBlur={handleDniBlur}
-              placeholder="Ingrese el DNI sin puntos"
-              error={!!dniError}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              disabled={!!formData.profile_id || !!formData.person_source}
-            />
-            {(formData.profile_id || formData.person_source) && (
-              <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1 italic">
-                El DNI está bloqueado porque se está usando una persona existente.
-              </p>
-            )}
-            {dniError && (
-              <p className="text-sm font-medium text-destructive mt-1">{dniError}</p>
-            )}
-          </div>
+          <DniIdentityInput
+            value={formData.document_number}
+            onChange={(value) => setFormData({ ...formData, document_number: value })}
+            onFound={handleDniFound}
+            onBlur={handleDniBlur}
+            error={!!dniError}
+            disabled={!!formData.profile_id || !!formData.person_source}
+          />
+          {dniError && !formData.profile_id && !formData.person_source && (
+            <p className="text-sm font-medium text-destructive mt-1">{dniError}</p>
+          )}
+          {(formData.profile_id || formData.person_source) && (
+            <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1 italic">
+              El DNI está bloqueado porque se está usando una persona existente.
+            </p>
+          )}
           <div className="space-y-2">
             <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
             <MuiDatePickerField

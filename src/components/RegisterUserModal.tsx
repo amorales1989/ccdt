@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Department, DepartmentType } from "@/types/database";
 import { UserPlus, Eye, EyeOff, Search } from "lucide-react";
 import { PersonSearchInput, PersonSearchResult } from "./PersonSearchInput";
+import { DniIdentityInput } from "./DniIdentityInput";
 import {
     Dialog,
     DialogContent,
@@ -35,7 +36,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
     const [showPassword, setShowPassword] = useState(false);
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
-    const [role, setRole] = useState<AppRole>("maestro");
+    const [role, setRole] = useState<AppRole | "">("");
     const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
     const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
     const [selectedClass, setSelectedClass] = useState<string>("");
@@ -130,8 +131,45 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
         }
     };
 
+    const handleDniFound = (person: any) => {
+        if (!person) return;
+
+        if (!firstName) setFirstName(person.first_name || "");
+        if (!lastName) setLastName(person.last_name || "");
+        if (!phone) setPhone(person.phone || "");
+        if (!birthdate) setBirthdate(person.birthdate || "");
+        if (!address) setAddress(person.address || "");
+        if (person.gender) setGender(person.gender);
+
+        // Auto-completar departamento y clase
+        if (person.departments && person.departments.length > 0) {
+            setSelectedDepartment(person.departments[0]);
+        }
+        if (person.assigned_class) {
+            setSelectedClass(person.assigned_class);
+        }
+
+        setProfileId(person.profile_id || (person.source === 'profile' ? person.id : null));
+        setPersonSource(person.source);
+        setSelectedPersonId(person.id);
+
+        toast({
+            title: person.source === 'profile' ? "Usuario encontrado" : "Miembro encontrado",
+            description: `Se han vinculado los datos de ${person.first_name} ${person.last_name}.`,
+        });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!role) {
+            toast({
+                title: "Error",
+                description: "Por favor seleccione un rol para el usuario",
+                variant: "destructive",
+            });
+            return;
+        }
 
         if (role !== 'director_general' && !selectedDepartment) {
             toast({
@@ -277,6 +315,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                         Buscar persona existente (Opcional)
                     </Label>
                     <PersonSearchInput
+                        selectedName={selectedPersonId ? `${firstName} ${lastName}` : undefined}
                         onSelect={(person: PersonSearchResult) => {
                             setFirstName(person.first_name);
                             setLastName(person.last_name);
@@ -330,11 +369,11 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="documentNumber" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">DNI / Documento</Label>
-                                <Input
+                                <DniIdentityInput
                                     id="documentNumber"
                                     value={documentNumber}
-                                    onChange={(e) => setDocumentNumber(e.target.value)}
-                                    required
+                                    onChange={setDocumentNumber}
+                                    onFound={handleDniFound}
                                     placeholder="Ej. 12345678"
                                     className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                                 />
@@ -346,7 +385,6 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                                     type="date"
                                     value={birthdate}
                                     onChange={(e) => setBirthdate(e.target.value)}
-                                    required
                                     className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                                 />
                             </div>
@@ -425,7 +463,7 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                                 <Label htmlFor="role" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Rol en el Sistema</Label>
                                 <Select value={role} onValueChange={(value: AppRole) => setRole(value)}>
                                     <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all">
-                                        <SelectValue placeholder="Selecciona un rol" />
+                                        <SelectValue placeholder="Seleccione rol" />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl shadow-xl">
                                         {isDirector || isVicedirector ? (

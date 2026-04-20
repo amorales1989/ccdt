@@ -627,11 +627,11 @@ const GestionUsuarios = () => {
                                       <div className="grid grid-cols-2 gap-4">
                                         <div>
                                           <Label htmlFor="document_number">DNI / Documento</Label>
-                                          <Input id="document_number" value={selectedUser?.document_number || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, document_number: e.target.value } : null)} required disabled={updateUserMutation.isPending} />
+                                          <Input id="document_number" value={selectedUser?.document_number || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, document_number: e.target.value } : null)} disabled={updateUserMutation.isPending} />
                                         </div>
                                         <div>
                                           <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-                                          <Input id="birthdate" type="date" value={selectedUser?.birthdate || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, birthdate: e.target.value } : null)} required disabled={updateUserMutation.isPending} />
+                                          <Input id="birthdate" type="date" value={selectedUser?.birthdate || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, birthdate: e.target.value } : null)} disabled={updateUserMutation.isPending} />
                                         </div>
                                       </div>
                                       <div>
