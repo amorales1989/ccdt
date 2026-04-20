@@ -62,21 +62,18 @@ export function MuiDatePickerField({
                 format="DD/MM/YYYY"
                 slotProps={{
                     popper: {
+                        disablePortal: true, // Importante: mantener dentro del DOM del modal de Radix
                         sx: {
-                            zIndex: 99999, // Super alto para estar sobre cualquier diálogo
+                            zIndex: 99999,
                             "& .MuiPaper-root": {
                                 borderRadius: "16px",
                                 boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
                                 border: "1px solid rgba(0, 0, 0, 0.05)",
                             },
-                            "& .MuiYearCalendar-root": {
-                                maxHeight: "300px",
-                                overflowY: "auto !important",
-                                touchAction: "pan-y !important",
-                            }
                         }
                     },
                     dialog: {
+                        disablePortal: true, // Importante: mantener dentro del DOM del modal de Radix
                         sx: {
                             zIndex: 99999,
                         }
@@ -84,11 +81,6 @@ export function MuiDatePickerField({
                     mobilePaper: {
                         sx: {
                             borderRadius: "24px 24px 0 0",
-                            "& .MuiYearCalendar-root": {
-                                maxHeight: "300px",
-                                overflowY: "auto !important",
-                                touchAction: "pan-y !important",
-                            }
                         }
                     },
                     calendarHeader: {
@@ -96,6 +88,15 @@ export function MuiDatePickerField({
                             "& .MuiPickersCalendarHeader-label": {
                                 fontWeight: 'bold',
                                 textTransform: 'capitalize'
+                            }
+                        }
+                    },
+                    layout: {
+                        sx: {
+                            "& .MuiYearCalendar-root": {
+                                maxHeight: "300px",
+                                overflowY: "auto !important",
+                                touchAction: "pan-y !important",
                             }
                         }
                     }
