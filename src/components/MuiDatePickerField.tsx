@@ -72,10 +72,11 @@ export function MuiDatePickerField({
             </PopoverTrigger>
 
             <PopoverContent
-                className="w-auto p-2 bg-popover rounded-2xl shadow-2xl border border-border/50 z-[100]"
+                className="w-[340px] p-2 bg-popover rounded-2xl shadow-2xl border border-border/50 z-[100] overflow-hidden"
                 align="start"
                 onWheel={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
+                onOpenAutoFocus={(e) => e.preventDefault()} // Evitar que el autofoco bloquee el scroll inicial
             >
                 <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
                     <DateCalendar
@@ -105,8 +106,10 @@ export function MuiDatePickerField({
                             "& .MuiYearCalendar-root": {
                                 width: '100%',
                                 maxHeight: '280px',
-                                overflowY: 'auto',
+                                overflowY: 'auto !important',
                                 padding: '8px 0',
+                                touchAction: 'pan-y !important', // Forzar comportamiento de scroll vertical
+                                pointerEvents: 'auto',
                                 scrollbarWidth: 'thin',
                                 '&::-webkit-scrollbar': {
                                     width: '6px',
@@ -115,9 +118,11 @@ export function MuiDatePickerField({
                                     backgroundColor: 'rgba(124, 58, 237, 0.2)',
                                     borderRadius: '10px',
                                 },
-                                '&::-webkit-scrollbar-thumb:hover': {
-                                    backgroundColor: 'rgba(124, 58, 237, 0.4)',
-                                },
+                            },
+                            "& .MuiPickersYear-yearButton": {
+                                fontSize: '0.9rem',
+                                margin: '2px 0',
+                                padding: '8px 0',
                             },
                             "& .MuiPickersYear-root": {
                                 flexBasis: '33.3%',
