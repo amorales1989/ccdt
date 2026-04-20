@@ -63,16 +63,32 @@ export function MuiDatePickerField({
                 slotProps={{
                     popper: {
                         sx: {
+                            zIndex: 99999, // Super alto para estar sobre cualquier diálogo
                             "& .MuiPaper-root": {
                                 borderRadius: "16px",
                                 boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
                                 border: "1px solid rgba(0, 0, 0, 0.05)",
                             },
+                            "& .MuiYearCalendar-root": {
+                                maxHeight: "300px",
+                                overflowY: "auto !important",
+                                touchAction: "pan-y !important",
+                            }
+                        }
+                    },
+                    dialog: {
+                        sx: {
+                            zIndex: 99999,
                         }
                     },
                     mobilePaper: {
                         sx: {
                             borderRadius: "24px 24px 0 0",
+                            "& .MuiYearCalendar-root": {
+                                maxHeight: "300px",
+                                overflowY: "auto !important",
+                                touchAction: "pan-y !important",
+                            }
                         }
                     },
                     calendarHeader: {
@@ -80,15 +96,6 @@ export function MuiDatePickerField({
                             "& .MuiPickersCalendarHeader-label": {
                                 fontWeight: 'bold',
                                 textTransform: 'capitalize'
-                            }
-                        }
-                    },
-                    yearCalendar: {
-                        sx: {
-                            "& .MuiYearCalendar-root": {
-                                maxHeight: "300px",
-                                overflowY: "auto !important",
-                                touchAction: "pan-y !important",
                             }
                         }
                     }
