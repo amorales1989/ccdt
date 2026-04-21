@@ -86,6 +86,7 @@ export default function Mantenimiento() {
 
     const [filterStatus, setFilterStatus] = useState<"all" | Status>("all");
     const [newDialogOpen, setNewDialogOpen] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
     const [newForm, setNewForm] = useState({
         title: "",
         description: "",
@@ -269,7 +270,11 @@ export default function Mantenimiento() {
                             </TableRow>
                         ) : (
                             filtered.map((req) => (
-                                <TableRow key={req.id} className="hover:bg-orange-50/20 dark:hover:bg-orange-900/5 transition-colors">
+                                <TableRow
+                                    key={req.id}
+                                    className="hover:bg-orange-50/20 dark:hover:bg-orange-900/5 transition-colors cursor-pointer"
+                                    onClick={() => setSelectedRequest(req)}
+                                >
                                     <TableCell>
                                         <div className="flex flex-col">
                                             <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{req.title}</span>
@@ -287,7 +292,7 @@ export default function Mantenimiento() {
                                             {PRIORITY_LABELS[req.priority]}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
                                         {req.status === "anulado" ? (
                                             // Anulado: always show as static badge, never a dropdown
                                             <Badge variant="outline" className={`${STATUS_COLORS[req.status]} text-[10px] font-semibold flex items-center gap-1 w-fit`}>
@@ -325,7 +330,7 @@ export default function Mantenimiento() {
                                         {formatDate(req.created_at)}
                                     </TableCell>
                                     {(isConserje || isAdmin) && (
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center justify-end gap-1">
                                                 {/* Anular: conserje can annul if not already anulado/terminado */}
                                                 {isConserje && req.status !== "anulado" && req.status !== "terminado" && (
@@ -432,6 +437,64 @@ export default function Mantenimiento() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Details Modal */}
+            <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Wrench className="h-4 w-4 text-orange-500" />
+                            Detalles de la Reparación
+                        </DialogTitle>
+                    </DialogHeader>
+                    {selectedRequest && (
+                        <div className="space-y-4 py-2">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                    {selectedRequest.title}
+                                </h3>
+                                {selectedRequest.location && (
+                                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                                        <span className="font-medium text-slate-700 dark:text-slate-300">Ubicación:</span> {selectedRequest.location}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                                <Badge variant="outline" className={`${PRIORITY_COLORS[selectedRequest.priority]} text-[10px] font-semibold capitalize`}>
+                                    {selectedRequest.priority === "alta" && <AlertCircle className="h-3 w-3 mr-1" />}
+                                    {PRIORITY_LABELS[selectedRequest.priority]}
+                                </Badge>
+                                <Badge variant="outline" className={`${STATUS_COLORS[selectedRequest.status]} text-[10px] font-semibold flex items-center gap-1 w-fit`}>
+                                    <StatusIcon status={selectedRequest.status} />
+                                    {STATUS_LABELS[selectedRequest.status]}
+                                </Badge>
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 text-sm text-slate-700 dark:text-slate-300">
+                                {selectedRequest.description || <span className="italic text-muted-foreground">Sin descripción detallada.</span>}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-sm mt-4">
+                                <div>
+                                    <span className="block text-xs font-medium text-muted-foreground">Solicitado por</span>
+                                    <span className="font-medium">{selectedRequest.requester_name || "—"}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-xs font-medium text-muted-foreground">Fecha</span>
+                                    <span className="font-medium">{formatDate(selectedRequest.created_at)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button onClick={() => setSelectedRequest(null)} className="w-full sm:w-auto">
+                            Cerrar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
+
