@@ -10,6 +10,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+    notifyMaintenanceRequest,
+} from "@/lib/api";
+import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -77,8 +80,9 @@ export default function Mantenimiento() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
-    const isConserje = profile?.role === "conserje";
-    const isAdmin = profile?.role === "admin" || profile?.role === "secretaria";
+    const isConserje = profile?.role === "conserje" || (profile?.roles && Array.isArray(profile.roles) && profile.roles.includes("conserje"));
+    const isAdmin = profile?.role === "admin" || profile?.role === "director_general";
+    const canSeeAll = isConserje || isAdmin;
 
     const [filterStatus, setFilterStatus] = useState<"all" | Status>("all");
     const [newDialogOpen, setNewDialogOpen] = useState(false);
@@ -95,17 +99,24 @@ export default function Mantenimiento() {
     const companyId = profile.company_id;
 
     const { data: requests = [], isLoading } = useQuery<MaintenanceRequest[]>({
-        queryKey: ["maintenance_requests", companyId],
+        queryKey: ["maintenance_requests", companyId, profile?.id, canSeeAll],
         queryFn: async () => {
-            const { data, error } = await (supabase as any)
+            let query = (supabase as any)
                 .from("maintenance_requests")
                 .select("*")
-                .eq("company_id", companyId)
-                .order("created_at", { ascending: false });
+                .eq("company_id", companyId);
+
+            // Si no tiene permisos de administrador o conserje, filtrar solo sus propias solicitudes
+            if (!canSeeAll) {
+                query = query.eq("requested_by", profile.id);
+            }
+
+            const { data, error } = await query.order("created_at", { ascending: false });
+
             if (error) throw error;
             return data as unknown as MaintenanceRequest[];
         },
-        enabled: !!companyId,
+        enabled: !!companyId && !!profile?.id,
     });
 
     const updateStatusMutation = useMutation({
@@ -141,6 +152,18 @@ export default function Mantenimiento() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["maintenance_requests", companyId] });
+
+            // Notificar al conserje si el solicitante no es el mismo conserje
+            if (!isConserje) {
+                notifyMaintenanceRequest({
+                    title: newForm.title,
+                    location: newForm.location,
+                    requesterName: `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim() || "Usuario",
+                    description: newForm.description,
+                    priority: newForm.priority
+                }).catch(err => console.error("Error al enviar notificaciones:", err));
+            }
+
             toast({ title: "Reparación registrada correctamente" });
             setNewDialogOpen(false);
             setNewForm({ title: "", description: "", location: "", priority: "normal" });

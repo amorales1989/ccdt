@@ -622,6 +622,25 @@ export const notifyNewRequest = async (requestData: {
   }
 };
 
+export const notifyMaintenanceRequest = async (requestData: {
+  title: string;
+  location?: string;
+  requesterName: string;
+  description?: string;
+  priority: string;
+}) => {
+  try {
+    const response = await apiCall('/maintenance/notify', {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error notifying maintenance request:', error);
+    throw error;
+  }
+};
+
 export const notifyRequestResponse = async (requestData: {
   eventTitle: string;
   eventDate: string;

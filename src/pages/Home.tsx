@@ -18,6 +18,7 @@ import { MiniStatsCarousel } from "@/components/MiniStatsCarousel";
 import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MaintenanceSummaryWidget } from "@/components/MaintenanceSummaryWidget";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -50,6 +51,7 @@ const Home = () => {
   }
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const isConserje = profile?.role === 'conserje';
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -118,7 +120,7 @@ const Home = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId && (profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'conserje'),
+    enabled: !!companyId && (profile?.role === 'admin' || profile?.role === 'conserje' || profile?.role === 'director_general' || (profile?.roles && profile.roles.includes('conserje'))),
   });
 
   const studentsBasicInfo = useMemo(() => {
@@ -162,7 +164,7 @@ const Home = () => {
   }, [events, profile?.role, userDepartments]);
 
   const upcomingBirthdays = useMemo(() => {
-    if (isCalendarDepartment) return []; // No mostrar cumpleaños si es calendario
+    if (isCalendarDepartment || isConserje) return []; // No mostrar cumpleaños si es calendario o conserje
 
     const today = new Date();
     const currentMonth = today.getMonth() + 1;
@@ -345,13 +347,12 @@ const Home = () => {
     );
   }
 
-  // Renderizar la página completa para otros departamentos
   return (
     <div className="space-y-8 bg-[#f8fafc] dark:bg-slate-900/50 min-h-screen -mt-4 -mx-4 px-4 pt-4 sm:-mt-8 sm:-mx-8 sm:px-8 sm:pt-8 rounded-tl-3xl">
       {/* Top Navbar Section */}
       <header className="flex flex-col items-center justify-center gap-6 mb-8 mt-2 animate-in fade-in slide-in-from-top-4 duration-500">
         <div className="w-full max-w-2xl mx-auto">
-          {isAdminOrSecretary && !studentsLoading && (
+          {isAdminOrSecretary && !isConserje && !studentsLoading && (
             <StudentSearch students={students} />
           )}
         </div>
@@ -359,15 +360,19 @@ const Home = () => {
 
       {/* Cards Section */}
       <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 mb-8">
-        <StudentStatsWidget
-          auth={{ profile, isAdminOrSecretary, isTeacherOrLeader }}
-          data={{ students, departments, pendingRequests, maintenanceRequests }}
-          actions={{
-            onPendingRequestsClick: handlePendingRequestsClick,
-            onMaintenanceClick: () => navigate("/mantenimiento"),
-            onClassClick: handleClassClick
-          }}
-        />
+        {isConserje ? (
+          <MaintenanceSummaryWidget requests={maintenanceRequests} />
+        ) : (
+          <StudentStatsWidget
+            auth={{ profile, isAdminOrSecretary, isTeacherOrLeader }}
+            data={{ students, departments, pendingRequests, maintenanceRequests }}
+            actions={{
+              onPendingRequestsClick: handlePendingRequestsClick,
+              onMaintenanceClick: () => navigate("/mantenimiento"),
+              onClassClick: handleClassClick
+            }}
+          />
+        )}
       </section>
 
       {/* 2-Column Layout */}
@@ -381,7 +386,7 @@ const Home = () => {
         </section>
 
         {/* Right Column: Actions & Resources */}
-        {isAdminOrSecretary && (
+        {isAdminOrSecretary && !isConserje && (
           <section className="space-y-6 lg:col-span-1 animate-in fade-in slide-in-from-right-8 duration-700 delay-300">
             <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100 mb-4 px-2">
               Estadisticas generales

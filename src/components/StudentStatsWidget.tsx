@@ -144,7 +144,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                     </Button>
                 )}
 
-                {(profile?.role === 'conserje' || isAdminOrSecretary) && data.maintenanceRequests && data.maintenanceRequests.length > 0 && (
+                {(profile?.role === 'conserje' || profile?.role === 'admin' || profile?.role === 'director_general' || (profile?.roles && profile.roles.includes('conserje'))) && data.maintenanceRequests && data.maintenanceRequests.length > 0 && (
                     <Button
                         onClick={actions.onMaintenanceClick}
                         className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6 py-5 shadow-lg shadow-orange-500/20 transition-all font-semibold"
