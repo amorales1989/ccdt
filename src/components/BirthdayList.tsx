@@ -5,7 +5,7 @@ import { differenceInYears, parse, isValid, getMonth, getDate, isBefore, isSameD
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "lucide-react";
+import { Calendar, CheckCheck, Clock } from "lucide-react";
 
 export interface BirthdayListProps {
     students: Student[];
@@ -65,17 +65,36 @@ export const BirthdayList: React.FC<BirthdayListProps> = ({ students }) => {
         });
     }, [students, selectedMonth]);
 
+    // Counters based on the FULL list (all months) so they always reflect the year
+    const birthdayCounts = useMemo(() => {
+        const withBirthdays = students.filter(s => getDayAndMonth(s.birthdate) !== null);
+        const passed = withBirthdays.filter(s => hasBirthdayPassed(s.birthdate)).length;
+        const upcoming = withBirthdays.length - passed;
+        return { passed, upcoming, total: withBirthdays.length };
+    }, [students]);
+
     const monthNames = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
     return (
-        <div className="space-y-6 animate-in slide-in-from-left-4 fade-in duration-300">
-            <div className="glass-card p-5">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-4 flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5" /> Filtrar Cumpleaños
-                </p>
+        <div className="space-y-4 animate-in slide-in-from-left-4 fade-in duration-300">
+            {/* Filter + counters combined */}
+            <div className="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-bold">
+                            <Clock className="h-3 w-3" />
+                            {birthdayCounts.upcoming} por cumplir
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-400 text-[11px] font-bold">
+                            <CheckCheck className="h-3 w-3" />
+                            {birthdayCounts.passed} cumplieron
+                        </span>
+                    </div>
+
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1">
                         <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mes de Cumpleaños</Label>
@@ -94,14 +113,14 @@ export const BirthdayList: React.FC<BirthdayListProps> = ({ students }) => {
                 </div>
             </div>
 
-            <div className="glass-card overflow-hidden">
+            <div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
                 <Table>
                     <TableHeader>
-                        <TableRow className="bg-slate-50/50 dark:bg-slate-800/50">
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300">Nombre</TableHead>
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300 hidden md:table-cell">Departamento / Clase</TableHead>
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300">Edad Actual</TableHead>
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300 text-right">Fecha de Cumpleaños</TableHead>
+                        <TableRow className="bg-slate-50 border-b border-slate-100">
+                            <TableHead className="font-bold text-slate-800 uppercase tracking-wider text-[11px] p-4">Nombre</TableHead>
+                            <TableHead className="font-bold text-slate-800 uppercase tracking-wider text-[11px] p-4 hidden md:table-cell">Departamento / Clase</TableHead>
+                            <TableHead className="font-bold text-slate-800 uppercase tracking-wider text-[11px] p-4">Edad</TableHead>
+                            <TableHead className="font-bold text-slate-800 uppercase tracking-wider text-[11px] p-4 text-right">Cumpleaños</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

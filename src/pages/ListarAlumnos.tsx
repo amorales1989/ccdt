@@ -1135,7 +1135,11 @@ const ListarAlumnos = () => {
             <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Gestión general e información detallada</p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold">
+              <User className="h-3 w-3 text-slate-400" />
+              {(regularStudents.length + newStudents.length)} miembros
+            </span>
             {canFilter && (
               <CustomTooltip title="Filtrar miembros">
                 <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95" onClick={() => setIsFilterOpen(!isFilterOpen)}>
