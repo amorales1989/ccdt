@@ -799,6 +799,101 @@ export const testWhatsappMessage = async (companyId: string | number, phoneNumbe
 
 // ============ FUNCIONES DE OBSERVACIONES DE MIEMBROS ============
 
+// ============ FUNCIONES DE INFORMES DE PERSONAL ============
+
+export const getEligibleStaff = async (department: string, assignedClass: string) => {
+  try {
+    const response = await apiCall(`/staff-reports/eligible?department=${encodeURIComponent(department)}&assigned_class=${encodeURIComponent(assignedClass)}`);
+    return response.data || response;
+  } catch (error) {
+    console.error('Error fetching eligible staff:', error);
+    throw error;
+  }
+};
+
+export const getStaffReports = async (userRole: string, userId: string, department?: string) => {
+  try {
+    let url = `/staff-reports?user_role=${encodeURIComponent(userRole)}&user_id=${encodeURIComponent(userId)}`;
+    if (department) {
+      url += `&user_department=${encodeURIComponent(department)}`;
+    }
+    const response = await apiCall(url);
+    return response.data || response;
+  } catch (error) {
+    console.error('Error fetching staff reports:', error);
+    throw error;
+  }
+};
+
+export const createStaffReport = async (reportData: {
+  target_user_id: string;
+  report: string;
+  department: string;
+  assigned_class: string;
+  created_by: string;
+}) => {
+  try {
+    const response = await apiCall('/staff-reports', {
+      method: 'POST',
+      body: JSON.stringify(reportData),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error creating staff report:', error);
+    throw error;
+  }
+};
+
+export const getUnreadStaffReportsCount = async (userRole: string, department?: string) => {
+  try {
+    if (!department) return 0;
+    const response = await apiCall(`/staff-reports/unread-count?user_role=${encodeURIComponent(userRole)}&user_department=${encodeURIComponent(department)}`);
+    return response.count || 0;
+  } catch (error) {
+    console.error('Error fetching unread staff reports count:', error);
+    return 0;
+  }
+};
+
+export const markStaffReportsAsRead = async (reportIds: string[]) => {
+  try {
+    if (!reportIds.length) return { success: true };
+    const response = await apiCall('/staff-reports/mark-read', {
+      method: 'PUT',
+      body: JSON.stringify({ reportIds }),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error marking staff reports as read:', error);
+    throw error;
+  }
+};
+
+export const updateStaffReport = async (id: string, reportData: { report: string; user_id: string }) => {
+  try {
+    const response = await apiCall(`/staff-reports/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(reportData),
+    });
+    return response.data || response;
+  } catch (error) {
+    console.error('Error updating staff report:', error);
+    throw error;
+  }
+};
+
+export const deleteStaffReport = async (id: string, userId: string, role: string, department: string) => {
+  try {
+    const response = await apiCall(`/staff-reports/${id}?user_id=${encodeURIComponent(userId)}&user_role=${encodeURIComponent(role)}&user_department=${encodeURIComponent(department)}`, {
+      method: 'DELETE',
+    });
+    return response;
+  } catch (error) {
+    console.error('Error deleting staff report:', error);
+    throw error;
+  }
+};
+
 export const getObservations = async (studentId: string): Promise<StudentObservation[]> => {
   try {
     const response = await apiCall(`/observations/${studentId}`);

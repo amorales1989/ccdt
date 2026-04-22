@@ -20,11 +20,12 @@ import {
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
   BarChart3, BookOpen, Wrench
 } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
+import { getUnreadStaffReportsCount } from "@/lib/api";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
@@ -34,10 +35,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { RoleSwitcher } from "./RoleSwitcher";
 
-const getItems = (role: string | undefined, profile: any) => {
+const getItems = (role: string | undefined, profile: any, unreadReportsCount: number = 0) => {
   const selectedDepartment = localStorage.getItem('selectedDepartment');
   if (selectedDepartment === 'calendario' || profile?.departments?.[0] === 'calendario') {
-    const calendarItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[] }[] = [
+    const calendarItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[] = [
       { title: "Inicio", url: "/", icon: Home },
       { title: "Calendario", url: "/calendario", icon: FileText }
     ];
@@ -52,7 +53,7 @@ const getItems = (role: string | undefined, profile: any) => {
     ];
   }
 
-  const baseItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[] }[] = [
+  const baseItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[] = [
     { title: "Inicio", url: "/", icon: Home },
     { title: "Lista de Miembros", url: "/listar", icon: Users },
     { title: "Calendario", url: "/calendario", icon: FileText },
@@ -60,6 +61,10 @@ const getItems = (role: string | undefined, profile: any) => {
 
   if (role === "secretaria" || role === "director_general" || role === "admin") {
     baseItems.push({ title: "Material Didáctico", url: "/material", icon: BookOpen });
+  }
+
+  if (["maestro", "director", "vicedirector", "admin", "director_general"].includes(role || "")) {
+    baseItems.push({ title: "Informes de Personal", url: "/informes", icon: Users, badge: unreadReportsCount > 0 ? unreadReportsCount : undefined });
   }
 
   if (role !== "secretaria" && role !== "director_general" && role !== "admin") {
@@ -132,6 +137,7 @@ const iconBgMap: Record<string, string> = {
   "Material Didáctico": "bg-emerald-100 text-emerald-600",
   "Mantenimiento": "bg-orange-100 text-orange-600",
   "Solicitar Reparación": "bg-orange-100 text-orange-600",
+  "Informes de Personal": "bg-purple-100 text-purple-600",
 };
 
 const NavItem = ({
@@ -139,7 +145,7 @@ const NavItem = ({
   isActive,
   onClick
 }: {
-  item: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[] };
+  item: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number };
   isActive: boolean;
   onClick?: () => void;
 }) => {
@@ -211,6 +217,11 @@ const NavItem = ({
         <item.icon className="h-3.5 w-3.5" />
       </div>
       <span className="font-semibold text-[13px] flex-1 leading-tight">{item.title}</span>
+      {item.badge !== undefined && item.badge > 0 && (
+        <div className="bg-red-500 text-white rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center text-[11px] font-bold shadow-sm">
+          {item.badge}
+        </div>
+      )}
       {isActive && <ChevronRight className="h-3.5 w-3.5 opacity-70 shrink-0" />}
     </Link>
   );
@@ -234,11 +245,20 @@ const NavigationContent = ({
   const { theme, toggleTheme } = useTheme();
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
-  const items = useMemo(() => {
-    return getItems(profile?.role, profile);
-  }, [profile?.role, profile?.departments]);
+  const selectedDepartment = typeof window !== 'undefined' ? localStorage.getItem('selectedDepartment') : null;
+  const isDirector = profile?.role === 'director' || profile?.role === 'vicedirector';
 
-  const selectedDepartment = localStorage.getItem('selectedDepartment');
+  const { data: unreadReportsCount = 0 } = useQuery({
+    queryKey: ['unread_staff_reports', profile?.role, selectedDepartment],
+    queryFn: () => getUnreadStaffReportsCount(profile?.role || '', selectedDepartment || profile?.departments?.[0] || ''),
+    enabled: !!profile?.id && isDirector,
+    refetchInterval: 15000,
+  });
+
+  const items = useMemo(() => {
+    return getItems(profile?.role, profile, unreadReportsCount);
+  }, [profile?.role, profile?.departments, unreadReportsCount]);
+
   const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
 
   const handleSignOut = async () => {

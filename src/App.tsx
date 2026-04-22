@@ -24,6 +24,7 @@ import AutorizacionSimple from "@/pages/AutorizacionSimple";
 import AutorizacionCampamento from "./pages/AutorizacionCampamento";
 import Material from "@/pages/Material";
 import Mantenimiento from "@/pages/Mantenimiento";
+import InformesPersonal from "./pages/InformesPersonal";
 
 
 import Estadisticas from "./pages/Estadisticas";
@@ -90,6 +91,10 @@ function App() {
                   {
                     path: "/mantenimiento",
                     element: <Mantenimiento />,
+                  },
+                  {
+                    path: "/informes",
+                    element: <InformesPersonal />,
                   },
 
 
