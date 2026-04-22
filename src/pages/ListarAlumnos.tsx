@@ -929,7 +929,7 @@ const ListarAlumnos = () => {
   const renderStudentRow = (student: Student) => (
     <React.Fragment key={student.id}>
       <TableRow
-        className={`cursor-pointer transition-colors hover:bg-primary/5 ${student.isAuthorized ? 'bg-emerald-50/60 dark:bg-emerald-900/10' : ''} ${student.nuevo ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''}`}
+        className={`group cursor-pointer transition-all duration-200 border-b border-slate-100/60 hover:bg-slate-50/80 ${student.isAuthorized ? 'bg-emerald-50/30 dark:bg-emerald-900/5' : ''} ${student.nuevo ? 'bg-blue-50/30 dark:bg-blue-900/5' : ''}`}
         onClick={() => handleStudentClick(student.id)}
       >
         <TableCell className="font-medium p-4">
@@ -940,21 +940,21 @@ const ListarAlumnos = () => {
                 {student.first_name.charAt(0)}{student.last_name?.charAt(0) || ""}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
+                <span className="font-bold text-base text-slate-800 dark:text-slate-100 tracking-tight">{student.first_name} {student.last_name}</span>
                 {expandedStudentId === student.id ? (
-                  <CircleChevronUp className="h-4 w-4 text-primary" />
+                  <CircleChevronUp className="h-3.5 w-3.5 text-primary opacity-60" />
                 ) : (
-                  <CircleChevronDown className="h-4 w-4 text-slate-400" />
+                  <CircleChevronDown className="h-3.5 w-3.5 text-slate-400 opacity-40 group-hover:opacity-80 transition-opacity" />
                 )}
-                <span className="uppercase font-semibold text-slate-900 dark:text-slate-100">{student.first_name} {student.last_name}</span>
               </div>
-              <div className="flex gap-2 items-center mt-1 ml-6">
-                {student.isAuthorized && <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-[10px] font-bold h-4">Autorizado</Badge>}
-                {student.nuevo && <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px] font-bold h-4">Nuevo</Badge>}
+              <div className="flex gap-2 items-center">
+                {student.isAuthorized && <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100/50 text-[10px] font-bold h-4.5 px-2">Autorizado</Badge>}
+                {student.nuevo && <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100/50 text-[10px] font-bold h-4.5 px-2">Nuevo</Badge>}
                 {((student as any).active_enrollments_count > 1) && (
-                  <div title="Miembro en múltiples departamentos">
-                    <User className="h-3 w-3 text-purple-500" />
+                  <div title="Miembro en múltiples departamentos" className="bg-purple-50 p-0.5 rounded-full border border-purple-100/50">
+                    <User className="h-2.5 w-2.5 text-purple-500" />
                   </div>
                 )}
               </div>
@@ -962,9 +962,15 @@ const ListarAlumnos = () => {
           </div>
         </TableCell>
         {!isMobile && (
-          <TableCell className="text-slate-600 dark:text-slate-400">{student.departments?.name || student.department || 'Sin departamento'}</TableCell>
+          <TableCell className="text-slate-500 dark:text-slate-400 font-medium text-sm text-center">
+            <span className="bg-slate-100/50 px-3 py-1 rounded-full border border-slate-200/40">
+              {student.departments?.name || student.department || 'Sin departamento'}
+            </span>
+          </TableCell>
         )}
-        <TableCell className="text-slate-600 dark:text-slate-400">{calculateAge(student.birthdate) || 'N/A'}</TableCell>
+        <TableCell className="text-slate-500 dark:text-slate-400 font-bold text-sm text-center">
+          {calculateAge(student.birthdate) || '—'}
+        </TableCell>
         <TableCell className="text-right">
           {renderActionButtons(student)}
         </TableCell>
@@ -1184,9 +1190,9 @@ const ListarAlumnos = () => {
               <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <CollapsibleTrigger asChild></CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="glass-card p-5">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-4 flex items-center gap-2">
-                      <Filter className="h-3.5 w-3.5" /> Filtros
+                  <div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 mb-4 flex items-center gap-2">
+                      <Filter className="h-3 w-3" /> Filtros de búsqueda
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1">
@@ -1251,36 +1257,36 @@ const ListarAlumnos = () => {
               </Collapsible>
             )}
 
-            <div className="glass-card overflow-hidden">
+            <div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
               <Table>
                 <TableBody>
-                  <TableRow className="bg-slate-50/50 dark:bg-slate-800/50">
+                  <TableRow className="bg-slate-50 border-b border-slate-100">
                     <TableCell
-                      className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
+                      className="font-bold text-slate-800 dark:text-slate-200 cursor-pointer hover:text-primary transition-colors group p-4"
                       onClick={() => handleSort('name')}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
                         Nombre
                         <div className={`transition-opacity ${sortConfig?.key === 'name' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
-                          {sortConfig?.key === 'name' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                          {sortConfig?.key === 'name' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-4 w-4" /> : <CircleChevronDown className="h-4 w-4" />}
                         </div>
                       </div>
                     </TableCell>
                     {!isMobile && (
-                      <TableCell className="font-bold text-slate-700 dark:text-slate-300">Departamento</TableCell>
+                      <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4 text-center">Departamento</TableCell>
                     )}
                     <TableCell
-                      className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
+                      className="font-bold text-slate-800 dark:text-slate-200 cursor-pointer hover:text-primary transition-colors group p-4"
                       onClick={() => handleSort('age')}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
                         Edad
                         <div className={`transition-opacity ${sortConfig?.key === 'age' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
-                          {sortConfig?.key === 'age' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                          {sortConfig?.key === 'age' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-4 w-4" /> : <CircleChevronDown className="h-4 w-4" />}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className={`font-bold text-slate-700 dark:text-slate-300 text-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>
+                    <TableCell className={`font-bold text-slate-800 dark:text-slate-200 text-center uppercase tracking-wider text-[11px] p-4 ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>
                       {!isMobile && "Acciones"}
                     </TableCell>
                   </TableRow>
@@ -1298,8 +1304,11 @@ const ListarAlumnos = () => {
                     </TableRow>
                   ) : (regularStudents.length === 0 && newStudents.length === 0) ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center">
-                        No hay miembros registrados.
+                      <TableCell colSpan={5} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-3">
+                          <User className="h-10 w-10 text-slate-200" />
+                          <p className="text-slate-400 font-medium tracking-tight">No hay miembros registrados.</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -1312,12 +1321,12 @@ const ListarAlumnos = () => {
                         <>
                           <TableRow>
                             <TableCell colSpan={4} className="py-4">
-                              <div className="flex items-center justify-center">
-                                <div className="flex-grow border-t border-gray-300"></div>
-                                <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                              <div className="flex items-center justify-center py-2 px-4">
+                                <div className="flex-grow border-t border-slate-100"></div>
+                                <span className="mx-4 px-4 py-1.5 bg-slate-50 text-slate-500 rounded-full text-[10px] uppercase font-black tracking-[0.2em] border border-slate-100/80">
                                   Nuevos Miembros
                                 </span>
-                                <div className="flex-grow border-t border-gray-300"></div>
+                                <div className="flex-grow border-t border-slate-100"></div>
                               </div>
                             </TableCell>
                           </TableRow>

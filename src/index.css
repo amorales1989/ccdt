@@ -80,15 +80,15 @@
 
 @layer components {
   .card {
-    @apply bg-gradient-to-br from-white to-accent/50 shadow-lg rounded-2xl border border-accent/40 transition-all duration-300 hover:shadow-xl dark:from-gray-800 dark:to-purple-800/60 dark:border-purple-700/40;
+    @apply bg-white shadow-sm rounded-2xl border border-slate-200 transition-all duration-300 hover:shadow-md dark:bg-slate-900 dark:border-slate-800;
   }
   
   .table-header {
-    @apply bg-primary/10 text-primary font-semibold dark:bg-primary/20;
+    @apply bg-slate-50 text-slate-800 font-bold dark:bg-slate-800/50 dark:text-slate-200;
   }
   
   .table-row {
-    @apply hover:bg-accent/20 transition-colors duration-200 dark:hover:bg-accent/10;
+    @apply hover:bg-slate-50 transition-colors duration-200 dark:hover:bg-slate-800/30;
   }
   
   .sidebar-item {
@@ -96,7 +96,7 @@
   }
   
   .input-search {
-    @apply relative rounded-lg overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 border border-accent dark:border-gray-700 dark:bg-gray-800;
+    @apply relative rounded-lg overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20 border border-slate-200 dark:border-slate-800 dark:bg-slate-900;
   }
   
   .button-gradient {

@@ -34,7 +34,7 @@ export const CustomTabs = <T extends string = string>({
                 value={value}
                 onChange={(_, newValue: T) => onChange(newValue)}
                 variant="scrollable"
-                scrollButtons="auto"
+                scrollButtons={false}
                 sx={{
                     minHeight: "auto",
                     "& .MuiTabs-indicator": {
