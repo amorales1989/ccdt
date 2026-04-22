@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CustomTabs } from "@/components/CustomTabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -404,330 +404,328 @@ export default function Configuration() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl p-1.5 rounded-2xl border border-white/20 dark:border-slate-800/50 h-14 w-full md:w-fit shadow-xl inline-flex">
-          {[
-            { id: 'general', label: 'Marca', icon: LayoutGrid },
-            { id: 'authorizations', label: 'Membrete', icon: FileText },
-            { id: 'whatsapp', label: 'Whatsapp', icon: Smartphone }
-          ].map((tab) => (
-            <TabsTrigger
-              key={tab.id}
-              value={tab.id}
-              className="rounded-xl h-full px-5 flex items-center gap-2.5 transition-all duration-500 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/5 group"
-            >
-              <tab.icon className={`h-4 w-4 transition-transform duration-500 group-hover:scale-110 ${activeTab === tab.id ? 'scale-110' : 'text-slate-400'}`} />
-              <span className="text-[10px] uppercase font-black tracking-widest">{tab.label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <CustomTabs
+        value={activeTab}
+        onChange={setActiveTab}
+        options={[
+          { value: 'general', label: 'Marca', icon: LayoutGrid },
+          { value: 'authorizations', label: 'Membrete', icon: FileText },
+          { value: 'whatsapp', label: 'Whatsapp', icon: Smartphone }
+        ]}
+        className="mb-6 w-full md:w-fit"
+      />
 
-        <TabsContent value="general" className="mt-0 outline-none space-y-6">
-          <div className="w-full max-w-4xl mx-auto">
-            <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-indigo-500/5 overflow-hidden font-inter">
+      <div className="space-y-6">
+        {activeTab === 'general' && (
+          <div className="mt-0 outline-none space-y-6">
+            <div className="w-full max-w-4xl mx-auto">
+              <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-indigo-500/5 overflow-hidden font-inter">
+                <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-2xl text-indigo-600 dark:text-indigo-400 shadow-xl shadow-indigo-500/10">
+                      <LayoutGrid className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Identidad de Marca</CardTitle>
+                      <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Define el nombre y logo principal de la congregación.</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6 md:p-8 space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                      <div className="space-y-2 group">
+                        <Label htmlFor="companyName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 group-focus-within:text-indigo-500">Nombre de la Congregación</Label>
+                        <Input
+                          id="companyName"
+                          value={congregationName}
+                          onChange={(e) => setCongregationName(e.target.value)}
+                          className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-700 dark:text-slate-200"
+                          placeholder="Ej: Congregación Los Pinos"
+                        />
+                      </div>
+
+                      <div className="space-y-4">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Logotipo Institucional</Label>
+                        <div className="flex flex-col gap-3">
+                          <Input
+                            id="logo-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoChange}
+                            className="h-10 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 file:bg-indigo-600 file:text-white file:font-black file:uppercase file:text-[9px] file:tracking-widest file:rounded-lg file:px-3 file:h-6 file:mt-1 cursor-pointer text-xs"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleUploadLogo}
+                              disabled={!logoFile || isUploading}
+                              className="flex-1 button-gradient h-10 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2"
+                            >
+                              {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                              Actualizar Logo
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleShowImagePreview(logoPreview || '')}
+                              disabled={!logoPreview}
+                              className="h-10 px-4 rounded-xl border-slate-200 font-bold"
+                            >
+                              <Sun className="h-4 w-4 text-amber-500" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-6">
+                      <div className="flex items-center justify-center p-6 rounded-3xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 shadow-inner group/logo relative overflow-hidden flex-1 min-h-[200px]">
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover/logo:opacity-100 transition-opacity duration-700"></div>
+                        {logoPreview ? (
+                          <img
+                            src={logoPreview}
+                            alt="Logo Preview"
+                            className="max-h-32 w-auto object-contain drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform duration-500 relative z-10"
+                            onClick={() => handleShowImagePreview(logoPreview)}
+                          />
+                        ) : (
+                          <div className="h-24 w-24 bg-slate-100 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-300 relative z-10">
+                            <Upload className="h-8 w-8 opacity-20" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-white/10 dark:border-slate-800/50 space-y-4">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ajustes de Interfaz</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-slate-700 dark:text-slate-200">Mostrar nombre y logo</Label>
+                          <p className="text-[10px] text-slate-500 font-medium tracking-tight">Hacer visible la marca en el menú lateral</p>
+                        </div>
+                        <Switch
+                          checked={generalSettings.showName}
+                          onCheckedChange={() => handleGeneralSettingChange('showName')}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-slate-700 dark:text-slate-200">Notificaciones</Label>
+                          <p className="text-[10px] text-slate-500 font-medium tracking-tight">Activar avisos y alertas del sistema</p>
+                        </div>
+                        <Switch
+                          checked={generalSettings.notifications}
+                          onCheckedChange={() => handleGeneralSettingChange('notifications')}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'authorizations' && (
+          <div className="mt-0 outline-none">
+            <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-purple-500/5 overflow-hidden">
               <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
                 <div className="flex items-center gap-4">
-                  <div className="bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-2xl text-indigo-600 dark:text-indigo-400 shadow-xl shadow-indigo-500/10">
-                    <LayoutGrid className="h-6 w-6" />
+                  <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 shadow-inner">
+                    <FileText className="h-5 w-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Identidad de Marca</CardTitle>
-                    <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Define el nombre y logo principal de la congregación.</CardDescription>
+                    <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">PDF de Autorizaciones</CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Personaliza el encabezado legal de los documentos.</CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-6 md:p-8 space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-6">
-                    <div className="space-y-2 group">
-                      <Label htmlFor="companyName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 group-focus-within:text-indigo-500">Nombre de la Congregación</Label>
-                      <Input
-                        id="companyName"
-                        value={congregationName}
-                        onChange={(e) => setCongregationName(e.target.value)}
-                        className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-700 dark:text-slate-200"
-                        placeholder="Ej: Congregación Los Pinos"
-                      />
-                    </div>
+              <CardContent className="p-6 md:p-8 space-y-4">
+                <div className="grid gap-3">
+                  {authPdfHeader.map((line, index) => {
+                    const placeholders = [
+                      "Ej: Asociación Civil Los Pinos",
+                      "Ej: Personería Jurídica N°...",
+                      "Ej: Calle 1234, Localidad, Provincia",
+                      "Ej: C.U.I.T. N° 30-xxxxxxxx-x"
+                    ];
+                    return (
+                      <div key={index} className="group relative flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/30 transition-all duration-300 shadow-sm">
+                        <div className="flex items-center justify-center h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-400 font-black text-[10px] shrink-0 border border-slate-200 dark:border-slate-800">
+                          {index + 1}
+                        </div>
 
-                    <div className="space-y-4">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Logotipo Institucional</Label>
-                      <div className="flex flex-col gap-3">
-                        <Input
-                          id="logo-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoChange}
-                          className="h-10 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 file:bg-indigo-600 file:text-white file:font-black file:uppercase file:text-[9px] file:tracking-widest file:rounded-lg file:px-3 file:h-6 file:mt-1 cursor-pointer text-xs"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={handleUploadLogo}
-                            disabled={!logoFile || isUploading}
-                            className="flex-1 button-gradient h-10 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2"
-                          >
-                            {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                            Actualizar Logo
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => handleShowImagePreview(logoPreview || '')}
-                            disabled={!logoPreview}
-                            className="h-10 px-4 rounded-xl border-slate-200 font-bold"
-                          >
-                            <Sun className="h-4 w-4 text-amber-500" />
-                          </Button>
+                        <div className="flex-1 w-full space-y-1">
+                          <Label htmlFor={`auth-line-${index}`} className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Línea de encabezado</Label>
+                          <Input
+                            id={`auth-line-${index}`}
+                            value={line.text}
+                            onChange={(e) => handleAuthPdfHeaderChange(index, 'text', e.target.value)}
+                            className="h-10 rounded-xl bg-transparent border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-indigo-500 transition-all px-3 text-sm"
+                            placeholder={placeholders[index] || `Texto para la línea ${index + 1}`}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 self-end md:self-center">
+                          <Label htmlFor={`auth-enable-${index}`} className="text-[9px] font-black uppercase tracking-widest text-slate-400 cursor-pointer">Activa</Label>
+                          <Switch
+                            id={`auth-enable-${index}`}
+                            checked={line.enabled}
+                            onCheckedChange={(checked) => handleAuthPdfHeaderChange(index, 'enabled', checked)}
+                            className="scale-90 data-[state=checked]:bg-indigo-600"
+                          />
                         </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-6">
-                    <div className="flex items-center justify-center p-6 rounded-3xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 shadow-inner group/logo relative overflow-hidden flex-1 min-h-[200px]">
-                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover/logo:opacity-100 transition-opacity duration-700"></div>
-                      {logoPreview ? (
-                        <img
-                          src={logoPreview}
-                          alt="Logo Preview"
-                          className="max-h-32 w-auto object-contain drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform duration-500 relative z-10"
-                          onClick={() => handleShowImagePreview(logoPreview)}
-                        />
-                      ) : (
-                        <div className="h-24 w-24 bg-slate-100 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-300 relative z-10">
-                          <Upload className="h-8 w-8 opacity-20" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
 
-                <div className="pt-6 border-t border-white/10 dark:border-slate-800/50 space-y-4">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ajustes de Interfaz</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
-                      <div className="space-y-0.5">
-                        <Label className="text-sm font-bold text-slate-700 dark:text-slate-200">Mostrar nombre y logo</Label>
-                        <p className="text-[10px] text-slate-500 font-medium tracking-tight">Hacer visible la marca en el menú lateral</p>
-                      </div>
-                      <Switch
-                        checked={generalSettings.showName}
-                        onCheckedChange={() => handleGeneralSettingChange('showName')}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
-                      <div className="space-y-0.5">
-                        <Label className="text-sm font-bold text-slate-700 dark:text-slate-200">Notificaciones</Label>
-                        <p className="text-[10px] text-slate-500 font-medium tracking-tight">Activar avisos y alertas del sistema</p>
-                      </div>
-                      <Switch
-                        checked={generalSettings.notifications}
-                        onCheckedChange={() => handleGeneralSettingChange('notifications')}
-                      />
-                    </div>
+                <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex gap-3 mt-2">
+                  <div className="p-1.5 bg-indigo-500/20 rounded-lg h-fit">
+                    <FileText className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                   </div>
+                  <p className="text-[10px] text-indigo-700 dark:text-indigo-300 font-medium leading-relaxed">
+                    Estas líneas aparecerán en el orden indicado en la parte superior derecha de los certificados de inscripción. Recomendamos mantener la información legal actualizada.
+                  </p>
                 </div>
               </CardContent>
             </Card>
-
-
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="authorizations" className="mt-0 outline-none">
-          <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-purple-500/5 overflow-hidden">
-            <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
-              <div className="flex items-center gap-4">
-                <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 shadow-inner">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">PDF de Autorizaciones</CardTitle>
-                  <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Personaliza el encabezado legal de los documentos.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6 md:p-8 space-y-4">
-              <div className="grid gap-3">
-                {authPdfHeader.map((line, index) => {
-                  const placeholders = [
-                    "Ej: Asociación Civil Los Pinos",
-                    "Ej: Personería Jurídica N°...",
-                    "Ej: Calle 1234, Localidad, Provincia",
-                    "Ej: C.U.I.T. N° 30-xxxxxxxx-x"
-                  ];
-                  return (
-                    <div key={index} className="group relative flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/30 transition-all duration-300 shadow-sm">
-                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-400 font-black text-[10px] shrink-0 border border-slate-200 dark:border-slate-800">
-                        {index + 1}
-                      </div>
-
-                      <div className="flex-1 w-full space-y-1">
-                        <Label htmlFor={`auth-line-${index}`} className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Línea de encabezado</Label>
-                        <Input
-                          id={`auth-line-${index}`}
-                          value={line.text}
-                          onChange={(e) => handleAuthPdfHeaderChange(index, 'text', e.target.value)}
-                          className="h-10 rounded-xl bg-transparent border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-indigo-500 transition-all px-3 text-sm"
-                          placeholder={placeholders[index] || `Texto para la línea ${index + 1}`}
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 self-end md:self-center">
-                        <Label htmlFor={`auth-enable-${index}`} className="text-[9px] font-black uppercase tracking-widest text-slate-400 cursor-pointer">Activa</Label>
-                        <Switch
-                          id={`auth-enable-${index}`}
-                          checked={line.enabled}
-                          onCheckedChange={(checked) => handleAuthPdfHeaderChange(index, 'enabled', checked)}
-                          className="scale-90 data-[state=checked]:bg-indigo-600"
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex gap-3 mt-2">
-                <div className="p-1.5 bg-indigo-500/20 rounded-lg h-fit">
-                  <FileText className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <p className="text-[10px] text-indigo-700 dark:text-indigo-300 font-medium leading-relaxed">
-                  Estas líneas aparecerán en el orden indicado en la parte superior derecha de los certificados de inscripción. Recomendamos mantener la información legal actualizada.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="whatsapp" className="mt-0 outline-none space-y-6">
-          <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-purple-500/5 overflow-hidden">
-            <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
-              <div className="flex items-center gap-4">
-                <div className="bg-green-100 dark:bg-green-900/30 p-2.5 rounded-xl text-green-600 dark:text-green-400 shadow-inner">
-                  <Smartphone className="h-5 w-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Conexión WhatsApp</CardTitle>
-                  <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Vincular cuenta para automatizar notificaciones.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6 md:p-8 space-y-6">
-              <div className={`p-6 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row items-center justify-between gap-6 ${whatsappInfo.status === 'connected'
-                ? 'bg-green-500/5 border-green-500/20 shadow-xl shadow-green-500/5'
-                : whatsappInfo.status === 'qr'
-                  ? 'bg-amber-500/5 border-amber-500/20 shadow-xl shadow-amber-500/5'
-                  : 'bg-red-500/5 border-red-500/20 shadow-xl shadow-red-500/5'
-                }`}>
+        {activeTab === 'whatsapp' && (
+          <div className="mt-0 outline-none space-y-6">
+            <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-purple-500/5 overflow-hidden">
+              <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
                 <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className={`absolute inset-0 blur-xl rounded-full opacity-30 ${whatsappInfo.status === 'connected' ? 'bg-green-500' : whatsappInfo.status === 'qr' ? 'bg-amber-500' : 'bg-red-500'
-                      }`}></div>
-                    <div className={`relative h-14 w-14 rounded-2xl flex items-center justify-center p-3.5 shadow-2xl ${whatsappInfo.status === 'connected' ? 'bg-green-500 text-white' : whatsappInfo.status === 'qr' ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'
-                      }`}>
-                      {whatsappInfo.status === 'connected' ? <CheckCircle2 className="h-full w-full" /> : <Smartphone className="h-full w-full" />}
-                    </div>
+                  <div className="bg-green-100 dark:bg-green-900/30 p-2.5 rounded-xl text-green-600 dark:text-green-400 shadow-inner">
+                    <Smartphone className="h-5 w-5" />
                   </div>
-
-                  <div className="space-y-0.5 text-center md:text-left">
-                    <div className="flex items-center justify-center md:justify-start gap-2">
-                      <h3 className="text-lg font-black uppercase tracking-tighter text-slate-800 dark:text-white">
-                        {whatsappInfo.status === 'connected' ? 'Servicio Activo' : whatsappInfo.status === 'qr' ? 'Esperando QR' : 'Desconectado'}
-                      </h3>
-                      <div className={`h-1.5 w-1.5 rounded-full ${whatsappInfo.status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      {whatsappInfo.status === 'connected' ? 'Instancia enviando correctamente.' : 'Vincule su dispositivo para comenzar.'}
-                    </p>
+                  <div>
+                    <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Conexión WhatsApp</CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Vincular cuenta para automatizar notificaciones.</CardDescription>
                   </div>
                 </div>
-
-                <div className="flex gap-3 w-full md:w-auto">
-                  {whatsappInfo.status === 'disconnected' && (
-                    <Button
-                      onClick={handleConnectWhatsapp}
-                      disabled={isConnectingWhatsapp}
-                      className="flex-1 md:flex-none button-gradient rounded-xl h-11 px-6 font-black uppercase text-[10px] tracking-widest gap-2"
-                    >
-                      {isConnectingWhatsapp ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                      Vincular Ahora
-                    </Button>
-                  )}
-                  {whatsappInfo.status !== 'disconnected' && (
-                    <Button
-                      variant="outline"
-                      onClick={handleDisconnectWhatsapp}
-                      className="flex-1 md:flex-none rounded-xl h-11 px-6 border-red-200 dark:border-red-900/50 text-red-500 font-black uppercase text-[9px] tracking-widest hover:bg-red-50 dark:hover:bg-red-900/20"
-                    >
-                      Desconectar
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {whatsappInfo.status === 'qr' && whatsappInfo.qr && (
-                <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-inner relative overflow-hidden group">
-                  <div className="relative z-10 space-y-6 flex flex-col items-center">
-                    <div className="bg-white p-4 rounded-2xl shadow-xl border border-slate-100 ring-4 ring-slate-50 dark:ring-slate-900/50">
-                      <img src={whatsappInfo.qr} alt="WhatsApp QR" className="w-48 h-48 mix-blend-multiply transition-transform duration-500 hover:scale-105" />
+              </CardHeader>
+              <CardContent className="p-6 md:p-8 space-y-6">
+                <div className={`p-6 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row items-center justify-between gap-6 ${whatsappInfo.status === 'connected'
+                  ? 'bg-green-500/5 border-green-500/20 shadow-xl shadow-green-500/5'
+                  : whatsappInfo.status === 'qr'
+                    ? 'bg-amber-500/5 border-amber-500/20 shadow-xl shadow-amber-500/5'
+                    : 'bg-red-500/5 border-red-500/20 shadow-xl shadow-red-500/5'
+                  }`}>
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className={`absolute inset-0 blur-xl rounded-full opacity-30 ${whatsappInfo.status === 'connected' ? 'bg-green-500' : whatsappInfo.status === 'qr' ? 'bg-amber-500' : 'bg-red-500'
+                        }`}></div>
+                      <div className={`relative h-14 w-14 rounded-2xl flex items-center justify-center p-3.5 shadow-2xl ${whatsappInfo.status === 'connected' ? 'bg-green-500 text-white' : whatsappInfo.status === 'qr' ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'
+                        }`}>
+                        {whatsappInfo.status === 'connected' ? <CheckCircle2 className="h-full w-full" /> : <Smartphone className="h-full w-full" />}
+                      </div>
                     </div>
-                    <div className="space-y-1 text-center max-w-xs">
-                      <h3 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tighter">Escanea el código</h3>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                        Abre WhatsApp → Dispositivos vinculados → Vincular un dispositivo.
+
+                    <div className="space-y-0.5 text-center md:text-left">
+                      <div className="flex items-center justify-center md:justify-start gap-2">
+                        <h3 className="text-lg font-black uppercase tracking-tighter text-slate-800 dark:text-white">
+                          {whatsappInfo.status === 'connected' ? 'Servicio Activo' : whatsappInfo.status === 'qr' ? 'Esperando QR' : 'Desconectado'}
+                        </h3>
+                        <div className={`h-1.5 w-1.5 rounded-full ${whatsappInfo.status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        {whatsappInfo.status === 'connected' ? 'Instancia enviando correctamente.' : 'Vincule su dispositivo para comenzar.'}
                       </p>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {whatsappInfo.status === 'connected' && (
-                <div className="space-y-6 p-6 rounded-3xl bg-slate-50/50 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-900/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-1 w-6 bg-green-500 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Prueba de Integración</h3>
-                    </div>
-                    <Badge className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[8px] font-black uppercase tracking-widest border-none">Live</Badge>
+                  <div className="flex gap-3 w-full md:w-auto">
+                    {whatsappInfo.status === 'disconnected' && (
+                      <Button
+                        onClick={handleConnectWhatsapp}
+                        disabled={isConnectingWhatsapp}
+                        className="flex-1 md:flex-none button-gradient rounded-xl h-11 px-6 font-black uppercase text-[10px] tracking-widest gap-2"
+                      >
+                        {isConnectingWhatsapp ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                        Vincular Ahora
+                      </Button>
+                    )}
+                    {whatsappInfo.status !== 'disconnected' && (
+                      <Button
+                        variant="outline"
+                        onClick={handleDisconnectWhatsapp}
+                        className="flex-1 md:flex-none rounded-xl h-11 px-6 border-red-200 dark:border-red-900/50 text-red-500 font-black uppercase text-[9px] tracking-widest hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        Desconectar
+                      </Button>
+                    )}
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="test-phone" className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Teléfono de Prueba</Label>
-                      <Input
-                        id="test-phone"
-                        placeholder="Ej: 54911..."
-                        value={testPhoneNumber}
-                        onChange={(e) => setTestPhoneNumber(e.target.value)}
-                        className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 px-4 text-sm font-medium shadow-inner"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="test-msg" className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Mensaje personalizado</Label>
-                      <Input
-                        id="test-msg"
-                        value={testMessage}
-                        onChange={(e) => setTestMessage(e.target.value)}
-                        className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 px-4 text-sm font-medium shadow-inner"
-                      />
+                {whatsappInfo.status === 'qr' && whatsappInfo.qr && (
+                  <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-inner relative overflow-hidden group">
+                    <div className="relative z-10 space-y-6 flex flex-col items-center">
+                      <div className="bg-white p-4 rounded-2xl shadow-xl border border-slate-100 ring-4 ring-slate-50 dark:ring-slate-900/50">
+                        <img src={whatsappInfo.qr} alt="WhatsApp QR" className="w-48 h-48 mix-blend-multiply transition-transform duration-500 hover:scale-105" />
+                      </div>
+                      <div className="space-y-1 text-center max-w-xs">
+                        <h3 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tighter">Escanea el código</h3>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                          Abre WhatsApp → Dispositivos vinculados → Vincular un dispositivo.
+                        </p>
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  <Button
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white shadow-xl shadow-green-500/10 rounded-xl h-11 font-black uppercase text-[10px] tracking-widest gap-2"
-                    onClick={handleSendTestMessage}
-                    disabled={isSendingTest}
-                  >
-                    {isSendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                    Enviar Mensaje de Prueba
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                {whatsappInfo.status === 'connected' && (
+                  <div className="space-y-6 p-6 rounded-3xl bg-slate-50/50 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-900/50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1 w-6 bg-green-500 rounded-full"></div>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Prueba de Integración</h3>
+                      </div>
+                      <Badge className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[8px] font-black uppercase tracking-widest border-none">Live</Badge>
+                    </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="test-phone" className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Teléfono de Prueba</Label>
+                        <Input
+                          id="test-phone"
+                          placeholder="Ej: 54911..."
+                          value={testPhoneNumber}
+                          onChange={(e) => setTestPhoneNumber(e.target.value)}
+                          className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 px-4 text-sm font-medium shadow-inner"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="test-msg" className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Mensaje personalizado</Label>
+                        <Input
+                          id="test-msg"
+                          value={testMessage}
+                          onChange={(e) => setTestMessage(e.target.value)}
+                          className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 px-4 text-sm font-medium shadow-inner"
+                        />
+                      </div>
+                    </div>
 
-      </Tabs>
+                    <Button
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white shadow-xl shadow-green-500/10 rounded-xl h-11 font-black uppercase text-[10px] tracking-widest gap-2"
+                      onClick={handleSendTestMessage}
+                      disabled={isSendingTest}
+                    >
+                      {isSendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      Enviar Mensaje de Prueba
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
 
       {showImagePreview && (
         <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>

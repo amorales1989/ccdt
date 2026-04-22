@@ -24,8 +24,12 @@ import { toast } from "@/hooks/use-toast";
 import { StudentDetails } from "@/components/StudentDetails";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations } from "@/lib/api";
+import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance } from "@/lib/api";
 import AgregarAlumno from "@/pages/AgregarAlumno";
+import { CustomTabs } from "@/components/CustomTabs";
+import { BirthdayList } from "@/components/BirthdayList";
+import { exportAttendanceReport } from "@/lib/attendancePdfUtils";
+import { Calendar } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
 import {
   Form,
@@ -81,6 +85,8 @@ const ListarAlumnos = () => {
     class: '',
   });
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'age', direction: 'asc' | 'desc' } | null>(null);
+  const [activeTab, setActiveTab] = useState<"miembros" | "cumpleanos">("miembros");
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -344,6 +350,101 @@ const ListarAlumnos = () => {
     }
   }, [profile, navigate, searchParams, departments, isFilterOpen]);
 
+
+  const handleDownloadAttendanceReport = async () => {
+    if (!students || students.length === 0) {
+      toast({
+        title: "Sin datos",
+        description: "No hay miembros en la lista actual para generar el reporte.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingReport(true);
+    try {
+      const currentYear = new Date().getFullYear();
+      const startDate = `${currentYear}-01-01`;
+      const endDate = `${currentYear}-12-31`;
+
+      // Obtener asistencias del año actual
+      // Si el usuario tiene un departamento asignado, filtramos por ese departamento
+      const allYearAttendance = await getAttendance(
+        startDate,
+        endDate,
+        undefined,
+        profile?.role !== 'admin' && profile?.role !== 'secretaria' ? profile?.department_id : (filters.department ? null : undefined)
+      );
+
+      // Si estamos filtrando por un departamento o clase específica en la UI, aplicamos esos filtros a la data de asistencia
+      let filteredAttendance = allYearAttendance;
+      if (filters.department) {
+        filteredAttendance = filteredAttendance.filter(a => a.department === filters.department);
+      }
+      if (filters.class) {
+        filteredAttendance = filteredAttendance.filter(a => a.assigned_class === filters.class);
+      }
+
+      // Obtener los IDs de los estudiantes que están actualmente en la lista (filtrados)
+      const currentStudentIds = new Set(students.map(s => s.id));
+
+      // Filtrar asistencias solo para los estudiantes visibles actualmente
+      const relevantAttendance = filteredAttendance.filter(a => currentStudentIds.has(a.student_id));
+
+      // Calcular días de actividad total (fechas únicas con al menos una asistencia registrada para este grupo)
+      const uniqueDates = new Set(relevantAttendance.map(a => a.date));
+      const totalActivityDays = uniqueDates.size;
+
+      if (totalActivityDays === 0) {
+        toast({
+          title: "Sin actividad",
+          description: "No se encontraron registros de asistencia para este grupo en el año actual.",
+          variant: "destructive",
+        });
+        setIsGeneratingReport(false);
+        return;
+      }
+
+      // Procesar datos por estudiante
+      const reportData = students.map(student => {
+        const studentAttendances = relevantAttendance.filter(a => a.student_id === student.id && a.status === true);
+        const presenceCount = studentAttendances.length;
+        const percentage = (presenceCount / totalActivityDays) * 100;
+
+        return {
+          studentName: `${student.first_name} ${student.last_name}`,
+          departmentName: student.department || '',
+          className: student.assigned_class || '',
+          presenceCount,
+          percentage
+        };
+      });
+
+      // Ordenar por porcentaje/asistencias de mayor a menor
+      reportData.sort((a, b) => b.percentage - a.percentage);
+
+      // Generar PDF
+      await exportAttendanceReport(
+        reportData,
+        totalActivityDays,
+        "CCDT"
+      );
+
+      toast({
+        title: "Reporte generado",
+        description: "El reporte de asistencia se ha descargado correctamente.",
+      });
+    } catch (error) {
+      console.error("Error generating attendance report:", error);
+      toast({
+        title: "Error",
+        description: "Hubo un problema al generar el reporte de asistencia.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
 
   // NUEVA FUNCIÓN DE EXPORTAR
   const exportToExcel = () => {
@@ -1036,7 +1137,24 @@ const ListarAlumnos = () => {
                 </Button>
               </CustomTooltip>
             )}
-            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director') && (
+            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'lider' || profile?.role === 'maestro') && (
+              <CustomTooltip title="Reporte de Asistencia (PDF)">
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
+                  onClick={handleDownloadAttendanceReport}
+                  disabled={isGeneratingReport}
+                >
+                  {isGeneratingReport ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
+                </Button>
+              </CustomTooltip>
+            )}
+
+            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general') && (
               <CustomTooltip title="Exportar a Excel">
                 <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95" onClick={exportToExcel}>
                   <FileDown className="h-4 w-4" />
@@ -1050,155 +1168,173 @@ const ListarAlumnos = () => {
           </div>
         </div>
 
-        {canFilter && (
-          <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-            <CollapsibleTrigger asChild></CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="glass-card p-5">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-4 flex items-center gap-2">
-                  <Filter className="h-3.5 w-3.5" /> Filtros
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</Label>
-                    <Select
-                      onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value, class: '' }))}
-                      value={filters.department || "all"}
-                      disabled={profile?.role === 'director' || profile?.role === 'vicedirector'}
-                    >
-                      <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
-                        <SelectValue placeholder="Seleccione un departamento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {profile?.role !== 'director' && profile?.role !== 'vicedirector' && <SelectItem value="all">Todos</SelectItem>}
-                        {departments?.filter(dept => {
-                          if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
-                          if (profile?.role === 'director' || profile?.role === 'vicedirector') return profile.department_id === dept.id;
-                          if (profile?.role === 'director_general') return profile.departments?.includes(dept.name);
-                          return false;
-                        }).map((department) => (
-                          <SelectItem key={department.id} value={department.name}>
-                            {department.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+        <CustomTabs
+          value={activeTab}
+          onChange={(v) => setActiveTab(v as "miembros" | "cumpleanos")}
+          options={[
+            { value: "miembros", label: "Lista de Miembros", icon: User },
+            { value: "cumpleanos", label: "Cumpleaños", icon: Calendar }
+          ]}
+          className="w-full sm:w-fit"
+        />
 
-                  <div className="space-y-1">
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Anexo/Clase</Label>
-                    <Select
-                      onValueChange={(value) => setFilters(prev => ({ ...prev, class: value === "all" ? "" : value }))}
-                      value={filters.class || "all"}
-                      key={filters.department}
-                    >
-                      <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
-                        <SelectValue placeholder="Seleccione una clase" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas</SelectItem>
-                        {classes?.map((className) => (
-                          <SelectItem key={String(className)} value={String(className)}>
-                            {String(className)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+        {activeTab === "miembros" && (
+          <div className="space-y-6 animate-in slide-in-from-left-4 fade-in duration-300">
+            {canFilter && (
+              <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <CollapsibleTrigger asChild></CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="glass-card p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-4 flex items-center gap-2">
+                      <Filter className="h-3.5 w-3.5" /> Filtros
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</Label>
+                        <Select
+                          onValueChange={(value) => setFilters(prev => ({ ...prev, department: value === "all" ? "" : value, class: '' }))}
+                          value={filters.department || "all"}
+                          disabled={profile?.role === 'director' || profile?.role === 'vicedirector'}
+                        >
+                          <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
+                            <SelectValue placeholder="Seleccione un departamento" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {profile?.role !== 'director' && profile?.role !== 'vicedirector' && <SelectItem value="all">Todos</SelectItem>}
+                            {departments?.filter(dept => {
+                              if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
+                              if (profile?.role === 'director' || profile?.role === 'vicedirector') return profile.department_id === dept.id;
+                              if (profile?.role === 'director_general') return profile.departments?.includes(dept.name);
+                              return false;
+                            }).map((department) => (
+                              <SelectItem key={department.id} value={department.name}>
+                                {department.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="flex items-end">
-                    <Button
-                      variant="outline"
-                      className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 font-bold h-10 px-6"
-                      onClick={handleClearFilters}
-                    >
-                      Limpiar Filtros
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Anexo/Clase</Label>
+                        <Select
+                          onValueChange={(value) => setFilters(prev => ({ ...prev, class: value === "all" ? "" : value }))}
+                          value={filters.class || "all"}
+                          key={filters.department}
+                        >
+                          <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
+                            <SelectValue placeholder="Seleccione una clase" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas</SelectItem>
+                            {classes?.map((className) => (
+                              <SelectItem key={String(className)} value={String(className)}>
+                                {String(className)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-        <div className="glass-card overflow-hidden">
-          <Table>
-            <TableBody>
-              <TableRow className="bg-slate-50/50 dark:bg-slate-800/50">
-                <TableCell
-                  className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
-                  onClick={() => handleSort('name')}
-                >
-                  <div className="flex items-center gap-1">
-                    Nombre
-                    <div className={`transition-opacity ${sortConfig?.key === 'name' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
-                      {sortConfig?.key === 'name' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                      <div className="flex items-end">
+                        <Button
+                          variant="outline"
+                          className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 font-bold h-10 px-6"
+                          onClick={handleClearFilters}
+                        >
+                          Limpiar Filtros
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </TableCell>
-                {!isMobile && (
-                  <TableCell className="font-bold text-slate-700 dark:text-slate-300">Departamento</TableCell>
-                )}
-                <TableCell
-                  className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
-                  onClick={() => handleSort('age')}
-                >
-                  <div className="flex items-center gap-1">
-                    Edad
-                    <div className={`transition-opacity ${sortConfig?.key === 'age' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
-                      {sortConfig?.key === 'age' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className={`font-bold text-slate-700 dark:text-slate-300 text-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>
-                  {!isMobile && "Acciones"}
-                </TableCell>
-              </TableRow>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                  </TableCell>
-                </TableRow>
-              ) : isError ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Error al cargar los miembros.
-                  </TableCell>
-                </TableRow>
-              ) : (regularStudents.length === 0 && newStudents.length === 0) ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    No hay miembros registrados.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                <>
-                  {/* Renderizar miembros regulares */}
-                  {regularStudents.map((student) => renderStudentRow(student))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
-                  {/* Línea separadora y miembros nuevos */}
-                  {hasNewStudents && (
+            <div className="glass-card overflow-hidden">
+              <Table>
+                <TableBody>
+                  <TableRow className="bg-slate-50/50 dark:bg-slate-800/50">
+                    <TableCell
+                      className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Nombre
+                        <div className={`transition-opacity ${sortConfig?.key === 'name' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                          {sortConfig?.key === 'name' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                        </div>
+                      </div>
+                    </TableCell>
+                    {!isMobile && (
+                      <TableCell className="font-bold text-slate-700 dark:text-slate-300">Departamento</TableCell>
+                    )}
+                    <TableCell
+                      className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
+                      onClick={() => handleSort('age')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Edad
+                        <div className={`transition-opacity ${sortConfig?.key === 'age' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                          {sortConfig?.key === 'age' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-3.5 w-3.5" /> : <CircleChevronDown className="h-3.5 w-3.5" />}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className={`font-bold text-slate-700 dark:text-slate-300 text-center ${isMobile ? 'w-[80px]' : 'w-[120px]'}`}>
+                      {!isMobile && "Acciones"}
+                    </TableCell>
+                  </TableRow>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                      </TableCell>
+                    </TableRow>
+                  ) : isError ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        Error al cargar los miembros.
+                      </TableCell>
+                    </TableRow>
+                  ) : (regularStudents.length === 0 && newStudents.length === 0) ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        No hay miembros registrados.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
                     <>
-                      <TableRow>
-                        <TableCell colSpan={4} className="py-4">
-                          <div className="flex items-center justify-center">
-                            <div className="flex-grow border-t border-gray-300"></div>
-                            <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                              Nuevos Miembros
-                            </span>
-                            <div className="flex-grow border-t border-gray-300"></div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      {newStudents.map((student) => renderStudentRow(student))}
+                      {/* Renderizar miembros regulares */}
+                      {regularStudents.map((student) => renderStudentRow(student))}
+
+                      {/* Línea separadora y miembros nuevos */}
+                      {hasNewStudents && (
+                        <>
+                          <TableRow>
+                            <TableCell colSpan={4} className="py-4">
+                              <div className="flex items-center justify-center">
+                                <div className="flex-grow border-t border-gray-300"></div>
+                                <span className="mx-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                                  Nuevos Miembros
+                                </span>
+                                <div className="flex-grow border-t border-gray-300"></div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {newStudents.map((student) => renderStudentRow(student))}
+                        </>
+                      )}
                     </>
                   )}
-                </>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "cumpleanos" && (
+          <BirthdayList students={filteredStudents || []} />
+        )}
 
         <Dialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
           <DialogContent className="w-[95vw] max-w-lg sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 gap-0 rounded-2xl border-slate-200">

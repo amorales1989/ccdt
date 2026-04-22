@@ -16,9 +16,9 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { CustomTabs } from "@/components/CustomTabs";
 
 const profileSchema = z.object({
   first_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -43,6 +43,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [activeTab, setActiveTab] = useState<"profile" | "password">("profile");
   const queryClient = useQueryClient();
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
@@ -64,9 +65,9 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
 
   const updateProfile = async (values: z.infer<typeof profileSchema>) => {
     if (!user) return;
-    
+
     setIsUpdating(true);
-    
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -77,20 +78,20 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
         .eq('id', user.id);
 
       if (error) throw error;
-      
+
       toast({
         title: "Perfil actualizado",
         description: "Tu información ha sido actualizada correctamente",
       });
-      
+
       // Invalidate profile data in the cache
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-      
+
       // Refresh the profile in the Auth context
       if (getProfile) {
         await getProfile(user.id);
       }
-      
+
       onClose();
     } catch (error: any) {
       console.error('Error updating profile:', error);
@@ -106,9 +107,9 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
 
   const changePassword = async (values: z.infer<typeof passwordSchema>) => {
     if (!user) return;
-    
+
     setIsChangingPassword(true);
-    
+
     try {
       // First verify current password is correct
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -126,12 +127,12 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
       });
 
       if (error) throw error;
-      
+
       toast({
         title: "Contraseña actualizada",
         description: "Tu contraseña ha sido actualizada correctamente",
       });
-      
+
       passwordForm.reset();
       onClose();
     } catch (error: any) {
@@ -146,14 +147,21 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
     }
   };
 
+  const tabOptions = [
+    { value: "profile", label: "Perfil" },
+    { value: "password", label: "Contraseña" }
+  ];
+
   return (
-    <Tabs defaultValue="profile" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 mb-4">
-        <TabsTrigger value="profile">Perfil</TabsTrigger>
-        <TabsTrigger value="password">Contraseña</TabsTrigger>
-      </TabsList>
-      
-      <TabsContent value="profile">
+    <div className="w-full">
+      <CustomTabs
+        value={activeTab}
+        onChange={(v) => setActiveTab(v as "profile" | "password")}
+        options={tabOptions}
+        className="w-full mb-4 grid grid-cols-2"
+      />
+
+      {activeTab === "profile" && (
         <Form {...profileForm}>
           <form onSubmit={profileForm.handleSubmit(updateProfile)} className="space-y-4">
             <FormField
@@ -169,7 +177,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={profileForm.control}
               name="last_name"
@@ -183,7 +191,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                 </FormItem>
               )}
             />
-            
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" type="button" onClick={onClose}>
                 Cancelar
@@ -195,9 +203,9 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
             </div>
           </form>
         </Form>
-      </TabsContent>
-      
-      <TabsContent value="password">
+      )}
+
+      {activeTab === "password" && (
         <Form {...passwordForm}>
           <form onSubmit={passwordForm.handleSubmit(changePassword)} className="space-y-4">
             <FormField
@@ -213,7 +221,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={passwordForm.control}
               name="newPassword"
@@ -227,7 +235,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={passwordForm.control}
               name="confirmPassword"
@@ -241,7 +249,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                 </FormItem>
               )}
             />
-            
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" type="button" onClick={onClose}>
                 Cancelar
@@ -253,7 +261,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
             </div>
           </form>
         </Form>
-      </TabsContent>
-    </Tabs>
+      )}
+    </div>
   );
 }

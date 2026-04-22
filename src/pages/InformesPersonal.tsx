@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CustomTabs } from "@/components/CustomTabs";
 import { CheckCircle2 } from "lucide-react";
 
 export default function InformesPersonal() {
@@ -44,6 +44,7 @@ export default function InformesPersonal() {
     const [newDialogOpen, setNewDialogOpen] = useState(false);
     const [editingReportId, setEditingReportId] = useState<string | null>(null);
     const [form, setForm] = useState({ targetUserId: "", report: "" });
+    const [activeTab, setActiveTab] = useState("nuevos");
 
     const role = profile?.role || "";
     const department = localStorage.getItem('selectedDepartment') || profile?.departments?.[0] || "";
@@ -291,45 +292,57 @@ export default function InformesPersonal() {
                     <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No hay informes disponibles</p>
                 </div>
             ) : canViewOthers ? (
-                <Tabs defaultValue="nuevos" className="space-y-4">
-                    <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-1">
-                        <TabsTrigger value="nuevos" className="relative data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm">
-                            Nuevos
-                            {reports.filter((r: any) => !r.is_read).length > 0 && (
-                                <span className="ml-2 bg-red-500 text-white min-w-[18px] h-4 px-1 flex items-center justify-center rounded-full text-[9px] font-bold">
-                                    {reports.filter((r: any) => !r.is_read).length}
-                                </span>
+                <div className="space-y-4">
+                    <CustomTabs
+                        value={activeTab}
+                        onChange={setActiveTab}
+                        options={[
+                            {
+                                value: "nuevos",
+                                label: (
+                                    <span className="flex items-center">
+                                        Nuevos
+                                        {reports.filter((r: any) => !r.is_read).length > 0 && (
+                                            <span className="ml-2 bg-red-500 text-white min-w-[18px] h-4 px-1 flex items-center justify-center rounded-full text-[9px] font-bold">
+                                                {reports.filter((r: any) => !r.is_read).length}
+                                            </span>
+                                        )}
+                                    </span>
+                                )
+                            },
+                            { value: "leidos", label: "Ya Leídos" }
+                        ]}
+                        className="mb-4 mx-0"
+                    />
+                    {activeTab === "nuevos" && (
+                        <div className="outline-none">
+                            {reports.filter((r: any) => !r.is_read).length === 0 ? (
+                                <div className="text-center p-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                                    <CheckCircle2 className="h-10 w-10 text-green-400/50 mx-auto mb-3" />
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Estás al día. No hay reportes nuevos.</p>
+                                </div>
+                            ) : (
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    {reports.filter((r: any) => !r.is_read).map((r: any) => renderReportCard(r, true))}
+                                </div>
                             )}
-                        </TabsTrigger>
-                        <TabsTrigger value="leidos" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                            Ya Leídos
-                        </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="nuevos" className="mt-0 outline-none">
-                        {reports.filter((r: any) => !r.is_read).length === 0 ? (
-                            <div className="text-center p-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
-                                <CheckCircle2 className="h-10 w-10 text-green-400/50 mx-auto mb-3" />
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Estás al día. No hay reportes nuevos.</p>
-                            </div>
-                        ) : (
-                            <div className="grid gap-4 md:grid-cols-2">
-                                {reports.filter((r: any) => !r.is_read).map((r: any) => renderReportCard(r, true))}
-                            </div>
-                        )}
-                    </TabsContent>
-                    <TabsContent value="leidos" className="mt-0 outline-none">
-                        {reports.filter((r: any) => r.is_read).length === 0 ? (
-                            <div className="text-center p-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
-                                <FileText className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Aún no has leído ningún reporte.</p>
-                            </div>
-                        ) : (
-                            <div className="grid gap-4 md:grid-cols-2 opacity-80">
-                                {reports.filter((r: any) => r.is_read).map((r: any) => renderReportCard(r, false))}
-                            </div>
-                        )}
-                    </TabsContent>
-                </Tabs>
+                        </div>
+                    )}
+                    {activeTab === "leidos" && (
+                        <div className="outline-none">
+                            {reports.filter((r: any) => r.is_read).length === 0 ? (
+                                <div className="text-center p-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                                    <FileText className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Aún no has leído ningún reporte.</p>
+                                </div>
+                            ) : (
+                                <div className="grid gap-4 md:grid-cols-2 opacity-80">
+                                    {reports.filter((r: any) => r.is_read).map((r: any) => renderReportCard(r, false))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                     {reports.map((report: any) => renderReportCard(report, false))}

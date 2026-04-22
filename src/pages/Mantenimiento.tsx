@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CustomTabs } from "@/components/CustomTabs";
 import {
     Wrench, Plus, Clock, Loader2, CheckCircle2, AlertCircle, Trash2, Ban,
 } from "lucide-react";
@@ -226,18 +226,22 @@ export default function Mantenimiento() {
             </div>
 
             {/* Status filter tabs */}
-            <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
-                <TabsList className="bg-slate-100 dark:bg-slate-800/50 h-auto flex-wrap gap-1 p-1">
-                    {(["all", "pendiente", "en_proceso", "terminado", "anulado"] as const).map((s) => (
-                        <TabsTrigger key={s} value={s} className="text-xs px-3 py-1.5 gap-1.5">
+            <CustomTabs
+                value={filterStatus}
+                onChange={(v) => setFilterStatus(v as any)}
+                options={(["all", "pendiente", "en_proceso", "terminado", "anulado"] as const).map((s) => ({
+                    value: s,
+                    label: (
+                        <span className="flex items-center gap-1.5">
                             {s === "all" ? "Todas" : STATUS_LABELS[s]}
-                            <span className="ml-1 text-[10px] font-bold bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full px-1.5 py-0.5">
+                            <span className="ml-1 text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full px-1.5 py-0.5">
                                 {counts[s]}
                             </span>
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-            </Tabs>
+                        </span>
+                    )
+                }))}
+                className="w-full mb-4"
+            />
 
             {/* Table */}
             <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
