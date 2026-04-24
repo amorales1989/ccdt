@@ -154,8 +154,13 @@ const GestionUsuarios = () => {
   useEffect(() => {
     if (selectedDepartment) {
       const department = departments.find(d => d.name === selectedDepartment);
-      setAvailableClasses(department?.classes || []);
-      setSelectedClass("");
+      const newClasses = department?.classes || [];
+      setAvailableClasses(newClasses);
+
+      // Solo resetear la clase si la actual no es válida para el nuevo departamento
+      if (selectedClass && !newClasses.includes(selectedClass)) {
+        setSelectedClass("");
+      }
     } else {
       setAvailableClasses([]);
       setSelectedClass("");
@@ -277,7 +282,8 @@ const GestionUsuarios = () => {
           company_id: companyId,
           birthdate: updatedUser.birthdate,
           document_number: updatedUser.document_number,
-          gender: updatedUser.gender
+          gender: updatedUser.gender,
+          phone: updatedUser.phone
         }
       };
 
@@ -307,7 +313,8 @@ const GestionUsuarios = () => {
           assigned_class: updatedUser.role === 'director_general' ? "" : selectedClass,
           birthdate: updatedUser.birthdate,
           document_number: updatedUser.document_number,
-          gender: updatedUser.gender
+          gender: updatedUser.gender,
+          phone: updatedUser.phone
         })
         .eq('id', updatedUser.id)
         .eq('company_id', companyId);
