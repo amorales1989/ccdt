@@ -393,15 +393,18 @@ const HistorialAsistencia = () => {
           </div>
 
           <div className="flex gap-2">
-            {!isEditMode && (
-              <Button
-                onClick={enterEditMode}
-                className="button-gradient shadow-lg shadow-primary/20 rounded-xl font-bold flex-1 sm:flex-none"
-              >
-                <PenSquare className="mr-2 h-4 w-4" />
-                Editar Historial
-              </Button>
-            )}
+            <Button
+              onClick={isEditMode ? exitEditMode : enterEditMode}
+              className={cn(
+                "rounded-xl font-bold flex-1 sm:flex-none transition-all",
+                isEditMode
+                  ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  : "button-gradient shadow-lg shadow-primary/20 text-white"
+              )}
+            >
+              {isEditMode ? <X className="mr-2 h-4 w-4" /> : <PenSquare className="mr-2 h-4 w-4" />}
+              {isEditMode ? "Salir de Edición" : "Editar Historial"}
+            </Button>
             {isAdminOrSecretaria && !isEditMode && (
               <Button
                 onClick={handleExportToExcel}
@@ -458,8 +461,8 @@ const HistorialAsistencia = () => {
 
           <div className="glass-card flex-1 flex flex-col md:flex-row items-center gap-3 px-4 py-4 md:py-0">
             {isEditMode ? (
-              <div className="flex flex-col md:flex-row items-center gap-3 w-full">
-                <div className="flex items-center gap-3 w-full md:w-auto h-full pr-4 md:border-r border-gray-100">
+              <div className="flex flex-col md:flex-row items-center gap-3 w-full animate-fade-in">
+                <div className="flex items-center gap-3 w-full md:w-auto h-full">
                   <DatePickerField
                     value={editDate}
                     onChange={handleEditDateSelect}
@@ -467,17 +470,6 @@ const HistorialAsistencia = () => {
                     onOpenChange={setEditDateOpen}
                     className="bg-transparent border-none outline-none font-bold text-sm text-gray-700 w-full"
                   />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground italic px-2">
-                  Editando registros para la fecha seleccionada
-                </p>
-                <div className="flex gap-2 w-full md:w-auto ml-auto">
-                  <Button variant="ghost" onClick={exitEditMode} className="font-bold text-rose-500 hover:bg-rose-50 hover:text-rose-600">
-                    Cancelar
-                  </Button>
-                  <Button onClick={saveAttendanceChanges} disabled={savingAttendance || editRecords.length === 0} className="button-gradient rounded-xl font-black">
-                    {savingAttendance ? "Guardando..." : "Aplicar"}
-                  </Button>
                 </div>
               </div>
             ) : (
