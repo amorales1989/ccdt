@@ -369,11 +369,16 @@ const ListarAlumnos = () => {
 
       // Obtener asistencias del año actual
       // Si el usuario tiene un departamento asignado, filtramos por ese departamento
+      const attendanceClassFilter = (profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general')
+        ? (filters.class || undefined)
+        : (profile?.assigned_class || undefined);
+
       const allYearAttendance = await getAttendance(
         startDate,
         endDate,
         undefined,
-        profile?.role !== 'admin' && profile?.role !== 'secretaria' ? profile?.department_id : (filters.department ? null : undefined)
+        profile?.role !== 'admin' && profile?.role !== 'secretaria' ? profile?.department_id : (filters.department ? null : undefined),
+        attendanceClassFilter
       );
 
       // Si estamos filtrando por un departamento o clase específica en la UI, aplicamos esos filtros a la data de asistencia

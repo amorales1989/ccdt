@@ -162,9 +162,10 @@ const TomarAsistencia = () => {
     setAsistencias(prev => ({ ...prev, [id]: presente }));
   };
 
-  const checkExistingAttendance = async (date: string) => {
+  const checkExistingAttendance = async (date: string, classId?: string) => {
+    if (!departmentId) return false;
     try {
-      const data = await getAttendance(date, date, undefined, departmentId);
+      const data = await getAttendance(date, date, undefined, departmentId, classId);
       return data && data.length > 0;
     } catch {
       return false;
@@ -178,10 +179,12 @@ const TomarAsistencia = () => {
     }
     setIsLoading(true);
     try {
-      const hasExisting = await checkExistingAttendance(selectedDate);
+      const classToFilter = isDirector ? selectedClass : userClass;
+      const hasExisting = await checkExistingAttendance(selectedDate, classToFilter);
       if (hasExisting) { setShowAlert(true); setIsLoading(false); return; }
 
-      const adjustedDate = format(addDays(new Date(selectedDate), 1), "yyyy-MM-dd");
+      // Use the selectedDate directly as it's already in YYYY-MM-DD format
+      const adjustedDate = selectedDate;
       const defaultAbsent: Record<string, boolean> = {};
       students.forEach(s => { defaultAbsent[s.id] = false; });
       const finalAttendances = { ...defaultAbsent, ...asistencias };
@@ -194,7 +197,7 @@ const TomarAsistencia = () => {
             date: adjustedDate,
             status,
             department_id: departmentId || undefined,
-            assigned_class: student?.assigned_class || userClass || "",
+            assigned_class: classToFilter || student?.assigned_class || "",
           });
         })
       );
@@ -226,7 +229,10 @@ const TomarAsistencia = () => {
     return <LoadingOverlay message="Cargando miembros..." />;
   }
 
-  const displayDate = format(addDays(new Date(selectedDate), 1), "EEEE, dd 'de' MMMM yyyy", { locale: es });
+  // Create a local date object from the "YYYY-MM-DD" string to avoid timezone shifts
+  const [year, month, day] = selectedDate.split('-').map(Number);
+  const dateObj = new Date(year, month - 1, day);
+  const displayDate = format(dateObj, "EEEE, dd 'de' MMMM yyyy", { locale: es });
 
   const renderStudentCard = (student: any) => {
     const isPresent = asistencias[student.id];
@@ -445,9 +451,10 @@ const TomarAsistencia = () => {
             <AlertDialogTitle className="text-center font-black text-foreground">
               Asistencia ya registrada
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
+            <AlertDialogDescription className="text-center text-slate-500">
               Ya existe un registro para el{" "}
-              <strong>{format(addDays(new Date(selectedDate), 1), "dd/MM/yyyy")}</strong> en este departamento.
+              <strong>{selectedDate.split('-').reverse().join('/')}</strong>
+              {" "}en {isDirector ? `la clase "${selectedClass}" de este departamento` : "esta clase"}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center">

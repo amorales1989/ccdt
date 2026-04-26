@@ -179,7 +179,8 @@ const HistorialAsistencia = () => {
         formattedStartDate,
         formattedEndDate,
         "",
-        departmentIdToUse
+        departmentIdToUse,
+        selectedClass !== "all" ? selectedClass : undefined
       );
 
       if (selectedClass !== "all") {
@@ -204,7 +205,8 @@ const HistorialAsistencia = () => {
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
       }
-      const attendanceData = await getAttendance(formattedDate, formattedDate, "", departmentIdToUse);
+      const classToFilter = (isAdminOrSecretaria && selectedClass !== "all") ? selectedClass : (!isAdminOrSecretaria ? (userClass || "") : undefined);
+      const attendanceData = await getAttendance(formattedDate, formattedDate, "", departmentIdToUse, classToFilter);
       if (isAdminOrSecretaria && selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
       } else if (!isAdminOrSecretaria) {

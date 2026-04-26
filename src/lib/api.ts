@@ -64,7 +64,8 @@ export const getAttendance = async (
   startDate?: string,
   endDate?: string,
   studentId?: string,
-  departmentId?: string | null
+  departmentId?: string | null,
+  assignedClass?: string
 ): Promise<Attendance[]> => {
   try {
     let query = supabase
@@ -92,8 +93,13 @@ export const getAttendance = async (
       query = query.eq('student_id', studentId);
     }
 
-    if (departmentId) {
+    if (departmentId !== undefined && departmentId !== null) {
       query = query.eq('department_id', departmentId);
+    }
+
+    if (assignedClass && assignedClass !== 'all') {
+      // Use ilike for case-insensitive matching
+      query = query.ilike('assigned_class', assignedClass);
     }
 
     const { data: attendances, error } = await query;
