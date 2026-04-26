@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
-import { getAttendance, getDepartmentByName } from "@/lib/api";
+import { getAttendance, getDepartmentByName, getDepartments } from "@/lib/api";
 import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X, Save, MoreVertical, PersonStanding, CheckCircle2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from 'xlsx';
@@ -27,14 +27,6 @@ const dateRangeOptions = [
   { label: "Rango personalizado", value: "custom" }
 ];
 
-const departments = [
-  { value: "escuelita_central", label: "Escuelita Central" },
-  { value: "pre_adolescentes", label: "Pre-adolescentes" },
-  { value: "adolescentes", label: "Adolescentes" },
-  { value: "jovenes", label: "Jóvenes" },
-  { value: "jovenes_adultos", label: "Jóvenes Adultos" },
-  { value: "adultos", label: "Adultos" }
-];
 
 const getFullName = (student: any): string => {
   if (!student) return "Miembro eliminado";
@@ -83,6 +75,11 @@ const HistorialAsistencia = () => {
       return null;
     },
     enabled: selectedDepartment !== "all"
+  });
+
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: getDepartments
   });
 
   const availableClasses = departmentData?.classes || [];
@@ -420,7 +417,7 @@ const HistorialAsistencia = () => {
         </div>
 
         {/* Stats and Filter Row */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-8">
+        <div className="flex flex-col xl:flex-row gap-4 mb-8">
           <div className="glass-card flex items-center gap-6 px-6 py-4 lg:w-auto overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
@@ -473,19 +470,24 @@ const HistorialAsistencia = () => {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 w-full py-2">
-                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[150px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 w-full py-2 px-1">
+                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[140px] flex-1">
                   <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
-                  <select
-                    value={selectedRange}
-                    onChange={(e) => handleDateRangeChange(e.target.value)}
-                    className="bg-transparent border-none outline-none text-[13px] w-full font-semibold cursor-pointer"
-                  >
-                    {dateRangeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                  </select>
+                  <Select value={selectedRange} onValueChange={handleDateRangeChange}>
+                    <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
+                      <SelectValue placeholder="Rango de fecha" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dateRangeOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value} className="text-xs font-medium">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[150px]">
+                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[140px] flex-1">
                   <div className="text-[10px] font-black text-primary shrink-0">DESDE</div>
                   <DatePickerField
                     value={startDate}
@@ -496,7 +498,7 @@ const HistorialAsistencia = () => {
                   />
                 </div>
 
-                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[150px]">
+                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[140px] flex-1">
                   <div className="text-[10px] font-black text-primary shrink-0">HASTA</div>
                   <DatePickerField
                     value={endDate}
@@ -508,34 +510,52 @@ const HistorialAsistencia = () => {
                 </div>
 
                 {isAdminOrSecretaria && (
-                  <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent">
+                  <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent flex-1">
                     <PersonStanding className="h-4 w-4 text-indigo-500 shrink-0" />
-                    <select
+                    <Select
                       value={selectedDepartment}
-                      onChange={(e) => {
-                        setSelectedDepartment(e.target.value);
+                      onValueChange={(val) => {
+                        setSelectedDepartment(val);
                         setSelectedClass("all");
                       }}
-                      className="bg-transparent border-none outline-none text-[13px] w-full font-semibold cursor-pointer"
                     >
-                      <option value="all">Todos los Deptos</option>
-                      {departments.map((dept) => <option key={dept.value} value={dept.value}>{dept.label}</option>)}
-                    </select>
+                      <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
+                        <SelectValue placeholder="Departamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="text-xs font-medium">Todos los Deptos</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.name} className="text-xs font-medium">
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
                 {(isAdminOrSecretaria || isDirector) && (
-                  <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent">
+                  <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent flex-1">
                     <Users className="h-4 w-4 text-blue-500 shrink-0" />
-                    <select
+                    <Select
                       value={selectedClass}
-                      onChange={(e) => setSelectedClass(e.target.value)}
+                      onValueChange={setSelectedClass}
                       disabled={selectedDepartment === "all"}
-                      className="bg-transparent border-none outline-none text-[13px] w-full font-semibold cursor-pointer"
                     >
-                      <option value="all">{isDirector ? "Seleccionar Clase" : "Todas las Clases"}</option>
-                      {availableClasses.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                      <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
+                        <SelectValue placeholder={isDirector ? "Clase" : "Todas las Clases"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="text-xs font-medium">
+                          {isDirector ? "Seleccionar Clase" : "Todas las Clases"}
+                        </SelectItem>
+                        {availableClasses.map((c) => (
+                          <SelectItem key={c} value={c} className="text-xs font-medium">
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
               </div>

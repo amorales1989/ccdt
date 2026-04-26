@@ -1,5 +1,12 @@
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { UserCheck, UserX, Calendar, Users, CheckCircle2, Save } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -347,19 +354,25 @@ const TomarAsistencia = () => {
               <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
                 <Users className="h-4 w-4 text-emerald-600" />
               </div>
-              <select
+              <Select
                 value={selectedDepartmentName || ""}
-                onChange={e => {
-                  setSelectedDepartmentName(e.target.value);
+                onValueChange={(val) => {
+                  setSelectedDepartmentName(val);
                   setSelectedClass("");
                   setAsistencias({});
                 }}
-                className="bg-transparent text-sm font-semibold text-gray-700 border-none outline-none w-full appearance-none cursor-pointer"
               >
-                {profile.departments.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
+                <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-sm font-semibold text-gray-700 w-full">
+                  <SelectValue placeholder="Seleccionar Depto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profile.departments.map(dept => (
+                    <SelectItem key={dept} value={dept} className="text-xs font-medium">
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -369,19 +382,27 @@ const TomarAsistencia = () => {
               <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
                 <Users className="h-4 w-4 text-indigo-600" />
               </div>
-              <select
+              <Select
                 value={selectedClass}
-                onChange={e => {
-                  setSelectedClass(e.target.value);
-                  setAsistencias({}); // Reset attendance when class changes
+                onValueChange={(val) => {
+                  setSelectedClass(val);
+                  setAsistencias({});
                 }}
-                className="bg-transparent text-sm font-semibold text-gray-700 border-none outline-none w-full appearance-none cursor-pointer"
               >
-                <option value="">Seleccionar Clase</option>
-                {deptClasses.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-sm font-semibold text-gray-700 w-full">
+                  <SelectValue placeholder="Seleccionar Clase" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_placeholder_" disabled className="text-xs font-medium text-muted-foreground">
+                    Seleccionar Clase
+                  </SelectItem>
+                  {deptClasses.map(c => (
+                    <SelectItem key={c} value={c} className="text-xs font-medium">
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>

@@ -121,7 +121,12 @@ const ListarAlumnos = () => {
   const students = React.useMemo(() => {
     if (!allStudents?.length) return [];
 
-    const filteredStudentsBase = allStudents.filter(s => !s.deleted_at);
+    const filteredStudentsBase = allStudents.filter(s => {
+      // Robust check for deleted status
+      if (s.deleted_at && s.deleted_at !== 'null') return false;
+      if ((s as any).is_deleted) return false;
+      return true;
+    });
 
     // Si es admin o secretaria, mostrar todos los miembros
     if (profile?.role === 'secretaria' || profile?.role === 'admin') {
@@ -250,13 +255,17 @@ const ListarAlumnos = () => {
       // 2. Obtener clases de los miembros existentes (para retrocompatibilidad)
       let studentClasses: string[] = [];
       if (allStudents) {
-        let studentsToAnalyze = allStudents;
+        // Filter out deleted students before collecting classes
+        const activeStudents = allStudents.filter(s => !s.deleted_at);
+        let studentsToAnalyze = activeStudents;
+
         if (filters.department) {
-          studentsToAnalyze = allStudents.filter(student =>
+          studentsToAnalyze = activeStudents.filter(student =>
             student.departments?.name === filters.department ||
             student.department === filters.department
           );
         }
+
         studentClasses = [...new Set(
           studentsToAnalyze
             .map(student => student.assigned_class)
