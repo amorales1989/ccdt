@@ -10,6 +10,7 @@ import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { DatePickerField } from "@/components/DatePickerField";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ const TomarAsistencia = () => {
   const [authorizedStudents, setAuthorizedStudents] = useState<Record<string, boolean>>({});
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [deptClasses, setDeptClasses] = useState<string[]>([]);
+  const [dateOpen, setDateOpen] = useState(false);
 
   const isDirector = profile?.role === "director" || profile?.role === "director_general" || profile?.role === "vicedirector";
   const isDirectorGeneral = profile?.role === "director_general";
@@ -329,15 +331,13 @@ const TomarAsistencia = () => {
           </div>
 
           {/* Date picker */}
-          <div className="glass-card flex items-center gap-3 px-4 py-3 sm:w-auto">
-            <div className="w-7 h-7 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
-              <Calendar className="h-4 w-4 text-primary" />
-            </div>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={e => setSelectedDate(e.target.value)}
-              className="bg-transparent text-sm font-semibold text-gray-700 border-none outline-none w-full"
+          <div className="glass-card flex items-center gap-3 px-4 py-3 sm:w-auto overflow-hidden">
+            <DatePickerField
+              value={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
+              onChange={(date) => setSelectedDate(date ? format(date, "yyyy-MM-dd") : "")}
+              open={dateOpen}
+              onOpenChange={setDateOpen}
+              className="bg-transparent border-none outline-none text-sm font-semibold text-gray-700 w-full"
             />
           </div>
 

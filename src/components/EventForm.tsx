@@ -12,7 +12,7 @@ import { format, parseISO, addDays } from "date-fns";
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { Clock, ChevronUp, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MuiDatePickerField } from "./MuiDatePickerField";
+import { DatePickerField } from "./DatePickerField";
 
 type EventFormData = Omit<Event, "id" | "created_at" | "updated_at"> & {
   departamento?: string;
@@ -366,7 +366,7 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
               <FormItem className="flex flex-col">
                 <FormLabel>Fecha Inicio</FormLabel>
                 <FormControl>
-                  <MuiDatePickerField
+                  <DatePickerField
                     value={field.value ? parseISO(field.value) : undefined}
                     onChange={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
                     open={startDateOpen}
@@ -385,7 +385,7 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
               <FormItem className="flex flex-col">
                 <FormLabel>Fecha Fin (Opción)</FormLabel>
                 <FormControl>
-                  <MuiDatePickerField
+                  <DatePickerField
                     value={field.value ? parseISO(field.value) : undefined}
                     onChange={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
                     open={endDateOpen}

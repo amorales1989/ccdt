@@ -10,7 +10,7 @@ import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from 'xlsx';
 import { useAuth } from "@/contexts/AuthContext";
-import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { DatePickerField } from "@/components/DatePickerField";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -460,7 +460,7 @@ const HistorialAsistencia = () => {
             {isEditMode ? (
               <div className="flex flex-col md:flex-row items-center gap-3 w-full">
                 <div className="flex items-center gap-3 w-full md:w-auto h-full pr-4 md:border-r border-gray-100">
-                  <MuiDatePickerField
+                  <DatePickerField
                     value={editDate}
                     onChange={handleEditDateSelect}
                     open={editDateOpen}
@@ -495,7 +495,7 @@ const HistorialAsistencia = () => {
 
                 <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[150px]">
                   <div className="text-[10px] font-black text-primary shrink-0">DESDE</div>
-                  <MuiDatePickerField
+                  <DatePickerField
                     value={startDate}
                     onChange={handleStartDateSelect}
                     open={startDateOpen}
@@ -506,7 +506,7 @@ const HistorialAsistencia = () => {
 
                 <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[150px]">
                   <div className="text-[10px] font-black text-primary shrink-0">HASTA</div>
-                  <MuiDatePickerField
+                  <DatePickerField
                     value={endDate}
                     onChange={handleEndDateSelect}
                     open={endDateOpen}
