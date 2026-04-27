@@ -25,6 +25,7 @@ import AutorizacionCampamento from "./pages/AutorizacionCampamento";
 import Material from "@/pages/Material";
 import Mantenimiento from "@/pages/Mantenimiento";
 import InformesPersonal from "./pages/InformesPersonal";
+import ResetPassword from "@/pages/ResetPassword";
 
 
 import Estadisticas from "./pages/Estadisticas";
@@ -140,6 +141,10 @@ function App() {
                     element: <NotFound />,
                   },
                 ],
+              },
+              {
+                path: "/reset-password",
+                element: <ResetPassword />,
               },
               {
                 path: "*",

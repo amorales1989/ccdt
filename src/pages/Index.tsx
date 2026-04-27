@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,10 @@ export default function Index() {
   const [companyName, setCompanyName] = useState("");
   const [showCompanyName, setShowCompanyName] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const { signIn, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -157,6 +161,32 @@ export default function Index() {
     return labels[dept] || dept;
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSendingReset(true);
+    try {
+      const redirectUrl = window.location.origin + '/reset-password';
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: redirectUrl,
+      });
+      if (error) throw error;
+      setResetEmailSent(true);
+      toast({
+        title: "Correo enviado",
+        description: "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.",
+      });
+    } catch (error: any) {
+      console.error("Error sending reset email:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo enviar el correo de recuperación. Intentá nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
   if (showDepartmentSelect) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 p-4 relative overflow-hidden">
@@ -251,7 +281,10 @@ export default function Index() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Contraseña</Label>
+                <div className="flex justify-between items-center ml-1">
+                  <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contraseña</Label>
+                  <button type="button" onClick={() => { setShowForgotPassword(true); setForgotEmail(email); }} className="text-xs text-purple-600 hover:text-purple-800 hover:underline transition-all">¿Olvidaste tu contraseña?</button>
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
@@ -292,6 +325,85 @@ export default function Index() {
           *Si no tienes una cuenta, por favor contacta al director o líder de tu área para solicitar acceso.
         </p>
       </div>
+
+      {/* Forgot Password Modal Overlay */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 shadow-2xl rounded-3xl p-8 sm:p-10">
+            {resetEmailSent ? (
+              <div className="text-center">
+                <div className="bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 p-4 rounded-2xl mb-5 shadow-inner inline-block">
+                  <CheckCircle2 className="h-10 w-10 text-green-600" />
+                </div>
+                <h2 className="text-xl font-bold mb-2">¡Correo enviado!</h2>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Si <span className="font-semibold text-foreground">{forgotEmail}</span> está registrado, recibirás un enlace para restablecer tu contraseña. Revisá también la carpeta de spam.
+                </p>
+                <Button
+                  onClick={() => { setShowForgotPassword(false); setResetEmailSent(false); setForgotEmail(""); }}
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold shadow-lg"
+                >
+                  Volver al inicio de sesión
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col items-center mb-6 text-center">
+                  <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 p-3 rounded-2xl mb-4 shadow-inner">
+                    <Mail className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <h2 className="text-xl font-bold mb-1">Recuperar Contraseña</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Ingresá tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
+                  </p>
+                </div>
+
+                <form onSubmit={handleForgotPassword} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="forgotEmail" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Correo Electrónico</Label>
+                    <div className="relative">
+                      <Input
+                        id="forgotEmail"
+                        type="email"
+                        placeholder="tu@correo.com"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        required
+                        className="h-12 pl-4 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-base shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300"
+                    disabled={isSendingReset}
+                  >
+                    {isSendingReset ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      "Enviar enlace de recuperación"
+                    )}
+                  </Button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setShowForgotPassword(false); setResetEmailSent(false); }}
+                    className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors pt-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Volver al inicio de sesión
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
