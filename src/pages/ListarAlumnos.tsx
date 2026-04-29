@@ -698,9 +698,18 @@ const ListarAlumnos = () => {
     if (!studentToEdit) return;
     setIsUpdating(true);
     try {
-      console.log("Raw form values:", values);
+      const payload = {
+        ...values,
+        birthdate: values.birthdate || null,
+        document_number: values.document_number || null,
+        phone: values.phone || null,
+        address: values.address || null,
+        assigned_class: values.assigned_class || null,
+      };
 
-      await updateStudent(studentToEdit.id, values);
+      console.log("Raw form values:", payload);
+
+      await updateStudent(studentToEdit.id, payload);
       toast({
         title: "Miembro actualizado",
         description: "El miembro ha sido actualizado correctamente.",

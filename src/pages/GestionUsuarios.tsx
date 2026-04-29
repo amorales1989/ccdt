@@ -312,10 +312,10 @@ const GestionUsuarios = () => {
           departments: deptsToUpdate,
           department_id: departmentId,
           assigned_class: updatedUser.role === 'director_general' ? "" : selectedClass,
-          birthdate: updatedUser.birthdate,
-          document_number: updatedUser.document_number,
-          gender: updatedUser.gender,
-          phone: updatedUser.phone
+          birthdate: updatedUser.birthdate || null,
+          document_number: updatedUser.document_number || null,
+          gender: updatedUser.gender || null,
+          phone: updatedUser.phone || null
         })
         .eq('id', updatedUser.id)
         .eq('company_id', companyId);
