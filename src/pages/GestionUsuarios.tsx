@@ -258,15 +258,16 @@ const GestionUsuarios = () => {
 
   const updateUserMutation = useMutation({
     mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
-      const deptsToUpdate = updatedUser.role === 'director_general' ? selectedDepartments : [selectedDepartment as DepartmentType];
+      const isOnlyConserje = selectedRoles.length === 1 && selectedRoles[0] === 'conserje';
+      const deptsToUpdate = updatedUser.role === 'director_general' ? selectedDepartments : (selectedDepartment ? [selectedDepartment as DepartmentType] : []);
       const primaryDeptName = deptsToUpdate[0];
       const selectedDepartmentObject = departments.find(d => d.name === primaryDeptName);
 
-      if (!selectedDepartmentObject && updatedUser.role !== 'admin') {
+      if (!selectedDepartmentObject && updatedUser.role !== 'admin' && !isOnlyConserje) {
         throw new Error("Departamento no válido");
       }
 
-      const departmentId = selectedDepartmentObject?.id;
+      const departmentId = selectedDepartmentObject?.id || null;
 
       const updateData: any = {
         action: 'update',
@@ -643,7 +644,7 @@ const GestionUsuarios = () => {
                                       <div className="grid grid-cols-2 gap-4">
                                         <div>
                                           <Label htmlFor="document_number">DNI / Documento</Label>
-                                          <Input id="document_number" value={selectedUser?.document_number || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, document_number: e.target.value } : null)} disabled={updateUserMutation.isPending} />
+                                          <Input id="document_number" value={selectedUser?.document_number || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, document_number: e.target.value.replace(/\D/g, '') } : null)} disabled={updateUserMutation.isPending} />
                                         </div>
                                         <div>
                                           <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
@@ -652,7 +653,7 @@ const GestionUsuarios = () => {
                                       </div>
                                       <div>
                                         <Label htmlFor="phone">Teléfono</Label>
-                                        <Input id="phone" value={selectedUser?.phone || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, phone: e.target.value } : null)} disabled={updateUserMutation.isPending} />
+                                        <Input id="phone" value={selectedUser?.phone || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, phone: e.target.value.replace(/\D/g, '') } : null)} disabled={updateUserMutation.isPending} />
                                       </div>
                                       <div>
                                         <Label htmlFor="gender">Género</Label>
@@ -708,6 +709,7 @@ const GestionUsuarios = () => {
                                       <div>
                                         <Label htmlFor="department">
                                           {selectedRoles.includes('director_general') ? "Departamentos Asignados" : "Departamento"}
+                                          {selectedRoles.length === 1 && selectedRoles.includes('conserje') && " (No requerido)"}
                                         </Label>
 
                                         {selectedRoles.includes('director_general') ? (
@@ -735,12 +737,15 @@ const GestionUsuarios = () => {
                                           </div>
                                         ) : (
                                           <Select
-                                            value={selectedDepartment || undefined}
-                                            onValueChange={(value: DepartmentType) => setSelectedDepartment(value)}
+                                            value={selectedDepartment || "none"}
+                                            onValueChange={(value) => setSelectedDepartment(value === "none" ? null : value as DepartmentType)}
                                             disabled={(isDirector || isVicedirector) || updateUserMutation.isPending}
                                           >
                                             <SelectTrigger><SelectValue placeholder="Seleccionar departamento" /></SelectTrigger>
                                             <SelectContent>
+                                              <SelectItem value="none" className="text-slate-500 italic">
+                                                Sin Departamento
+                                              </SelectItem>
                                               {departments.filter(d => (!isDirector && !isVicedirector && !isDirectorGeneral) || profile?.departments?.includes(d.name)).map((dept) => (
                                                 <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
                                               ))}

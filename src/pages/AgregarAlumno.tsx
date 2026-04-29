@@ -481,7 +481,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
                 id="phone"
                 value={formData.phone}
                 onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
+                  setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })
                 }
                 placeholder="Sin 0 ni 15 al inicio, ej: 11xxxxxxxx"
               />

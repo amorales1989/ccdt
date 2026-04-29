@@ -1649,7 +1649,16 @@ const ListarAlumnos = () => {
                       <FormItem>
                         <FormLabel>Teléfono</FormLabel>
                         <FormControl>
-                          <Input placeholder="Teléfono" {...field} />
+                          <Input
+                            placeholder="Teléfono"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              field.onChange(value);
+                            }}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
