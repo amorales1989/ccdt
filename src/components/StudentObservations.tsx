@@ -108,7 +108,7 @@ export const StudentObservations = ({ studentId }: StudentObservationsProps) => 
                 <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-amber-50 border border-amber-200/60 rounded-xl text-amber-900">
                     <Info className="h-4 w-4 shrink-0 text-amber-500" />
                     <p className="text-[11px] sm:text-xs font-medium italic leading-snug">
-                        En caso de tratarse de información sensible tratarlo directamente con el director responsable.
+                        En caso de tratarse de información sensible dirigirse al director responsable.
                     </p>
                 </div>
                 <Textarea

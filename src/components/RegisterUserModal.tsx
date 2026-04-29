@@ -268,6 +268,36 @@ export function RegisterUserModal({ children, onSuccess }: RegisterUserModalProp
                 if (profileUpdateError) {
                     console.error("Error updating profile after creation:", profileUpdateError);
                 }
+
+                // Lógica de "Obreros" para asistencia de personal
+                const hasMaestroRoles = roles.some(r => ['maestro', 'colaborador', 'lider'].includes(r as string));
+                const hasObrerosClass = departmentObj?.classes?.includes("Obreros");
+
+                if (hasMaestroRoles && hasObrerosClass && department_id) {
+                    const { data: existingStudent } = await supabase
+                        .from('students')
+                        .select('id')
+                        .eq('profile_id', newUser.id)
+                        .maybeSingle();
+
+                    if (existingStudent) {
+                        await supabase.from('students').update({ assigned_class: 'Obreros' }).eq('id', existingStudent.id);
+                    } else {
+                        await supabase.from('students').insert({
+                            first_name: firstName,
+                            last_name: lastName || "",
+                            phone: phone || null,
+                            department: departmentObj?.name || null,
+                            department_id: department_id,
+                            assigned_class: 'Obreros',
+                            gender: gender || "masculino",
+                            birthdate: birthdate || null,
+                            document_number: documentNumber || null,
+                            profile_id: newUser.id,
+                            company_id: getPersistentCompanyId()
+                        });
+                    }
+                }
             }
 
             toast({

@@ -127,7 +127,7 @@ export const BirthdayList: React.FC<BirthdayListProps> = ({ students }) => {
                         {filteredAndSortedStudents.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={4} className="text-center py-6 text-slate-500 font-medium">
-                                    No hay miembros con cumpleaños registrados en este rango.
+                                    No hay miembros con cumpleaños registrados en este mes.
                                 </TableCell>
                             </TableRow>
                         ) : (

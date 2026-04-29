@@ -321,6 +321,36 @@ const GestionUsuarios = () => {
         .eq('company_id', companyId);
 
       if (profileError) throw profileError;
+
+      // Lógica de "Obreros" para asistencia de personal
+      const hasMaestroRoles = selectedRoles.some(r => ['maestro', 'colaborador', 'lider'].includes(r as string));
+      const hasObrerosClass = selectedDepartmentObject?.classes?.includes("Obreros");
+
+      if (hasMaestroRoles && hasObrerosClass && departmentId) {
+        const { data: existingStudent } = await supabase
+          .from('students')
+          .select('id')
+          .eq('profile_id', updatedUser.id)
+          .maybeSingle();
+
+        if (existingStudent) {
+          await supabase.from('students').update({ assigned_class: 'Obreros' }).eq('id', existingStudent.id);
+        } else {
+          await supabase.from('students').insert({
+            first_name: updatedUser.first_name,
+            last_name: updatedUser.last_name || "",
+            phone: updatedUser.phone || null,
+            department: selectedDepartmentObject?.name || null,
+            department_id: departmentId,
+            assigned_class: 'Obreros',
+            gender: updatedUser.gender || "masculino",
+            birthdate: updatedUser.birthdate || null,
+            document_number: updatedUser.document_number || null,
+            profile_id: updatedUser.id,
+            company_id: companyId
+          });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });

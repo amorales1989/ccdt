@@ -1294,10 +1294,10 @@ const ListarAlumnos = () => {
                       <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4 text-center">Departamento</TableCell>
                     )}
                     <TableCell
-                      className="font-bold text-slate-800 dark:text-slate-200 cursor-pointer hover:text-primary transition-colors group p-4"
+                      className="font-bold text-slate-800 dark:text-slate-200 cursor-pointer hover:text-primary transition-colors group p-4 text-center"
                       onClick={() => handleSort('age')}
                     >
-                      <div className="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                      <div className="flex items-center justify-center gap-1.5 uppercase tracking-wider text-[11px]">
                         Edad
                         <div className={`transition-opacity ${sortConfig?.key === 'age' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
                           {sortConfig?.key === 'age' && sortConfig.direction === 'desc' ? <CircleChevronUp className="h-4 w-4" /> : <CircleChevronDown className="h-4 w-4" />}
@@ -1592,7 +1592,6 @@ const ListarAlumnos = () => {
                           <SelectContent>
                             <SelectItem value="masculino">Masculino</SelectItem>
                             <SelectItem value="femenino">Femenino</SelectItem>
-                            <SelectItem value="otro">Otro</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
