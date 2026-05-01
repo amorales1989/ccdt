@@ -33,6 +33,8 @@ const PromoverAlumnos = () => {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
+  const isDirectorOrVice = profile?.role === "director" || profile?.role === "vicedirector";
+  const canFilterOrigin = isAdminOrSecretaria || isDirectorOrVice;
 
   const userDepartment = profile?.departments?.[0] || null;
   const userClass = profile?.assigned_class || null;
@@ -66,9 +68,11 @@ const PromoverAlumnos = () => {
 
       if (userClass) {
         setSelectedClass(userClass);
+      } else if (isDirectorOrVice) {
+        setSelectedClass("all");
       }
     }
-  }, [isAdminOrSecretaria, userDepartment, userClass]);
+  }, [isAdminOrSecretaria, userDepartment, userClass, isDirectorOrVice]);
 
   const { data: studentAuthorizations = [], refetch: refetchAuthorizations } = useQuery({
     queryKey: ["student-authorizations"],
@@ -572,7 +576,7 @@ const PromoverAlumnos = () => {
             <div className="space-y-5">
 
               {/* Filtros de origen */}
-              {isAdminOrSecretaria && (
+              {canFilterOrigin && (
                 <div className="glass-card p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-primary mb-4 flex items-center gap-2">
                     <ListChecks className="h-3.5 w-3.5" /> Departamento de origen
@@ -580,7 +584,7 @@ const PromoverAlumnos = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
-                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange}>
+                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange} disabled={!isAdminOrSecretaria}>
                         <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                           <SelectValue placeholder="Selecciona un departamento" />
                         </SelectTrigger>
@@ -611,7 +615,7 @@ const PromoverAlumnos = () => {
                 </div>
               )}
 
-              {isAdminOrSecretaria && !selectedDepartmentId ? (
+              {canFilterOrigin && !selectedDepartmentId ? (
                 <div className="glass-card p-12 text-center">
                   <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                     <FolderUp className="h-8 w-8 text-slate-400" />
@@ -622,15 +626,15 @@ const PromoverAlumnos = () => {
               ) : (
                 <>
                   {/* Contexto del filtro activo */}
-                  {((!isAdminOrSecretaria && userDepartment) || (isAdminOrSecretaria && selectedDepartment)) && (
+                  {((!canFilterOrigin && userDepartment) || (canFilterOrigin && selectedDepartment)) && (
                     <div className="flex items-center gap-2 px-1">
                       <span className="text-xs text-slate-500 font-medium">Mostrando miembros de:</span>
                       <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-black">
-                        {formatDepartment(isAdminOrSecretaria ? selectedDepartment : userDepartment)}
+                        {formatDepartment(canFilterOrigin ? selectedDepartment : userDepartment)}
                       </span>
-                      {(isAdminOrSecretaria ? selectedClass : userClass) && (
+                      {(canFilterOrigin ? selectedClass : userClass) && (
                         <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
-                          Clase: {isAdminOrSecretaria ? selectedClass : userClass}
+                          Clase: {(canFilterOrigin ? selectedClass : userClass) === "all" ? "Todas las clases" : (canFilterOrigin ? selectedClass : userClass)}
                         </span>
                       )}
                     </div>
@@ -802,7 +806,7 @@ const PromoverAlumnos = () => {
             <div className="space-y-5">
 
               {/* Filtros de origen */}
-              {isAdminOrSecretaria && (
+              {canFilterOrigin && (
                 <div className="glass-card p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-primary mb-4 flex items-center gap-2">
                     <ListChecks className="h-3.5 w-3.5" /> Departamento de origen
@@ -810,7 +814,7 @@ const PromoverAlumnos = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
-                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange}>
+                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange} disabled={!isAdminOrSecretaria}>
                         <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                           <SelectValue placeholder="Selecciona un departamento" />
                         </SelectTrigger>
@@ -841,7 +845,7 @@ const PromoverAlumnos = () => {
                 </div>
               )}
 
-              {isAdminOrSecretaria && !selectedDepartmentId ? (
+              {canFilterOrigin && !selectedDepartmentId ? (
                 <div className="glass-card p-12 text-center">
                   <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                     <UserCheck className="h-8 w-8 text-slate-400" />

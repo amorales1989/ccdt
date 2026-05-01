@@ -91,8 +91,8 @@ const ListarAlumnos = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const profile = useAuth().profile;
-  const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'director' || profile?.role === 'director_general';
-  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'director_general';
+  const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector';
+  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector';
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -150,7 +150,7 @@ const ListarAlumnos = () => {
     let filteredList = filteredStudentsBase.filter(student => {
       // Caso 1: Miembro regular de mi departamento (y clase si soy maestro)
       const isRegular = (
-        ((profile?.role === 'director' || profile?.role === 'director_general') &&
+        ((profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') &&
           (profile?.departments?.includes(student.departments?.name || student.department) || student.department_id === profile?.department_id)) ||
         (profile?.department_id && profile?.assigned_class &&
           student.department_id === profile.department_id &&
@@ -248,7 +248,7 @@ const ListarAlumnos = () => {
     queryFn: async () => {
       // 1. Obtener clases del departamento si está seleccionado
       const selectedDeptObj = departments?.find(d =>
-        d.name === filters.department || (d.id === profile?.department_id && profile?.role === 'director')
+        d.name === filters.department || (d.id === profile?.department_id && (profile?.role === 'director' || profile?.role === 'vicedirector'))
       );
       const deptClasses = selectedDeptObj?.classes || [];
 
@@ -348,7 +348,7 @@ const ListarAlumnos = () => {
         class: classParam || ''
       }));
       setIsFilterOpen(true);
-    } else if ((profile?.role === 'director' || profile?.role === 'director_general') && departments) {
+    } else if ((profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') && departments) {
       if (isFilterOpen) return;
 
       const directorDept = profile.department_id ? departments.find(d => d.id === profile.department_id) : null;
@@ -378,7 +378,7 @@ const ListarAlumnos = () => {
 
       // Obtener asistencias del año actual
       // Si el usuario tiene un departamento asignado, filtramos por ese departamento
-      const attendanceClassFilter = (profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general')
+      const attendanceClassFilter = (profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector')
         ? (filters.class || undefined)
         : (profile?.assigned_class || undefined);
 
@@ -886,7 +886,7 @@ const ListarAlumnos = () => {
   };
 
   const handleClearFilters = () => {
-    if (profile?.role === 'director' && profile?.department_id && departments) {
+    if ((profile?.role === 'director' || profile?.role === 'vicedirector') && profile?.department_id && departments) {
       const directorDept = departments.find(d => d.id === profile.department_id);
       setFilters({
         name: '',
@@ -1170,7 +1170,7 @@ const ListarAlumnos = () => {
                 </Button>
               </CustomTooltip>
             )}
-            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'lider' || profile?.role === 'maestro') && (
+            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector' || profile?.role === 'lider' || profile?.role === 'maestro') && (
               <CustomTooltip title="Reporte de Asistencia (PDF)">
                 <Button
                   variant="outline"
@@ -1187,7 +1187,7 @@ const ListarAlumnos = () => {
               </CustomTooltip>
             )}
 
-            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general') && (
+            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') && (
               <CustomTooltip title="Exportar a Excel">
                 <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95" onClick={exportToExcel}>
                   <FileDown className="h-4 w-4" />
@@ -1698,7 +1698,7 @@ const ListarAlumnos = () => {
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
-                          disabled={profile?.role === 'maestro' || profile?.role === 'director'}
+                          disabled={profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'vicedirector'}
                         >
                           <FormControl>
                             <SelectTrigger>
