@@ -254,41 +254,91 @@ serve(async (req) => {
             try {
               const departmentId = u.department ? deptMap[u.department] : null;
 
-              const { data, error } = await supabaseClient.auth.admin.createUser({
+              const userPassword = u.password || '123456';
+              const userMetadata = {
+                first_name: u.first_name,
+                last_name: u.last_name || '',
+                role: u.role || 'maestro',
+                roles: u.roles || [u.role || 'maestro'],
+                departments: u.department ? [u.department] : [],
+                department_id: departmentId,
+                assigned_class: u.assigned_class || '',
+                phone: u.phone,
+                birthdate: u.birthdate,
+                address: u.address,
+                document_number: u.document_number,
+                company_id: u.company_id
+              };
+
+              let { data, error } = await supabaseClient.auth.admin.createUser({
                 email: u.email,
-                password: u.password || Math.random().toString(36).slice(-10),
+                password: userPassword,
                 email_confirm: true,
-                user_metadata: {
-                  first_name: u.first_name,
-                  last_name: u.last_name || '',
-                  role: u.role || 'maestro',
-                  roles: u.roles || [u.role || 'maestro'],
-                  departments: u.department ? [u.department] : [],
-                  department_id: departmentId,
-                  assigned_class: u.assigned_class || '',
-                  company_id: u.company_id
-                }
+                user_metadata: userMetadata
               });
 
+              if (error && error.message.toLowerCase().includes('already registered')) {
+                console.log(`User ${u.email} already exists, attempting to update password and metadata.`);
+
+                // Find existing user to get their ID
+                const { data: profileData } = await supabaseClient
+                  .from('profiles')
+                  .select('id')
+                  .eq('email', u.email)
+                  .single();
+
+                if (profileData?.id) {
+                  const { data: updateData, error: updateError } = await supabaseClient.auth.admin.updateUserById(
+                    profileData.id,
+                    {
+                      password: userPassword,
+                      user_metadata: userMetadata
+                    }
+                  );
+                  data = updateData;
+                  error = updateError;
+                } else {
+                  // Fallback to searching in Auth if not in profiles
+                  const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers();
+                  const authUser = users?.find(user => user.email === u.email);
+                  if (authUser) {
+                    const { data: updateData, error: updateError } = await supabaseClient.auth.admin.updateUserById(
+                      authUser.id,
+                      {
+                        password: userPassword,
+                        user_metadata: userMetadata
+                      }
+                    );
+                    data = updateData;
+                    error = updateError;
+                  }
+                }
+              }
+
               if (error) {
-                console.error(`Error creating user ${u.email}:`, error.message);
+                console.error(`Error processing user ${u.email}:`, error.message);
                 return { email: u.email, success: false, error: error.message };
               }
 
-              // Sync with profiles table
+              // Sync with profiles table - Use upsert to handle potential race conditions or missing rows
               const { error: profileError } = await supabaseClient
                 .from('profiles')
-                .update({
+                .upsert({
+                  id: data.user.id,
                   first_name: u.first_name,
                   last_name: u.last_name || '',
+                  email: u.email,
                   role: u.role || 'maestro',
                   roles: u.roles || [u.role || 'maestro'],
                   departments: u.department ? [u.department] : [],
                   department_id: departmentId,
                   assigned_class: u.assigned_class || '',
+                  phone: u.phone ?? null,
+                  birthdate: u.birthdate ?? null,
+                  address: u.address ?? null,
+                  document_number: u.document_number ?? null,
                   company_id: u.company_id
-                })
-                .eq('id', data.user.id);
+                }, { onConflict: 'id' });
 
               if (profileError) {
                 console.error(`Error syncing profile for bulk-create user ${u.email}:`, profileError);
