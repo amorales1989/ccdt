@@ -81,7 +81,8 @@ const Home = () => {
   }, [isCalendarDepartment, navigate, location.pathname, profile]);
   // Solo cargar miembros si NO es departamento calendario
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['students', 'stats', profile?.id, companyId], // Usar prefix 'students' para que se invalide correctamente
+    // Incluir role/department_id/assigned_class para que React Query refetchee al cambiar de assignment
+    queryKey: ['students', 'stats', profile?.id, companyId, profile?.role, profile?.department_id, profile?.assigned_class],
     queryFn: async () => {
       if (!profile) return [];
 
@@ -91,7 +92,7 @@ const Home = () => {
 
         // Solo filtramos por clase si el usuario es maestro o líder
         // Los directores deben poder ver todas las clases de su departamento
-        if (profile.role === 'maestro' || profile.role === 'lider' || profile.role === 'colaborador') {
+        if (profile.role === 'maestro' || profile.role === 'lider' || profile.role === 'colaborador' || profile.role === 'ayudante') {
           params.assigned_class = profile.assigned_class;
         }
       }

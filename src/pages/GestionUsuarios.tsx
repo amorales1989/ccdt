@@ -47,6 +47,7 @@ type Profile = {
   birthdate?: string;
   document_number?: string;
   gender?: string;
+  assignments?: any[];
 };
 
 const GestionUsuarios = () => {
@@ -57,11 +58,6 @@ const GestionUsuarios = () => {
   const navigate = useNavigate();
   const { companyId } = useCompany();
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
-  const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>("");
@@ -121,6 +117,10 @@ const GestionUsuarios = () => {
         .select('*')
         .eq('company_id', companyId);
 
+      if (profiles) {
+        console.log("DEBUG: First profile data:", profiles[0]);
+      }
+
       if (error) {
         console.error("Error fetching profiles:", error);
         throw error;
@@ -141,7 +141,8 @@ const GestionUsuarios = () => {
           if (!adminData) return null;
           return {
             ...profile,
-            email: adminData?.email || ''
+            email: adminData?.email || '',
+            assignments: adminData?.user_metadata?.assignments || profile.assignments || [],
           };
         })
         .filter((user) => user !== null) as Profile[];
@@ -234,7 +235,7 @@ const GestionUsuarios = () => {
         .update({ assigned_class: null })
         .eq('company_id', companyId)
         .contains('departments', [department])
-        .in('role', ['maestro', 'lider', 'colaborador']);
+        .in('role', ['maestro', 'lider', 'colaborador', 'ayudante']);
 
       if (error) throw error;
       return data;
@@ -256,124 +257,6 @@ const GestionUsuarios = () => {
     },
   });
 
-  const updateUserMutation = useMutation({
-    mutationFn: async (updatedUser: Profile & { newEmail?: string; newPassword?: string }) => {
-      const isOnlyConserje = selectedRoles.length === 1 && selectedRoles[0] === 'conserje';
-      const deptsToUpdate = updatedUser.role === 'director_general' ? selectedDepartments : (selectedDepartment ? [selectedDepartment as DepartmentType] : []);
-      const primaryDeptName = deptsToUpdate[0];
-      const selectedDepartmentObject = departments.find(d => d.name === primaryDeptName);
-
-      if (!selectedDepartmentObject && updatedUser.role !== 'admin' && !isOnlyConserje) {
-        throw new Error("Departamento no válido");
-      }
-
-      const departmentId = selectedDepartmentObject?.id || null;
-
-      const updateData: any = {
-        action: 'update',
-        userId: updatedUser.id,
-        userData: {
-          first_name: updatedUser.first_name,
-          last_name: updatedUser.last_name,
-          role: selectedRoles.length > 0 ? selectedRoles[0] : updatedUser.role,
-          roles: selectedRoles,
-          departments: deptsToUpdate,
-          department_id: departmentId,
-          assigned_class: updatedUser.role === 'director_general' ? "" : selectedClass,
-          company_id: companyId,
-          birthdate: updatedUser.birthdate,
-          document_number: updatedUser.document_number,
-          gender: updatedUser.gender,
-          phone: updatedUser.phone
-        }
-      };
-
-      if (updatedUser.newEmail) {
-        updateData.userData.email = updatedUser.newEmail;
-      }
-
-      if (updatedUser.newPassword) {
-        updateData.userData.password = updatedUser.newPassword;
-      }
-
-      const { error: adminError } = await supabase.functions.invoke('manage-users', {
-        body: updateData
-      });
-
-      if (adminError) throw adminError;
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: updatedUser.first_name,
-          last_name: updatedUser.last_name,
-          role: selectedRoles.length > 0 ? selectedRoles[0] : updatedUser.role,
-          roles: selectedRoles,
-          departments: deptsToUpdate,
-          department_id: departmentId,
-          assigned_class: updatedUser.role === 'director_general' ? "" : selectedClass,
-          birthdate: updatedUser.birthdate || null,
-          document_number: updatedUser.document_number || null,
-          gender: updatedUser.gender || null,
-          phone: updatedUser.phone || null
-        })
-        .eq('id', updatedUser.id)
-        .eq('company_id', companyId);
-
-      if (profileError) throw profileError;
-
-      // Lógica de "Obreros" para asistencia de personal
-      const hasMaestroRoles = selectedRoles.some(r => ['maestro', 'colaborador', 'lider'].includes(r as string));
-      const hasObrerosClass = selectedDepartmentObject?.classes?.includes("Obreros");
-
-      if (hasMaestroRoles && hasObrerosClass && departmentId) {
-        const { data: existingStudent } = await supabase
-          .from('students')
-          .select('id')
-          .eq('profile_id', updatedUser.id)
-          .maybeSingle();
-
-        if (existingStudent) {
-          await supabase.from('students').update({ assigned_class: 'Obreros' }).eq('id', existingStudent.id);
-        } else {
-          await supabase.from('students').insert({
-            first_name: updatedUser.first_name,
-            last_name: updatedUser.last_name || "",
-            phone: updatedUser.phone || null,
-            department: selectedDepartmentObject?.name || null,
-            department_id: departmentId,
-            assigned_class: 'Obreros',
-            gender: updatedUser.gender || "masculino",
-            birthdate: updatedUser.birthdate || null,
-            document_number: updatedUser.document_number || null,
-            profile_id: updatedUser.id,
-            company_id: companyId
-          });
-        }
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast({
-        title: "Usuario actualizado",
-        description: "El usuario ha sido actualizado exitosamente"
-      });
-      setIsEditing(false);
-      setNewEmail("");
-      setNewPassword("");
-      setSelectedDepartment(null);
-      setSelectedDepartments([]);
-      setSelectedClass("");
-    },
-    onError: (error) => {
-      console.error("Error updating user:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el usuario",
-        variant: "destructive"
-      });
-    }
-  });
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -413,7 +296,7 @@ const GestionUsuarios = () => {
       if (!userDepts.includes(listDepartmentFilter as DepartmentType)) {
         return false;
       }
-    } else if (profile?.role === 'director' || profile?.role === 'director_general') {
+    } else if (profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') {
       const userDepts = user.departments || [];
       const managedDepts = profile?.departments || [];
       // Si el usuario no tiene ningún departamento en común con los del director, filtrar
@@ -444,7 +327,7 @@ const GestionUsuarios = () => {
 
   // Assignment logic filtering (accounts for pending local changes)
   const assignmentFilteredUsers = users.filter(user =>
-    (user.role === 'maestro' || user.role === 'lider' || user.role === 'colaborador') &&
+    (user.role === 'maestro' || user.role === 'lider' || user.role === 'colaborador' || user.role === 'ayudante') &&
     user.departments?.includes(assignmentDept as DepartmentType)
   );
 
@@ -471,7 +354,7 @@ const GestionUsuarios = () => {
 
   return (
     <div className="animate-fade-in space-y-4 px-4 md:px-6 pb-8 pt-2 md:pt-4 max-w-[1600px] mx-auto relative overflow-hidden">
-      {(updateUserMutation.isPending || deleteUserMutation.isPending || saveClassMutation.isPending || bulkResetMutation.isPending) && (
+      {(deleteUserMutation.isPending || saveClassMutation.isPending || bulkResetMutation.isPending) && (
         <LoadingOverlay message="Guardando..." />
       )}
       <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/10 blur-3xl pointer-events-none"></div>
@@ -549,10 +432,10 @@ const GestionUsuarios = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    {profile?.role !== 'director' && <SelectItem value="all">Todos los Deptos.</SelectItem>}
+                    {profile?.role !== 'director' && profile?.role !== 'vicedirector' && <SelectItem value="all">Todos los Deptos.</SelectItem>}
                     {departments.filter(dept => {
                       if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
-                      if (profile?.role === 'director' || profile?.role === 'director_general') return profile.departments?.includes(dept.name as DepartmentType);
+                      if (profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') return profile.departments?.includes(dept.name as DepartmentType);
                       return false;
                     }).map((dept) => (
                       <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
@@ -579,9 +462,7 @@ const GestionUsuarios = () => {
                       <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
                         <TableRow>
                           <TableHead className="font-bold py-4">Usuario</TableHead>
-                          <TableHead className="font-bold py-4">Rol</TableHead>
-                          <TableHead className="font-bold py-4 hidden md:table-cell">Departamento</TableHead>
-                          <TableHead className="font-bold py-4 hidden sm:table-cell">Clase</TableHead>
+                          <TableHead className="font-bold py-4 hidden md:table-cell">Asignaciones</TableHead>
                           <TableHead className="text-right font-bold py-4">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -594,226 +475,53 @@ const GestionUsuarios = () => {
                                 <span className="text-xs text-muted-foreground">{user.email || "Sin email"}</span>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {(user.roles && user.roles.length > 0 ? user.roles : [user.role]).map((r, i) => (
-                                  <Badge key={i} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50 capitalize text-[10px] font-black tracking-wider">
-                                    {r}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </TableCell>
                             <TableCell className="hidden md:table-cell">
-                              <div className="flex flex-wrap gap-1">
-                                {user.departments?.length ? user.departments.map((dept, i) => (
-                                  <Badge key={i} variant="outline" className="text-[9px] h-5 bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/40">
-                                    {dept}
-                                  </Badge>
-                                )) : (
-                                  <span className="text-xs text-muted-foreground italic">Ninguno</span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
-                              {user.assigned_class ? (
-                                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-900/40 text-[10px]">
-                                  {user.assigned_class}
-                                </Badge>
+                              {user.assignments && user.assignments.length > 0 ? (
+                                <div className="flex flex-col gap-1">
+                                  {user.assignments.map((a: any, i: number) => (
+                                    <div key={i} className="flex items-center gap-1 flex-wrap">
+                                      <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 text-[9px] h-4 capitalize">
+                                        {a.role}
+                                      </Badge>
+                                      <span className="text-xs text-slate-600 dark:text-slate-400">{a.department}</span>
+                                      {a.assigned_class && (
+                                        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 text-[9px] h-4">
+                                          {a.assigned_class}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
                               ) : (
-                                <span className="text-xs text-muted-foreground">-</span>
+                                <div className="flex flex-col gap-1">
+                                  {(user.roles && user.roles.length > 0 ? user.roles : [user.role]).map((r, i) => (
+                                    <div key={i} className="flex items-center gap-1 flex-wrap">
+                                      <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[9px] h-4 capitalize">{r}</Badge>
+                                      {user.departments?.[i] && (
+                                        <span className="text-xs text-slate-600 dark:text-slate-400">{user.departments[i]}</span>
+                                      )}
+                                      {i === 0 && user.assigned_class && (
+                                        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[9px] h-4">{user.assigned_class}</Badge>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {!user.departments?.length && (
+                                    <span className="text-xs text-muted-foreground italic">Sin asignar</span>
+                                  )}
+                                </div>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
-                                <Dialog open={isEditing && selectedUser?.id === user.id} onOpenChange={(open) => {
-                                  if (!open) {
-                                    setIsEditing(false);
-                                    setSelectedUser(null);
-                                  }
-                                }}>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 rounded-full transition-colors"
-                                      onClick={() => {
-                                        setSelectedUser(user);
-                                        setSelectedRoles(user.roles && user.roles.length > 0 ? user.roles : [user.role]);
-                                        setIsEditing(true);
-                                        setNewEmail(user.email || "");
-                                        setSelectedDepartment(user.departments?.[0] || null);
-                                        setSelectedDepartments(user.departments || []);
-                                        setSelectedClass(user.assigned_class || "");
-                                      }}
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="w-[95vw] max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-purple-200/50 dark:border-slate-700/50 rounded-3xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
-                                    <DialogHeader>
-                                      <DialogTitle className="text-2xl flex items-center gap-2">
-                                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl text-purple-600 dark:text-purple-400">
-                                          <Pencil className="h-5 w-5" />
-                                        </div>
-                                        Editar Usuario
-                                      </DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-4">
-                                      <div>
-                                        <Label htmlFor="first_name">Nombre</Label>
-                                        <Input id="first_name" value={selectedUser?.first_name || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, first_name: e.target.value } : null)} disabled={updateUserMutation.isPending} />
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="last_name">Apellido</Label>
-                                        <Input id="last_name" value={selectedUser?.last_name || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, last_name: e.target.value } : null)} disabled={updateUserMutation.isPending} />
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="email">Email</Label>
-                                        <Input id="email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} disabled={updateUserMutation.isPending} />
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                          <Label htmlFor="document_number">DNI / Documento</Label>
-                                          <Input id="document_number" value={selectedUser?.document_number || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, document_number: e.target.value.replace(/\D/g, '') } : null)} disabled={updateUserMutation.isPending} />
-                                        </div>
-                                        <div>
-                                          <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-                                          <Input id="birthdate" type="date" value={selectedUser?.birthdate || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, birthdate: e.target.value } : null)} disabled={updateUserMutation.isPending} />
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="phone">Teléfono</Label>
-                                        <Input id="phone" value={selectedUser?.phone || ""} onChange={(e) => setSelectedUser(prev => prev ? { ...prev, phone: e.target.value.replace(/\D/g, '') } : null)} disabled={updateUserMutation.isPending} />
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="gender">Género</Label>
-                                        <Select value={selectedUser?.gender || "masculino"} onValueChange={(value) => setSelectedUser(prev => prev ? { ...prev, gender: value } : null)} disabled={updateUserMutation.isPending}>
-                                          <SelectTrigger><SelectValue placeholder="Seleccionar género" /></SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="masculino">Masculino</SelectItem>
-                                            <SelectItem value="femenino">Femenino</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      <div className="relative">
-                                        <Label htmlFor="password">Nueva Contraseña</Label>
-                                        <div className="relative">
-                                          <Input id="password" type={showPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="pr-10" disabled={updateUserMutation.isPending} />
-                                          <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full" onClick={() => setShowPassword(!showPassword)} disabled={updateUserMutation.isPending}>
-                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                          </Button>
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="roles">Roles</Label>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 mt-2 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 max-h-40 overflow-y-auto">
-                                          {(isDirector || isVicedirector ? (
-                                            ['maestro', 'colaborador']
-                                          ) : isDirectorGeneral ? (
-                                            ['maestro', 'colaborador', 'director', 'vicedirector']
-                                          ) : (
-                                            ['maestro', 'lider', 'director', 'vicedirector', 'director_general', 'colaborador', 'secretaria', 'secr.-calendario', 'conserje', 'admin']
-                                          )).map((roleOption) => (
-                                            <div key={roleOption} className="flex items-center space-x-2">
-                                              <input
-                                                type="checkbox"
-                                                id={`edit-role-${roleOption}`}
-                                                checked={selectedRoles.includes(roleOption as AppRole)}
-                                                onChange={(e) => {
-                                                  if (e.target.checked) {
-                                                    setSelectedRoles([...selectedRoles, roleOption as AppRole]);
-                                                  } else {
-                                                    setSelectedRoles(selectedRoles.filter(r => r !== roleOption));
-                                                  }
-                                                }}
-                                                disabled={updateUserMutation.isPending}
-                                                className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
-                                              />
-                                              <label htmlFor={`edit-role-${roleOption}`} className="text-sm font-medium leading-none cursor-pointer capitalize">
-                                                {roleOption}
-                                              </label>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="department">
-                                          {selectedRoles.includes('director_general') ? "Departamentos Asignados" : "Departamento"}
-                                          {selectedRoles.length === 1 && selectedRoles.includes('conserje') && " (No requerido)"}
-                                        </Label>
-
-                                        {selectedRoles.includes('director_general') ? (
-                                          <div className="grid grid-cols-1 gap-2 p-3 mt-2 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 max-h-40 overflow-y-auto">
-                                            {departments.filter(d => !isDirector && !isDirectorGeneral && !isVicedirector || profile?.departments?.includes(d.name)).map((dept) => (
-                                              <div key={dept.id} className="flex items-center space-x-2">
-                                                <input
-                                                  type="checkbox"
-                                                  id={`edit-dept-${dept.id}`}
-                                                  checked={selectedDepartments.includes(dept.name)}
-                                                  onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                      setSelectedDepartments([...selectedDepartments, dept.name]);
-                                                    } else {
-                                                      setSelectedDepartments(selectedDepartments.filter(name => name !== dept.name));
-                                                    }
-                                                  }}
-                                                  className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
-                                                />
-                                                <label htmlFor={`edit-dept-${dept.id}`} className="text-sm font-medium leading-none cursor-pointer">
-                                                  {dept.name}
-                                                </label>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        ) : (
-                                          <Select
-                                            value={selectedDepartment || "none"}
-                                            onValueChange={(value) => setSelectedDepartment(value === "none" ? null : value as DepartmentType)}
-                                            disabled={(isDirector || isVicedirector) || updateUserMutation.isPending}
-                                          >
-                                            <SelectTrigger><SelectValue placeholder="Seleccionar departamento" /></SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="none" className="text-slate-500 italic">
-                                                Sin Departamento
-                                              </SelectItem>
-                                              {departments.filter(d => (!isDirector && !isVicedirector && !isDirectorGeneral) || profile?.departments?.includes(d.name)).map((dept) => (
-                                                <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        )}
-                                      </div>
-                                      {selectedDepartment && availableClasses.length > 0 && selectedUser?.role !== 'director_general' && (
-                                        <div>
-                                          <Label htmlFor="class">Clase</Label>
-                                          <Select value={selectedClass} onValueChange={setSelectedClass} disabled={updateUserMutation.isPending}>
-                                            <SelectTrigger><SelectValue placeholder="Seleccionar clase" /></SelectTrigger>
-                                            <SelectContent>
-                                              {availableClasses.map((className) => (
-                                                <SelectItem key={className} value={className}>{className}</SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      )}
-                                      <Button
-                                        className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20 rounded-xl h-12 mt-6"
-                                        onClick={() => {
-                                          if (selectedUser) {
-                                            updateUserMutation.mutate({
-                                              ...selectedUser,
-                                              newEmail: newEmail !== selectedUser.email ? newEmail : undefined,
-                                              newPassword: newPassword || undefined
-                                            });
-                                          }
-                                        }}
-                                        disabled={updateUserMutation.isPending}
-                                      >
-                                        {updateUserMutation.isPending ? "Guardando..." : "Guardar Cambios"}
-                                      </Button>
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
+                                <RegisterUserModal user={user} onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 rounded-full transition-colors"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </RegisterUserModal>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-full transition-colors"
                                   disabled={deleteUserMutation.isPending}
                                   onClick={() => {
@@ -884,7 +592,7 @@ const GestionUsuarios = () => {
                   <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                     {departments.filter(dept => {
                       if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
-                      if (profile?.role === 'director' || profile?.role === 'director_general') return profile.departments?.includes(dept.name as DepartmentType);
+                      if (profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') return profile.departments?.includes(dept.name as DepartmentType);
                       return false;
                     }).map((dept) => (
                       <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>

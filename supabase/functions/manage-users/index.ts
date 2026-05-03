@@ -27,6 +27,12 @@ serve(async (req) => {
     const { action, userId, userData } = await req.json()
     console.log('Received request:', { action, userId, userData })
 
+    // Diagnóstico de columnas
+    const { data: colInfo } = await supabaseClient.from('profiles').select('*').limit(1);
+    if (colInfo && colInfo.length > 0) {
+      console.log('COLUMNAS DISPONIBLES EN PROFILES:', Object.keys(colInfo[0]));
+    }
+
     switch (action) {
       case 'list':
         const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers()
@@ -36,9 +42,8 @@ serve(async (req) => {
         })
 
       case 'create':
-        // Get department_id from the department name if provided
-        let departmentId = null;
-        if (userData.departments && userData.departments.length > 0) {
+        let departmentId = userData.department_id;
+        if (!departmentId && userData.departments && userData.departments.length > 0) {
           const { data: departmentData, error: departmentError } = await supabaseClient
             .from('departments')
             .select('id')
@@ -46,7 +51,7 @@ serve(async (req) => {
             .single();
 
           if (departmentError) {
-            console.error('Error fetching department ID:', departmentError);
+            console.error('Error fetching department ID for create:', departmentError);
           } else if (departmentData) {
             departmentId = departmentData.id;
           }
@@ -62,26 +67,56 @@ serve(async (req) => {
             role: userData.role,
             roles: userData.roles || (userData.role ? [userData.role] : []),
             departments: userData.departments,
-            department_id: departmentId,
-            assigned_class: userData.assigned_class,
+            department_id: departmentId || null,
+            assigned_class: userData.assigned_class || null,
             phone: userData.phone,
             birthdate: userData.birthdate,
             gender: userData.gender,
             address: userData.address,
             document_number: userData.document_number,
             is_member: userData.is_member || false,
-            company_id: userData.company_id
+            company_id: userData.company_id,
+            assignments: userData.assignments || []
           }
         })
         if (createError) throw createError
+
+        // Sync with profiles table
+        if (createData.user) {
+          console.log(`Syncing profile for new user ${createData.user.id}. Assignments:`, JSON.stringify(userData.assignments));
+          const { error: profileError } = await supabaseClient
+            .from('profiles')
+            .upsert({
+              id: createData.user.id,
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              role: userData.role,
+              roles: userData.roles || [userData.role],
+              departments: userData.departments,
+              department_id: departmentId || null,
+              assigned_class: userData.assigned_class || null,
+              phone: userData.phone ?? null,
+              birthdate: userData.birthdate ?? null,
+              gender: userData.gender ?? null,
+              address: userData.address ?? null,
+              document_number: userData.document_number ?? null,
+              is_member: userData.is_member ?? false,
+              company_id: userData.company_id ?? null,
+            }, { onConflict: 'id' });
+
+          if (profileError) {
+            console.error('Error syncing profile on create:', profileError);
+            throw new Error('Profile sync failed on create: ' + profileError.message);
+          }
+        }
+
         return new Response(JSON.stringify(createData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
 
       case 'update':
-        // Get department_id from the department name if provided
-        let updatedDepartmentId = null;
-        if (userData.departments && userData.departments.length > 0) {
+        let updatedDepartmentId = userData.department_id;
+        if (!updatedDepartmentId && userData.departments && userData.departments.length > 0) {
           const { data: departmentData, error: departmentError } = await supabaseClient
             .from('departments')
             .select('id')
@@ -89,7 +124,7 @@ serve(async (req) => {
             .single();
 
           if (departmentError) {
-            console.error('Error fetching department ID:', departmentError);
+            console.error('Error fetching department ID for update:', departmentError);
           } else if (departmentData) {
             updatedDepartmentId = departmentData.id;
           }
@@ -102,14 +137,15 @@ serve(async (req) => {
             role: userData.role,
             roles: userData.roles || (userData.role ? [userData.role] : []),
             departments: userData.departments,
-            department_id: updatedDepartmentId,
-            assigned_class: userData.assigned_class,
+            department_id: updatedDepartmentId || null,
+            assigned_class: userData.assigned_class || null,
             phone: userData.phone,
             birthdate: userData.birthdate,
             gender: userData.gender,
             address: userData.address,
             document_number: userData.document_number,
-            is_member: userData.is_member || false
+            is_member: userData.is_member || false,
+            assignments: userData.assignments || []
           }
         }
 
@@ -126,7 +162,38 @@ serve(async (req) => {
           updates
         )
         if (updateError) throw updateError
-        return new Response(JSON.stringify(updateData), {
+
+        // Sync with profiles table — usar UPDATE directo (la fila siempre existe en update)
+        console.log(`Syncing profile for existing user ${userId}.`);
+
+        const { error: profileSyncError } = await supabaseClient
+          .from('profiles')
+          .update({
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            role: userData.role,
+            roles: userData.roles || [userData.role],
+            departments: userData.departments,
+            department_id: updatedDepartmentId || null,
+            assigned_class: userData.assigned_class || null,
+            phone: userData.phone ?? null,
+            birthdate: userData.birthdate ?? null,
+            gender: userData.gender ?? null,
+            address: userData.address ?? null,
+            document_number: userData.document_number ?? null,
+            is_member: userData.is_member ?? false,
+            company_id: userData.company_id ?? null,
+          })
+          .eq('id', userId);
+
+        if (profileSyncError) {
+          console.error('CRITICAL: Error syncing profile on update:', profileSyncError);
+          throw new Error('Profile sync failed: ' + profileSyncError.message);
+        }
+
+        console.log('Profile sync successful');
+
+        return new Response(JSON.stringify({ ...updateData, assignments: userData.assignments }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
 
@@ -139,7 +206,16 @@ serve(async (req) => {
 
         if (profileError) {
           console.error('Error deleting profile:', profileError)
-          // We continue to try deleting the auth user even if profile deletion fails
+        }
+
+        // Soft delete from students table if there's an associated record
+        const { error: studentError } = await supabaseClient
+          .from('students')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('profile_id', userId)
+
+        if (studentError) {
+          console.error('Error deleting associated student:', studentError)
         }
 
         const { data: deleteData, error: deleteError } = await supabaseClient.auth.admin.deleteUser(
@@ -197,6 +273,25 @@ serve(async (req) => {
               if (error) {
                 console.error(`Error creating user ${u.email}:`, error.message);
                 return { email: u.email, success: false, error: error.message };
+              }
+
+              // Sync with profiles table
+              const { error: profileError } = await supabaseClient
+                .from('profiles')
+                .update({
+                  first_name: u.first_name,
+                  last_name: u.last_name || '',
+                  role: u.role || 'maestro',
+                  roles: u.roles || [u.role || 'maestro'],
+                  departments: u.department ? [u.department] : [],
+                  department_id: departmentId,
+                  assigned_class: u.assigned_class || '',
+                  company_id: u.company_id
+                })
+                .eq('id', data.user.id);
+
+              if (profileError) {
+                console.error(`Error syncing profile for bulk-create user ${u.email}:`, profileError);
               }
 
               return { email: u.email, success: true, userId: data.user.id };

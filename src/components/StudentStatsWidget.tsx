@@ -199,7 +199,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                                 />
                             ))}
                         </>
-                    ) : (profile?.role === 'maestro' || profile?.role === 'lider' || profile?.role === 'colaborador') ? (
+                    ) : (profile?.role === 'maestro' || profile?.role === 'lider' || profile?.role === 'colaborador' || profile?.role === 'ayudante') ? (
                         userAssignedClass ? (
                             <ClassStatsCard
                                 className={userAssignedClass}

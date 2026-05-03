@@ -60,10 +60,10 @@ export default function Auth() {
     }
 
     if (profile) {
-      if (profile.role === 'colaborador') {
+      if (profile.role === 'colaborador' || profile.role === 'ayudante') {
         toast({
           title: "Acceso denegado",
-          description: "Los colaboradores no tienen acceso a la aplicación.",
+          description: "Los colaboradores y ayudantes no tienen acceso a la aplicación.",
           variant: "destructive",
         });
         return;

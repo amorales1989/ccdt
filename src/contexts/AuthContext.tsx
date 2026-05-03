@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import type { User, Session } from "@supabase/supabase-js";
-import type { DepartmentType, AppRole } from "@/types/database";
+import type { DepartmentType, AppRole, UserAssignment } from "@/types/database";
 
 type Profile = {
   id: string;
@@ -20,6 +20,7 @@ type Profile = {
   document_number: string | null;
   address: string | null;
   company_id: number | null;
+  assignments: UserAssignment[] | null;
 };
 
 type AuthContextType = {
@@ -38,7 +39,7 @@ type AuthContextType = {
   }) => Promise<void>;
   signOut: () => Promise<void>;
   getProfile: (userId: string) => Promise<void>;
-  switchRole: (newRole: AppRole) => Promise<void>;
+  switchAssignment: (assignment: UserAssignment) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -128,17 +129,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error("company_mismatch");
         }
 
+        const allAssignments: UserAssignment[] = authUser?.user_metadata?.assignments || [];
+
+        // Para usuarios con múltiples assignments, mostrar solo el departamento activo
+        // (el que coincide con el role+department_id guardado en profiles).
+        // Esto evita que el widget muestre todos los departamentos al hacer login.
+        let activeDepartments = (data.departments as DepartmentType[]) || [];
+        if (allAssignments.length > 1) {
+          const activeAssignment = allAssignments.find(
+            (a) => a.role === data.role && (a.department_id || null) === (data.department_id || null)
+          ) ?? allAssignments[0];
+          activeDepartments = [activeAssignment.department as DepartmentType];
+        }
+
         const typedProfile: Profile = {
           ...data,
           roles: (data.roles as AppRole[]) || [data.role],
-          departments: data.departments as DepartmentType[] || [],
+          departments: activeDepartments,
           department_id: data.department_id || null,
-          email: authUser?.email || null,  // Agregar el email del usuario autenticado
+          email: authUser?.email || null,
           phone: data.phone || null,
           birthdate: data.birthdate || null,
           gender: data.gender || null,
           document_number: data.document_number || null,
-          address: data.address || null
+          address: data.address || null,
+          assignments: allAssignments,
         };
         setProfile(typedProfile);
       }
@@ -256,24 +271,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function switchRole(newRole: AppRole) {
+  async function switchAssignment(assignment: UserAssignment) {
     if (!profile || !user) return;
 
     try {
       setLoading(true);
+
+      // Actualizar localStorage para que todos los filtros de la app usen el contexto correcto
+      localStorage.setItem('selectedDepartment', assignment.department);
+      if (assignment.department_id) {
+        localStorage.setItem('selectedDepartmentId', assignment.department_id);
+      }
+
       const { error } = await supabase
         .from("profiles")
-        .update({ role: newRole })
+        .update({
+          role: assignment.role,
+          department_id: assignment.department_id,
+          assigned_class: assignment.assigned_class || null
+        })
         .eq("id", user.id);
 
       if (error) throw error;
 
-      setProfile(prev => prev ? { ...prev, role: newRole } : null);
+      // Actualizar estado local: role activo, dept activo y clase activa
+      setProfile(prev => prev ? {
+        ...prev,
+        role: assignment.role,
+        departments: [assignment.department as DepartmentType],
+        department_id: assignment.department_id,
+        assigned_class: assignment.assigned_class || null,
+      } : null);
 
-      // Opcional: Recargar la página si los cambios de UI basados en roles son muy profundos
-      // window.location.reload();
     } catch (error) {
-      console.error("Error switching role:", error);
+      console.error("Error switching assignment:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -281,7 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut, getProfile, switchRole }}>
+    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut, getProfile, switchAssignment }}>
       {children}
     </AuthContext.Provider>
   );

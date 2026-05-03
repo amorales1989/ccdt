@@ -62,10 +62,10 @@ export default function Index() {
     }
 
     if (profile) {
-      if (profile.role === 'colaborador') {
+      if (profile.role === 'colaborador' || profile.role === 'ayudante') {
         toast({
           title: "Acceso denegado",
-          description: "Los colaboradores no tienen acceso a la aplicación.",
+          description: "Los colaboradores y ayudantes no tienen acceso a la aplicación.",
           variant: "destructive",
         });
         signIn("", ""); // Reset state (though signOut is better if available)
@@ -73,21 +73,33 @@ export default function Index() {
         return;
       }
 
-      if (profile.departments && profile.departments.length > 1 && profile.role !== 'director_general') {
+      // Usuarios con múltiples assignments → RoleSwitcher en sidebar, sin selector
+      const hasMultiAssignments =
+        (profile.assignments && profile.assignments.length > 1) ||
+        (profile.roles && profile.roles.length > 1 && profile.departments && profile.departments.length > 1);
+
+      if (hasMultiAssignments) {
+        // Usar el assignment activo (coincide con role+department_id del perfil), no siempre [0]
+        const activeAssignment = profile.assignments?.find(
+          a => a.role === profile.role && (a.department_id || null) === (profile.department_id || null)
+        ) ?? profile.assignments?.[0];
+        const initDept = activeAssignment?.department || profile.departments?.[0] || '';
+        const initDeptId = activeAssignment?.department_id || profile.department_id || '';
+        if (initDept) localStorage.setItem('selectedDepartment', initDept);
+        if (initDeptId) localStorage.setItem('selectedDepartmentId', initDeptId);
+        navigate("/home");
+      } else if (profile.departments && profile.departments.length > 1 && profile.role !== 'director_general') {
         setUserDepartments(profile.departments);
-        setShowDepartmentSelect(true); // Mostrar selector si tiene más de un departamento
+        setShowDepartmentSelect(true);
       } else if (profile.departments && profile.departments.length === 1) {
         const dept = profile.departments[0];
         localStorage.setItem('selectedDepartment', dept);
-
-        // Set department_id in localStorage if available
         if (profile.department_id) {
           localStorage.setItem('selectedDepartmentId', profile.department_id);
         }
-
-        navigate("/home"); // Si solo tiene un departamento, proceder al login automáticamente
+        navigate("/home");
       } else {
-        navigate("/home"); // Si no tiene departamentos, también procede al login
+        navigate("/home");
       }
     }
   }, [profile, navigate, company]);

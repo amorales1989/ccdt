@@ -120,6 +120,14 @@ export type DepartmentType =
   | "adultos"
   | string;
 
+export interface UserAssignment {
+  id: string;
+  role: AppRole;
+  department: string;
+  department_id?: string;
+  assigned_class?: string;
+}
+
 export interface Profile {
   id: string;
   first_name: string;
@@ -135,9 +143,10 @@ export interface Profile {
   gender?: string;
   document_number?: string;
   company_id?: number;
+  assignments?: UserAssignment[];
 }
 
-export type AppRole = "admin" | "lider" | "director" | "director_general" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador" | "vicedirector" | "conserje";
+export type AppRole = "admin" | "lider" | "director" | "director_general" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador" | "ayudante" | "vicedirector" | "conserje";
 
 export interface StudentAuthorization {
   id: string;

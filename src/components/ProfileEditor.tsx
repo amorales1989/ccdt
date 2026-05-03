@@ -158,45 +158,59 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
         value={activeTab}
         onChange={(v) => setActiveTab(v as "profile" | "password")}
         options={tabOptions}
-        className="w-full mb-4 grid grid-cols-2"
+        className="w-full mb-4"
       />
 
       {activeTab === "profile" && (
         <Form {...profileForm}>
-          <form onSubmit={profileForm.handleSubmit(updateProfile)} className="space-y-4">
-            <FormField
-              control={profileForm.control}
-              name="first_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Tu nombre" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={profileForm.handleSubmit(updateProfile)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={profileForm.control}
+                name="first_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nombre</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Tu nombre"
+                        {...field}
+                        className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:ring-2 focus:ring-purple-500 transition-all"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={profileForm.control}
-              name="last_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Apellido</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Tu apellido" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={profileForm.control}
+                name="last_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Apellido</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Tu apellido"
+                        {...field}
+                        className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:ring-2 focus:ring-purple-500 transition-all"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" type="button" onClick={onClose}>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <Button variant="ghost" type="button" onClick={onClose} className="rounded-xl h-12 px-6">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isUpdating}>
+              <Button
+                type="submit"
+                disabled={isUpdating}
+                className="rounded-xl h-12 px-8 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md shadow-purple-500/20"
+              >
                 {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Guardar Cambios
               </Button>
@@ -207,56 +221,77 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
 
       {activeTab === "password" && (
         <Form {...passwordForm}>
-          <form onSubmit={passwordForm.handleSubmit(changePassword)} className="space-y-4">
+          <form onSubmit={passwordForm.handleSubmit(changePassword)} className="space-y-6">
             <FormField
               control={passwordForm.control}
               name="currentPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Contraseña Actual</FormLabel>
+                  <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Contraseña Actual</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="Tu contraseña actual" {...field} />
+                    <Input
+                      type="password"
+                      placeholder="Tu contraseña actual"
+                      {...field}
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:ring-2 focus:ring-purple-500 transition-all"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={passwordForm.control}
-              name="newPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nueva Contraseña</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Nueva contraseña" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={passwordForm.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nueva Contraseña</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Mínimo 6 caracteres"
+                        {...field}
+                        className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:ring-2 focus:ring-purple-500 transition-all"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={passwordForm.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmar Contraseña</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Confirmar nueva contraseña" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={passwordForm.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Confirmar Contraseña</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Repite la nueva contraseña"
+                        {...field}
+                        className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:ring-2 focus:ring-purple-500 transition-all"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" type="button" onClick={onClose}>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <Button variant="ghost" type="button" onClick={onClose} className="rounded-xl h-12 px-6">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isChangingPassword}>
+              <Button
+                type="submit"
+                disabled={isChangingPassword}
+                className="rounded-xl h-12 px-8 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md shadow-purple-500/20"
+              >
                 {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Cambiar Contraseña
+                Actualizar Contraseña
               </Button>
             </div>
           </form>
