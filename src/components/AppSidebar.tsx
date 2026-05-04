@@ -255,9 +255,38 @@ const NavigationContent = ({
     refetchInterval: 15000,
   });
 
+  const { data: company } = useQuery({
+    queryKey: ['company', getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId()),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const MENU_KEY_MAP: Record<string, string> = {
+    "Lista de Miembros": "menu_lista_miembros",
+    "Tomar Asistencia": "menu_asistencia",
+    "Historial": "menu_historial",
+    "Promover Miembros": "menu_promover",
+    "Autorizaciones": "menu_autorizaciones",
+    "Estadísticas": "menu_estadisticas",
+    "Informes de Personal": "menu_informes",
+    "Material Didáctico": "menu_material",
+    "Departamentos": "menu_departamentos",
+    "Gestión de Usuarios": "menu_gestion_usuarios",
+    "Configuración": "menu_configuracion",
+    "Mantenimiento": "menu_mantenimiento",
+    "Solicitar Reparación": "menu_mantenimiento",
+  };
+
   const items = useMemo(() => {
-    return getItems(profile?.role, profile, unreadReportsCount);
-  }, [profile?.role, profile?.departments, unreadReportsCount]);
+    const allItems = getItems(profile?.role, profile, unreadReportsCount);
+    const rolePerms = (company as any)?.role_permissions?.[profile?.role || ''];
+    if (!rolePerms) return allItems;
+    return allItems.filter(item => {
+      const menuKey = MENU_KEY_MAP[item.title];
+      if (!menuKey) return true; // Inicio, Calendario always visible
+      return rolePerms[menuKey] !== false;
+    });
+  }, [profile?.role, profile?.departments, unreadReportsCount, company]);
 
   const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
 

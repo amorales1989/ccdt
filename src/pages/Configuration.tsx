@@ -11,12 +11,82 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage } from "@/lib/api";
-import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid } from "lucide-react";
+import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
+
+// ─── Permisos y Notificaciones ───────────────────────────────────────────────
+
+const ALL_ROLES = [
+  'admin', 'director_general', 'director', 'vicedirector',
+  'secretaria', 'secr.-calendario', 'lider', 'maestro',
+  'conserje', 'colaborador', 'ayudante',
+] as const;
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin', director_general: 'Director General', director: 'Director',
+  vicedirector: 'Vicedirector', secretaria: 'Secretaria', 'secr.-calendario': 'Secr. Calendario',
+  lider: 'Líder', maestro: 'Maestro', conserje: 'Conserje',
+  colaborador: 'Colaborador', ayudante: 'Ayudante',
+};
+
+const PERMISSIONS = [
+  { key: 'puede_agregar_miembros', label: 'Agregar miembros' },
+  { key: 'puede_editar_miembros', label: 'Editar miembros' },
+  { key: 'puede_tomar_asistencia', label: 'Tomar asistencia' },
+  { key: 'puede_ver_informes', label: 'Ver informes' },
+  { key: 'puede_gestionar_eventos', label: 'Gestionar eventos' },
+  { key: 'puede_promover_miembros', label: 'Promover miembros' },
+  { key: 'puede_autorizaciones', label: 'Autorizaciones salida' },
+] as const;
+
+const MENU_PERMISSIONS = [
+  { key: 'menu_lista_miembros',   label: 'Lista de Miembros' },
+  { key: 'menu_asistencia',       label: 'Tomar Asistencia' },
+  { key: 'menu_historial',        label: 'Historial' },
+  { key: 'menu_promover',         label: 'Promover Miembros' },
+  { key: 'menu_autorizaciones',   label: 'Autorizaciones' },
+  { key: 'menu_estadisticas',     label: 'Estadísticas' },
+  { key: 'menu_informes',         label: 'Informes de Personal' },
+  { key: 'menu_material',         label: 'Material Didáctico' },
+  { key: 'menu_departamentos',    label: 'Departamentos' },
+  { key: 'menu_gestion_usuarios', label: 'Gestión de Usuarios' },
+  { key: 'menu_configuracion',    label: 'Configuración' },
+  { key: 'menu_mantenimiento',    label: 'Solicitar Reparación' },
+] as const;
+
+const NOTIFICATION_EVENTS = [
+  { key: 'cumpleanos', label: 'Cumpleaños de miembros', description: 'Notifica a los responsables cuando un miembro de su clase cumple años' },
+  { key: 'solicitudes_pendientes', label: 'Solicitudes de eventos pendientes', description: 'Alerta diaria sobre solicitudes de calendario sin aprobar' },
+  { key: 'eventos_aprobados', label: 'Eventos aprobados', description: 'Notifica a los roles seleccionados cuando una solicitud es aprobada. Los rechazos solo se notifican al solicitante.' },
+  { key: 'mantenimiento', label: 'Solicitudes de mantenimiento', description: 'Notifica cuando se registra un nuevo pedido de mantenimiento' },
+] as const;
+
+const DEFAULT_PERMISSIONS: Record<string, Record<string, boolean>> = {
+  admin:             { puede_agregar_miembros: true,  puede_editar_miembros: true,  puede_tomar_asistencia: true,  puede_ver_informes: true,  puede_gestionar_eventos: true,  puede_promover_miembros: true,  puede_autorizaciones: true,  menu_lista_miembros: true,  menu_asistencia: false, menu_historial: true,  menu_promover: true,  menu_autorizaciones: true,  menu_estadisticas: true,  menu_informes: true,  menu_material: true,  menu_departamentos: true,  menu_gestion_usuarios: true,  menu_configuracion: true,  menu_mantenimiento: true  },
+  director_general:  { puede_agregar_miembros: false, puede_editar_miembros: true,  puede_tomar_asistencia: false, puede_ver_informes: true,  puede_gestionar_eventos: false, puede_promover_miembros: false, puede_autorizaciones: false, menu_lista_miembros: true,  menu_asistencia: false, menu_historial: true,  menu_promover: true,  menu_autorizaciones: false, menu_estadisticas: true,  menu_informes: true,  menu_material: true,  menu_departamentos: false, menu_gestion_usuarios: true,  menu_configuracion: false, menu_mantenimiento: true  },
+  director:          { puede_agregar_miembros: true,  puede_editar_miembros: true,  puede_tomar_asistencia: true,  puede_ver_informes: true,  puede_gestionar_eventos: false, puede_promover_miembros: true,  puede_autorizaciones: false, menu_lista_miembros: true,  menu_asistencia: true,  menu_historial: true,  menu_promover: true,  menu_autorizaciones: false, menu_estadisticas: true,  menu_informes: true,  menu_material: false, menu_departamentos: false, menu_gestion_usuarios: true,  menu_configuracion: false, menu_mantenimiento: true  },
+  vicedirector:      { puede_agregar_miembros: true,  puede_editar_miembros: true,  puede_tomar_asistencia: true,  puede_ver_informes: true,  puede_gestionar_eventos: false, puede_promover_miembros: true,  puede_autorizaciones: false, menu_lista_miembros: true,  menu_asistencia: true,  menu_historial: true,  menu_promover: true,  menu_autorizaciones: false, menu_estadisticas: true,  menu_informes: true,  menu_material: false, menu_departamentos: false, menu_gestion_usuarios: true,  menu_configuracion: false, menu_mantenimiento: true  },
+  secretaria:        { puede_agregar_miembros: true,  puede_editar_miembros: true,  puede_tomar_asistencia: true,  puede_ver_informes: true,  puede_gestionar_eventos: true,  puede_promover_miembros: true,  puede_autorizaciones: true,  menu_lista_miembros: true,  menu_asistencia: false, menu_historial: true,  menu_promover: true,  menu_autorizaciones: true,  menu_estadisticas: true,  menu_informes: false, menu_material: true,  menu_departamentos: true,  menu_gestion_usuarios: true,  menu_configuracion: true,  menu_mantenimiento: true  },
+  'secr.-calendario':{ puede_agregar_miembros: false, puede_editar_miembros: false, puede_tomar_asistencia: false, puede_ver_informes: false, puede_gestionar_eventos: true,  puede_promover_miembros: false, puede_autorizaciones: false, menu_lista_miembros: false, menu_asistencia: false, menu_historial: false, menu_promover: false, menu_autorizaciones: false, menu_estadisticas: false, menu_informes: false, menu_material: false, menu_departamentos: false, menu_gestion_usuarios: false, menu_configuracion: false, menu_mantenimiento: true  },
+  lider:             { puede_agregar_miembros: false, puede_editar_miembros: true,  puede_tomar_asistencia: true,  puede_ver_informes: false, puede_gestionar_eventos: false, puede_promover_miembros: false, puede_autorizaciones: true,  menu_lista_miembros: true,  menu_asistencia: true,  menu_historial: true,  menu_promover: true,  menu_autorizaciones: true,  menu_estadisticas: false, menu_informes: false, menu_material: false, menu_departamentos: false, menu_gestion_usuarios: false, menu_configuracion: false, menu_mantenimiento: true  },
+  maestro:           { puede_agregar_miembros: false, puede_editar_miembros: true,  puede_tomar_asistencia: true,  puede_ver_informes: false, puede_gestionar_eventos: false, puede_promover_miembros: false, puede_autorizaciones: false, menu_lista_miembros: true,  menu_asistencia: true,  menu_historial: true,  menu_promover: false, menu_autorizaciones: false, menu_estadisticas: false, menu_informes: true,  menu_material: false, menu_departamentos: false, menu_gestion_usuarios: false, menu_configuracion: false, menu_mantenimiento: true  },
+  conserje:          { puede_agregar_miembros: false, puede_editar_miembros: false, puede_tomar_asistencia: false, puede_ver_informes: false, puede_gestionar_eventos: false, puede_promover_miembros: false, puede_autorizaciones: false, menu_lista_miembros: false, menu_asistencia: false, menu_historial: false, menu_promover: false, menu_autorizaciones: false, menu_estadisticas: false, menu_informes: false, menu_material: false, menu_departamentos: false, menu_gestion_usuarios: false, menu_configuracion: false, menu_mantenimiento: true  },
+  colaborador:       { puede_agregar_miembros: false, puede_editar_miembros: false, puede_tomar_asistencia: false, puede_ver_informes: false, puede_gestionar_eventos: false, puede_promover_miembros: false, puede_autorizaciones: false, menu_lista_miembros: true,  menu_asistencia: true,  menu_historial: true,  menu_promover: true,  menu_autorizaciones: false, menu_estadisticas: false, menu_informes: false, menu_material: false, menu_departamentos: false, menu_gestion_usuarios: false, menu_configuracion: false, menu_mantenimiento: true  },
+  ayudante:          { puede_agregar_miembros: false, puede_editar_miembros: false, puede_tomar_asistencia: false, puede_ver_informes: false, puede_gestionar_eventos: false, puede_promover_miembros: false, puede_autorizaciones: false, menu_lista_miembros: true,  menu_asistencia: true,  menu_historial: true,  menu_promover: true,  menu_autorizaciones: false, menu_estadisticas: false, menu_informes: false, menu_material: false, menu_departamentos: false, menu_gestion_usuarios: false, menu_configuracion: false, menu_mantenimiento: true  },
+};
+
+const DEFAULT_NOTIFICATIONS: Record<string, string[]> = {
+  cumpleanos: ['lider', 'maestro'],
+  solicitudes_pendientes: ['secr.-calendario', 'admin'],
+  eventos_aprobados: ['director', 'vicedirector'],
+  mantenimiento: ['conserje', 'admin'],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function Configuration() {
   const { profile } = useAuth();
@@ -35,6 +105,10 @@ export default function Configuration() {
   const [testMessage, setTestMessage] = useState("¡Hola! Mensaje de prueba de WhatsApp.");
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
+  const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>(DEFAULT_PERMISSIONS);
+  const [notificationSettings, setNotificationSettings] = useState<Record<string, string[]>>(DEFAULT_NOTIFICATIONS);
+  const [isSavingPermissions, setIsSavingPermissions] = useState(false);
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
 
   const [generalSettings, setGeneralSettings] = useState({
     darkMode: false,
@@ -100,13 +174,23 @@ export default function Configuration() {
     if (companyData.auth_pdf_header && Array.isArray(companyData.auth_pdf_header) && companyData.auth_pdf_header.length > 0) {
       setAuthPdfHeader(companyData.auth_pdf_header as { text: string, enabled: boolean }[]);
     } else {
-      // Si está vacío o es nulo, inicializar con 4 líneas vacías para que el usuario las complete
       setAuthPdfHeader([
         { text: "", enabled: false },
         { text: "", enabled: false },
         { text: "", enabled: false },
         { text: "", enabled: false }
       ]);
+    }
+
+    if (companyData.role_permissions && Object.keys(companyData.role_permissions).length > 0) {
+      const merged = { ...DEFAULT_PERMISSIONS };
+      for (const role of Object.keys(companyData.role_permissions)) {
+        merged[role] = { ...DEFAULT_PERMISSIONS[role], ...companyData.role_permissions[role] };
+      }
+      setRolePermissions(merged);
+    }
+    if (companyData.notification_settings && Object.keys(companyData.notification_settings).length > 0) {
+      setNotificationSettings({ ...DEFAULT_NOTIFICATIONS, ...companyData.notification_settings });
     }
   }, [company]);
 
@@ -342,10 +426,47 @@ export default function Configuration() {
   const handleClearCongregationName = () => {
     setCongregationName('');
     updateCompanyMutate({ congregation_name: '' });
+    toast({ title: "Nombre eliminado", description: "El nombre de la congregación ha sido eliminado" });
+  };
 
-    toast({
-      title: "Nombre eliminado",
-      description: "El nombre de la congregación ha sido eliminado",
+  const handleSavePermissions = async () => {
+    setIsSavingPermissions(true);
+    try {
+      await updateCompany(getPersistentCompanyId(), { role_permissions: rolePermissions });
+      toast({ title: "Permisos guardados", description: "La configuración de roles fue actualizada." });
+    } catch {
+      toast({ title: "Error", description: "No se pudieron guardar los permisos.", variant: "destructive" });
+    } finally {
+      setIsSavingPermissions(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setIsSavingNotifications(true);
+    try {
+      await updateCompany(getPersistentCompanyId(), { notification_settings: notificationSettings });
+      toast({ title: "Notificaciones guardadas", description: "La configuración de notificaciones fue actualizada." });
+    } catch {
+      toast({ title: "Error", description: "No se pudieron guardar las notificaciones.", variant: "destructive" });
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
+
+  const togglePermission = (role: string, perm: string) => {
+    setRolePermissions(prev => ({
+      ...prev,
+      [role]: { ...prev[role], [perm]: !prev[role]?.[perm] }
+    }));
+  };
+
+  const toggleNotificationRole = (event: string, role: string) => {
+    setNotificationSettings(prev => {
+      const current = prev[event] || [];
+      return {
+        ...prev,
+        [event]: current.includes(role) ? current.filter(r => r !== role) : [...current, role]
+      };
     });
   };
 
@@ -410,7 +531,11 @@ export default function Configuration() {
         options={[
           { value: 'general', label: 'Marca', icon: LayoutGrid },
           { value: 'authorizations', label: 'Membrete', icon: FileText },
-          { value: 'whatsapp', label: 'Whatsapp', icon: Smartphone }
+          { value: 'whatsapp', label: 'Whatsapp', icon: Smartphone },
+          ...(profile?.role === 'admin' ? [
+            { value: 'permissions', label: 'Permisos', icon: Shield },
+            { value: 'notifications', label: 'Notificaciones', icon: Bell },
+          ] : []),
         ]}
         className="mb-6 w-full md:w-fit"
       />
@@ -721,6 +846,159 @@ export default function Configuration() {
                     </Button>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        {/* ── TAB: Permisos por Rol ───────────────────────────────────────── */}
+        {activeTab === 'permissions' && (
+          <div className="mt-0 outline-none space-y-6">
+            <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl overflow-hidden">
+              <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
+                <div className="flex items-center gap-4">
+                  <div className="bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-2xl text-indigo-600 dark:text-indigo-400">
+                    <Shield className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Permisos por Rol</CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Configurá qué puede hacer cada rol dentro de la app.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 md:p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th className="text-left py-3 px-2 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[130px]">Rol</th>
+                        {PERMISSIONS.map(p => (
+                          <th key={p.key} className="text-center py-3 px-1 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[90px]">
+                            {p.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ALL_ROLES.map((role, i) => (
+                        <tr key={role} className={`border-t border-slate-100 dark:border-slate-800 ${i % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-800/20' : ''}`}>
+                          <td className="py-3 px-2 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            {ROLE_LABELS[role]}
+                          </td>
+                          {PERMISSIONS.map(p => (
+                            <td key={p.key} className="py-3 px-1 text-center">
+                              <Switch
+                                checked={!!rolePermissions[role]?.[p.key]}
+                                onCheckedChange={() => togglePermission(role, p.key)}
+                                className="data-[state=checked]:bg-indigo-500"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-8 border-t border-slate-100 dark:border-slate-800 pt-6">
+                  <h3 className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-widest mb-4">Visibilidad de Menú</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr>
+                          <th className="text-left py-3 px-2 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[130px]">Rol</th>
+                          {MENU_PERMISSIONS.map(p => (
+                            <th key={p.key} className="text-center py-3 px-1 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[80px]">
+                              {p.label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ALL_ROLES.map((role, i) => (
+                          <tr key={role} className={`border-t border-slate-100 dark:border-slate-800 ${i % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-800/20' : ''}`}>
+                            <td className="py-3 px-2 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                              {ROLE_LABELS[role]}
+                            </td>
+                            {MENU_PERMISSIONS.map(p => (
+                              <td key={p.key} className="py-3 px-1 text-center">
+                                <Switch
+                                  checked={!!rolePermissions[role]?.[p.key]}
+                                  onCheckedChange={() => togglePermission(role, p.key)}
+                                  className="data-[state=checked]:bg-indigo-500"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-6">
+                  <Button
+                    onClick={handleSavePermissions}
+                    disabled={isSavingPermissions}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl px-8 font-bold shadow-lg"
+                  >
+                    {isSavingPermissions ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : 'Guardar Permisos'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ── TAB: Notificaciones Automáticas ─────────────────────────────── */}
+        {activeTab === 'notifications' && (
+          <div className="mt-0 outline-none space-y-6">
+            <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl overflow-hidden">
+              <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
+                <div className="flex items-center gap-4">
+                  <div className="bg-amber-100 dark:bg-amber-900/40 p-3 rounded-2xl text-amber-600 dark:text-amber-400">
+                    <Bell className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Notificaciones Automáticas</CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Elegí qué roles reciben cada tipo de notificación automática.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 md:p-8 space-y-8">
+                {NOTIFICATION_EVENTS.map(event => (
+                  <div key={event.key} className="space-y-4">
+                    <div>
+                      <h3 className="font-black text-slate-800 dark:text-white text-base">{event.label}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{event.description}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {ALL_ROLES.map(role => {
+                        const active = (notificationSettings[event.key] || []).includes(role);
+                        return (
+                          <button
+                            key={role}
+                            onClick={() => toggleNotificationRole(event.key, role)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                              active
+                                ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-500/20'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-amber-300'
+                            }`}
+                          >
+                            {ROLE_LABELS[role]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="h-px bg-slate-100 dark:bg-slate-800" />
+                  </div>
+                ))}
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSaveNotifications}
+                    disabled={isSavingNotifications}
+                    className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl px-8 font-bold shadow-lg"
+                  >
+                    {isSavingNotifications ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : 'Guardar Notificaciones'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
