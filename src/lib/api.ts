@@ -257,6 +257,18 @@ export const deleteStudent = async (id: string) => {
   }
 };
 
+export const addStudentDepartment = async (studentId: string, assignment: { department_id: string; assigned_class?: string | null; role_in_dept?: string }) => {
+  const response = await apiCall(`/students/${studentId}/departments`, {
+    method: 'POST',
+    body: JSON.stringify(assignment),
+  });
+  return response.data || response;
+};
+
+export const removeStudentDepartment = async (studentId: string, departmentId: string) => {
+  await apiCall(`/students/${studentId}/departments/${departmentId}`, { method: 'DELETE' });
+};
+
 export const checkDniExists = async (dni: string) => {
   try {
     const response = await apiCall(`/students/search?document_number=${encodeURIComponent(dni)}`);

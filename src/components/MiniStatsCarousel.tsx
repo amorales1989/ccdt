@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
-import { format, subMonths, differenceInYears } from "date-fns";
+import { format, subMonths, differenceInYears, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users, UserCheck, Baby, TrendingUp } from "lucide-react";
 import Autoplay from "embla-carousel-autoplay";
 import { useCompany } from "@/contexts/CompanyContext";
 
@@ -98,7 +98,31 @@ export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouse
             .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
             .sort((a, b) => b.value - a.value);
 
-        return { genderData, ageData, last12Months, roleData };
+        // Department distribution
+        const deptCount: Record<string, number> = {};
+        students.forEach(s => {
+            const name = s.departments?.name || s.department || 'Sin depto.';
+            deptCount[name] = (deptCount[name] || 0) + 1;
+        });
+        const deptData = Object.entries(deptCount)
+            .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '), value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 8);
+
+        // KPIs
+        const total = students.length;
+        const newThisMonth = students.filter(s => {
+            if (!s.created_at) return false;
+            return new Date(s.created_at) >= startOfMonth(new Date());
+        }).length;
+        const females = students.filter(s => s.gender === 'femenino').length;
+        const males = students.filter(s => s.gender === 'masculino').length;
+        const minors = students.filter(s => {
+            if (!s.birthdate) return false;
+            return differenceInYears(new Date(), new Date(s.birthdate)) < 18;
+        }).length;
+
+        return { genderData, ageData, last12Months, roleData, deptData, total, newThisMonth, females, males, minors };
     }, [students, profiles]);
 
     if (loadingProfiles || !data) {
@@ -111,73 +135,110 @@ export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouse
 
     const charts = [
         {
-            title: "Curva de Membresía",
-            description: "Evolución acumulada",
+            title: "Resumen de Congregación",
+            description: "Métricas generales",
+            content: (
+                <div className="grid grid-cols-2 gap-3 w-full px-2">
+                    {[
+                        { icon: Users, label: "Total miembros", value: data.total, color: "bg-blue-50 text-blue-700" },
+                        { icon: TrendingUp, label: "Nuevos este mes", value: data.newThisMonth, color: "bg-emerald-50 text-emerald-700" },
+                        { icon: Baby, label: "Menores de 18", value: data.minors, color: "bg-violet-50 text-violet-700" },
+                        { icon: UserCheck, label: "Personal", value: profiles.length, color: "bg-amber-50 text-amber-700" },
+                    ].map(({ icon: Icon, label, value, color }) => (
+                        <div key={label} className={`rounded-2xl p-4 flex flex-col gap-1 ${color}`}>
+                            <Icon className="h-4 w-4 opacity-70" />
+                            <p className="text-2xl font-black">{value}</p>
+                            <p className="text-[10px] font-semibold opacity-70 leading-tight">{label}</p>
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            title: "Por Departamento",
+            description: "Miembros activos por área",
             content: (
                 <ResponsiveContainer width="100%" height={220}>
-                    <AreaChart data={data.last12Months}>
+                    <BarChart data={data.deptData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} width={90} />
+                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '10px', fontSize: '12px' }} />
+                        <Bar dataKey="value" name="Miembros" fill="#002366" radius={[0, 4, 4, 0]} barSize={14} />
+                    </BarChart>
+                </ResponsiveContainer>
+            )
+        },
+        {
+            title: "Crecimiento Mensual",
+            description: "Últimos 6 meses",
+            content: (
+                <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={data.last12Months.slice(-6)} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                         <defs>
-                            <linearGradient id="colorTotalMini" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#002366" stopOpacity={0.2} />
-                                <stop offset="95%" stopColor="#002366" stopOpacity={0} />
+                            <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-                        <YAxis hide />
-                        <Tooltip contentStyle={{ borderRadius: '10px', fontSize: '12px' }} />
-                        <Area type="monotone" dataKey="total" name="Miembros" stroke="#002366" strokeWidth={3} fillOpacity={1} fill="url(#colorTotalMini)" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} dy={8} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} width={28} />
+                        <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+                        <Area type="monotone" dataKey="total" name="Miembros" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#growthGrad)" dot={{ fill: '#6366f1', r: 4 }} />
                     </AreaChart>
                 </ResponsiveContainer>
             )
         },
         {
-            title: "Capas Generacionales",
-            description: "Distribución etaria",
+            title: "Género",
+            description: "Composición de la congregación",
             content: (
-                <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={data.ageData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} width={30} />
-                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '10px', fontSize: '12px' }} />
-                        <Bar dataKey="value" name="Miembros" fill="#002366" radius={[4, 4, 0, 0]} barSize={24} />
-                    </BarChart>
-                </ResponsiveContainer>
+                <div className="flex items-center justify-center gap-8 w-full py-4">
+                    <div className="flex flex-col items-center gap-2">
+                        <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-3xl font-black text-blue-700">{data.males}</span>
+                        </div>
+                        <p className="text-sm font-bold text-slate-600">Varones</p>
+                        <p className="text-xs text-slate-400">{data.total ? Math.round(data.males / data.total * 100) : 0}%</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="h-2 w-32 rounded-full bg-slate-100 overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-blue-500 to-pink-500 rounded-full" style={{ width: '100%' }} />
+                        </div>
+                        <p className="text-xs text-slate-400 font-semibold">{data.total} total</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                        <div className="h-24 w-24 rounded-full bg-pink-100 flex items-center justify-center">
+                            <span className="text-3xl font-black text-pink-600">{data.females}</span>
+                        </div>
+                        <p className="text-sm font-bold text-slate-600">Mujeres</p>
+                        <p className="text-xs text-slate-400">{data.total ? Math.round(data.females / data.total * 100) : 0}%</p>
+                    </div>
+                </div>
             )
         },
         {
-            title: "Equilibrio Demográfico",
-            description: "Composición por género",
+            title: "Rangos Etarios",
+            description: "Distribución por edad",
             content: (
-                <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                        <Pie data={data.genderData} innerRadius={55} outerRadius={85} paddingAngle={5} dataKey="value" stroke="none">
-                            {data.genderData.map((_, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ borderRadius: '10px', fontSize: '12px' }} />
-                        <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
-                    </PieChart>
-                </ResponsiveContainer>
+                <div className="w-full space-y-2 px-2 py-1">
+                    {data.ageData.filter(d => d.name !== 'Sin datos' && d.value > 0).map(d => (
+                        <div key={d.name} className="flex items-center gap-3">
+                            <span className="text-[10px] font-bold text-slate-500 w-16 shrink-0">{d.name}</span>
+                            <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full flex items-center justify-end pr-2 transition-all"
+                                    style={{ width: `${data.total ? Math.max(6, Math.round(d.value / data.total * 100)) : 0}%` }}
+                                >
+                                    <span className="text-[9px] font-black text-white">{d.value}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             )
         },
-        {
-            title: "Organigrama Ministerial",
-            description: "Distribución de perfiles",
-            content: (
-                <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={data.roleData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                        <XAxis type="number" hide />
-                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} width={80} />
-                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '10px', fontSize: '12px' }} />
-                        <Bar dataKey="value" name="Personal" fill="#002366" radius={[0, 4, 4, 0]} barSize={16} />
-                    </BarChart>
-                </ResponsiveContainer>
-            )
-        }
     ];
 
     return (

@@ -83,32 +83,20 @@ const getItems = (role: string | undefined, profile: any, unreadReportsCount: nu
   }
   baseItems.push({ title: "Historial", url: "/historial", icon: History });
 
+  if (role === "admin" || role === "secretaria") {
+    baseItems.push({ title: "Todos los Miembros", url: "/todos-los-miembros", icon: Users });
+  }
+
   if (role === "admin" || role === "secretaria" || role === "director" || role === "director_general" || role === "vicedirector") {
     if (role === "admin" || role === "secretaria") {
       baseItems.push(
-        {
-          title: "Estadísticas",
-          url: "/estadisticas",
-          icon: BarChart3,
-          subItems: [
-            { title: "Por Edad", url: "/estadisticas?view=age" },
-            { title: "Por Clases", url: "/estadisticas?view=class" }
-          ]
-        },
+        { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
         { title: "Autorizaciones", url: "/autorizaciones", icon: FileOutput },
         { title: "Departamentos", url: "/departamentos", icon: FolderIcon }
       );
     } else if (role === "director" || role === "director_general" || role === "vicedirector") {
       baseItems.push(
-        {
-          title: "Estadísticas",
-          url: "/estadisticas",
-          icon: BarChart3,
-          subItems: [
-            { title: "Por Edad", url: "/estadisticas?view=age" },
-            { title: "Por Clases", url: "/estadisticas?view=class" }
-          ]
-        }
+        { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 }
       );
     }
     baseItems.push(
@@ -130,6 +118,7 @@ const iconBgMap: Record<string, string> = {
   "Promover Miembros": "bg-pink-100 text-pink-600",
   "Autorizaciones": "bg-red-100 text-red-600",
   "Registrar Usuario": "bg-cyan-100 text-cyan-600",
+  "Todos los Miembros": "bg-slate-100 text-slate-700",
   "Gestión de Usuarios": "bg-violet-100 text-violet-600",
   "Departamentos": "bg-amber-100 text-amber-600",
   "Estadísticas": "bg-indigo-100 text-indigo-600",
@@ -262,6 +251,7 @@ const NavigationContent = ({
   });
 
   const MENU_KEY_MAP: Record<string, string> = {
+    "Todos los Miembros": "menu_todos_miembros",
     "Lista de Miembros": "menu_lista_miembros",
     "Tomar Asistencia": "menu_asistencia",
     "Historial": "menu_historial",

@@ -413,10 +413,16 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="department">Departamento</Label>
+            <Label htmlFor="department">
+              Departamento{isAdminOrSecretaria && <span className="text-muted-foreground font-normal"> (opcional)</span>}
+            </Label>
             <Select
-              value={formData.department || undefined}
+              value={formData.department || "__none__"}
               onValueChange={(value) => {
+                if (value === "__none__") {
+                  setFormData({ ...formData, department: null, department_id: "", assigned_class: "" });
+                  return;
+                }
                 const selectedDept = departments.find(d => d.name === value);
                 setFormData({
                   ...formData,
@@ -431,6 +437,11 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
                 <SelectValue placeholder="Seleccionar departamento" />
               </SelectTrigger>
               <SelectContent>
+                {isAdminOrSecretaria && (
+                  <SelectItem value="__none__">
+                    <span className="text-muted-foreground italic">Sin departamento</span>
+                  </SelectItem>
+                )}
                 {availableDepartments.map((dept) => (
                   <SelectItem key={dept.name} value={dept.name}>
                     {dept.name.charAt(0).toUpperCase() + dept.name.slice(1).replace(/_/g, " ")}
@@ -438,6 +449,11 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
                 ))}
               </SelectContent>
             </Select>
+            {isAdminOrSecretaria && !formData.department && (
+              <p className="text-[11px] text-muted-foreground">
+                Podés registrar miembros de la congregación sin asignarlos a ningún departamento.
+              </p>
+            )}
           </div>
           {formData.department && departmentHasClasses && (
             <div className="space-y-2">

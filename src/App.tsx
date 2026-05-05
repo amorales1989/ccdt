@@ -29,6 +29,7 @@ import ResetPassword from "@/pages/ResetPassword";
 
 
 import Estadisticas from "./pages/Estadisticas";
+import TodosMiembros from "./pages/TodosMiembros";
 import { NotificationHandler } from '@/components/NotificationHandler';
 
 const queryClient = new QueryClient({
@@ -100,6 +101,10 @@ function App() {
 
 
 
+                  {
+                    path: "/todos-los-miembros",
+                    element: <TodosMiembros />,
+                  },
                   {
                     path: "/gestion-usuarios",
                     element: <GestionUsuarios />,

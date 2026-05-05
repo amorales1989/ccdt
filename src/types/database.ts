@@ -10,6 +10,16 @@ export interface StudentObservation {
   };
 }
 
+export interface StudentDepartment {
+  id?: string;
+  student_id?: string;
+  department_id: string;
+  assigned_class?: string | null;
+  role_in_dept: string;
+  company_id?: number;
+  departments?: { id: string; name: string; classes?: string[] };
+}
+
 export interface Student {
   // Campos básicos que existen en la tabla
   id: string;
@@ -39,6 +49,7 @@ export interface Student {
     id?: string;
   };
   observations?: StudentObservation[];
+  dept_assignments?: StudentDepartment[];
 
   // Campos computados (solo para el frontend)
   is_authorized?: boolean;
