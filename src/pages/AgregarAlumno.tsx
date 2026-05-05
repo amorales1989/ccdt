@@ -13,9 +13,8 @@ import { Student, Department, DepartmentType } from "@/types/database";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
-import { UserPlus, User, MapPin, Phone, Hash, CalendarDays, KeyRound, Building2, Search, Check } from "lucide-react";
+import { UserPlus, Check } from "lucide-react";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
-import { PersonSearchInput, PersonSearchResult } from "@/components/PersonSearchInput";
 import { DniIdentityInput } from "@/components/DniIdentityInput";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 
@@ -301,36 +300,6 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
       )}
 
       <div className={`${!isModal ? 'bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/40 dark:border-slate-700/50 shadow-sm' : ''}`}>
-        <div className="mb-8 p-4 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-900/20">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-400 ml-1 mb-2 block">
-            Buscar persona existente (Opcional)
-          </Label>
-          <PersonSearchInput
-            onSelect={(person: PersonSearchResult) => {
-              setFormData(prev => ({
-                ...prev,
-                first_name: person.first_name,
-                last_name: person.last_name,
-                phone: person.phone || "",
-                address: person.address || "",
-                gender: person.gender || "masculino",
-                birthdate: person.birthdate || format(new Date(), 'yyyy-MM-dd'),
-                document_number: person.document_number || "",
-                profile_id: person.profile_id || (person.source === 'profile' ? person.id : (prev.profile_id)),
-                person_source: person.source
-              }));
-
-              toast({
-                title: "Persona seleccionada",
-                description: `Se han cargado los datos de ${person.first_name} ${person.last_name}.`,
-              });
-            }}
-          />
-          <p className="text-[10px] text-muted-foreground mt-2 px-1 italic">
-            Evita duplicados buscando si la persona ya es líder o miembro de otro departamento.
-          </p>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
