@@ -13,6 +13,7 @@ interface CustomTabsProps<T extends string = string> {
     onChange: (value: T) => void;
     options: TabOption<T>[];
     className?: string;
+    scrollable?: boolean;
 }
 
 export const CustomTabs = <T extends string = string>({
@@ -20,20 +21,23 @@ export const CustomTabs = <T extends string = string>({
     onChange,
     options,
     className = "",
+    scrollable = false,
 }: CustomTabsProps<T>) => {
     return (
         <Box
             className={`
                 bg-slate-100/80 dark:bg-slate-800/50 backdrop-blur-md
                 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-700/50
-                w-full overflow-hidden
+                w-full ${scrollable ? "overflow-x-auto" : "overflow-hidden"}
                 ${className}
             `}
         >
             <Tabs
                 value={value}
                 onChange={(_, newValue: T) => onChange(newValue)}
-                variant="fullWidth"
+                variant={scrollable ? "scrollable" : "fullWidth"}
+                scrollButtons={scrollable ? "auto" : undefined}
+                allowScrollButtonsMobile={scrollable}
                 sx={{
                     minHeight: "auto",
                     "& .MuiTabs-indicator": {

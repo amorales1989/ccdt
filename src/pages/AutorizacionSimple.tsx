@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Calendar, Clock, MapPin, Users, Phone, User, FileText, Info } from "lucide-react";
+import { TimePickerField } from "@/components/TimePickerField";
 import { jsPDF } from "jspdf";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
@@ -26,6 +27,7 @@ const AutorizacionRhema = () => {
     tipoEvento: "",
     lugarEvento: "",
     descripcionEvento: "",
+    valorSalida: "",
     liderDirector: "",
     telefono: ""
   });
@@ -166,6 +168,15 @@ const AutorizacionRhema = () => {
         currentY += 5;
       }
 
+      if (data.valorSalida) {
+        const lineValor = doc.splitTextToSize(`El valor de la salida es de $${data.valorSalida}.`, pageWidth - margin * 2);
+        lineValor.forEach((line) => {
+          doc.text(line, margin, currentY);
+          currentY += 5;
+        });
+        currentY += 5;
+      }
+
       const parrafo3 = "Si Uds. están interesados en que su hijo/a concurra a la actividad, les rogamos nos lo hagan saber a la mayor brevedad posible, completando la autorización que se adjunta a la presente.";
 
       const lines3 = doc.splitTextToSize(parrafo3, pageWidth - margin * 2);
@@ -214,6 +225,11 @@ const AutorizacionRhema = () => {
       });
 
       currentY += 15;
+
+      if (data.valorSalida) {
+        doc.text(`Valor de la salida: $${data.valorSalida}`, margin, currentY);
+        currentY += 15;
+      }
 
       // Firma del padre o tutor
       doc.text("FIRMA DEL PADRE ó TUTOR: …………................................................................................", margin, currentY);
@@ -310,33 +326,21 @@ const AutorizacionRhema = () => {
                     {errors.fechaEvento && <p className="text-xs text-red-500">{errors.fechaEvento}</p>}
                   </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="horaInicio" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hora de Inicio <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <Input
-                        id="horaInicio"
-                        type="time"
-                        value={formData.horaInicio}
-                        onChange={(e) => handleInputChange('horaInicio', e.target.value)}
-                        className="rounded-xl bg-slate-50 border-slate-200"
-                      />
-                    </div>
-                    {errors.horaInicio && <p className="text-xs text-red-500">{errors.horaInicio}</p>}
-                  </div>
+                  <TimePickerField
+                    label="Hora de Inicio"
+                    value={formData.horaInicio}
+                    onChange={(v) => handleInputChange('horaInicio', v)}
+                    required
+                    error={errors.horaInicio}
+                  />
 
-                  <div className="space-y-1">
-                    <Label htmlFor="horaFin" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hora de Finalización <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <Input
-                        id="horaFin"
-                        type="time"
-                        value={formData.horaFin}
-                        onChange={(e) => handleInputChange('horaFin', e.target.value)}
-                        className="rounded-xl bg-slate-50 border-slate-200"
-                      />
-                    </div>
-                    {errors.horaFin && <p className="text-xs text-red-500">{errors.horaFin}</p>}
-                  </div>
+                  <TimePickerField
+                    label="Hora de Finalización"
+                    value={formData.horaFin}
+                    onChange={(v) => handleInputChange('horaFin', v)}
+                    required
+                    error={errors.horaFin}
+                  />
 
                   <div className="space-y-1">
                     <Label htmlFor="liderDirector" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Director/Responsable <span className="text-red-500">*</span></Label>
@@ -391,6 +395,20 @@ const AutorizacionRhema = () => {
                       rows={3}
                       className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 text-sm resize-none"
                     />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="valorSalida" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Valor de la Salida (Opcional)</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">$</span>
+                      <Input
+                        id="valorSalida"
+                        value={formData.valorSalida}
+                        onChange={(e) => handleInputChange('valorSalida', e.target.value)}
+                        placeholder="Ej: 2500"
+                        className="pl-7 rounded-xl bg-slate-50 border-slate-200"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -451,6 +469,11 @@ const AutorizacionRhema = () => {
                     {formData.descripcionEvento && (
                       <p className="text-justify leading-relaxed">
                         {formData.descripcionEvento}
+                      </p>
+                    )}
+                    {formData.valorSalida && (
+                      <p className="text-justify leading-relaxed">
+                        El valor de la salida es de ${formData.valorSalida}.
                       </p>
                     )}
                     <p className="text-justify leading-relaxed">

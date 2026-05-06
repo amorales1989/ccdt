@@ -34,15 +34,15 @@ import { STORAGE_URL } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { RoleSwitcher } from "./RoleSwitcher";
+import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 
 const getItems = (role: string | undefined, profile: any, unreadReportsCount: number = 0) => {
   const selectedDepartment = localStorage.getItem('selectedDepartment');
   if (selectedDepartment === 'calendario' || profile?.departments?.[0] === 'calendario') {
-    const calendarItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[] = [
+    return [
       { title: "Inicio", url: "/", icon: Home },
       { title: "Calendario", url: "/calendario", icon: FileText }
-    ];
-    return calendarItems;
+    ] as { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[];
   }
 
   if (role === 'conserje') {
@@ -50,61 +50,32 @@ const getItems = (role: string | undefined, profile: any, unreadReportsCount: nu
       { title: "Inicio", url: "/", icon: Home },
       { title: "Calendario", url: "/calendario", icon: FileText },
       { title: "Mantenimiento", url: "/mantenimiento", icon: Wrench }
-    ];
+    ] as { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[];
   }
 
-  const baseItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[] = [
+  const userDepartment = profile?.departments?.[0] || selectedDepartment;
+
+  // Full list — permissions system controls visibility via MENU_KEY_MAP filter
+  const allItems: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[] = [
     { title: "Inicio", url: "/", icon: Home },
+    { title: "Todos los Miembros", url: "/todos-los-miembros", icon: Users },
     { title: "Lista de Miembros", url: "/listar", icon: Users },
     { title: "Calendario", url: "/calendario", icon: FileText },
+    { title: "Material Didáctico", url: "/material", icon: BookOpen },
+    { title: "Informes de Personal", url: "/informes", icon: Users, badge: unreadReportsCount > 0 ? unreadReportsCount : undefined },
+    { title: "Tomar Asistencia", url: "/asistencia", icon: ClipboardList },
+    // Autorizaciones: only include if role is not lider, or lider in adolescentes
+    ...(role !== "lider" || userDepartment === "adolescentes"
+      ? [{ title: "Autorizaciones", url: "/autorizaciones", icon: FileOutput }]
+      : []),
+    { title: "Promover Miembros", url: "/promover", icon: FolderUp },
+    { title: "Historial", url: "/historial", icon: History },
+    { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
+    { title: "Departamentos", url: "/departamentos", icon: FolderIcon },
+    { title: "Gestión de Usuarios", url: "/gestion-usuarios", icon: UserRound },
   ];
 
-  if (role === "secretaria" || role === "director_general" || role === "admin") {
-    baseItems.push({ title: "Material Didáctico", url: "/material", icon: BookOpen });
-  }
-
-  if (["maestro", "director", "vicedirector", "admin", "director_general"].includes(role || "")) {
-    baseItems.push({ title: "Informes de Personal", url: "/informes", icon: Users, badge: unreadReportsCount > 0 ? unreadReportsCount : undefined });
-  }
-
-  if (role !== "secretaria" && role !== "director_general" && role !== "admin") {
-    baseItems.push({ title: "Tomar Asistencia", url: "/asistencia", icon: ClipboardList });
-  }
-
-  if (role === "lider") {
-    const userDepartment = profile?.departments?.[0] || selectedDepartment;
-    if (userDepartment === "adolescentes") {
-      baseItems.push({ title: "Autorizaciones", url: "/autorizaciones", icon: FileOutput });
-    }
-  }
-
-  if (role !== "maestro") {
-    baseItems.push({ title: "Promover Miembros", url: "/promover", icon: FolderUp });
-  }
-  baseItems.push({ title: "Historial", url: "/historial", icon: History });
-
-  if (role === "admin" || role === "secretaria") {
-    baseItems.push({ title: "Todos los Miembros", url: "/todos-los-miembros", icon: Users });
-  }
-
-  if (role === "admin" || role === "secretaria" || role === "director" || role === "director_general" || role === "vicedirector") {
-    if (role === "admin" || role === "secretaria") {
-      baseItems.push(
-        { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
-        { title: "Autorizaciones", url: "/autorizaciones", icon: FileOutput },
-        { title: "Departamentos", url: "/departamentos", icon: FolderIcon }
-      );
-    } else if (role === "director" || role === "director_general" || role === "vicedirector") {
-      baseItems.push(
-        { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 }
-      );
-    }
-    baseItems.push(
-      { title: "Gestión de Usuarios", url: "/gestion-usuarios", icon: UserRound }
-    );
-  }
-
-  return baseItems;
+  return allItems;
 };
 
 // Icon background color by category
@@ -267,14 +238,22 @@ const NavigationContent = ({
     "Solicitar Reparación": "menu_mantenimiento",
   };
 
+  const checkMenuPerm = (menuKey: string) => {
+    const role = profile?.role || '';
+    const savedPerms = (company as any)?.role_permissions?.[role];
+    if (savedPerms && menuKey in savedPerms) return savedPerms[menuKey] !== false;
+    return DEFAULT_PERMISSIONS[role]?.[menuKey] !== false;
+  };
+
   const items = useMemo(() => {
     const allItems = getItems(profile?.role, profile, unreadReportsCount);
-    const rolePerms = (company as any)?.role_permissions?.[profile?.role || ''];
-    if (!rolePerms) return allItems;
+    const role = profile?.role || '';
+    const savedPerms = (company as any)?.role_permissions?.[role];
     return allItems.filter(item => {
       const menuKey = MENU_KEY_MAP[item.title];
       if (!menuKey) return true; // Inicio, Calendario always visible
-      return rolePerms[menuKey] !== false;
+      if (savedPerms && menuKey in savedPerms) return savedPerms[menuKey] !== false;
+      return DEFAULT_PERMISSIONS[role]?.[menuKey] !== false;
     });
   }, [profile?.role, profile?.departments, unreadReportsCount, company]);
 
@@ -405,14 +384,14 @@ const NavigationContent = ({
 
       {/* Bottom section */}
       <div className="px-2 py-2 border-t border-border space-y-1">
-        {profile?.role !== "conserje" && (
+        {profile?.role !== "conserje" && checkMenuPerm("menu_mantenimiento") && (
           <NavItem
             item={{ title: "Solicitar Reparación", url: "/mantenimiento", icon: Wrench }}
             isActive={location.pathname === "/mantenimiento"}
             onClick={onItemClick}
           />
         )}
-        {(profile?.role === "admin" || profile?.role === "secretaria") && (
+        {checkMenuPerm("menu_configuracion") && (
           <NavItem
             item={{ title: "Configuración", url: "/configuracion", icon: Settings }}
             isActive={location.pathname === "/configuracion"}

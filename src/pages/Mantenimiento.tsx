@@ -241,18 +241,107 @@ export default function Mantenimiento() {
                     )
                 }))}
                 className="w-full mb-4"
+                scrollable
             />
 
-            {/* Table */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+                {isLoading ? (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="h-6 w-6 animate-spin text-orange-400" />
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground italic text-sm">
+                        No hay reparaciones
+                    </div>
+                ) : (
+                    filtered.map((req) => (
+                        <div
+                            key={req.id}
+                            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm cursor-pointer active:bg-orange-50/30"
+                            onClick={() => setSelectedRequest(req)}
+                        >
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm truncate">{req.title}</p>
+                                    {req.location && (
+                                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{req.location}</p>
+                                    )}
+                                    {req.description && (
+                                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{req.description}</p>
+                                    )}
+                                </div>
+                                {(isConserje || isAdmin) && (
+                                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                        {isConserje && req.status !== "anulado" && req.status !== "terminado" && (
+                                            <Button
+                                                variant="ghost" size="icon"
+                                                className="h-7 w-7 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                onClick={() => updateStatusMutation.mutate({ id: req.id, status: "anulado" })}
+                                            >
+                                                <Ban className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
+                                        {isAdmin && (
+                                            <Button
+                                                variant="ghost" size="icon"
+                                                className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                onClick={() => deleteMutation.mutate(req.id)}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                                <Badge variant="outline" className={`${PRIORITY_COLORS[req.priority]} text-[10px] font-semibold`}>
+                                    {req.priority === "alta" && <AlertCircle className="h-3 w-3 mr-1" />}
+                                    {PRIORITY_LABELS[req.priority]}
+                                </Badge>
+                                {req.status === "anulado" || !(isConserje || isAdmin) ? (
+                                    <Badge variant="outline" className={`${STATUS_COLORS[req.status]} text-[10px] font-semibold flex items-center gap-1`}>
+                                        <StatusIcon status={req.status} />
+                                        {STATUS_LABELS[req.status]}
+                                    </Badge>
+                                ) : (
+                                    <Select
+                                        value={req.status}
+                                        onValueChange={(val) => updateStatusMutation.mutate({ id: req.id, status: val as Status })}
+                                    >
+                                        <SelectTrigger className={`h-7 text-[10px] font-semibold w-[130px] border rounded-full px-2 ${STATUS_COLORS[req.status]}`}>
+                                            <div className="flex items-center gap-1">
+                                                <StatusIcon status={req.status} />
+                                                <SelectValue />
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="pendiente">Pendiente</SelectItem>
+                                            <SelectItem value="en_proceso">En proceso</SelectItem>
+                                            <SelectItem value="terminado">Terminado</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                                <span className="text-[10px] text-muted-foreground ml-auto">{formatDate(req.created_at)}</span>
+                            </div>
+                            {req.requester_name && (
+                                <p className="text-[10px] text-muted-foreground mt-1.5">Por: {req.requester_name}</p>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50">
                             <TableHead className="text-xs font-semibold text-slate-500">Reparación</TableHead>
-                            <TableHead className="hidden md:table-cell text-xs font-semibold text-slate-500">Ubicación</TableHead>
+                            <TableHead className="text-xs font-semibold text-slate-500">Ubicación</TableHead>
                             <TableHead className="text-xs font-semibold text-slate-500">Prioridad</TableHead>
                             <TableHead className="text-xs font-semibold text-slate-500">Estado</TableHead>
-                            <TableHead className="hidden sm:table-cell text-xs font-semibold text-slate-500">Solicitado por</TableHead>
+                            <TableHead className="text-xs font-semibold text-slate-500">Solicitado por</TableHead>
                             <TableHead className="hidden lg:table-cell text-xs font-semibold text-slate-500">Fecha</TableHead>
                             {(isConserje || isAdmin) && (
                                 <TableHead className="text-xs font-semibold text-slate-500 text-right">Acciones</TableHead>
@@ -287,7 +376,7 @@ export default function Mantenimiento() {
                                             )}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                                    <TableCell className="text-sm text-muted-foreground">
                                         {req.location || <span className="italic">Sin especificar</span>}
                                     </TableCell>
                                     <TableCell>
@@ -298,7 +387,6 @@ export default function Mantenimiento() {
                                     </TableCell>
                                     <TableCell onClick={(e) => e.stopPropagation()}>
                                         {req.status === "anulado" ? (
-                                            // Anulado: always show as static badge, never a dropdown
                                             <Badge variant="outline" className={`${STATUS_COLORS[req.status]} text-[10px] font-semibold flex items-center gap-1 w-fit`}>
                                                 <StatusIcon status={req.status} />
                                                 {STATUS_LABELS[req.status]}
@@ -327,7 +415,7 @@ export default function Mantenimiento() {
                                             </Badge>
                                         )}
                                     </TableCell>
-                                    <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
+                                    <TableCell className="text-xs text-muted-foreground">
                                         {req.requester_name || "—"}
                                     </TableCell>
                                     <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
@@ -336,24 +424,18 @@ export default function Mantenimiento() {
                                     {(isConserje || isAdmin) && (
                                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center justify-end gap-1">
-                                                {/* Anular: conserje can annul if not already anulado/terminado */}
                                                 {isConserje && req.status !== "anulado" && req.status !== "terminado" && (
                                                     <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        title="Anular reparación"
+                                                        variant="ghost" size="icon"
                                                         className="h-7 w-7 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
                                                         onClick={() => updateStatusMutation.mutate({ id: req.id, status: "anulado" })}
                                                     >
                                                         <Ban className="h-3.5 w-3.5" />
                                                     </Button>
                                                 )}
-                                                {/* Delete: only admin/secretaria */}
                                                 {isAdmin && (
                                                     <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        title="Eliminar"
+                                                        variant="ghost" size="icon"
                                                         className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                                                         onClick={() => deleteMutation.mutate(req.id)}
                                                     >
@@ -381,7 +463,7 @@ export default function Mantenimiento() {
                     </DialogHeader>
                     <div className="space-y-4 py-2">
                         <div>
-                            <Label htmlFor="maint-title">Título *</Label>
+                            <Label htmlFor="maint-title">Motivo del mantenimiento *</Label>
                             <Input
                                 id="maint-title"
                                 placeholder="Ej: Puerta del baño rota"

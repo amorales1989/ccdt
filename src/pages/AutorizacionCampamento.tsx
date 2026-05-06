@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { TimePickerField } from "@/components/TimePickerField";
 import { format, parseISO } from "date-fns";
 
 const AutorizacionCampamento = () => {
@@ -495,43 +496,27 @@ const AutorizacionCampamento = () => {
                     {errors.fechaLimite && <p className="text-xs text-red-500">{errors.fechaLimite}</p>}
                   </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="horaSalida1" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Primera hora de salida <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="horaSalida1"
-                      name="horaSalida1"
-                      type="time"
-                      value={formData.horaSalida1}
-                      onChange={handleInputChange}
-                      className="rounded-xl bg-slate-50 border-slate-200"
-                    />
-                    {errors.horaSalida1 && <p className="text-xs text-red-500">{errors.horaSalida1}</p>}
-                  </div>
+                  <TimePickerField
+                    label="Primera hora de salida"
+                    value={formData.horaSalida1}
+                    onChange={(v) => handleInputChange({ target: { name: 'horaSalida1', value: v } })}
+                    required
+                    error={errors.horaSalida1}
+                  />
 
-                  <div className="space-y-1">
-                    <Label htmlFor="horaSalida2" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Segunda hora de salida</Label>
-                    <Input
-                      id="horaSalida2"
-                      name="horaSalida2"
-                      type="time"
-                      value={formData.horaSalida2}
-                      onChange={handleInputChange}
-                      className="rounded-xl bg-slate-50 border-slate-200"
-                    />
-                  </div>
+                  <TimePickerField
+                    label="Segunda hora de salida"
+                    value={formData.horaSalida2}
+                    onChange={(v) => handleInputChange({ target: { name: 'horaSalida2', value: v } })}
+                  />
 
-                  <div className="space-y-1">
-                    <Label htmlFor="horaRegreso" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hora de regreso <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="horaRegreso"
-                      name="horaRegreso"
-                      type="time"
-                      value={formData.horaRegreso}
-                      onChange={handleInputChange}
-                      className="rounded-xl bg-slate-50 border-slate-200"
-                    />
-                    {errors.horaRegreso && <p className="text-xs text-red-500">{errors.horaRegreso}</p>}
-                  </div>
+                  <TimePickerField
+                    label="Hora de regreso"
+                    value={formData.horaRegreso}
+                    onChange={(v) => handleInputChange({ target: { name: 'horaRegreso', value: v } })}
+                    required
+                    error={errors.horaRegreso}
+                  />
 
                   <div className="space-y-1">
                     <Label htmlFor="liderDirector" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Director/Responsable <span className="text-red-500">*</span></Label>

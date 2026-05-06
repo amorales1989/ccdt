@@ -34,6 +34,7 @@ const GENDER_COLORS: Record<string, string> = {
 };
 
 const GLOBAL_ROLES = ["admin", "secretaria"];
+const LIDER_ROLES = ["lider"];
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -81,6 +82,7 @@ export default function Estadisticas() {
   });
 
   const isGlobalView = !currentProfile || GLOBAL_ROLES.includes(currentProfile.role);
+  const isLider = currentProfile && LIDER_ROLES.includes(currentProfile.role);
 
   const { data: allDepartments = [] } = useQuery({
     queryKey: ['stats-all-departments', companyId],
@@ -109,6 +111,15 @@ export default function Estadisticas() {
     }
     return allDepartments.filter(d => userDeptIds.has(d.id));
   }, [currentProfile, allDepartments]);
+
+  // Auto-set department and class for lider (after allDepartments is declared)
+  React.useEffect(() => {
+    if (!isLider || !currentProfile || !allDepartments.length) return;
+    const deptId = currentProfile.department_id ||
+      allDepartments.find((d: any) => currentProfile.departments?.includes(d.name))?.id;
+    if (deptId && selectedDeptId === "all") setSelectedDeptId(deptId);
+    if (currentProfile.assigned_class && selectedClass === "all") setSelectedClass(currentProfile.assigned_class);
+  }, [isLider, currentProfile, allDepartments]);
 
   const effectiveDeptId = selectedDeptId === "all" ? null : selectedDeptId;
 
@@ -352,7 +363,9 @@ export default function Estadisticas() {
         <div className="relative z-10 max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <p className="text-indigo-200 text-xs font-black uppercase tracking-[0.2em] mb-2">
-              {selectedDeptId === "all" ? (isGlobalView ? "Vista Global" : "Mis Departamentos") : `Departamento · ${deptLabel}`}
+              {isLider
+                ? `${deptLabel || "Mi Departamento"} · ${currentProfile?.assigned_class || "Mi Clase"}`
+                : selectedDeptId === "all" ? (isGlobalView ? "Vista Global" : "Mis Departamentos") : `Departamento · ${deptLabel}`}
             </p>
             <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
               Estadísticas
@@ -363,7 +376,7 @@ export default function Estadisticas() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {allowedDepts.length > 1 && (
+            {!isLider && allowedDepts.length > 1 && (
               <Select
                 value={selectedDeptId}
                 onValueChange={val => {
@@ -384,7 +397,7 @@ export default function Estadisticas() {
                 </SelectContent>
               </Select>
             )}
-            {availableClasses.length > 0 && (
+            {!isLider && availableClasses.length > 0 && (
               <Select
                 value={selectedClass}
                 onValueChange={setSelectedClass}
