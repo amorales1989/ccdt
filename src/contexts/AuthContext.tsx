@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import type { User, Session } from "@supabase/supabase-js";
@@ -51,12 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [lastActivity, setLastActivity] = useState(Date.now());
+  const lastActivity = useRef(Date.now());
 
   useEffect(() => {
-    const handleActivity = () => {
-      setLastActivity(Date.now());
-    };
+    const handleActivity = () => { lastActivity.current = Date.now(); };
 
     window.addEventListener('mousemove', handleActivity);
     window.addEventListener('keydown', handleActivity);
@@ -64,12 +62,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('touchstart', handleActivity);
     window.addEventListener('scroll', handleActivity);
 
+    // Check frontend inactivity every minute
     const checkInactivity = setInterval(() => {
-      if (user && Date.now() - lastActivity > INACTIVITY_TIMEOUT) {
-        console.log('User inactive for 10 minutes, logging out...');
+      if (user && Date.now() - lastActivity.current > INACTIVITY_TIMEOUT) {
+        console.log('User inactive for 60 minutes, logging out...');
         signOut();
       }
-    }, 60000); // Check every minute
+    }, 60000);
+
+    // Heartbeat every 8 minutes to keep backend session alive while user is active
+    const heartbeat = setInterval(async () => {
+      if (!user) return;
+      if (Date.now() - lastActivity.current > INACTIVITY_TIMEOUT) return;
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (!currentSession) return;
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        await fetch(`${apiBase.replace(/\/api$/, '')}/api/heartbeat`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${currentSession.access_token}` },
+        });
+      } catch { /* silent */ }
+    }, 8 * 60 * 1000);
 
     return () => {
       window.removeEventListener('mousemove', handleActivity);
@@ -78,8 +92,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('touchstart', handleActivity);
       window.removeEventListener('scroll', handleActivity);
       clearInterval(checkInactivity);
+      clearInterval(heartbeat);
     };
-  }, [user, lastActivity]);
+  }, [user]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
@@ -190,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    setLastActivity(Date.now());
+    lastActivity.current = Date.now();
   }
 
   async function signUp(email: string, password: string, userData: {
