@@ -77,6 +77,7 @@ const ListarAlumnos = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [studentsToPromote, setStudentsToPromote] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [isPromoting, setIsPromoting] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -789,7 +790,10 @@ const ListarAlumnos = () => {
     setIsPromoting(true);
     try {
       for (const studentId of studentsToPromote) {
-        await updateStudent(studentId, { department_id: selectedDepartment });
+        await updateStudent(studentId, {
+          department_id: selectedDepartment,
+          assigned_class: selectedClass
+        });
       }
       toast({
         title: "Miembros promovidos",
@@ -799,6 +803,7 @@ const ListarAlumnos = () => {
       setIsPromoteModalOpen(false);
       setStudentsToPromote([]);
       setSelectedDepartment(null);
+      setSelectedClass(null);
       queryClient.invalidateQueries({ queryKey: ["students", companyId] });
     } catch (error: any) {
       toast({
@@ -1232,7 +1237,7 @@ const ListarAlumnos = () => {
                           <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
                             <SelectValue placeholder="Seleccione un departamento" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                             {profile?.role !== 'director' && profile?.role !== 'vicedirector' && <SelectItem value="all">Todos</SelectItem>}
                             {departments?.filter(dept => {
                               if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
@@ -1258,7 +1263,7 @@ const ListarAlumnos = () => {
                           <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
                             <SelectValue placeholder="Seleccione una clase" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                             <SelectItem value="all">Todas</SelectItem>
                             {classes?.map((className) => (
                               <SelectItem key={String(className)} value={String(className)}>
@@ -1393,12 +1398,24 @@ const ListarAlumnos = () => {
               {/* Departamento destino */}
               <div className="space-y-2">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Departamento destino</p>
-                <Select onValueChange={setSelectedDepartment} defaultValue={selectedDepartment ?? ""}>
+                <Select
+                  onValueChange={(value) => {
+                    setSelectedDepartment(value);
+                    setSelectedClass(null);
+                  }}
+                  value={selectedDepartment ?? ""}
+                >
                   <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200 h-11">
                     <SelectValue placeholder="Seleccione un departamento" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {departments?.map((department) => (
+                  <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                    {departments?.filter(dept => {
+                      if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
+                      if (profile?.role === 'director_general' || profile?.role === 'director' || profile?.role === 'vicedirector') {
+                        return profile?.departments?.includes(dept.name);
+                      }
+                      return false;
+                    }).map((department) => (
                       <SelectItem key={department.id} value={department.id}>
                         {department.name}
                       </SelectItem>
@@ -1406,6 +1423,26 @@ const ListarAlumnos = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Clase destino */}
+              {selectedDepartment && (
+                <div className="space-y-2">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Clase destino</p>
+                  <Select onValueChange={setSelectedClass} value={selectedClass ?? ""}>
+                    <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200 h-11">
+                      <SelectValue placeholder="Seleccione una clase (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                      <SelectItem value="none">Sin clase específica</SelectItem>
+                      {departments?.find(d => d.id === selectedDepartment)?.classes?.map((className) => (
+                        <SelectItem key={className} value={className}>
+                          {className}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Selección de miembros */}
               <div className="space-y-2">
@@ -1487,12 +1524,12 @@ const ListarAlumnos = () => {
               <Button
                 onClick={promoteStudents}
                 disabled={isPromoting || studentsToPromote.length === 0 || !selectedDepartment}
-                className="button-gradient rounded-xl font-black px-6 shadow-lg shadow-primary/20 disabled:opacity-50"
+                className="button-gradient rounded-xl font-black h-11 px-6 shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95 transition-all disabled:opacity-50"
               >
                 {isPromoting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Upload className="mr-2 h-4 w-4" />
+                  <Upload className="mr-2 h-4 w-4 text-white" />
                 )}
                 Promover {studentsToPromote.length > 0 ? `(${studentsToPromote.length})` : ''}
               </Button>

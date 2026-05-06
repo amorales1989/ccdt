@@ -12,6 +12,13 @@ import {
   Users, TrendingUp, Award, Loader2, FileDown,
   UserCheck, Star, CalendarDays, ArrowUpRight, BookOpen
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format, subMonths, differenceInYears } from "date-fns";
 import { es } from "date-fns/locale";
 import { exportStatsReport } from "@/lib/statsPdfUtils";
@@ -57,6 +64,7 @@ export default function Estadisticas() {
   const [searchParams] = useSearchParams();
   const currentView = searchParams.get("view") || "age";
   const [selectedClass, setSelectedClass] = React.useState<string>("all");
+  const [selectedDeptId, setSelectedDeptId] = React.useState<string>("all");
   const [isExporting, setIsExporting] = React.useState(false);
   const { companyId } = useCompany();
 
@@ -73,15 +81,51 @@ export default function Estadisticas() {
   });
 
   const isGlobalView = !currentProfile || GLOBAL_ROLES.includes(currentProfile.role);
-  const scopedDeptId = isGlobalView ? null : currentProfile?.department_id;
+
+  const { data: allDepartments = [] } = useQuery({
+    queryKey: ['stats-all-departments', companyId],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from('departments') as any)
+        .select('id, name, classes').eq('company_id', companyId);
+      if (error) throw error;
+      return data as any[];
+    }
+  });
+
+  const allowedDepts = React.useMemo(() => {
+    if (!currentProfile || !allDepartments.length) return [];
+    if (GLOBAL_ROLES.includes(currentProfile.role)) return allDepartments;
+
+    const userDeptIds = new Set<string>();
+    if (currentProfile.department_id) userDeptIds.add(currentProfile.department_id);
+    if (currentProfile.assignments) {
+      currentProfile.assignments.forEach((a: any) => { if (a.department_id) userDeptIds.add(a.department_id); });
+    }
+    if (currentProfile.departments) {
+      currentProfile.departments.forEach((dName: string) => {
+        const d = allDepartments.find(ad => ad.name === dName);
+        if (d) userDeptIds.add(d.id);
+      });
+    }
+    return allDepartments.filter(d => userDeptIds.has(d.id));
+  }, [currentProfile, allDepartments]);
+
+  const effectiveDeptId = selectedDeptId === "all" ? null : selectedDeptId;
 
   const { data: students = [], isLoading: loadingStudents } = useQuery({
-    queryKey: ['stats-students', scopedDeptId, companyId],
+    queryKey: ['stats-students', selectedDeptId, companyId, currentProfile?.id],
     enabled: !loadingProfile,
     queryFn: async () => {
       let q = (supabase.from('students') as any)
         .select('*').eq('company_id', companyId).is('deleted_at', null);
-      if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
+
+      if (selectedDeptId !== "all") {
+        q = q.eq('department_id', selectedDeptId);
+      } else if (!isGlobalView) {
+        const deptIds = allowedDepts.map(d => d.id);
+        if (deptIds.length > 0) q = q.in('department_id', deptIds);
+      }
+
       const { data, error } = await q;
       if (error) throw error;
       return data as Student[];
@@ -89,11 +133,18 @@ export default function Estadisticas() {
   });
 
   const { data: attendance = [], isLoading: loadingAttendance } = useQuery({
-    queryKey: ['stats-attendance', scopedDeptId, companyId],
+    queryKey: ['stats-attendance', selectedDeptId, companyId, currentProfile?.id],
     enabled: !loadingProfile,
     queryFn: async () => {
       let q = (supabase.from('attendance') as any).select('*').eq('company_id', companyId);
-      if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
+
+      if (selectedDeptId !== "all") {
+        q = q.eq('department_id', selectedDeptId);
+      } else if (!isGlobalView) {
+        const deptIds = allowedDepts.map(d => d.id);
+        if (deptIds.length > 0) q = q.in('department_id', deptIds);
+      }
+
       const { data, error } = await q;
       if (error) throw error;
       return data as any[];
@@ -101,11 +152,18 @@ export default function Estadisticas() {
   });
 
   const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
-    queryKey: ['stats-profiles', scopedDeptId, companyId],
+    queryKey: ['stats-profiles', selectedDeptId, companyId, currentProfile?.id],
     enabled: !loadingProfile,
     queryFn: async () => {
       let q = (supabase.from('profiles') as any).select('*').eq('company_id', companyId);
-      if (scopedDeptId) q = q.eq('department_id', scopedDeptId);
+
+      if (selectedDeptId !== "all") {
+        q = q.eq('department_id', selectedDeptId);
+      } else if (!isGlobalView) {
+        const deptIds = allowedDepts.map(d => d.id);
+        if (deptIds.length > 0) q = q.in('department_id', deptIds);
+      }
+
       const { data, error } = await q;
       if (error) throw error;
       return data as Profile[];
@@ -113,11 +171,11 @@ export default function Estadisticas() {
   });
 
   const { data: deptInfo } = useQuery({
-    queryKey: ['stats-dept', scopedDeptId, companyId],
-    enabled: !!scopedDeptId,
+    queryKey: ['stats-dept', effectiveDeptId, companyId],
+    enabled: !!effectiveDeptId,
     queryFn: async () => {
       const { data, error } = await (supabase.from('departments') as any)
-        .select('name, classes').eq('id', scopedDeptId).eq('company_id', companyId).single();
+        .select('name, classes').eq('id', effectiveDeptId).eq('company_id', companyId).single();
       if (error) throw error;
       return data;
     }
@@ -244,7 +302,7 @@ export default function Estadisticas() {
       value: filteredStudents.filter(s => s.assigned_class === c).length
     }));
 
-    const totalVolunteers = filteredProfiles.filter(p => p.role === 'lider' || p.role === 'maestro').length;
+    const totalVolunteers = filteredProfiles.filter(p => ['lider', 'maestro', 'ayudante', 'colaborador'].includes(p.role as string)).length;
     const newStudents = filteredStudents.filter((s: any) => s.nuevo).length;
 
     return {
@@ -294,7 +352,7 @@ export default function Estadisticas() {
         <div className="relative z-10 max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <p className="text-indigo-200 text-xs font-black uppercase tracking-[0.2em] mb-2">
-              {isGlobalView ? "Vista Global" : `Departamento · ${deptLabel}`}
+              {selectedDeptId === "all" ? (isGlobalView ? "Vista Global" : "Mis Departamentos") : `Departamento · ${deptLabel}`}
             </p>
             <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
               Estadísticas
@@ -305,17 +363,42 @@ export default function Estadisticas() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {availableClasses.length > 0 && (
-              <select
-                value={selectedClass}
-                onChange={e => setSelectedClass(e.target.value)}
-                className="h-10 px-4 rounded-xl bg-white/15 text-white text-xs font-bold border border-white/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30"
+            {allowedDepts.length > 1 && (
+              <Select
+                value={selectedDeptId}
+                onValueChange={val => {
+                  setSelectedDeptId(val);
+                  setSelectedClass("all");
+                }}
               >
-                <option value="all" className="text-slate-800">Todas las clases</option>
-                {availableClasses.map((c: string) => (
-                  <option key={c} value={c} className="text-slate-800">{c}</option>
-                ))}
-              </select>
+                <SelectTrigger className="h-10 px-4 rounded-xl bg-white/15 text-white text-xs font-bold border border-white/20 backdrop-blur-sm focus:ring-2 focus:ring-white/30 w-auto min-w-[150px]">
+                  <SelectValue placeholder={isGlobalView ? "Todas las áreas" : "Mis áreas"} />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                  <SelectItem value="all" className="text-slate-800">
+                    {isGlobalView ? "Todas las áreas" : "Mis áreas"}
+                  </SelectItem>
+                  {allowedDepts.map((d: any) => (
+                    <SelectItem key={d.id} value={d.id} className="text-slate-800">{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {availableClasses.length > 0 && (
+              <Select
+                value={selectedClass}
+                onValueChange={setSelectedClass}
+              >
+                <SelectTrigger className="h-10 px-4 rounded-xl bg-white/15 text-white text-xs font-bold border border-white/20 backdrop-blur-sm focus:ring-2 focus:ring-white/30 w-auto min-w-[140px]">
+                  <SelectValue placeholder="Todas las clases" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                  <SelectItem value="all" className="text-slate-800">Todas las clases</SelectItem>
+                  {availableClasses.map((c: string) => (
+                    <SelectItem key={c} value={c} className="text-slate-800">{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
             <button
               onClick={handleExport}
@@ -358,7 +441,7 @@ export default function Estadisticas() {
               label: "Equipo de Servicio",
               value: data.totalVolunteers,
               suffix: "",
-              sub: "líderes y maestros",
+              sub: "Líderes, maestros y colab.",
               icon: Award,
               color: "from-amber-500 to-orange-500",
               light: "bg-amber-50 dark:bg-amber-950/50",
@@ -622,11 +705,13 @@ export default function Estadisticas() {
             <div className="space-y-2">
               <p className="text-indigo-200 text-xs font-black uppercase tracking-[0.2em]">Resumen</p>
               <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight leading-tight">
-                {isGlobalView ? "Visión Congregacional" : `Dpto. ${deptLabel}`}
+                {selectedDeptId === "all" ? (isGlobalView ? "Visión Congregacional" : "Visión Personal") : `Dpto. ${deptLabel}`}
               </h3>
               <p className="text-indigo-200 text-sm max-w-xl">
-                {isGlobalView
-                  ? `La congregación cuenta con ${data.totalStudents} miembros activos, un equipo de ${data.totalVolunteers} líderes y maestros, y una tasa de participación del ${data.attendanceRate}%.`
+                {selectedDeptId === "all"
+                  ? (isGlobalView
+                    ? `La congregación cuenta con ${data.totalStudents} miembros activos, un equipo de ${data.totalVolunteers} líderes, maestros y colaboradores, y una tasa de participación del ${data.attendanceRate}%.`
+                    : `Sus departamentos cuentan con ${data.totalStudents} miembros activos y una participación del ${data.attendanceRate}%.`)
                   : `El departamento tiene ${data.totalStudents} miembros activos con una participación del ${data.attendanceRate}%. Edad promedio: ${data.avgAge} años.`
                 }
               </p>

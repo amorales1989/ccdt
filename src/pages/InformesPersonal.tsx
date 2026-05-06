@@ -363,7 +363,7 @@ export default function InformesPersonal() {
                                 onValueChange={(val) => setForm({ ...form, targetUserId: val })}
                                 disabled={loadingStaff || !!editingReportId}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="h-11 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-purple-500 shadow-sm transition-all mt-1">
                                     <SelectValue placeholder={loadingStaff ? "Cargando..." : "Selecciona un integrante..."} />
                                 </SelectTrigger>
                                 <SelectContent>

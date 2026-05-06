@@ -34,7 +34,8 @@ const PromoverAlumnos = () => {
   const queryClient = useQueryClient();
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
   const isDirectorOrVice = profile?.role === "director" || profile?.role === "vicedirector";
-  const canFilterOrigin = isAdminOrSecretaria || isDirectorOrVice;
+  const isDirectorGeneral = profile?.role === "director_general";
+  const canFilterOrigin = isAdminOrSecretaria || isDirectorOrVice || isDirectorGeneral;
 
   const userDepartment = profile?.departments?.[0] || null;
   const userClass = profile?.assigned_class || null;
@@ -584,12 +585,18 @@ const PromoverAlumnos = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
-                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange} disabled={!isAdminOrSecretaria}>
+                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange} disabled={!isAdminOrSecretaria && !isDirectorGeneral}>
                         <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                           <SelectValue placeholder="Selecciona un departamento" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {departments.map((dept) => (
+                        <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                          {departments.filter(dept => {
+                            if (isAdminOrSecretaria) return true;
+                            if (isDirectorGeneral || isDirectorOrVice) {
+                              return profile?.departments?.includes(dept.name as DepartmentType);
+                            }
+                            return false;
+                          }).map((dept) => (
                             <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
                           ))}
                         </SelectContent>
@@ -602,7 +609,7 @@ const PromoverAlumnos = () => {
                           <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                             <SelectValue placeholder="Todas las clases" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                             <SelectItem value="all">Todas las clases</SelectItem>
                             {availableClasses.map((className) => (
                               <SelectItem key={className} value={className}>{className}</SelectItem>
@@ -760,8 +767,14 @@ const PromoverAlumnos = () => {
                             <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                               <SelectValue placeholder="Selecciona departamento destino" />
                             </SelectTrigger>
-                            <SelectContent>
-                              {departments.map((dept) => (
+                            <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                              {departments.filter(dept => {
+                                if (isAdminOrSecretaria) return true;
+                                if (isDirectorGeneral || isDirectorOrVice) {
+                                  return profile?.departments?.includes(dept.name as DepartmentType);
+                                }
+                                return false;
+                              }).map((dept) => (
                                 <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
                               ))}
                             </SelectContent>
@@ -774,7 +787,7 @@ const PromoverAlumnos = () => {
                               <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                                 <SelectValue placeholder="Selecciona clase destino" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                                 {targetAvailableClasses.map((className) => (
                                   <SelectItem key={className} value={className}>{className}</SelectItem>
                                 ))}
@@ -814,12 +827,18 @@ const PromoverAlumnos = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
-                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange} disabled={!isAdminOrSecretaria}>
+                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange} disabled={!isAdminOrSecretaria && !isDirectorGeneral}>
                         <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                           <SelectValue placeholder="Selecciona un departamento" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {departments.map((dept) => (
+                        <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                          {departments.filter(dept => {
+                            if (isAdminOrSecretaria) return true;
+                            if (isDirectorGeneral || isDirectorOrVice) {
+                              return profile?.departments?.includes(dept.name as DepartmentType);
+                            }
+                            return false;
+                          }).map((dept) => (
                             <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
                           ))}
                         </SelectContent>
@@ -832,7 +851,7 @@ const PromoverAlumnos = () => {
                           <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                             <SelectValue placeholder="Todas las clases" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                             <SelectItem value="all">Todas las clases</SelectItem>
                             {availableClasses.map((className) => (
                               <SelectItem key={className} value={className}>{className}</SelectItem>
@@ -966,8 +985,14 @@ const PromoverAlumnos = () => {
                           <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                             <SelectValue placeholder="Selecciona departamento destino" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {departments.map((dept) => (
+                          <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                            {departments.filter(dept => {
+                              if (isAdminOrSecretaria) return true;
+                              if (isDirectorGeneral || isDirectorOrVice) {
+                                return profile?.departments?.includes(dept.name as DepartmentType);
+                              }
+                              return false;
+                            }).map((dept) => (
                               <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
                             ))}
                           </SelectContent>
@@ -980,7 +1005,7 @@ const PromoverAlumnos = () => {
                             <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
                               <SelectValue placeholder="Todas las clases" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                               {targetAvailableClasses.map((className) => (
                                 <SelectItem key={className} value={className}>{className}</SelectItem>
                               ))}
