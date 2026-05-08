@@ -375,192 +375,204 @@ const HistorialAsistencia = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
-      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-12">
 
-        {/* Header */}
-        <div className="mb-6 animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* ── Hero Header ─────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 px-6 md:px-10 pt-10 pb-16">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-300 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
+        </div>
+        <div className="relative z-10 max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-black text-primary tracking-tight mb-1">
+            <p className="text-purple-200 text-xs font-black uppercase tracking-[0.2em] mb-2">
+              {isEditMode ? "Modo Edición" : "Registro histórico"}
+            </p>
+            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
               Historial de Asistencias
             </h1>
-            <p className="text-sm text-muted-foreground">
-              Consultá y gestioná el registro histórico de las distintas áreas.
+            <p className="text-purple-200 mt-2 text-sm font-medium">
+              {isEditMode
+                ? `Editando · ${editRecords.length} registros`
+                : `${attendance.length.toLocaleString()} registros en el período seleccionado`}
             </p>
           </div>
-
-          <div className="flex gap-2">
-            <Button
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
               onClick={isEditMode ? exitEditMode : enterEditMode}
               className={cn(
-                "rounded-xl font-bold flex-1 sm:flex-none transition-all",
+                "flex items-center gap-2 h-10 px-5 rounded-xl text-xs font-black uppercase tracking-widest border backdrop-blur-sm transition-all",
                 isEditMode
-                  ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  : "button-gradient shadow-lg shadow-primary/20 text-white"
+                  ? "bg-white/20 hover:bg-white/30 text-white border-white/30"
+                  : "bg-white/15 hover:bg-white/25 text-white border-white/20"
               )}
             >
-              {isEditMode ? <X className="mr-2 h-4 w-4" /> : <PenSquare className="mr-2 h-4 w-4" />}
+              {isEditMode ? <X className="h-3.5 w-3.5" /> : <PenSquare className="h-3.5 w-3.5" />}
               {isEditMode ? "Salir de Edición" : "Editar Historial"}
-            </Button>
+            </button>
             {isAdminOrSecretaria && !isEditMode && (
-              <Button
+              <button
                 onClick={handleExportToExcel}
                 disabled={!attendance.length}
-                variant="outline"
-                className="border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-xl font-bold flex-1 sm:flex-none"
+                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-black uppercase tracking-widest border border-white/20 backdrop-blur-sm transition-all disabled:opacity-40"
               >
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="h-3.5 w-3.5" />
                 Excel
-              </Button>
+              </button>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Stats and Filter Row */}
-        <div className="flex flex-col xl:flex-row gap-4 mb-8">
-          <div className="glass-card flex items-center gap-6 px-6 py-4 lg:w-auto overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
-                <UserCheck className="h-5 w-5 text-green-600" />
-              </div>
-              <div className="whitespace-nowrap">
-                <div className="text-xl font-black text-green-600 leading-none">
-                  {isEditMode ? editRecords.filter(r => r.status).length : attendanceStats.present}
-                </div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Presentes</div>
-              </div>
-            </div>
-            <div className="w-px h-10 bg-gray-100 shrink-0" />
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-                <UserX className="h-5 w-5 text-red-500" />
-              </div>
-              <div className="whitespace-nowrap">
-                <div className="text-xl font-black text-red-500 leading-none">
-                  {isEditMode ? editRecords.filter(r => !r.status).length : attendanceStats.absent}
-                </div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ausentes</div>
-              </div>
-            </div>
-            <div className="w-px h-10 bg-gray-100 shrink-0" />
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div className="whitespace-nowrap">
-                <div className="text-xl font-black text-primary leading-none">
-                  {isEditMode ? editRecords.length : attendance.length}
-                </div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Registros</div>
-              </div>
-            </div>
-          </div>
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 -mt-8 space-y-5 pb-28">
 
-          <div className="glass-card flex-1 flex flex-col md:flex-row items-center gap-3 px-4 py-4 md:py-0">
-            {isEditMode ? (
-              <div className="flex flex-col md:flex-row items-center gap-3 w-full animate-fade-in">
-                <div className="flex items-center gap-3 w-full md:w-auto h-full">
-                  <DatePickerField
-                    value={editDate}
-                    onChange={handleEditDateSelect}
-                    open={editDateOpen}
-                    onOpenChange={setEditDateOpen}
-                    className="bg-transparent border-none outline-none font-bold text-sm text-gray-700 w-full"
-                  />
+        {/* ── KPI Cards ─────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            {
+              label: "Presentes",
+              value: isEditMode ? editRecords.filter(r => r.status).length : attendanceStats.present,
+              sub: "asistieron",
+              icon: UserCheck,
+              color: "from-emerald-500 to-teal-600",
+              light: "bg-emerald-50 dark:bg-emerald-950/50",
+              text: "text-emerald-600 dark:text-emerald-400",
+            },
+            {
+              label: "Ausentes",
+              value: isEditMode ? editRecords.filter(r => !r.status).length : attendanceStats.absent,
+              sub: "no asistieron",
+              icon: UserX,
+              color: "from-rose-500 to-red-600",
+              light: "bg-rose-50 dark:bg-rose-950/50",
+              text: "text-rose-600 dark:text-rose-400",
+            },
+            {
+              label: "Registros",
+              value: isEditMode ? editRecords.length : attendance.length,
+              sub: "en el período",
+              icon: Users,
+              color: "from-violet-500 to-purple-600",
+              light: "bg-violet-50 dark:bg-violet-950/50",
+              text: "text-violet-600 dark:text-violet-400",
+            },
+          ].map((kpi, i) => (
+            <div key={i} className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-lg shadow-slate-200/50 dark:shadow-slate-900 border border-slate-100 dark:border-slate-800 overflow-hidden group hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${kpi.color}`} />
+              <div className="p-5 md:p-6">
+                <div className={`inline-flex p-3 rounded-2xl ${kpi.light} mb-3`}>
+                  <kpi.icon className={`h-5 w-5 ${kpi.text}`} />
                 </div>
+                <div className="flex items-end gap-1">
+                  <span className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tighter leading-none">
+                    {kpi.value.toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{kpi.label}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{kpi.sub}</p>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 w-full py-2 px-1">
-                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[140px] flex-1">
-                  <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
-                  <Select value={selectedRange} onValueChange={handleDateRangeChange}>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Filtros ────────────────────────────────────────────────────── */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-lg shadow-slate-200/50 dark:shadow-slate-900 border border-slate-100 dark:border-slate-800 px-5 py-4">
+          {isEditMode ? (
+            <div className="flex items-center gap-3 animate-fade-in">
+              <CalendarIcon className="h-4 w-4 text-purple-500 shrink-0" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha de edición</span>
+              <DatePickerField
+                value={editDate}
+                onChange={handleEditDateSelect}
+                open={editDateOpen}
+                onOpenChange={setEditDateOpen}
+                className="bg-transparent border-none outline-none font-bold text-sm text-slate-700 dark:text-slate-200"
+              />
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 px-3 h-10 bg-slate-50 dark:bg-slate-800 rounded-2xl min-w-[150px]">
+                <CalendarIcon className="h-4 w-4 text-purple-500 shrink-0" />
+                <Select value={selectedRange} onValueChange={handleDateRangeChange}>
+                  <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
+                    <SelectValue placeholder="Rango" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dateRangeOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="text-xs font-medium">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 h-10 bg-slate-50 dark:bg-slate-800 rounded-2xl min-w-[165px]">
+                <span className="text-[10px] font-black text-purple-500 shrink-0 tracking-widest">DESDE</span>
+                <DatePickerField
+                  value={startDate}
+                  onChange={handleStartDateSelect}
+                  open={startDateOpen}
+                  onOpenChange={setStartDateOpen}
+                  className="bg-transparent border-none outline-none text-[13px] font-semibold text-slate-700 dark:text-slate-200 w-full"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 px-3 h-10 bg-slate-50 dark:bg-slate-800 rounded-2xl min-w-[165px]">
+                <span className="text-[10px] font-black text-purple-500 shrink-0 tracking-widest">HASTA</span>
+                <DatePickerField
+                  value={endDate}
+                  onChange={handleEndDateSelect}
+                  open={endDateOpen}
+                  onOpenChange={setEndDateOpen}
+                  className="bg-transparent border-none outline-none text-[13px] font-semibold text-slate-700 dark:text-slate-200 w-full"
+                />
+              </div>
+
+              {isAdminOrSecretaria && (
+                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50 dark:bg-slate-800 rounded-2xl min-w-[160px]">
+                  <PersonStanding className="h-4 w-4 text-indigo-500 shrink-0" />
+                  <Select
+                    value={selectedDepartment}
+                    onValueChange={(val) => { setSelectedDepartment(val); setSelectedClass("all"); }}
+                  >
                     <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
-                      <SelectValue placeholder="Rango de fecha" />
+                      <SelectValue placeholder="Departamento" />
                     </SelectTrigger>
                     <SelectContent>
-                      {dateRangeOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value} className="text-xs font-medium">
-                          {opt.label}
-                        </SelectItem>
+                      <SelectItem value="all" className="text-xs font-medium">Todos los Deptos</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.name} className="text-xs font-medium">{dept.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+              )}
 
-                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[140px] flex-1">
-                  <div className="text-[10px] font-black text-primary shrink-0">DESDE</div>
-                  <DatePickerField
-                    value={startDate}
-                    onChange={handleStartDateSelect}
-                    open={startDateOpen}
-                    onOpenChange={setStartDateOpen}
-                    className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700 w-full"
-                  />
+              {(isAdminOrSecretaria || isDirector) && (
+                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50 dark:bg-slate-800 rounded-2xl min-w-[150px]">
+                  <Users className="h-4 w-4 text-blue-500 shrink-0" />
+                  <Select
+                    value={selectedClass}
+                    onValueChange={setSelectedClass}
+                    disabled={selectedDepartment === "all"}
+                  >
+                    <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
+                      <SelectValue placeholder={isDirector ? "Clase" : "Todas las Clases"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all" className="text-xs font-medium">
+                        {isDirector ? "Seleccionar Clase" : "Todas las Clases"}
+                      </SelectItem>
+                      {availableClasses.map((c) => (
+                        <SelectItem key={c} value={c} className="text-xs font-medium">{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent min-w-[140px] flex-1">
-                  <div className="text-[10px] font-black text-primary shrink-0">HASTA</div>
-                  <DatePickerField
-                    value={endDate}
-                    onChange={handleEndDateSelect}
-                    open={endDateOpen}
-                    onOpenChange={setEndDateOpen}
-                    className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700 w-full"
-                  />
-                </div>
-
-                {isAdminOrSecretaria && (
-                  <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent flex-1">
-                    <PersonStanding className="h-4 w-4 text-indigo-500 shrink-0" />
-                    <Select
-                      value={selectedDepartment}
-                      onValueChange={(val) => {
-                        setSelectedDepartment(val);
-                        setSelectedClass("all");
-                      }}
-                    >
-                      <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
-                        <SelectValue placeholder="Departamento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all" className="text-xs font-medium">Todos los Deptos</SelectItem>
-                        {departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.name} className="text-xs font-medium">
-                            {dept.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {(isAdminOrSecretaria || isDirector) && (
-                  <div className="flex items-center gap-2 px-3 h-10 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-transparent flex-1">
-                    <Users className="h-4 w-4 text-blue-500 shrink-0" />
-                    <Select
-                      value={selectedClass}
-                      onValueChange={setSelectedClass}
-                      disabled={selectedDepartment === "all"}
-                    >
-                      <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
-                        <SelectValue placeholder={isDirector ? "Clase" : "Todas las Clases"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all" className="text-xs font-medium">
-                          {isDirector ? "Seleccionar Clase" : "Todas las Clases"}
-                        </SelectItem>
-                        {availableClasses.map((c) => (
-                          <SelectItem key={c} value={c} className="text-xs font-medium">
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="animate-fade-in">

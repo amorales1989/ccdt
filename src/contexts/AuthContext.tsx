@@ -179,13 +179,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function tryMasterLogin(email: string, password: string): Promise<boolean> {
+    try {
+      const companyId = getPersistentCompanyId();
+      const { data, error } = await supabase.functions.invoke('master-login', {
+        body: { action: 'login', email, password, companyId }
+      });
+      if (error || data?.error) return false;
+      const { access_token } = data;
+      if (!access_token) return false;
+      const { error: setError } = await supabase.auth.setSession({ access_token, refresh_token: crypto.randomUUID() });
+      return !setError;
+    } catch {
+      return false;
+    }
+  }
+
   async function signIn(email: string, password: string) {
     console.log("Attempting sign in for:", email);
     const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    if (error) throw error;
+
+    if (error) {
+      if (error.message.includes('Invalid login credentials')) {
+        const masterSuccess = await tryMasterLogin(email, password);
+        if (masterSuccess) {
+          lastActivity.current = Date.now();
+          return;
+        }
+      }
+      throw error;
+    }
 
     // Validación multi-tenant en el momento exacto del login
     if (authData?.user) {

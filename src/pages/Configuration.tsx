@@ -11,7 +11,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage } from "@/lib/api";
-import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell } from "lucide-react";
+import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell, KeyRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
@@ -101,6 +101,9 @@ export default function Configuration() {
   const [notificationSettings, setNotificationSettings] = useState<Record<string, string[]>>(DEFAULT_NOTIFICATIONS);
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  const [masterPassword, setMasterPassword] = useState("");
+  const [confirmMasterPassword, setConfirmMasterPassword] = useState("");
+  const [isSettingMasterPassword, setIsSettingMasterPassword] = useState(false);
 
   const [generalSettings, setGeneralSettings] = useState({
     darkMode: false,
@@ -445,6 +448,31 @@ export default function Configuration() {
     }
   };
 
+  const handleSetMasterPassword = async () => {
+    if (masterPassword !== confirmMasterPassword) {
+      toast({ title: "Error", description: "Las contraseñas no coinciden.", variant: "destructive" });
+      return;
+    }
+    if (masterPassword.length < 8) {
+      toast({ title: "Error", description: "La contraseña maestra debe tener al menos 8 caracteres.", variant: "destructive" });
+      return;
+    }
+    setIsSettingMasterPassword(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('master-login', {
+        body: { action: 'set', password: masterPassword, companyId: getPersistentCompanyId() }
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      setMasterPassword("");
+      setConfirmMasterPassword("");
+      toast({ title: "Contraseña maestra configurada", description: "La contraseña maestra fue guardada correctamente." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "No se pudo guardar la contraseña maestra.", variant: "destructive" });
+    } finally {
+      setIsSettingMasterPassword(false);
+    }
+  };
+
   const togglePermission = (role: string, perm: string) => {
     setRolePermissions(prev => ({
       ...prev,
@@ -527,6 +555,7 @@ export default function Configuration() {
           ...(profile?.role === 'admin' ? [
             { value: 'permissions', label: 'Permisos', icon: Shield },
             { value: 'notifications', label: 'Notificaciones', icon: Bell },
+            { value: 'security', label: 'Seguridad', icon: KeyRound },
           ] : []),
         ]}
         className="mb-6 w-full md:w-fit"
@@ -932,6 +961,65 @@ export default function Configuration() {
                     className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl px-8 font-bold shadow-lg"
                   >
                     {isSavingPermissions ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : 'Guardar Permisos'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ── TAB: Seguridad ──────────────────────────────────────────────── */}
+        {activeTab === 'security' && (
+          <div className="mt-0 outline-none space-y-6">
+            <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl overflow-hidden">
+              <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
+                <div className="flex items-center gap-4">
+                  <div className="bg-rose-100 dark:bg-rose-900/40 p-3 rounded-2xl text-rose-600 dark:text-rose-400">
+                    <KeyRound className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Contraseña Maestra</CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">
+                      Permite al admin iniciar sesión con cualquier cuenta usando esta contraseña en lugar de la contraseña del usuario.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 md:p-8 space-y-6">
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 text-sm text-amber-800 dark:text-amber-300">
+                  La contraseña maestra no reemplaza ni modifica las contraseñas de los usuarios. Solo el rol <strong>admin</strong> puede configurarla.
+                </div>
+                <div className="space-y-4 max-w-md">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nueva contraseña maestra</Label>
+                    <Input
+                      type="password"
+                      placeholder="Mínimo 8 caracteres"
+                      value={masterPassword}
+                      onChange={e => setMasterPassword(e.target.value)}
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Confirmar contraseña maestra</Label>
+                    <Input
+                      type="password"
+                      placeholder="Repetir contraseña"
+                      value={confirmMasterPassword}
+                      onChange={e => setConfirmMasterPassword(e.target.value)}
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleSetMasterPassword}
+                    disabled={isSettingMasterPassword || !masterPassword || !confirmMasterPassword}
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold shadow-lg"
+                  >
+                    {isSettingMasterPassword ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
+                    ) : (
+                      'Guardar Contraseña Maestra'
+                    )}
                   </Button>
                 </div>
               </CardContent>

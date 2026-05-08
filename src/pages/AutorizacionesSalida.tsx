@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { generateBlankFichaSalud } from "@/lib/pdfUtils";
+import { FileText } from "lucide-react";
 
 const AutorizacionesSalida = () => {
   const { profile } = useAuth();
@@ -60,18 +61,26 @@ const AutorizacionesSalida = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
-      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-12">
 
-        {/* Header */}
-        <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Autorizaciones</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+      {/* ── Hero Header ─────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-purple-700 via-pink-600 to-rose-600 px-6 md:px-10 pt-10 pb-16">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-pink-300 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
+        </div>
+        <div className="relative z-10 max-w-[1600px] mx-auto">
+          <p className="text-pink-200 text-xs font-black uppercase tracking-[0.2em] mb-2">Documentos</p>
+          <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
+            Autorizaciones
+          </h1>
+          <p className="text-pink-200 mt-2 text-sm font-medium">
             Generá y gestioná las autorizaciones para las distintas actividades.
           </p>
         </div>
+      </div>
 
-        {/* Cards Grid */}
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 -mt-8 pb-28">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <AuthorizationOption
             title="Autorización de Campamento"

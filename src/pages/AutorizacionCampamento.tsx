@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, MapPin, Users, FileText, List, Info } from "lucide-react";
+import { Calendar, MapPin, Users, FileText, List, Info, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
@@ -15,6 +16,7 @@ import { format, parseISO } from "date-fns";
 
 const AutorizacionCampamento = () => {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const [inicioOpen, setInicioOpen] = useState(false);
   const [finOpen, setFinOpen] = useState(false);
   const [limiteOpen, setLimiteOpen] = useState(false);
@@ -402,17 +404,35 @@ const AutorizacionCampamento = () => {
   const finDia = finFormatted ? finFormatted.split('/')[0] : "____";
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
-      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-12">
 
-        {/* Header */}
-        <div className="mb-6 animate-fade-in">
-          <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Autorización de Campamento</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
-            Completá los datos para generar la autorización en PDF.
-          </p>
+      {/* ── Hero Header ─────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-purple-700 via-pink-600 to-rose-600 px-6 md:px-10 pt-10 pb-16">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-pink-300 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
         </div>
+        <div className="relative z-10 max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <p className="text-pink-200 text-xs font-black uppercase tracking-[0.2em] mb-2">Autorizaciones</p>
+            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
+              Autorización de Campamento
+            </h1>
+            <p className="text-pink-200 mt-2 text-sm font-medium">
+              Completá los datos para generar la autorización en PDF.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/autorizaciones")}
+            className="flex items-center gap-2 h-10 px-5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-black uppercase tracking-widest border border-white/20 backdrop-blur-sm transition-all w-fit"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Volver
+          </button>
+        </div>
+      </div>
 
+      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto -mt-4">
         <div className="flex flex-col xl:flex-row gap-6 items-start">
 
           {/* Lado izquierdo: Formulario */}
