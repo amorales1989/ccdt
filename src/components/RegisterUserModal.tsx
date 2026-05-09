@@ -139,6 +139,14 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
     const isDirectorGeneralMode = standaloneRoles.includes('director_general' as AppRole);
     const isConserjeOnlyMode = standaloneRoles.length > 0 && assignments.length === 0 && selectedDepartments.length === 0;
 
+    const COLAB_ROLES = ['colaborador', 'ayudante'] as const;
+    const isColabOrAyudante = (() => {
+        if (isLockedToSingleDept) return COLAB_ROLES.includes(lockedRole as any);
+        if (standaloneRoles.length > 0) return standaloneRoles.every(r => COLAB_ROLES.includes(r as any));
+        if (assignments.length > 0) return assignments.every(a => COLAB_ROLES.includes(a.role as any));
+        return false;
+    })();
+
     // Locked dept classes
     useEffect(() => {
         if (isLockedToSingleDept && profile?.departments?.[0]) {
@@ -564,24 +572,34 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
-                                Correo Electrónico{isEditMode ? " (vacío = sin cambios)" : ""}
-                            </Label>
-                            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required={!isEditMode} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "ejemplo@correo.com"} autoComplete="off" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
-                                {isEditMode ? "Nueva Contraseña (vacío = sin cambios)" : "Contraseña Temporal"}
-                            </Label>
-                            <div className="relative">
-                                <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required={!isEditMode} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "••••••••"} autoComplete="new-password" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12" />
-                                <Button type="button" onClick={() => setShowPassword(!showPassword)} variant="ghost" size="icon" className="absolute right-1 top-1 h-10 w-10 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700">
-                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                                </Button>
+                        {(!isColabOrAyudante || isEditMode) && (
+                          <>
+                            <div className="space-y-2">
+                                <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
+                                    Correo Electrónico{isEditMode ? " (vacío = sin cambios)" : ""}
+                                </Label>
+                                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required={!isEditMode && !isColabOrAyudante} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "ejemplo@correo.com"} autoComplete="off" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
                             </div>
-                        </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
+                                    {isEditMode ? "Nueva Contraseña (vacío = sin cambios)" : "Contraseña Temporal"}
+                                </Label>
+                                <div className="relative">
+                                    <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required={!isEditMode && !isColabOrAyudante} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "••••••••"} autoComplete="new-password" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12" />
+                                    <Button type="button" onClick={() => setShowPassword(!showPassword)} variant="ghost" size="icon" className="absolute right-1 top-1 h-10 w-10 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700">
+                                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    </Button>
+                                </div>
+                            </div>
+                          </>
+                        )}
+
+                        {isColabOrAyudante && !isEditMode && (
+                          <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl text-xs text-amber-700 dark:text-amber-300">
+                            <span>Los roles <strong>Colaborador</strong> y <strong>Ayudante</strong> no tienen acceso al sistema — no se requiere email ni contraseña.</span>
+                          </div>
+                        )}
 
                         {/* ── ASSIGNMENTS SECTION ── */}
                         <div className="space-y-3 pt-2">
