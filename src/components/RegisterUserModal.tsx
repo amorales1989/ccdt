@@ -406,6 +406,11 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                     body: { action: 'update', userId: user!.id, userData: updatePayload }
                 });
                 if (error) throw error;
+
+                // Sincronizar phone y address en el registro de estudiante si existe
+                await supabase.from('students')
+                    .update({ phone: phone || null, address: address || null })
+                    .eq('profile_id', user!.id);
             } else {
                 const { data: registerData, error: registerError } = await supabase.functions.invoke('manage-users', {
                     body: { action: 'create', userData: { email: finalEmail, password: finalPassword, ...profileData } }
@@ -428,11 +433,19 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                             const { data: existingStudent } = await supabase
                                 .from('students').select('id').eq('profile_id', newUser.id).maybeSingle();
                             if (existingStudent) {
-                                await supabase.from('students').update({ assigned_class: 'Obreros' }).eq('id', existingStudent.id);
+                                await supabase.from('students').update({
+                                    assigned_class: 'Obreros',
+                                    phone: phone || null,
+                                    address: address || null,
+                                    birthdate: birthdate || null,
+                                    document_number: documentNumber || null,
+                                    gender: gender || "masculino",
+                                }).eq('id', existingStudent.id);
                             } else {
                                 await supabase.from('students').insert({
                                     first_name: firstName, last_name: lastName || "",
-                                    phone: phone || null, department: firstDeptObj?.name || null,
+                                    phone: phone || null, address: address || null,
+                                    department: firstDeptObj?.name || null,
                                     department_id: finalDeptId, assigned_class: 'Obreros',
                                     gender: gender || "masculino", birthdate: birthdate || null,
                                     document_number: documentNumber || null,
@@ -569,6 +582,10 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                             <div className="space-y-2">
                                 <Label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Teléfono</Label>
                                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="Ej. 1122334455" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="address" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Dirección</Label>
+                                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Ej. Calle Falsa 123" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
                             </div>
                         </div>
 
