@@ -23,7 +23,7 @@ import {
 import { FileUp, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { importUsersFromExcel, getDepartments } from "@/lib/api";
-import { Department, AppRole } from "@/types/database";
+import { Department } from "@/types/database";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface BulkImportDialogProps {
@@ -110,6 +110,9 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
                 // Map column names (support common variations)
                 const mappedData = json.map((row: any) => {
                     const rawBirthdate = row["Fecha Nacimiento (DD-MM-AAAA)"] || row["Fecha Nacimiento"] || row.birthdate || row.FechaNacimiento || "";
+                    // Dirección puede venir con o sin tilde según el encoding del Excel
+                    const address = row["Dirección"] || row["Direccion"] || row["direccion"] || row["dirección"] || row.Address || null;
+                    const phone = row.Telefono || row.teléfono || row["Teléfono"] || row.telefono || row.Phone || row.phone || null;
                     return {
                         first_name: row.Nombre || row.nombre || row.FirstName,
                         last_name: row.Apellido || row.apellido || row.LastName || "",
@@ -117,9 +120,10 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
                         role: (row.Rol || row.rol || row.Role || "maestro").toLowerCase(),
                         department: row.Departamento || row.departamento || row.Department,
                         document_number: row.DNI || row.dni || row["Documento"] || null,
-                        address: row.Dirección || row.direccion || row.Address || null,
+                        address,
+                        phone,
                         birthdate: formatDateForDB(rawBirthdate) || null,
-                        assigned_class: "", // Always empty now, will be assigned in app
+                        assigned_class: "",
                         company_id: profile?.company_id
                     };
                 });
@@ -185,6 +189,7 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
             { header: "Departamento", key: "department", width: 20 },
             { header: "DNI", key: "document_number", width: 15 },
             { header: "Dirección", key: "address", width: 30 },
+            { header: "Teléfono", key: "phone", width: 20 },
             { header: "Fecha Nacimiento (DD-MM-AAAA)", key: "birthdate", width: 25 }
         ];
 
@@ -223,13 +228,12 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
             department: deptNames[0] || "adolescentes",
             document_number: "12345678",
             address: "Calle Falsa 123",
+            phone: "1112345678",
             birthdate: "01-01-2000"
         });
 
         // Ensure lists are not empty for validation formulae
         const deptsForFormula = deptNames.length > 0 ? deptNames : ["adolescentes"];
-        const allClasses = Array.from(new Set(departments.flatMap(d => d.classes || [])));
-        const classesForFormula = ["Ninguna", ...(allClasses.length > 0 ? allClasses : ["central"])];
 
         // Excel JS strings for formulae (must be comma separated values inside double quotes if not referencing cells)
         const rolesFormula = `"${roles.join(',')}"`;

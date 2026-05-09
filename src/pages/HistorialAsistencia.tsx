@@ -61,7 +61,7 @@ const HistorialAsistencia = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
-  const isDirector = profile?.role === 'director';
+  const isDirector = profile?.role === 'director' || profile?.role === 'vicedirector';
   const userDepartment = profile?.departments?.[0];
   const userDepartmentId = profile?.department_id;
   const userClass = profile?.assigned_class;
@@ -202,11 +202,13 @@ const HistorialAsistencia = () => {
       } else if (userDepartmentId) {
         departmentIdToUse = userDepartmentId;
       }
-      const classToFilter = (isAdminOrSecretaria && selectedClass !== "all") ? selectedClass : (!isAdminOrSecretaria ? (userClass || "") : undefined);
+      const classToFilter = (isAdminOrSecretaria || isDirector) && selectedClass !== "all"
+        ? selectedClass
+        : (!isAdminOrSecretaria && !isDirector ? (userClass || "") : undefined);
       const attendanceData = await getAttendance(formattedDate, formattedDate, "", departmentIdToUse, classToFilter);
-      if (isAdminOrSecretaria && selectedClass !== "all") {
+      if ((isAdminOrSecretaria || isDirector) && selectedClass !== "all") {
         return attendanceData.filter(record => record.assigned_class === selectedClass);
-      } else if (!isAdminOrSecretaria) {
+      } else if (!isAdminOrSecretaria && !isDirector) {
         return attendanceData.filter(record => record.assigned_class === (userClass || ""));
       }
       return attendanceData;
@@ -233,9 +235,9 @@ const HistorialAsistencia = () => {
         .eq('department_id', departmentIdToUse)
         .is('deleted_at', null);
 
-      if (isAdminOrSecretaria && selectedClass !== "all") {
+      if ((isAdminOrSecretaria || isDirector) && selectedClass !== "all") {
         query = query.eq('assigned_class', selectedClass);
-      } else if (!isAdminOrSecretaria) {
+      } else if (!isAdminOrSecretaria && !isDirector) {
         query = query.eq('assigned_class', userClass || "");
       }
       const { data, error } = await query;
@@ -478,16 +480,34 @@ const HistorialAsistencia = () => {
         {/* ── Filtros ────────────────────────────────────────────────────── */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-lg shadow-slate-200/50 dark:shadow-slate-900 border border-slate-100 dark:border-slate-800 px-5 py-4">
           {isEditMode ? (
-            <div className="flex items-center gap-3 animate-fade-in">
-              <CalendarIcon className="h-4 w-4 text-purple-500 shrink-0" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha de edición</span>
-              <DatePickerField
-                value={editDate}
-                onChange={handleEditDateSelect}
-                open={editDateOpen}
-                onOpenChange={setEditDateOpen}
-                className="bg-transparent border-none outline-none font-bold text-sm text-slate-700 dark:text-slate-200"
-              />
+            <div className="flex flex-wrap items-center gap-3 animate-fade-in">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-purple-500 shrink-0" />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha de edición</span>
+                <DatePickerField
+                  value={editDate}
+                  onChange={handleEditDateSelect}
+                  open={editDateOpen}
+                  onOpenChange={setEditDateOpen}
+                  className="bg-transparent border-none outline-none font-bold text-sm text-slate-700 dark:text-slate-200"
+                />
+              </div>
+              {isDirector && (
+                <div className="flex items-center gap-2 px-3 h-10 bg-slate-50 dark:bg-slate-800 rounded-2xl min-w-[150px]">
+                  <Users className="h-4 w-4 text-blue-500 shrink-0" />
+                  <Select value={selectedClass} onValueChange={setSelectedClass}>
+                    <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
+                      <SelectValue placeholder="Seleccionar Clase" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all" className="text-xs font-medium">Seleccionar Clase</SelectItem>
+                      {availableClasses.map((c) => (
+                        <SelectItem key={c} value={c} className="text-xs font-medium">{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
