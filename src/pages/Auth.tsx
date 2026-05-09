@@ -30,7 +30,7 @@ export default function Auth() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
-  const { signIn, profile, loading } = useAuth();
+  const { signIn, signOut, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -60,12 +60,9 @@ export default function Auth() {
     }
 
     if (profile) {
-      if (profile.role === 'colaborador' || profile.role === 'ayudante') {
-        toast({
-          title: "Acceso denegado",
-          description: "Los colaboradores y ayudantes no tienen acceso a la aplicación.",
-          variant: "destructive",
-        });
+      const allRoles = profile.roles?.length ? profile.roles : [profile.role];
+      const hasOnlyRestrictedRoles = allRoles.every(r => r === 'colaborador' || r === 'ayudante');
+      if (hasOnlyRestrictedRoles) {
         return;
       }
 

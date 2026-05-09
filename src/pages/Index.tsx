@@ -32,7 +32,7 @@ export default function Index() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
-  const { signIn, profile, loading } = useAuth();
+  const { signIn, signOut, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -68,8 +68,7 @@ export default function Index() {
           description: "Los colaboradores y ayudantes no tienen acceso a la aplicación.",
           variant: "destructive",
         });
-        signIn("", ""); // Reset state (though signOut is better if available)
-        // Accessing signOut from useAuth might be better
+        signOut();
         return;
       }
 

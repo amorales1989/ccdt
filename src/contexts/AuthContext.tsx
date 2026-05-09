@@ -145,15 +145,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const allAssignments: UserAssignment[] = authUser?.user_metadata?.assignments || [];
+        const validAssignments = allAssignments.filter(a => a.role !== 'colaborador' && a.role !== 'ayudante');
+        const assignmentsForProfile = validAssignments.length > 0 ? validAssignments : allAssignments;
 
         // Para usuarios con múltiples assignments, mostrar solo el departamento activo
         // (el que coincide con el role+department_id guardado en profiles).
         // Esto evita que el widget muestre todos los departamentos al hacer login.
         let activeDepartments = (data.departments as DepartmentType[]) || [];
-        if (allAssignments.length > 1) {
-          const activeAssignment = allAssignments.find(
+        if (assignmentsForProfile.length > 1) {
+          const activeAssignment = assignmentsForProfile.find(
             (a) => a.role === data.role && (a.department_id || null) === (data.department_id || null)
-          ) ?? allAssignments[0];
+          ) ?? assignmentsForProfile[0];
           activeDepartments = [activeAssignment.department as DepartmentType];
         }
 
@@ -168,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           gender: data.gender || null,
           document_number: data.document_number || null,
           address: data.address || null,
-          assignments: allAssignments,
+          assignments: assignmentsForProfile,
         };
         setProfile(typedProfile);
       }
@@ -197,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signIn(email: string, password: string) {
     console.log("Attempting sign in for:", email);
+
     const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -229,6 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.auth.signOut();
         throw new Error("company_mismatch");
       }
+
     }
 
     lastActivity.current = Date.now();
