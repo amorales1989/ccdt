@@ -35,6 +35,7 @@ const GENDER_COLORS: Record<string, string> = {
 
 const GLOBAL_ROLES = ["admin", "secretaria"];
 const LIDER_ROLES = ["lider"];
+const VICEDIR_ROLES = ["vicedirector"];
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -83,6 +84,7 @@ export default function Estadisticas() {
 
   const isGlobalView = !currentProfile || GLOBAL_ROLES.includes(currentProfile.role);
   const isLider = currentProfile && LIDER_ROLES.includes(currentProfile.role);
+  const isVicedirector = currentProfile && VICEDIR_ROLES.includes(currentProfile.role);
 
   const { data: allDepartments = [] } = useQuery({
     queryKey: ['stats-all-departments', companyId],
@@ -97,6 +99,18 @@ export default function Estadisticas() {
   const allowedDepts = React.useMemo(() => {
     if (!currentProfile || !allDepartments.length) return [];
     if (GLOBAL_ROLES.includes(currentProfile.role)) return allDepartments;
+
+    // Vicedirector: solo los departamentos donde su rol es vicedirector
+    if (VICEDIR_ROLES.includes(currentProfile.role)) {
+      const viceDeptIds = new Set<string>();
+      if (currentProfile.assignments) {
+        currentProfile.assignments.forEach((a: any) => {
+          if (a.role === 'vicedirector' && a.department_id) viceDeptIds.add(a.department_id);
+        });
+      }
+      if (viceDeptIds.size === 0 && currentProfile.department_id) viceDeptIds.add(currentProfile.department_id);
+      return allDepartments.filter(d => viceDeptIds.has(d.id));
+    }
 
     const userDeptIds = new Set<string>();
     if (currentProfile.department_id) userDeptIds.add(currentProfile.department_id);
@@ -120,6 +134,14 @@ export default function Estadisticas() {
     if (deptId && selectedDeptId === "all") setSelectedDeptId(deptId);
     if (currentProfile.assigned_class && selectedClass === "all") setSelectedClass(currentProfile.assigned_class);
   }, [isLider, currentProfile, allDepartments]);
+
+  // Auto-set department for vicedirector
+  React.useEffect(() => {
+    if (!isVicedirector || !currentProfile || !allDepartments.length) return;
+    const viceDept = currentProfile.assignments?.find((a: any) => a.role === 'vicedirector');
+    const deptId = viceDept?.department_id || currentProfile.department_id;
+    if (deptId && selectedDeptId === "all") setSelectedDeptId(deptId);
+  }, [isVicedirector, currentProfile, allDepartments]);
 
   const effectiveDeptId = selectedDeptId === "all" ? null : selectedDeptId;
 
@@ -378,7 +400,7 @@ export default function Estadisticas() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {!isLider && allowedDepts.length > 1 && (
+            {!isLider && !isVicedirector && allowedDepts.length > 1 && (
               <Select
                 value={selectedDeptId}
                 onValueChange={val => {
