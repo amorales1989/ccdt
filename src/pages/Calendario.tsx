@@ -259,7 +259,7 @@ export default function Calendario() {
     if (isPendingRequest && canCreateEvents) {
       setSelectedRequest(event);
       setRequestDetailOpen(true);
-    } else {
+    } else if (canCreateEvents) {
       setSelectedEvent(event);
       setDialogOpen(true);
     }
