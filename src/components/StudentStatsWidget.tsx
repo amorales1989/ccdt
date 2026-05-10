@@ -82,7 +82,8 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
 
         let deptStudents = filteredStudents.filter(s => {
             const studentDept = s.departments?.name || s.department;
-            return studentDept === dept;
+            const inDeptViaAssignments = s.dept_assignments?.some((da: any) => da.departments?.name === dept);
+            return studentDept === dept || inDeptViaAssignments;
         });
 
         acc[dept] = {
@@ -115,7 +116,10 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
     const getStatsForClass = (deptName: string, className: string): ClassStats => {
         const deptStudents = students.filter(s => {
             const studentDept = s.departments?.name || s.department;
-            return studentDept === deptName && s.assigned_class === className;
+            const deptAssignment = s.dept_assignments?.find((da: any) => da.departments?.name === deptName);
+            const matchDept = studentDept === deptName || !!deptAssignment;
+            const effectiveClass = deptAssignment?.assigned_class || s.assigned_class;
+            return matchDept && effectiveClass === className;
         });
 
         return {
