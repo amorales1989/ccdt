@@ -475,6 +475,18 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                     gender: gender || "masculino",
                                 }).eq('id', existingStudent.id);
                             } else {
+                                // Buscar foto de un registro existente del mismo miembro (ej: alumno en otro departamento)
+                                let inheritedPhotoUrl: string | null = null;
+                                if (documentNumber) {
+                                    const { data: memberWithPhoto } = await supabase
+                                        .from('students')
+                                        .select('photo_url')
+                                        .eq('document_number', documentNumber)
+                                        .eq('company_id', getPersistentCompanyId())
+                                        .not('photo_url', 'is', null)
+                                        .maybeSingle();
+                                    inheritedPhotoUrl = memberWithPhoto?.photo_url ?? null;
+                                }
                                 await supabase.from('students').insert({
                                     first_name: firstName, last_name: lastName || "",
                                     phone: phone || null, address: address || null,
@@ -482,7 +494,8 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                     department_id: finalDeptId, assigned_class: 'Obreros',
                                     gender: gender || "masculino", birthdate: birthdate || null,
                                     document_number: documentNumber || null,
-                                    profile_id: newUser.id, company_id: getPersistentCompanyId()
+                                    profile_id: newUser.id, company_id: getPersistentCompanyId(),
+                                    photo_url: inheritedPhotoUrl,
                                 });
                             }
                         }
