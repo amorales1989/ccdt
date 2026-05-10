@@ -325,15 +325,32 @@ const GestionUsuarios = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
+  const ASSIGNABLE_ROLES = ['maestro', 'lider', 'colaborador', 'ayudante'];
+
   // Assignment logic filtering (accounts for pending local changes)
-  const assignmentFilteredUsers = users.filter(user =>
-    (user.role === 'maestro' || user.role === 'lider' || user.role === 'colaborador' || user.role === 'ayudante') &&
-    user.departments?.includes(assignmentDept as DepartmentType)
-  );
+  // Also checks user.assignments for multi-role users (e.g. vicedirector + colaborador)
+  const assignmentFilteredUsers = users.filter(user => {
+    const primaryMatch = ASSIGNABLE_ROLES.includes(user.role) && user.departments?.includes(assignmentDept as DepartmentType);
+    const assignmentMatch = user.assignments?.some(a =>
+      ASSIGNABLE_ROLES.includes(a.role) && a.department === assignmentDept
+    );
+    if (assignmentDept) console.log('[DBG]', user.first_name, user.last_name, '| role:', user.role, '| depts:', user.departments, '| assignments:', JSON.stringify(user.assignments), '| primaryMatch:', primaryMatch, '| assignmentMatch:', assignmentMatch);
+    return primaryMatch || assignmentMatch;
+  });
 
   // Compute effective class for each user (pending overrides DB)
-  const getEffectiveClass = (user: Profile) =>
-    user.id in pendingAssignments ? pendingAssignments[user.id] : user.assigned_class;
+  // For multi-role users, finds the class for the relevant department assignment
+  const getEffectiveClass = (user: Profile): string | null | undefined => {
+    if (user.id in pendingAssignments) return pendingAssignments[user.id];
+    const deptAssignment = user.assignments?.find(a =>
+      ASSIGNABLE_ROLES.includes(a.role) && a.department === assignmentDept
+    );
+    if (deptAssignment) return deptAssignment.assigned_class;
+    if (user.departments?.includes(assignmentDept as DepartmentType) && ASSIGNABLE_ROLES.includes(user.role)) {
+      return user.assigned_class;
+    }
+    return null;
+  };
 
   const availableTeachers = assignmentFilteredUsers.filter(user => {
     const effective = getEffectiveClass(user);

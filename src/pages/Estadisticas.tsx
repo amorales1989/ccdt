@@ -239,6 +239,7 @@ export default function Estadisticas() {
       if (!s.birthdate) return;
       try {
         const age = differenceInYears(new Date(), new Date(s.birthdate));
+        if (age <= 0) return;
         ageSum += age;
         totalWithAge++;
         if (age <= 11) ageBuckets[0].value++;
@@ -254,7 +255,8 @@ export default function Estadisticas() {
 
     // Exact age for detailed view
     const ages = filteredStudents.filter(s => s.birthdate)
-      .map(s => differenceInYears(new Date(), new Date(s.birthdate)));
+      .map(s => differenceInYears(new Date(), new Date(s.birthdate)))
+      .filter(a => a > 0);
     const maxAge = ages.length > 0 ? Math.max(...ages) : 0;
     const exactAgeData = Array.from({ length: maxAge + 1 }, (_, i) => ({
       name: `${i}`, value: ages.filter(a => a === i).length
