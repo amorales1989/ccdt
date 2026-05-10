@@ -113,10 +113,16 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
         statsTitle = "Estadísticas de Miembros";
     }
 
+    const STAFF_ROLES = ['maestro', 'lider', 'colaborador', 'ayudante'];
+
     const getStatsForClass = (deptName: string, className: string): ClassStats => {
         const deptStudents = students.filter(s => {
             const studentDept = s.departments?.name || s.department;
-            const deptAssignment = s.dept_assignments?.find((da: any) => da.departments?.name === deptName);
+            // Ignorar dept_assignments con rol de staff (maestro/colaborador/etc.),
+            // ya que esos usuarios se cuentan en Obreros por su assigned_class directo.
+            const deptAssignment = s.dept_assignments?.find((da: any) =>
+                da.departments?.name === deptName && !STAFF_ROLES.includes(da.role_in_dept)
+            );
             const matchDept = studentDept === deptName || !!deptAssignment;
             const effectiveClass = deptAssignment?.assigned_class || s.assigned_class;
             return matchDept && effectiveClass === className;

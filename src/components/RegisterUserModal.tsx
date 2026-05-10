@@ -57,8 +57,11 @@ interface RegisterUserModalProps {
 // Roles that have per-department assignments
 const ASSIGNABLE_ROLES: AppRole[] = [
     'maestro', 'lider', 'director', 'vicedirector',
-    'colaborador', 'ayudante', 'secretaria',
+    'colaborador', 'ayudante',
 ];
+
+// Roles that don't require a department
+const STANDALONE_ROLE_VALUES = ['conserje', 'admin', 'secr.-calendario', 'secretaria'];
 
 const ROLE_LABELS: Record<string, string> = {
     maestro: 'Maestro',
@@ -187,25 +190,33 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                 setStandaloneRoles(['director_general' as AppRole]);
                 setSelectedDepartments(user.departments || []);
                 setAssignments([]);
-            } else if (userRoles.includes('conserje' as AppRole) || userRoles.includes('admin' as AppRole) || userRoles.includes('secr.-calendario' as AppRole)) {
-                setStandaloneRoles(userRoles);
-                setAssignments([]);
-                setSelectedDepartments([]);
             } else {
-                setStandaloneRoles([]);
                 if (user.assignments && user.assignments.length > 0) {
-                    setAssignments(user.assignments.map((a: any) => ({
+                    // Separar assignments con dept (rol+dept) de los standalone (sin dept)
+                    const deptAssignments = user.assignments.filter((a: any) => a.department);
+                    const standaloneFromAssignments = user.assignments
+                        .filter((a: any) => !a.department)
+                        .map((a: any) => a.role as AppRole);
+                    // También detectar por roles para compatibilidad con registros anteriores
+                    const standaloneFromRoles = userRoles.filter(r => STANDALONE_ROLE_VALUES.includes(r as string)) as AppRole[];
+                    const allStandalone = [...new Set([...standaloneFromAssignments, ...standaloneFromRoles])];
+                    setStandaloneRoles(allStandalone);
+                    setAssignments(deptAssignments.map((a: any) => ({
                         role: (a.role || userRoles[0] || 'maestro') as AppRole,
                         department: a.department || '',
                         assigned_class: a.assigned_class || '',
                     })));
                 } else if (user.departments && user.departments.length > 0) {
+                    const standaloneFromRoles = userRoles.filter(r => STANDALONE_ROLE_VALUES.includes(r as string)) as AppRole[];
+                    setStandaloneRoles(standaloneFromRoles);
                     setAssignments(user.departments.map((dept) => ({
-                        role: (userRoles[0] || 'maestro') as AppRole,
+                        role: (userRoles.find(r => !STANDALONE_ROLE_VALUES.includes(r as string)) || userRoles[0] || 'maestro') as AppRole,
                         department: dept,
                         assigned_class: dept === user.departments[0] ? (user.assigned_class || '') : '',
                     })));
                 } else {
+                    const standaloneFromRoles = userRoles.filter(r => STANDALONE_ROLE_VALUES.includes(r as string)) as AppRole[];
+                    setStandaloneRoles(standaloneFromRoles);
                     setAssignments([]);
                 }
                 setSelectedDepartments([]);
@@ -340,23 +351,45 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                 finalRoles = standaloneRoles;
                 finalAssignments = [];
             } else {
-                if (assignments.length === 0) {
-                    toast({ title: "Error", description: "Agregue al menos un rol con departamento", variant: "destructive" });
+                if (assignments.length === 0 && standaloneRoles.length === 0) {
+                    toast({ title: "Error", description: "Agregue al menos un rol o asignación", variant: "destructive" });
                     setLoading(false);
                     return;
                 }
-                finalDepts = [...new Set(assignments.map(a => a.department))];
-                finalDeptId = departments.find(d => d.name === assignments[0].department)?.id;
-                finalClass = assignments[0].assigned_class || undefined;
-                finalRole = assignments[0].role;
-                finalRoles = [...new Set(assignments.map(a => a.role))] as AppRole[];
-                finalAssignments = assignments.map((a, i) => ({
-                    id: `assign_${i}`,
-                    role: a.role,
-                    department: a.department,
-                    department_id: departments.find(d => d.name === a.department)?.id || '',
-                    assigned_class: a.assigned_class || '',
-                }));
+                if (assignments.length === 0) {
+                    // Solo standalone roles (ej: solo secretaria sin dept)
+                    finalDepts = [];
+                    finalDeptId = undefined;
+                    finalClass = undefined;
+                    finalRole = standaloneRoles[0];
+                    finalRoles = standaloneRoles;
+                    finalAssignments = [];
+                } else {
+                    finalDepts = [...new Set(assignments.map(a => a.department))];
+                    finalDeptId = departments.find(d => d.name === assignments[0].department)?.id;
+                    finalClass = assignments[0].assigned_class || undefined;
+                    finalRole = assignments[0].role;
+                    // Combinar roles de asignaciones + roles standalone (ej: Líder + Conserje)
+                    finalRoles = [...new Set([...assignments.map(a => a.role), ...standaloneRoles])] as AppRole[];
+                    // Los standalone se guardan como assignments sin dept para que aparezcan en RoleSwitcher
+                    const standaloneAssignments = standaloneRoles.map((r, i) => ({
+                        id: `assign_s_${i}`,
+                        role: r,
+                        department: '',
+                        department_id: '',
+                        assigned_class: '',
+                    }));
+                    finalAssignments = [
+                        ...assignments.map((a, i) => ({
+                            id: `assign_${i}`,
+                            role: a.role,
+                            department: a.department,
+                            department_id: departments.find(d => d.name === a.department)?.id || '',
+                            assigned_class: a.assigned_class || '',
+                        })),
+                        ...standaloneAssignments,
+                    ];
+                }
             }
 
             const hasColaboradorRole = finalRoles.includes('colaborador' as AppRole) || finalRoles.includes('ayudante' as AppRole);
@@ -493,7 +526,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
         ? ['maestro', 'colaborador', 'ayudante'] as AppRole[]
         : isLoggedInDirectorGeneral
             ? ['maestro', 'colaborador', 'ayudante', 'director', 'vicedirector'] as AppRole[]
-            : [...ASSIGNABLE_ROLES, 'director_general' as AppRole, 'secr.-calendario' as AppRole, 'conserje' as AppRole, 'admin' as AppRole];
+            : [...ASSIGNABLE_ROLES, 'director_general' as AppRole, 'secr.-calendario' as AppRole, 'conserje' as AppRole, 'admin' as AppRole, 'secretaria' as AppRole];
 
     // Whether the current set of roles needs departments
     const needsDepartment = !standaloneRoles.some(r =>
@@ -671,7 +704,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                     <div className="space-y-2">
                                         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Roles sin departamento</p>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                            {(['director_general', 'conserje', 'admin', 'secr.-calendario'] as AppRole[])
+                                            {(['director_general', 'conserje', 'admin', 'secr.-calendario', 'secretaria'] as AppRole[])
                                                 .filter(r => rolesForLoggedIn.includes(r))
                                                 .map(r => (
                                                     <label key={r} className="flex items-center gap-2 cursor-pointer">
@@ -761,7 +794,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 {rolesForLoggedIn
-                                                                    .filter(r => !['director_general', 'conserje', 'admin', 'secr.-calendario'].includes(r as string))
+                                                                    .filter(r => !['director_general', 'conserje', 'admin', 'secr.-calendario', 'secretaria'].includes(r as string))
                                                                     .map(r => (
                                                                         <SelectItem key={r} value={r} className="text-xs">{ROLE_LABELS[r] || r}</SelectItem>
                                                                     ))}

@@ -36,7 +36,7 @@ export function RoleSwitcher() {
     // Helper to identify if an assignment is the active one
     const isActive = (a: any) =>
         a.role === profile.role &&
-        a.department_id === profile.department_id &&
+        (a.department_id || null) === (profile.department_id || null) &&
         (a.assigned_class || "") === (profile.assigned_class || "");
 
     return (
@@ -80,19 +80,21 @@ export function RoleSwitcher() {
                                     </span>
                                     {active && <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />}
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                                        {a.department}
-                                    </span>
-                                    {a.assigned_class && (
-                                        <>
-                                            <span className="text-slate-300 dark:text-slate-600">•</span>
-                                            <span className="text-[10px] font-medium text-purple-600/70 dark:text-purple-400/70">
-                                                {a.assigned_class}
-                                            </span>
-                                        </>
-                                    )}
-                                </div>
+                                {a.department && (
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                            {a.department}
+                                        </span>
+                                        {a.assigned_class && (
+                                            <>
+                                                <span className="text-slate-300 dark:text-slate-600">•</span>
+                                                <span className="text-[10px] font-medium text-purple-600/70 dark:text-purple-400/70">
+                                                    {a.assigned_class}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </DropdownMenuItem>
                         );
                     })}

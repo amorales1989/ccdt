@@ -155,8 +155,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (assignmentsForProfile.length > 1) {
           const activeAssignment = assignmentsForProfile.find(
             (a) => a.role === data.role && (a.department_id || null) === (data.department_id || null)
-          ) ?? assignmentsForProfile[0];
-          activeDepartments = [activeAssignment.department as DepartmentType];
+          ) ?? assignmentsForProfile.find(a => a.department) ?? assignmentsForProfile[0];
+          // Solo sobreescribir si el assignment activo tiene departamento (standalone no tiene)
+          if (activeAssignment?.department) {
+            activeDepartments = [activeAssignment.department as DepartmentType];
+          }
         }
 
         const typedProfile: Profile = {
@@ -323,16 +326,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
 
       // Actualizar localStorage para que todos los filtros de la app usen el contexto correcto
-      localStorage.setItem('selectedDepartment', assignment.department);
+      localStorage.setItem('selectedDepartment', assignment.department || '');
       if (assignment.department_id) {
         localStorage.setItem('selectedDepartmentId', assignment.department_id);
+      } else {
+        localStorage.removeItem('selectedDepartmentId');
       }
+
+      const deptId = assignment.department_id || null;
 
       const { error } = await supabase
         .from("profiles")
         .update({
           role: assignment.role,
-          department_id: assignment.department_id,
+          department_id: deptId,
           assigned_class: assignment.assigned_class || null
         })
         .eq("id", user.id);
@@ -343,8 +350,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(prev => prev ? {
         ...prev,
         role: assignment.role,
-        departments: [assignment.department as DepartmentType],
-        department_id: assignment.department_id,
+        departments: assignment.department ? [assignment.department as DepartmentType] : [],
+        department_id: deptId,
         assigned_class: assignment.assigned_class || null,
       } : null);
 
