@@ -463,10 +463,28 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                     if (hasMaestroRoles && finalDeptId) {
                         const firstDeptObj = departments.find(d => d.id === finalDeptId);
                         if (firstDeptObj?.classes?.includes("Obreros")) {
-                            const { data: existingStudent } = await supabase
+                            // Buscar student existente: primero por profile_id, luego por DNI
+                            const { data: byProfile } = await supabase
                                 .from('students').select('id').eq('profile_id', newUser.id).maybeSingle();
+
+                            let studentByDni: { id: string } | null = null;
+                            if (!byProfile && documentNumber) {
+                                const { data } = await supabase
+                                    .from('students')
+                                    .select('id')
+                                    .eq('document_number', documentNumber)
+                                    .eq('company_id', getPersistentCompanyId())
+                                    .is('deleted_at', null)
+                                    .maybeSingle();
+                                studentByDni = data;
+                            }
+
+                            const existingStudent = byProfile || studentByDni;
+
                             if (existingStudent) {
+                                // Vincular el student existente al nuevo usuario
                                 await supabase.from('students').update({
+                                    profile_id: newUser.id,
                                     assigned_class: 'Obreros',
                                     phone: phone || null,
                                     address: address || null,
@@ -474,19 +492,16 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                     document_number: documentNumber || null,
                                     gender: gender || "masculino",
                                 }).eq('id', existingStudent.id);
+
+                                // Agregar inscripción en Obreros en student_departments
+                                await supabase.from('student_departments').upsert({
+                                    student_id: existingStudent.id,
+                                    department_id: finalDeptId,
+                                    assigned_class: 'Obreros',
+                                    role_in_dept: finalRoles.find(r => ['maestro','colaborador','ayudante','lider'].includes(r as string)) || 'alumno',
+                                    company_id: getPersistentCompanyId(),
+                                }, { onConflict: 'student_id,department_id' });
                             } else {
-                                // Buscar foto de un registro existente del mismo miembro (ej: alumno en otro departamento)
-                                let inheritedPhotoUrl: string | null = null;
-                                if (documentNumber) {
-                                    const { data: memberWithPhoto } = await supabase
-                                        .from('students')
-                                        .select('photo_url')
-                                        .eq('document_number', documentNumber)
-                                        .eq('company_id', getPersistentCompanyId())
-                                        .not('photo_url', 'is', null)
-                                        .maybeSingle();
-                                    inheritedPhotoUrl = memberWithPhoto?.photo_url ?? null;
-                                }
                                 await supabase.from('students').insert({
                                     first_name: firstName, last_name: lastName || "",
                                     phone: phone || null, address: address || null,
@@ -495,7 +510,6 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                     gender: gender || "masculino", birthdate: birthdate || null,
                                     document_number: documentNumber || null,
                                     profile_id: newUser.id, company_id: getPersistentCompanyId(),
-                                    photo_url: inheritedPhotoUrl,
                                 });
                             }
                         }

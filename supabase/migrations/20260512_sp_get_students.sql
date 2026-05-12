@@ -109,14 +109,14 @@ enrollment_counts AS (
 
 SELECT
   s.id,
-  s.first_name,
-  s.last_name,
-  s.gender,
-  s.birthdate,
-  s.phone,
-  s.address,
-  s.document_number,
-  s.photo_url,
+  COALESCE(p.first_name, s.first_name)       AS first_name,
+  COALESCE(p.last_name, s.last_name)         AS last_name,
+  COALESCE(p.gender, s.gender)               AS gender,
+  COALESCE(p.birthdate::date, s.birthdate)   AS birthdate,
+  COALESCE(p.phone, s.phone)                 AS phone,
+  COALESCE(p.address, s.address)             AS address,
+  COALESCE(p.document_number, s.document_number) AS document_number,
+  COALESCE(p.photo_url, s.photo_url)         AS photo_url,
   COALESCE(di.resolved_class, s.assigned_class) AS assigned_class,
   s.department_id,
   dep.name AS department_name,
@@ -129,6 +129,7 @@ SELECT
   COALESCE(asgn.dept_assignments, '[]'::jsonb) AS dept_assignments
 FROM students s
 JOIN all_ids ON all_ids.student_id = s.id
+LEFT JOIN profiles p        ON p.id = s.profile_id
 LEFT JOIN dept_ids di       ON di.student_id = s.id
 LEFT JOIN authorized_ids ai ON ai.student_id = s.id
 LEFT JOIN departments dep   ON dep.id = s.department_id
@@ -136,13 +137,13 @@ LEFT JOIN assignments asgn  ON asgn.student_id = s.id
 LEFT JOIN enrollment_counts ec ON ec.student_id = s.id
 WHERE s.deleted_at IS NULL
   AND s.company_id = p_company_id
-  AND (p_gender IS NULL OR s.gender = p_gender)
+  AND (p_gender IS NULL OR COALESCE(p.gender, s.gender) = p_gender)
   AND (
     p_search IS NULL
-    OR s.first_name ILIKE '%' || p_search || '%'
-    OR s.last_name  ILIKE '%' || p_search || '%'
+    OR COALESCE(p.first_name, s.first_name) ILIKE '%' || p_search || '%'
+    OR COALESCE(p.last_name, s.last_name)   ILIKE '%' || p_search || '%'
   )
-ORDER BY s.first_name;
+ORDER BY COALESCE(p.first_name, s.first_name);
 
 $$;
 
