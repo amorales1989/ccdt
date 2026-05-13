@@ -203,8 +203,16 @@ const ListarAlumnos = () => {
 
       const nameMatch = fullName.includes(nameFilter);
       const departmentMatch = departmentFilter ?
-        (student.departments?.name === departmentFilter || student.department === departmentFilter) : true;
-      const classMatch = classFilter ? student.assigned_class === classFilter : true;
+        (student.departments?.name === departmentFilter ||
+         student.department === departmentFilter ||
+         (student as any).dept_assignments?.some((a: any) => a.departments?.name === departmentFilter))
+        : true;
+      const classMatch = classFilter ?
+        (student.assigned_class === classFilter ||
+         (departmentFilter && (student as any).dept_assignments?.some(
+           (a: any) => a.departments?.name === departmentFilter && a.assigned_class === classFilter
+         )))
+        : true;
 
       return nameMatch && departmentMatch && classMatch;
     });
@@ -775,9 +783,21 @@ const ListarAlumnos = () => {
     });
   };
 
+  const promotableStudents = students?.filter(s => {
+    if (s.assigned_class?.toLowerCase() === 'obreros') return false;
+    const deptFilter = filters.department;
+    if (deptFilter) {
+      const assignmentForDept = (s as any).dept_assignments?.find(
+        (a: any) => a.departments?.name === deptFilter
+      );
+      if (assignmentForDept?.assigned_class?.toLowerCase() === 'obreros') return false;
+    }
+    return true;
+  }) || [];
+
   const handlePromoteAll = () => {
     if (!students) return;
-    const allStudentIds = students.map(student => student.id);
+    const allStudentIds = promotableStudents.map(student => student.id);
     if (studentsToPromote.length === allStudentIds.length) {
       setStudentsToPromote([]);
     } else {
@@ -1461,14 +1481,14 @@ const ListarAlumnos = () => {
                     onClick={handlePromoteAll}
                     className="text-xs font-bold text-primary hover:text-primary/70 transition-colors"
                   >
-                    {studentsToPromote.length === (students?.length || 0) ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                    {studentsToPromote.length === (promotableStudents?.length || 0) ? 'Deseleccionar todos' : 'Seleccionar todos'}
                   </button>
                 </div>
 
                 {/* Lista scrolleable de miembros */}
                 <div className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
                   <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
-                    {students && students.length > 0 ? students.map((student) => {
+                    {promotableStudents && promotableStudents.length > 0 ? promotableStudents.map((student) => {
                       const isSelected = studentsToPromote.includes(student.id);
                       return (
                         <button
