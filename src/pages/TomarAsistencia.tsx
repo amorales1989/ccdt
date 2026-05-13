@@ -12,7 +12,7 @@ import { UserCheck, UserX, Calendar, Users, CheckCircle2, Save } from "lucide-re
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { markAttendance, getAttendance } from "@/lib/api";
+import { markAttendance, getAttendance, getStudents } from "@/lib/api";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -105,43 +105,14 @@ const TomarAsistencia = () => {
       // For director, if no class selected, return empty
       if (isDirector && !selectedClass) return [];
 
-      let departmentQuery = supabase
-        .from("students")
-        .select("*, departments:department_id(name, id)")
-        .is('deleted_at', null);
+      const classToFilter = isDirector ? selectedClass : userClass;
 
-      if (!isAdminOrSecretaria) {
-        departmentQuery = departmentQuery.eq("department_id", departmentId);
+      const params: Record<string, string> = { department_id: departmentId };
+      if (classToFilter && classToFilter !== "all") params.assigned_class = classToFilter;
 
-        const classToFilter = isDirector ? selectedClass : userClass;
-        if (isDirector && classToFilter === "all") {
-          // no filter
-        } else {
-          departmentQuery = departmentQuery.eq("assigned_class", classToFilter || "");
-        }
-      }
+      const allStudents = await getStudents(params) || [];
 
-      const { data: departmentStudents, error } = await departmentQuery;
-      if (error) throw error;
-
-      let allStudents = [...departmentStudents];
-
-      if (!isAdminOrSecretaria && departmentId) {
-        const { data: authorizedData, error: authError } = await supabase
-          .from("student_authorizations")
-          .select("*, student:student_id(*)")
-          .eq("department_id", departmentId);
-
-        if (!authError && authorizedData) {
-          const existingIds = new Set(departmentStudents.map(s => s.id));
-          const authStudents = authorizedData
-            .filter((a: any) => a.student && !a.student.deleted_at && !existingIds.has(a.student.id))
-            .map((a: any) => ({ ...a.student, is_authorized: true }));
-          allStudents = [...departmentStudents, ...authStudents];
-        }
-      }
-
-      return allStudents.sort((a, b) => {
+      return allStudents.sort((a: any, b: any) => {
         const gA = (a.gender || '').toLowerCase();
         const gB = (b.gender || '').toLowerCase();
         if (gA !== gB) {

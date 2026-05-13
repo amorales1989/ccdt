@@ -34,14 +34,15 @@ STABLE
 SECURITY DEFINER
 AS $$
 
--- CTE 1: IDs válidos según filtro de departamento
+-- CTE 1: IDs válidos según filtro de departamento (una sola fila por alumno)
 WITH dept_ids AS (
-  SELECT DISTINCT s.id AS student_id,
+  SELECT DISTINCT ON (s.id) s.id AS student_id,
     COALESCE(sd.assigned_class, s.assigned_class) AS resolved_class
   FROM students s
   LEFT JOIN student_departments sd
     ON sd.student_id = s.id
-    AND (p_department_id IS NULL OR sd.department_id = p_department_id)
+    AND p_department_id IS NOT NULL
+    AND sd.department_id = p_department_id
     AND (p_assigned_class IS NULL OR p_assigned_class = 'all' OR sd.assigned_class ILIKE p_assigned_class)
   WHERE s.company_id = p_company_id
     AND s.deleted_at IS NULL
@@ -55,6 +56,7 @@ WITH dept_ids AS (
       OR s.assigned_class ILIKE p_assigned_class
       OR sd.assigned_class ILIKE p_assigned_class
     )
+  ORDER BY s.id
 ),
 
 -- CTE 2: Alumnos autorizados (solo cuando hay filtro dept+clase)

@@ -149,13 +149,22 @@ const ListarAlumnos = () => {
 
     // Unir mis miembros regulares con los autorizados
     let filteredList = filteredStudentsBase.filter(student => {
+      // Verificar si el student pertenece al departamento via dept_assignments (junction table)
+      const inDeptViaAssignment = (student as any).dept_assignments?.some(
+        (a: any) => a.department_id === profile?.department_id
+      );
+
       // Caso 1: Miembro regular de mi departamento (y clase si soy maestro)
       const isRegular = (
         ((profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') &&
-          (profile?.departments?.includes(student.departments?.name || student.department) || student.department_id === profile?.department_id)) ||
+          (profile?.departments?.includes(student.departments?.name || student.department) || student.department_id === profile?.department_id || inDeptViaAssignment)) ||
         (profile?.department_id && profile?.assigned_class &&
-          student.department_id === profile.department_id &&
-          student.assigned_class === profile.assigned_class)
+          (student.department_id === profile.department_id || inDeptViaAssignment) &&
+          ((student.assigned_class === profile.assigned_class) ||
+           (student as any).dept_assignments?.some(
+             (a: any) => a.department_id === profile?.department_id && a.assigned_class === profile.assigned_class
+           ))
+        )
       );
 
       // Caso 2: Miembro de otro departamento pero autorizado al mío
