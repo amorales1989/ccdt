@@ -500,7 +500,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                     assigned_class: 'Obreros',
                                     role_in_dept: finalRoles.find(r => ['maestro','colaborador','ayudante','lider'].includes(r as string)) || 'alumno',
                                     company_id: getPersistentCompanyId(),
-                                }, { onConflict: 'student_id,department_id' });
+                                }, { onConflict: 'student_id,department_id,role_in_dept' });
                             } else {
                                 await supabase.from('students').insert({
                                     first_name: firstName, last_name: lastName || "",
