@@ -33,6 +33,7 @@ export const StudentObservations = ({ studentId }: StudentObservationsProps) => 
                 student_id: studentId,
                 observation: text,
                 created_by: profile?.id || "",
+                department_id: profile?.department_id || null,
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["observations", studentId] });

@@ -70,6 +70,7 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                 .select('*')
                 .or(`first_name.ilike.${term},last_name.ilike.${term},document_number.ilike.${term}`)
                 .eq('company_id', getPersistentCompanyId())
+                .is('deleted_at', null)
                 .limit(5) as { data: any[], error: any }
 
             const flattened: PersonSearchResult[] = [

@@ -926,6 +926,7 @@ export const addObservation = async (observation: {
   student_id: string;
   observation: string;
   created_by: string;
+  department_id?: string | null;
 }) => {
   try {
     const response = await apiCall('/observations', {

@@ -16,6 +16,8 @@ import { format, parseISO } from "date-fns";
 import { UserPlus, Check } from "lucide-react";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { DniIdentityInput } from "@/components/DniIdentityInput";
+import { NameSearchInput } from "@/components/NameSearchInput";
+import type { PersonSearchResult } from "@/components/PersonSearchInput";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 
 interface AgregarAlumnoProps {
@@ -47,6 +49,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
     nuevo: true, // Por defecto marcado como nuevo
     profile_id: null as string | null,
     person_source: null as 'profile' | 'student' | null,
+    existing_student_id: null as string | null,
   });
 
   const companyId = getPersistentCompanyId();
@@ -155,7 +158,8 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
       birthdate: person.birthdate || prev.birthdate,
       document_number: person.document_number,
       profile_id: person.profile_id || (source === 'profile' ? person.id : (prev.profile_id)),
-      person_source: source
+      person_source: source,
+      existing_student_id: source === 'student' ? person.id : prev.existing_student_id,
     }));
 
     toast({
@@ -246,6 +250,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
         nuevo: formData.nuevo,
         profile_id: formData.profile_id || undefined,
         person_source: formData.person_source || undefined,
+        existing_student_id: formData.existing_student_id || undefined,
       } as any);
 
       toast({
@@ -304,12 +309,38 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="first_name">Nombre *</Label>
-              <Input
+              <NameSearchInput
                 id="first_name"
                 value={formData.first_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, first_name: e.target.value })
+                onChange={(v) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    first_name: v,
+                    ...((prev.profile_id || prev.person_source || prev.existing_student_id)
+                      ? { profile_id: null, person_source: null, existing_student_id: null }
+                      : {}),
+                  }))
                 }
+                onSelect={(person: PersonSearchResult) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    first_name: person.first_name || prev.first_name,
+                    last_name: person.last_name || prev.last_name,
+                    phone: person.phone || prev.phone,
+                    address: person.address || prev.address,
+                    gender: person.gender || prev.gender,
+                    birthdate: person.birthdate || prev.birthdate,
+                    document_number: person.document_number || prev.document_number,
+                    profile_id: person.profile_id || (person.source === 'profile' ? person.id : prev.profile_id),
+                    person_source: person.source,
+                    existing_student_id: person.source === 'student' ? person.id : prev.existing_student_id,
+                  }));
+                  setDniError(null);
+                  toast({
+                    title: "Persona seleccionada",
+                    description: `Se han cargado los datos de ${person.first_name} ${person.last_name}.`,
+                  });
+                }}
                 required
               />
             </div>

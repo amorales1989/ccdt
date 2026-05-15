@@ -11,7 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Department, DepartmentType } from "@/types/database";
 import { UserPlus, Eye, EyeOff, Plus, X, Pencil } from "lucide-react";
-import { PersonSearchInput, PersonSearchResult } from "./PersonSearchInput";
+import { PersonSearchResult } from "./PersonSearchInput";
+import { NameSearchInput } from "./NameSearchInput";
 import { DniIdentityInput } from "./DniIdentityInput";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -578,28 +579,6 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                     </DialogDescription>
                 </DialogHeader>
 
-                {!isEditMode && (
-                    <div className="mt-4 mb-6">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1 mb-2 block">
-                            Buscar persona existente (Opcional)
-                        </Label>
-                        <PersonSearchInput
-                            selectedName={selectedPersonId ? `${firstName} ${lastName}` : undefined}
-                            onSelect={(person: PersonSearchResult) => {
-                                setFirstName(person.first_name); setLastName(person.last_name);
-                                setPhone(person.phone || ""); setBirthdate(person.birthdate || "");
-                                setGender(person.gender || "masculino"); setAddress(person.address || "");
-                                setDocumentNumber(person.document_number || "");
-                                setProfileId(person.profile_id || (person.source === 'profile' ? person.id : null));
-                                setPersonSource(person.source); setSelectedPersonId(person.id);
-                                toast({ title: "Persona seleccionada", description: `Datos cargados de ${person.first_name} ${person.last_name}.` });
-                            }}
-                        />
-                        <p className="text-[10px] text-muted-foreground mt-2 px-1 italic">
-                            Si la persona ya existe como miembro o líder, selecciónala para evitar duplicados.
-                        </p>
-                    </div>
-                )}
 
                 <form onSubmit={handleSubmit} className="relative z-10 mt-4">
                     <div className="space-y-6">
@@ -607,7 +586,34 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="firstName" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Nombre</Label>
-                                <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required placeholder="Ej. Juan" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
+                                {!isEditMode ? (
+                                    <NameSearchInput
+                                        id="firstName"
+                                        value={firstName}
+                                        onChange={(v) => {
+                                            setFirstName(v);
+                                            if (selectedPersonId) {
+                                                setSelectedPersonId(null);
+                                                setPersonSource(null);
+                                                setProfileId(null);
+                                            }
+                                        }}
+                                        onSelect={(person: PersonSearchResult) => {
+                                            setFirstName(person.first_name); setLastName(person.last_name);
+                                            setPhone(person.phone || ""); setBirthdate(person.birthdate || "");
+                                            setGender(person.gender || "masculino"); setAddress(person.address || "");
+                                            setDocumentNumber(person.document_number || "");
+                                            setProfileId(person.profile_id || (person.source === 'profile' ? person.id : null));
+                                            setPersonSource(person.source); setSelectedPersonId(person.id);
+                                            toast({ title: "Persona seleccionada", description: `Datos cargados de ${person.first_name} ${person.last_name}.` });
+                                        }}
+                                        required
+                                        placeholder="Ej. Juan"
+                                        className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                    />
+                                ) : (
+                                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required placeholder="Ej. Juan" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="lastName" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Apellido</Label>
