@@ -68,7 +68,14 @@ export function RoleSwitcher() {
                         return (
                             <DropdownMenuItem
                                 key={a.id}
-                                onClick={() => switchAssignment(a)}
+                                onClick={async () => {
+                                    if (isActive(a)) return;
+                                    try {
+                                        await switchAssignment(a);
+                                    } finally {
+                                        window.location.reload();
+                                    }
+                                }}
                                 className={`flex flex-col items-start gap-0.5 p-2.5 cursor-pointer rounded-xl transition-all ${active
                                         ? "bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500"
                                         : "hover:bg-slate-100 dark:hover:bg-slate-800 border-l-4 border-transparent"

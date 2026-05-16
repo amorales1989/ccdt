@@ -34,8 +34,28 @@ const GENDER_COLORS: Record<string, string> = {
 };
 
 const GLOBAL_ROLES = ["admin", "secretaria"];
+
+// Trae todas las filas paginando para evitar el límite default de 1000 de Supabase
+const fetchAllPaginated = async <T,>(buildQuery: () => any, pageSize = 1000): Promise<T[]> => {
+  const all: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...(data as T[]));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+};
 const LIDER_ROLES = ["lider"];
 const VICEDIR_ROLES = ["vicedirector"];
+const DIRECTOR_GENERAL_ROLES = ["director_general"];
+// Roles que solo deben ver el departamento de su rol activo
+const SINGLE_DEPT_ROLES = ["director", "lider", "maestro", "colaborador", "ayudante"];
+// Roles cuya vista debe quedar fijada a su clase activa
+const CLASS_LOCKED_ROLES = ["lider", "maestro", "colaborador", "ayudante"];
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -98,10 +118,12 @@ export default function Estadisticas() {
 
   const allowedDepts = React.useMemo(() => {
     if (!currentProfile || !allDepartments.length) return [];
-    if (GLOBAL_ROLES.includes(currentProfile.role)) return allDepartments;
+    const role = currentProfile.role;
+
+    if (GLOBAL_ROLES.includes(role)) return allDepartments;
 
     // Vicedirector: solo los departamentos donde su rol es vicedirector
-    if (VICEDIR_ROLES.includes(currentProfile.role)) {
+    if (VICEDIR_ROLES.includes(role)) {
       const viceDeptIds = new Set<string>();
       if (currentProfile.assignments) {
         currentProfile.assignments.forEach((a: any) => {
@@ -112,28 +134,46 @@ export default function Estadisticas() {
       return allDepartments.filter(d => viceDeptIds.has(d.id));
     }
 
-    const userDeptIds = new Set<string>();
-    if (currentProfile.department_id) userDeptIds.add(currentProfile.department_id);
-    if (currentProfile.assignments) {
-      currentProfile.assignments.forEach((a: any) => { if (a.department_id) userDeptIds.add(a.department_id); });
-    }
-    if (currentProfile.departments) {
-      currentProfile.departments.forEach((dName: string) => {
+    // Director General: todos los departamentos que tiene asignados (varias escuelitas)
+    if (DIRECTOR_GENERAL_ROLES.includes(role)) {
+      const ids = new Set<string>();
+      if (currentProfile.department_id) ids.add(currentProfile.department_id);
+      currentProfile.assignments?.forEach((a: any) => { if (a.department_id) ids.add(a.department_id); });
+      currentProfile.departments?.forEach((dName: string) => {
         const d = allDepartments.find(ad => ad.name === dName);
-        if (d) userDeptIds.add(d.id);
+        if (d) ids.add(d.id);
       });
+      return allDepartments.filter(d => ids.has(d.id));
     }
-    return allDepartments.filter(d => userDeptIds.has(d.id));
+
+    // Director / lider / maestro / colaborador / ayudante:
+    // SOLO el departamento del rol activo (no unimos con otras asignaciones del usuario)
+    if (SINGLE_DEPT_ROLES.includes(role) && currentProfile.department_id) {
+      return allDepartments.filter(d => d.id === currentProfile.department_id);
+    }
+
+    return [];
   }, [currentProfile, allDepartments]);
 
-  // Auto-set department and class for lider (after allDepartments is declared)
+  const isClassLocked = currentProfile && CLASS_LOCKED_ROLES.includes(currentProfile.role);
+  const lockedClass = isClassLocked ? currentProfile?.assigned_class || null : null;
+
+  // Auto-set department for cualquier rol con un solo dept o clase fijada
   React.useEffect(() => {
-    if (!isLider || !currentProfile || !allDepartments.length) return;
-    const deptId = currentProfile.department_id ||
-      allDepartments.find((d: any) => currentProfile.departments?.includes(d.name))?.id;
-    if (deptId && selectedDeptId === "all") setSelectedDeptId(deptId);
-    if (currentProfile.assigned_class && selectedClass === "all") setSelectedClass(currentProfile.assigned_class);
-  }, [isLider, currentProfile, allDepartments]);
+    if (!currentProfile || !allDepartments.length) return;
+
+    // Si la vista está acotada a un único departamento, fijarlo
+    if (SINGLE_DEPT_ROLES.includes(currentProfile.role) && currentProfile.department_id) {
+      if (selectedDeptId !== currentProfile.department_id) {
+        setSelectedDeptId(currentProfile.department_id);
+      }
+    }
+
+    // Si el rol tiene clase fijada, forzarla
+    if (isClassLocked && lockedClass && selectedClass !== lockedClass) {
+      setSelectedClass(lockedClass);
+    }
+  }, [currentProfile, allDepartments, isClassLocked, lockedClass]);
 
   // Auto-set department for vicedirector
   React.useEffect(() => {
@@ -148,59 +188,47 @@ export default function Estadisticas() {
   const { data: students = [], isLoading: loadingStudents } = useQuery({
     queryKey: ['stats-students', selectedDeptId, companyId, currentProfile?.id],
     enabled: !loadingProfile,
-    queryFn: async () => {
+    queryFn: async () => fetchAllPaginated<Student>(() => {
       let q = (supabase.from('students') as any)
         .select('*').eq('company_id', companyId).is('deleted_at', null);
-
       if (selectedDeptId !== "all") {
         q = q.eq('department_id', selectedDeptId);
       } else if (!isGlobalView) {
         const deptIds = allowedDepts.map(d => d.id);
         if (deptIds.length > 0) q = q.in('department_id', deptIds);
       }
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as Student[];
-    }
+      return q;
+    })
   });
 
   const { data: attendance = [], isLoading: loadingAttendance } = useQuery({
     queryKey: ['stats-attendance', selectedDeptId, companyId, currentProfile?.id],
     enabled: !loadingProfile,
-    queryFn: async () => {
+    queryFn: async () => fetchAllPaginated<any>(() => {
       let q = (supabase.from('attendance') as any).select('*').eq('company_id', companyId);
-
       if (selectedDeptId !== "all") {
         q = q.eq('department_id', selectedDeptId);
       } else if (!isGlobalView) {
         const deptIds = allowedDepts.map(d => d.id);
         if (deptIds.length > 0) q = q.in('department_id', deptIds);
       }
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as any[];
-    }
+      return q;
+    })
   });
 
   const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
     queryKey: ['stats-profiles', selectedDeptId, companyId, currentProfile?.id],
     enabled: !loadingProfile,
-    queryFn: async () => {
+    queryFn: async () => fetchAllPaginated<Profile>(() => {
       let q = (supabase.from('profiles') as any).select('*').eq('company_id', companyId);
-
       if (selectedDeptId !== "all") {
         q = q.eq('department_id', selectedDeptId);
       } else if (!isGlobalView) {
         const deptIds = allowedDepts.map(d => d.id);
         if (deptIds.length > 0) q = q.in('department_id', deptIds);
       }
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as Profile[];
-    }
+      return q;
+    })
   });
 
   const { data: deptInfo } = useQuery({
@@ -421,7 +449,7 @@ export default function Estadisticas() {
                 </SelectContent>
               </Select>
             )}
-            {!isLider && availableClasses.length > 0 && (
+            {!isClassLocked && availableClasses.length > 0 && (
               <Select
                 value={selectedClass}
                 onValueChange={setSelectedClass}

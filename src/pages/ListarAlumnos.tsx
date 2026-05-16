@@ -791,10 +791,25 @@ const ListarAlumnos = () => {
   const confirmDelete = async () => {
     if (!studentToDelete) return;
     try {
-      await deleteStudent(studentToDelete);
+      // Determinar el departamento desde el cual se está eliminando:
+      // - admin/secretaria: el del filtro activo (si lo hay)
+      // - otros roles: su departamento activo
+      const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
+      let fromDeptId: string | null | undefined = null;
+      if (isAdminOrSecretaria) {
+        if (filters.department) {
+          fromDeptId = departments?.find(d => d.name === filters.department)?.id || null;
+        }
+      } else {
+        fromDeptId = profile?.department_id || null;
+      }
+
+      const result: any = await deleteStudent(studentToDelete, fromDeptId);
       toast({
-        title: "Miembro eliminado",
-        description: "El miembro ha sido eliminado correctamente.",
+        title: result?.unlinked ? "Desvinculado del departamento" : "Miembro eliminado",
+        description: result?.unlinked
+          ? "El miembro pertenecía a más de un departamento. Se quitó solo de este."
+          : "El miembro ha sido eliminado correctamente.",
         variant: "success",
       });
       setDeleteAlertOpen(false);

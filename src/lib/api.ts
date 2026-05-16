@@ -247,9 +247,10 @@ export const deleteStudentPhoto = async (id: string) => {
   }
 };
 
-export const deleteStudent = async (id: string) => {
+export const deleteStudent = async (id: string, departmentId?: string | null) => {
   try {
-    const response = await apiCall(`/students/${id}`, {
+    const qs = departmentId ? `?department_id=${encodeURIComponent(departmentId)}` : '';
+    const response = await apiCall(`/students/${id}${qs}`, {
       method: 'DELETE',
     });
     return response.data || response;
