@@ -1022,3 +1022,30 @@ export const deleteMaterial = async (id: string) => {
     throw error;
   }
 };
+
+// ============ TOURS / ONBOARDING ============
+
+export const getCompletedTours = async (): Promise<string[]> => {
+  try {
+    const response = await apiCall('/tours');
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching completed tours:', error);
+    return [];
+  }
+};
+
+export const completeTour = async (tourKey: string): Promise<string[]> => {
+  const response = await apiCall('/tours/complete', {
+    method: 'POST',
+    body: JSON.stringify({ tour_key: tourKey }),
+  });
+  return response.data || [];
+};
+
+export const resetTourApi = async (tourKey: string): Promise<string[]> => {
+  const response = await apiCall(`/tours/${encodeURIComponent(tourKey)}`, {
+    method: 'DELETE',
+  });
+  return response.data || [];
+};

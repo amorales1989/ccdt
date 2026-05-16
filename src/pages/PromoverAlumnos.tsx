@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FolderUp, ListChecks, UserCheck } from "lucide-react";
+import { FolderUp, ListChecks, UserCheck, HelpCircle } from "lucide-react";
+import { TourGuide } from "@/components/TourGuide";
+import type { Step } from "react-joyride";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInYears } from "date-fns";
@@ -30,6 +32,12 @@ const PromoverAlumnos = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [activeTab, setActiveTab] = useState<"promote" | "authorize">("promote");
   const [authorizedStudents, setAuthorizedStudents] = useState<Record<string, string[]>>({});
+  const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
+  const tourSteps: Step[] = [
+    { target: '[data-tour="prom-header"]', content: "Acá podés promover miembros a otro departamento o autorizarlos para visitar otra clase.", disableBeacon: true },
+    { target: '[data-tour="prom-tabs"]', content: "Cambiá entre Promover (cambio definitivo de departamento) y Autorizar (permiso temporal)." },
+    { target: '[data-tour="prom-content"]', content: "Seleccioná los miembros y luego elegí el departamento/clase destino. Confirmás al final." },
+  ];
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
@@ -550,19 +558,23 @@ const PromoverAlumnos = () => {
     <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
       <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto animate-fade-in space-y-6">
 
+        <TourGuide tourKey="promover_alumnos" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div data-tour="prom-header" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Gestión de Miembros</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
               Promové o autorizá a los miembros a diferentes departamentos.
             </p>
           </div>
+          <Button onClick={() => setRunTour(true)} variant="outline" size="sm" className="gap-1.5">
+            <HelpCircle className="h-4 w-4" /> Ayuda
+          </Button>
         </div>
 
         {/* Tabs */}
-        <div className="w-full">
-          <CustomTabs
+        <div className="w-full" data-tour="prom-content">
+          <div data-tour="prom-tabs"><CustomTabs
             value={activeTab}
             onChange={(value) => setActiveTab(value as "promote" | "authorize")}
             options={[
@@ -570,7 +582,7 @@ const PromoverAlumnos = () => {
               { value: "authorize", label: "Autorizar", icon: UserCheck }
             ]}
             className="mb-6 w-full sm:w-fit mx-0"
-          />
+          /></div>
 
           {/* ============ TAB PROMOVER ============ */}
           {activeTab === "promote" && (

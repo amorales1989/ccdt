@@ -32,6 +32,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { TourGuide } from "@/components/TourGuide";
+import { HelpCircle } from "lucide-react";
+import type { Step } from "react-joyride";
 
 interface ClassStats {
   male: number;
@@ -295,6 +298,27 @@ const Home = () => {
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria" || profile?.role === "secr.-calendario";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
 
+  const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
+
+  const tourSteps: Step[] = isTeacherOrLeader
+    ? [
+        {
+          target: '[data-tour="home-stats"]',
+          content: "Acá ves un resumen de tu clase: cantidad de miembros, asistencias y accesos rápidos.",
+          disableBeacon: true,
+        },
+        {
+          target: '[data-tour="home-calendar"]',
+          content: "Estos son los próximos eventos y cumpleaños de tu clase.",
+        },
+        {
+          target: '[data-tour="home-help"]',
+          content: "Si querés volver a ver esta guía o las de otras pantallas, tocá este botón.",
+          placement: "bottom",
+        },
+      ]
+    : [];
+
   const handleClassClick = (departmentName: string, className: string) => {
     navigate(`/listar?department=${departmentName}&class=${className}`);
   };
@@ -363,8 +387,30 @@ const Home = () => {
         </div>
       </header>
 
+      {isTeacherOrLeader && (
+        <>
+          <TourGuide
+            tourKey="home_maestro_lider"
+            steps={tourSteps}
+            run={runTour}
+            onClose={() => setRunTour(false)}
+          />
+          <div className="flex justify-end -mb-4">
+            <button
+              data-tour="home-help"
+              onClick={() => setRunTour(true)}
+              className="inline-flex items-center gap-1 text-xs font-bold text-primary bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-xl transition-colors"
+              title="Ver guía de la pantalla"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Ayuda
+            </button>
+          </div>
+        </>
+      )}
+
       {/* Cards Section */}
-      <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 mb-8">
+      <section data-tour="home-stats" className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 mb-8">
         {isConserje ? (
           <MaintenanceSummaryWidget requests={maintenanceRequests} />
         ) : (
@@ -383,7 +429,7 @@ const Home = () => {
       {/* 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
         {/* Left Column: Events */}
-        <section className={`transition-all duration-500 ${isAdminOrSecretary ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+        <section data-tour="home-calendar" className={`transition-all duration-500 ${isAdminOrSecretary ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
           <CalendarWidget
             auth={{ isAdminOrSecretary }}
             data={{ events: futureEvents, eventsLoading, searchTerm, setSearchTerm }}

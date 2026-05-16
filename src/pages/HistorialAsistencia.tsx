@@ -19,6 +19,9 @@ import { useToast } from "@/hooks/use-toast";
 import { markAttendance } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { TourGuide } from "@/components/TourGuide";
+import { HelpCircle } from "lucide-react";
+import type { Step } from "react-joyride";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -38,6 +41,13 @@ const getFullName = (student: any): string => {
 
 const HistorialAsistencia = () => {
   const [selectedRange, setSelectedRange] = useState("today");
+  const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
+  const tourSteps: Step[] = [
+    { target: '[data-tour="hist-header"]', content: "Consultá las asistencias registradas en cualquier período.", disableBeacon: true },
+    { target: '[data-tour="hist-kpis"]', content: "Resumen rápido: cuántos asistieron, faltaron y total de registros." },
+    { target: '[data-tour="hist-filtros"]', content: "Cambiá el rango de fechas, departamento o clase para filtrar los datos." },
+    { target: '[data-tour="hist-edit"]', content: "Si necesitás corregir asistencias pasadas, entrá en modo Edición." },
+  ];
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -378,9 +388,10 @@ const HistorialAsistencia = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-12">
+      <TourGuide tourKey="historial_asistencia" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
 
       {/* ── Hero Header ─────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 px-6 md:px-10 pt-10 pb-16">
+      <div data-tour="hist-header" className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 px-6 md:px-10 pt-10 pb-16">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-300 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
@@ -401,6 +412,15 @@ const HistorialAsistencia = () => {
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <button
+              onClick={() => setRunTour(true)}
+              className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-black uppercase tracking-widest border border-white/20 backdrop-blur-sm transition-all"
+              title="Ver guía"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              Ayuda
+            </button>
+            <button
+              data-tour="hist-edit"
               onClick={isEditMode ? exitEditMode : enterEditMode}
               className={cn(
                 "flex items-center gap-2 h-10 px-5 rounded-xl text-xs font-black uppercase tracking-widest border backdrop-blur-sm transition-all",
@@ -429,7 +449,7 @@ const HistorialAsistencia = () => {
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 -mt-8 space-y-5 pb-28">
 
         {/* ── KPI Cards ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-4">
+        <div data-tour="hist-kpis" className="grid grid-cols-3 gap-4">
           {[
             {
               label: "Presentes",
@@ -478,7 +498,7 @@ const HistorialAsistencia = () => {
         </div>
 
         {/* ── Filtros ────────────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-lg shadow-slate-200/50 dark:shadow-slate-900 border border-slate-100 dark:border-slate-800 px-5 py-4">
+        <div data-tour="hist-filtros" className="bg-white dark:bg-slate-900 rounded-3xl shadow-lg shadow-slate-200/50 dark:shadow-slate-900 border border-slate-100 dark:border-slate-800 px-5 py-4">
           {isEditMode ? (
             <div className="flex flex-wrap items-center gap-3 animate-fade-in">
               <div className="flex items-center gap-2">

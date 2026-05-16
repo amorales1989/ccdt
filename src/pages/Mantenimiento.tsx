@@ -23,8 +23,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CustomTabs } from "@/components/CustomTabs";
 import {
-    Wrench, Plus, Clock, Loader2, CheckCircle2, AlertCircle, Trash2, Ban,
+    Wrench, Plus, Clock, Loader2, CheckCircle2, AlertCircle, Trash2, Ban, HelpCircle,
 } from "lucide-react";
+import { TourGuide } from "@/components/TourGuide";
+import type { Step } from "react-joyride";
 
 type Status = "pendiente" | "en_proceso" | "terminado" | "anulado";
 type Priority = "baja" | "normal" | "alta";
@@ -85,6 +87,12 @@ export default function Mantenimiento() {
     const canSeeAll = isConserje || isAdmin;
 
     const [filterStatus, setFilterStatus] = useState<"all" | Status>("all");
+    const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
+    const tourSteps: Step[] = [
+      { target: '[data-tour="mant-header"]', content: "Acá se gestionan las reparaciones del edificio.", disableBeacon: true },
+      { target: '[data-tour="mant-nuevo"]', content: "Tocá para solicitar una nueva reparación. Indicá título, ubicación y descripción.", placement: "left" },
+      { target: '[data-tour="mant-tabs"]', content: "Filtrá por estado: pendientes, en proceso, terminadas." },
+    ];
     const [newDialogOpen, setNewDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
     const [newForm, setNewForm] = useState({
@@ -202,8 +210,9 @@ export default function Mantenimiento() {
 
     return (
         <div className="p-4 md:p-6 space-y-6">
+            <TourGuide tourKey="mantenimiento" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
             {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
+            <div data-tour="mant-header" className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30">
                         <Wrench className="h-5 w-5 text-orange-600 dark:text-orange-400" />
@@ -215,18 +224,24 @@ export default function Mantenimiento() {
                         <p className="text-xs text-muted-foreground">Gestión de reparaciones del edificio</p>
                     </div>
                 </div>
-                <Button
-                    onClick={() => setNewDialogOpen(true)}
-                    className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-200 dark:shadow-none gap-1.5"
-                    size="sm"
-                >
-                    <Plus className="h-4 w-4" />
-                    {isConserje ? "Nueva reparación" : "Solicitar reparación"}
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={() => setRunTour(true)} variant="outline" size="sm" className="gap-1.5">
+                        <HelpCircle className="h-4 w-4" /> Ayuda
+                    </Button>
+                    <Button
+                        data-tour="mant-nuevo"
+                        onClick={() => setNewDialogOpen(true)}
+                        className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-200 dark:shadow-none gap-1.5"
+                        size="sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        {isConserje ? "Nueva reparación" : "Solicitar reparación"}
+                    </Button>
+                </div>
             </div>
 
             {/* Status filter tabs */}
-            <CustomTabs
+            <div data-tour="mant-tabs"><CustomTabs
                 value={filterStatus}
                 onChange={(v) => setFilterStatus(v as any)}
                 options={(["all", "pendiente", "en_proceso", "terminado", "anulado"] as const).map((s) => ({
@@ -242,7 +257,7 @@ export default function Mantenimiento() {
                 }))}
                 className="w-full mb-4"
                 scrollable
-            />
+            /></div>
 
             {/* Mobile cards */}
             <div className="md:hidden space-y-3">

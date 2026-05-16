@@ -4,7 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getStaffReports, getEligibleStaff, createStaffReport, markStaffReportsAsRead, updateStaffReport, deleteStaffReport } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Users, FileText, Send, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, Users, FileText, Send, Pencil, Trash2, HelpCircle } from "lucide-react";
+import { TourGuide } from "@/components/TourGuide";
+import type { Step } from "react-joyride";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -45,6 +47,12 @@ export default function InformesPersonal() {
     const [editingReportId, setEditingReportId] = useState<string | null>(null);
     const [form, setForm] = useState({ targetUserId: "", report: "" });
     const [activeTab, setActiveTab] = useState("nuevos");
+    const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
+    const tourSteps: Step[] = [
+      { target: '[data-tour="inf-header"]', content: "Acá se ven los informes del equipo. Los maestros escriben informes sobre el desempeño de sus colaboradores.", disableBeacon: true },
+      { target: '[data-tour="inf-nuevo"]', content: "Tocá para crear un informe nuevo: elegís a quién es y escribís el detalle.", placement: "left" },
+      { target: '[data-tour="inf-lista"]', content: "Acá ves los informes recibidos (Nuevos) y los ya leídos." },
+    ];
 
     const role = profile?.role || "";
     const department = localStorage.getItem('selectedDepartment') || profile?.departments?.[0] || "";
@@ -248,8 +256,9 @@ export default function InformesPersonal() {
 
     return (
         <div className="p-4 md:p-6 space-y-6">
+            <TourGuide tourKey="informes_personal" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
             {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
+            <div data-tour="inf-header" className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30">
                         <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
@@ -265,21 +274,28 @@ export default function InformesPersonal() {
                         </p>
                     </div>
                 </div>
-                {canWrite && (
-                    <Button
-                        onClick={() => {
-                            setEditingReportId(null);
-                            setForm({ targetUserId: "", report: "" });
-                            setNewDialogOpen(true);
-                        }}
-                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm gap-1.5"
-                        size="sm"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Nuevo Informe
+                <div className="flex items-center gap-2">
+                    <Button onClick={() => setRunTour(true)} variant="outline" size="sm" className="gap-1.5">
+                        <HelpCircle className="h-4 w-4" /> Ayuda
                     </Button>
-                )}
+                    {canWrite && (
+                        <Button
+                            data-tour="inf-nuevo"
+                            onClick={() => {
+                                setEditingReportId(null);
+                                setForm({ targetUserId: "", report: "" });
+                                setNewDialogOpen(true);
+                            }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm gap-1.5"
+                            size="sm"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Nuevo Informe
+                        </Button>
+                    )}
+                </div>
             </div>
+            <div data-tour="inf-lista" />
 
             {/* List */}
             {loadingReports ? (

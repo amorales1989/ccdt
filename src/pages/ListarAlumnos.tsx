@@ -50,6 +50,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CustomTooltip } from "@/components/CustomTooltip";
 import * as z from "zod";
+import { TourGuide } from "@/components/TourGuide";
+import { HelpCircle } from "lucide-react";
+import type { Step } from "react-joyride";
 
 const ListarAlumnos = () => {
   const [importModalState, setImportModalState] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -88,6 +91,7 @@ const ListarAlumnos = () => {
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'age', direction: 'asc' | 'desc' } | null>(null);
   const [activeTab, setActiveTab] = useState<"miembros" | "cumpleanos">("miembros");
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
 
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -1228,11 +1232,31 @@ const ListarAlumnos = () => {
     <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
       <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto animate-fade-in space-y-6">
 
+        <TourGuide
+          tourKey="listar_alumnos"
+          steps={[
+            { target: '[data-tour="lista-header"]', content: "Acá ves todos los miembros de tu clase.", disableBeacon: true },
+            { target: '[data-tour="lista-search"]', content: "Buscá por nombre rápidamente." },
+            { target: '[data-tour="lista-tabs"]', content: "Cambiá entre lista de miembros y próximos cumpleaños." },
+            { target: '[data-tour="lista-nuevo"]', content: "Tocá aquí para agregar un nuevo miembro.", placement: "left" },
+          ]}
+          run={runTour}
+          onClose={() => setRunTour(false)}
+        />
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Directorio de Miembros</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Gestión general e información detallada</p>
+        <div data-tour="lista-header" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Directorio de Miembros</h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Gestión general e información detallada</p>
+            </div>
+            <button
+              onClick={() => setRunTour(true)}
+              className="inline-flex items-center gap-1 text-xs font-bold text-primary bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-xl transition-colors"
+              title="Ver guía"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
@@ -1271,14 +1295,14 @@ const ListarAlumnos = () => {
                 </Button>
               </CustomTooltip>
             )}
-            <Button onClick={() => setIsAddModalOpen(true)} className="button-gradient rounded-xl font-black h-10 px-5 shadow-lg shadow-primary/20">
+            <Button data-tour="lista-nuevo" onClick={() => setIsAddModalOpen(true)} className="button-gradient rounded-xl font-black h-10 px-5 shadow-lg shadow-primary/20">
               <UserPlus className="h-4 w-4 mr-2" />
               Nuevo Miembro
             </Button>
           </div>
         </div>
 
-        <CustomTabs
+        <div data-tour="lista-tabs"><CustomTabs
           value={activeTab}
           onChange={(v) => setActiveTab(v as "miembros" | "cumpleanos")}
           options={[
@@ -1286,11 +1310,11 @@ const ListarAlumnos = () => {
             { value: "cumpleanos", label: "Cumpleaños", icon: Calendar }
           ]}
           className="w-full sm:w-fit"
-        />
+        /></div>
 
         {activeTab === "miembros" && (
           <div className="space-y-6 animate-in slide-in-from-left-4 fade-in duration-300">
-            <div className="relative">
+            <div className="relative" data-tour="lista-search">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Buscar por nombre en la lista actual..."

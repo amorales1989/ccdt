@@ -21,6 +21,7 @@ type Profile = {
   address: string | null;
   company_id: number | null;
   assignments: UserAssignment[] | null;
+  completed_tours: string[] | null;
 };
 
 type AuthContextType = {
@@ -40,6 +41,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   getProfile: (userId: string) => Promise<void>;
   switchAssignment: (assignment: UserAssignment) => Promise<void>;
+  markTourCompleted: (tourKey: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -363,8 +365,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function markTourCompleted(tourKey: string) {
+    setProfile(prev => {
+      if (!prev) return prev;
+      const existing = prev.completed_tours || [];
+      if (existing.includes(tourKey)) return prev;
+      return { ...prev, completed_tours: [...existing, tourKey] };
+    });
+    try {
+      const { completeTour } = await import("@/lib/api");
+      await completeTour(tourKey);
+    } catch (error) {
+      console.error("Error guardando tour completado:", error);
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut, getProfile, switchAssignment }}>
+    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut, getProfile, switchAssignment, markTourCompleted }}>
       {children}
     </AuthContext.Provider>
   );

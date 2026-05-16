@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserCheck, UserX, Calendar, Users, CheckCircle2, Save } from "lucide-react";
+import { UserCheck, UserX, Calendar, Users, CheckCircle2, Save, HelpCircle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { type Step } from "react-joyride";
+import { TourGuide } from "@/components/TourGuide";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { markAttendance, getAttendance, getStudents } from "@/lib/api";
@@ -41,6 +43,35 @@ const TomarAsistencia = () => {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [deptClasses, setDeptClasses] = useState<string[]>([]);
   const [dateOpen, setDateOpen] = useState(false);
+  const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
+
+  const tourSteps: Step[] = [
+    {
+      target: '[data-tour="header"]',
+      content: "Bienvenido. Aquí podés registrar la asistencia de los miembros del día.",
+      disableBeacon: true,
+      placement: "bottom",
+    },
+    {
+      target: '[data-tour="stats"]',
+      content: "Vas viendo en vivo cuántos están presentes, ausentes y el total.",
+    },
+    {
+      target: '[data-tour="date"]',
+      content: "Seleccioná la fecha de la asistencia. Por defecto es hoy.",
+    },
+    {
+      target: '[data-tour="list"]',
+      content: "Tocá el botón rojo 'A' (Ausente) para cambiarlo a verde 'P' (Presente). Los que no marques quedan como ausentes.",
+      placement: "top",
+    },
+    {
+      target: '[data-tour="save"]',
+      content: "Cuando termines, presioná aquí para guardar la asistencia del día.",
+      placement: "top",
+    },
+  ];
+
 
   const isDirector = profile?.role === "director" || profile?.role === "director_general" || profile?.role === "vicedirector";
   const isDirectorGeneral = profile?.role === "director_general";
@@ -273,20 +304,36 @@ const TomarAsistencia = () => {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
+      <TourGuide
+        tourKey="tomar_asistencia"
+        steps={tourSteps}
+        run={runTour}
+        onClose={() => setRunTour(false)}
+      />
       <div className="p-4 md:p-6 pb-28">
 
         {/* Page Header */}
-        <div className="mb-6 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-black text-primary tracking-tight mb-1">
-            Tomar Asistencia
-          </h1>
-          <p className="text-sm text-muted-foreground capitalize">{displayDate}</p>
+        <div className="mb-6 animate-fade-in flex items-start justify-between gap-3" data-tour="header">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-primary tracking-tight mb-1">
+              Tomar Asistencia
+            </h1>
+            <p className="text-sm text-muted-foreground capitalize">{displayDate}</p>
+          </div>
+          <button
+            onClick={() => setRunTour(true)}
+            className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-primary bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-xl transition-colors"
+            title="Ver guía de la pantalla"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Ayuda
+          </button>
         </div>
 
         {/* Stats + Date row */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           {/* Stats pill */}
-          <div className="glass-card flex items-center gap-4 px-5 py-3 flex-1">
+          <div className="glass-card flex items-center gap-4 px-5 py-3 flex-1" data-tour="stats">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-green-100 flex items-center justify-center">
                 <UserCheck className="h-4 w-4 text-green-600" />
@@ -319,7 +366,7 @@ const TomarAsistencia = () => {
           </div>
 
           {/* Date picker */}
-          <div className="glass-card flex items-center gap-3 px-4 py-3 sm:w-auto overflow-hidden">
+          <div className="glass-card flex items-center gap-3 px-4 py-3 sm:w-auto overflow-hidden" data-tour="date">
             <DatePickerField
               value={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
               onChange={(date) => setSelectedDate(date ? format(date, "yyyy-MM-dd") : "")}
@@ -395,7 +442,7 @@ const TomarAsistencia = () => {
             <p className="font-semibold text-muted-foreground">No hay miembros en este departamento</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="list">
             {/* Section label */}
             <div className="flex items-center gap-2 mb-3 px-1">
               <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">
@@ -423,7 +470,7 @@ const TomarAsistencia = () => {
       </div>
 
       {/* Floating Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 to-transparent flex justify-center">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 to-transparent flex justify-center" data-tour="save">
         <Button
           onClick={handleSaveAttendance}
           disabled={isLoading || !selectedDate || students.length === 0}
