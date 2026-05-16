@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Joyride, STATUS, type CallBackProps, type Step } from "react-joyride";
+import { Joyride, STATUS, EVENTS, type Step } from "react-joyride";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface TourGuideProps {
@@ -23,22 +23,33 @@ export const TourGuide = ({
   const isCompleted = Boolean(profile?.completed_tours?.includes(tourKey));
 
   useEffect(() => {
+    console.log("[TourGuide:mount]", tourKey, { hasProfile: !!profile, isCompleted, runProp, autoStart });
     if (runProp !== undefined) {
       setRun(runProp);
       return;
     }
     if (autoStart && profile && !isCompleted) {
-      const t = setTimeout(() => setRun(true), 600);
+      const t = setTimeout(() => {
+        console.log("[TourGuide:autostart]", tourKey);
+        setRun(true);
+      }, 600);
       return () => clearTimeout(t);
     }
   }, [tourKey, autoStart, runProp, profile, isCompleted]);
 
-  const handleCallback = (data: CallBackProps) => {
-    const { status, action } = data;
-    const finished = [STATUS.FINISHED, STATUS.SKIPPED, STATUS.PAUSED].includes(status as any);
-    if (finished || action === "close" || action === "reset") {
+  const handleEvent = (data: any) => {
+    const { status, action, type } = data || {};
+    console.log("[TourGuide]", tourKey, { status, action, type, isCompleted });
+    const ended =
+      type === EVENTS.TOUR_END ||
+      status === STATUS.FINISHED ||
+      status === STATUS.SKIPPED ||
+      action === "close" ||
+      action === "skip";
+    if (ended) {
       setRun(false);
       if (!isCompleted) {
+        console.log("[TourGuide] guardando completado:", tourKey);
         markTourCompleted(tourKey);
       }
       onClose?.();
@@ -52,7 +63,7 @@ export const TourGuide = ({
       continuous
       showSkipButton
       showProgress
-      callback={handleCallback}
+      onEvent={handleEvent}
       locale={{
         back: "Atrás",
         close: "Cerrar",
