@@ -23,23 +23,18 @@ export const TourGuide = ({
   const isCompleted = Boolean(profile?.completed_tours?.includes(tourKey));
 
   useEffect(() => {
-    console.log("[TourGuide:mount]", tourKey, { hasProfile: !!profile, isCompleted, runProp, autoStart });
     if (runProp !== undefined) {
       setRun(runProp);
       return;
     }
     if (autoStart && profile && !isCompleted) {
-      const t = setTimeout(() => {
-        console.log("[TourGuide:autostart]", tourKey);
-        setRun(true);
-      }, 600);
+      const t = setTimeout(() => setRun(true), 600);
       return () => clearTimeout(t);
     }
   }, [tourKey, autoStart, runProp, profile, isCompleted]);
 
   const handleEvent = (data: any) => {
     const { status, action, type } = data || {};
-    console.log("[TourGuide]", tourKey, { status, action, type, isCompleted });
     const ended =
       type === EVENTS.TOUR_END ||
       status === STATUS.FINISHED ||
@@ -49,7 +44,6 @@ export const TourGuide = ({
     if (ended) {
       setRun(false);
       if (!isCompleted) {
-        console.log("[TourGuide] guardando completado:", tourKey);
         markTourCompleted(tourKey);
       }
       onClose?.();
