@@ -19,6 +19,7 @@ import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MaintenanceSummaryWidget } from "@/components/MaintenanceSummaryWidget";
+import { MissingDniAlertModal } from "@/components/MissingDniAlertModal";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -350,6 +351,9 @@ const Home = () => {
 
   return (
     <div className="space-y-8 bg-[#f8fafc] dark:bg-slate-900/50 min-h-screen -mt-4 -mx-4 px-4 pt-4 sm:-mt-8 sm:-mx-8 sm:px-8 sm:pt-8 rounded-tl-3xl">
+      {isTeacherOrLeader && profile?.id && !studentsLoading && (
+        <MissingDniAlertModal profileId={profile.id} students={students} />
+      )}
       {/* Top Navbar Section */}
       <header className="flex flex-col items-center justify-center gap-6 mb-8 mt-2 animate-in fade-in slide-in-from-top-4 duration-500">
         <div className="w-full max-w-2xl mx-auto">
