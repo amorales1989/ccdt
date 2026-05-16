@@ -72,6 +72,7 @@ export const getAttendance = async (
       .from('attendance')
       .select(`
           *,
+          attendance_department:department_id(name),
           students (
             id,
             first_name,
@@ -106,8 +107,9 @@ export const getAttendance = async (
 
     if (error) throw error;
 
-    const formattedAttendances = attendances?.map(attendance => {
+    const formattedAttendances = attendances?.map((attendance: any) => {
       const student = attendance.students;
+      const attendanceDeptName = attendance.attendance_department?.name || student?.departments?.name || '';
       return {
         ...attendance,
         students: {
@@ -119,8 +121,8 @@ export const getAttendance = async (
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         },
-        department_name: student?.departments?.name || '',
-        department: student?.departments?.name || '',
+        department_name: attendanceDeptName,
+        department: attendanceDeptName,
         event_id: null
       };
     }) || [];
@@ -484,13 +486,20 @@ export const markAttendance = async (attendanceData: {
 }) => {
   try {
 
-    const { data: existingAttendance, error: fetchError } = await supabase
+    let lookupQuery = supabase
       .from('attendance')
       .select('*')
       .eq('student_id', attendanceData.student_id)
       .eq('date', attendanceData.date)
-      .eq('company_id', getPersistentCompanyId())
-      .maybeSingle();
+      .eq('company_id', getPersistentCompanyId());
+
+    if (attendanceData.department_id) {
+      lookupQuery = lookupQuery.eq('department_id', attendanceData.department_id);
+    } else {
+      lookupQuery = lookupQuery.is('department_id', null);
+    }
+
+    const { data: existingAttendance, error: fetchError } = await lookupQuery.maybeSingle();
 
     if (fetchError) throw fetchError;
 

@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCheck, UserX, Calendar, Users, CheckCircle2, Save } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -225,8 +226,17 @@ const TomarAsistencia = () => {
         key={student.id}
         className="bg-white border border-gray-100 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm hover:shadow-md transition-all duration-200 animate-slide-in"
       >
-        {/* Gender dot */}
-        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isFemale ? 'bg-pink-400' : 'bg-blue-400'}`} />
+        {/* Photo */}
+        <Avatar className="h-10 w-10 border border-slate-200 shadow-sm shrink-0">
+          <AvatarImage
+            src={student.photo_url || (isFemale ? '/avatarM.png' : '/avatarH.png')}
+            alt={student.first_name}
+            className="object-cover"
+          />
+          <AvatarFallback className={`text-xs font-bold ${isFemale ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'}`}>
+            {(student.first_name || '').charAt(0)}{(student.last_name || '').charAt(0)}
+          </AvatarFallback>
+        </Avatar>
 
         {/* Name + badges */}
         <div className="flex-1 min-w-0">

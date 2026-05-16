@@ -1,7 +1,8 @@
 import * as React from "react"
-import { User, GraduationCap } from "lucide-react"
+import { User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { supabase } from "@/integrations/supabase/client"
 import { useQuery } from "@tanstack/react-query"
 import { Badge } from "@/components/ui/badge"
@@ -101,6 +102,7 @@ export function NameSearchInput({
                     address: s.address || undefined,
                     document_number: s.document_number || undefined,
                     phone: s.phone || undefined,
+                    photo_url: s.photo_url || undefined,
                 })) || []),
             ]
             return flattened
@@ -151,14 +153,22 @@ export function NameSearchInput({
                                     className="flex items-center justify-between gap-2 px-3 py-2 mx-1 rounded-lg cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
                                 >
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <div className={cn(
-                                            "p-1.5 rounded-md shrink-0",
-                                            person.source === 'profile'
-                                                ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400"
-                                                : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400"
-                                        )}>
-                                            {person.source === 'profile' ? <User className="h-3.5 w-3.5" /> : <GraduationCap className="h-3.5 w-3.5" />}
-                                        </div>
+                                        {person.source === 'student' ? (
+                                            <Avatar className="h-8 w-8 shrink-0 border border-slate-200">
+                                                <AvatarImage
+                                                    src={(person as any).photo_url || ((person.gender || '').toLowerCase() === 'femenino' ? '/avatarM.png' : '/avatarH.png')}
+                                                    alt={person.first_name}
+                                                    className="object-cover"
+                                                />
+                                                <AvatarFallback className="bg-emerald-100 text-emerald-600 text-[10px] font-bold">
+                                                    {person.first_name.charAt(0)}{person.last_name?.charAt(0) || ""}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                        ) : (
+                                            <div className="p-1.5 rounded-md shrink-0 bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+                                                <User className="h-3.5 w-3.5" />
+                                            </div>
+                                        )}
                                         <div className="flex flex-col min-w-0">
                                             <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">
                                                 {person.first_name} {person.last_name}

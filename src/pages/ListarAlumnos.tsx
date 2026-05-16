@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, User } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, User, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { jsPDF } from "jspdf";
@@ -24,7 +24,7 @@ import { toast } from "@/hooks/use-toast";
 import { StudentDetails } from "@/components/StudentDetails";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance } from "@/lib/api";
+import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, addStudentDepartment } from "@/lib/api";
 import AgregarAlumno from "@/pages/AgregarAlumno";
 import { CustomTabs } from "@/components/CustomTabs";
 import { BirthdayList } from "@/components/BirthdayList";
@@ -553,6 +553,22 @@ const ListarAlumnos = () => {
     setStudentToEdit(student);
     const birthDate = student.birthdate || "";
 
+    // For restricted roles (maestro/director/vicedirector), show the student's
+    // assignment in the editor's department instead of the student's primary one.
+    const restrictedRole = profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'vicedirector';
+    let editDeptId = student.department_id || "";
+    let editClass = student.assigned_class || "";
+
+    if (restrictedRole && profile?.department_id) {
+      const ownAssignment = (student as any).dept_assignments?.find(
+        (a: any) => a.department_id === profile.department_id
+      );
+      if (ownAssignment) {
+        editDeptId = profile.department_id;
+        editClass = ownAssignment.assigned_class || "";
+      }
+    }
+
     form.reset({
       first_name: student.first_name || "",
       last_name: student.last_name || "",
@@ -561,8 +577,8 @@ const ListarAlumnos = () => {
       address: student.address || "",
       phone: student.phone || "",
       document_number: student.document_number || "",
-      department_id: student.department_id || "",
-      assigned_class: student.assigned_class || "",
+      department_id: editDeptId,
+      assigned_class: editClass,
     });
     setIsEditModalOpen(true);
   };
@@ -716,7 +732,13 @@ const ListarAlumnos = () => {
     if (!studentToEdit) return;
     setIsUpdating(true);
     try {
-      const payload = {
+      const restrictedRole = profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'vicedirector';
+      const editingOwnAssignment = restrictedRole
+        && profile?.department_id
+        && values.department_id === profile.department_id
+        && studentToEdit.department_id !== profile.department_id;
+
+      const payload: any = {
         ...values,
         birthdate: values.birthdate || null,
         document_number: values.document_number || null,
@@ -724,6 +746,16 @@ const ListarAlumnos = () => {
         address: values.address || null,
         assigned_class: values.assigned_class || null,
       };
+
+      if (editingOwnAssignment) {
+        // Update only their own dept_assignment, not the student's primary department.
+        delete payload.department_id;
+        delete payload.assigned_class;
+        await addStudentDepartment(studentToEdit.id, {
+          department_id: profile.department_id!,
+          assigned_class: values.assigned_class || null,
+        });
+      }
 
       console.log("Raw form values:", payload);
 
@@ -1021,7 +1053,18 @@ const ListarAlumnos = () => {
         {!isMobile && (
           <TableCell className="text-slate-500 dark:text-slate-400 font-medium text-sm text-center">
             <span className="bg-slate-100/50 px-3 py-1 rounded-full border border-slate-200/40">
-              {student.departments?.name || student.department || 'Sin departamento'}
+              {(() => {
+                const restrictedRole = profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'vicedirector';
+                if (restrictedRole && profile?.department_id) {
+                  const own = (student as any).dept_assignments?.find(
+                    (a: any) => a.department_id === profile.department_id
+                  );
+                  if (own?.departments?.name) return own.departments.name;
+                  const ownDept = departments?.find(d => d.id === profile.department_id);
+                  if (ownDept) return ownDept.name;
+                }
+                return student.departments?.name || student.department || 'Sin departamento';
+              })()}
             </span>
           </TableCell>
         )}
@@ -1247,6 +1290,24 @@ const ListarAlumnos = () => {
 
         {activeTab === "miembros" && (
           <div className="space-y-6 animate-in slide-in-from-left-4 fade-in duration-300">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Buscar por nombre en la lista actual..."
+                value={filters.name}
+                onChange={(e) => setFilters(prev => ({ ...prev, name: e.target.value }))}
+                className="pl-9 h-10 rounded-xl border-slate-200 bg-white shadow-sm"
+              />
+              {filters.name && (
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, name: "" }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  type="button"
+                >
+                  <X className="h-3.5 w-3.5 text-slate-400" />
+                </button>
+              )}
+            </div>
             {canFilter && (
               <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <CollapsibleTrigger asChild></CollapsibleTrigger>
