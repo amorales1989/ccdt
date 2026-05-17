@@ -15,6 +15,7 @@ import { PersonSearchResult } from "./PersonSearchInput";
 import { NameSearchInput } from "./NameSearchInput";
 import { DniIdentityInput } from "./DniIdentityInput";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     Dialog,
     DialogContent,
@@ -46,6 +47,7 @@ type EditableUser = {
     birthdate?: string;
     document_number?: string;
     gender?: string;
+    address?: string;
     assignments?: any[];
 };
 
@@ -114,6 +116,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
     const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
     const [profileId, setProfileId] = useState<string | null>(null);
     const [personSource, setPersonSource] = useState<'profile' | 'student' | null>(null);
+    const [photoUrl, setPhotoUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     const { profile } = useAuth();
@@ -174,6 +177,11 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
     // Pre-fill on edit mode
     useEffect(() => {
         if (user && open) {
+            (async () => {
+                const { data } = await (supabase.from('students') as any)
+                    .select('photo_url').eq('profile_id', user.id).maybeSingle();
+                setPhotoUrl(data?.photo_url || null);
+            })();
             setFirstName(user.first_name || "");
             setLastName(user.last_name || "");
             setEmail(user.email || "");
@@ -182,6 +190,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
             setBirthdate(user.birthdate || "");
             setGender(user.gender || "masculino");
             setDocumentNumber(user.document_number || "");
+            setAddress((user as any).address || "");
 
             const userRoles = user.roles && user.roles.length > 0
                 ? user.roles
@@ -191,6 +200,17 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                 setStandaloneRoles(['director_general' as AppRole]);
                 setSelectedDepartments(user.departments || []);
                 setAssignments([]);
+            } else if (isLockedToSingleDept && profile?.departments?.[0]) {
+                // Director/vicedirector editando: precargar rol y clase del assignment del dept fijo
+                const fixedDept = profile.departments[0];
+                const match = (user.assignments || []).find((a: any) => a.department === fixedDept);
+                const role = (match?.role || user.role || 'maestro') as AppRole;
+                const cls = match?.assigned_class || user.assigned_class || '';
+                setLockedRole(role);
+                setLockedClass(cls ? cls : 'none');
+                setAssignments([]);
+                setSelectedDepartments([]);
+                setStandaloneRoles([]);
             } else {
                 if (user.assignments && user.assignments.length > 0) {
                     // Separar assignments con dept (rol+dept) de los standalone (sin dept)
@@ -242,6 +262,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
         setTempRole("maestro"); setTempDept(""); setTempClass("none"); setTempClasses([]);
         setLockedRole("maestro"); setLockedClass("none");
         setSelectedPersonId(null); setPersonSource(null); setProfileId(null);
+        setPhotoUrl(null);
     };
 
     const handleOpenChange = (newOpen: boolean) => {
@@ -272,22 +293,24 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
         setAssignments(assignments.filter((_, i) => i !== idx));
     };
 
-    const handleDniFound = (person: any) => {
+    const handleDniFound = (person: any, source?: 'student' | 'profile') => {
         if (!person) return;
+        const src = source || person.source;
         if (!firstName) setFirstName(person.first_name || "");
         if (!lastName) setLastName(person.last_name || "");
         if (!phone) setPhone(person.phone || "");
         if (!birthdate) setBirthdate(person.birthdate || "");
         if (!address) setAddress(person.address || "");
         if (person.gender) setGender(person.gender);
+        if (person.photo_url) setPhotoUrl(person.photo_url);
         if (person.departments?.length > 0 && assignments.length === 0) {
             setAssignments([{ role: 'maestro', department: person.departments[0], assigned_class: person.assigned_class || '' }]);
         }
-        setProfileId(person.profile_id || (person.source === 'profile' ? person.id : null));
-        setPersonSource(person.source);
+        setProfileId(person.profile_id || (src === 'profile' ? person.id : null));
+        setPersonSource(src);
         setSelectedPersonId(person.id);
         toast({
-            title: person.source === 'profile' ? "Usuario encontrado" : "Miembro encontrado",
+            title: src === 'profile' ? "Usuario encontrado" : "Miembro encontrado",
             description: `Se han vinculado los datos de ${person.first_name} ${person.last_name}.`,
         });
     };
@@ -424,7 +447,9 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                 gender: gender || undefined,
                 address: address || undefined,
                 document_number: documentNumber || undefined,
-                is_member: finalRoles.some(r => (r as string) === 'miembro') || personSource === 'student',
+                // No marcar is_member=true si ya tenemos un student existente para linkear
+                // (evita que el trigger de DB cree un student duplicado)
+                is_member: finalRoles.some(r => (r as string) === 'miembro') || (personSource === 'student' && !selectedPersonId),
                 profile_id: profileId || undefined,
                 person_source: personSource || undefined,
                 company_id: getPersistentCompanyId(),
@@ -441,9 +466,15 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                 });
                 if (error) throw error;
 
-                // Sincronizar phone y address en el registro de estudiante si existe
-                await supabase.from('students')
-                    .update({ phone: phone || null, address: address || null })
+                // Sincronizar datos personales en el registro de estudiante si existe
+                await (supabase.from('students') as any)
+                    .update({
+                        phone: phone || null,
+                        address: address || null,
+                        document_number: documentNumber || null,
+                        birthdate: birthdate || null,
+                        gender: gender || null,
+                    })
                     .eq('profile_id', user!.id);
             } else {
                 const { data: registerData, error: registerError } = await supabase.functions.invoke('manage-users', {
@@ -459,14 +490,36 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                         gender: gender || undefined,
                     }).eq('id', newUser.id);
 
+                    // Si se eligió una persona existente desde students, vincularla y sincronizar datos
+                    if (personSource === 'student' && selectedPersonId) {
+                        // Si un trigger creó un student duplicado con este profile_id, eliminarlo primero
+                        const { data: autoCreated } = await (supabase.from('students') as any)
+                            .select('id').eq('profile_id', newUser.id).neq('id', selectedPersonId).maybeSingle();
+                        if (autoCreated?.id) {
+                            await (supabase.from('students') as any).delete().eq('id', autoCreated.id);
+                        }
+                        const { error: linkErr } = await (supabase.from('students') as any).update({
+                            profile_id: newUser.id,
+                            document_number: documentNumber || null,
+                            birthdate: birthdate || null,
+                            gender: gender || null,
+                            phone: phone || null,
+                            address: address || null,
+                        }).eq('id', selectedPersonId);
+                        if (linkErr) {
+                            console.error('[LINK] Error vinculando student:', linkErr);
+                            toast({ title: 'Aviso', description: 'No se pudo vincular al miembro existente: ' + linkErr.message, variant: 'destructive' });
+                        }
+                    }
+
                     // Lógica Obreros
                     const hasMaestroRoles = finalRoles.some(r => ['maestro', 'colaborador', 'ayudante', 'lider'].includes(r as string));
                     if (hasMaestroRoles && finalDeptId) {
                         const firstDeptObj = departments.find(d => d.id === finalDeptId);
                         if (firstDeptObj?.classes?.includes("Obreros")) {
                             // Buscar student existente: primero por profile_id, luego por DNI
-                            const { data: byProfile } = await supabase
-                                .from('students').select('id').eq('profile_id', newUser.id).maybeSingle();
+                            const { data: byProfile } = await (supabase
+                                .from('students') as any).select('id').eq('profile_id', newUser.id).maybeSingle();
 
                             let studentByDni: { id: string } | null = null;
                             if (!byProfile && documentNumber) {
@@ -582,6 +635,16 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
 
                 <form onSubmit={handleSubmit} className="relative z-10 mt-4">
                     <div className="space-y-6">
+                        {photoUrl && (
+                            <div className="flex justify-center">
+                                <Avatar className="h-24 w-24 ring-4 ring-purple-100 dark:ring-purple-900/40 shadow-lg">
+                                    <AvatarImage src={photoUrl} alt={`${firstName} ${lastName}`} className="object-cover" />
+                                    <AvatarFallback className="bg-purple-100 text-purple-700 font-bold text-xl">
+                                        {(firstName?.[0] || "") + (lastName?.[0] || "")}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </div>
+                        )}
                         {/* Personal data */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
@@ -596,6 +659,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                                 setSelectedPersonId(null);
                                                 setPersonSource(null);
                                                 setProfileId(null);
+                                                setPhotoUrl(null);
                                             }
                                         }}
                                         onSelect={(person: PersonSearchResult) => {
@@ -605,6 +669,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                             setDocumentNumber(person.document_number || "");
                                             setProfileId(person.profile_id || (person.source === 'profile' ? person.id : null));
                                             setPersonSource(person.source); setSelectedPersonId(person.id);
+                                            setPhotoUrl(person.photo_url || null);
                                             toast({ title: "Persona seleccionada", description: `Datos cargados de ${person.first_name} ${person.last_name}.` });
                                         }}
                                         required

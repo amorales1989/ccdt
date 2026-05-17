@@ -36,6 +36,7 @@ export type PersonSearchResult = {
     address?: string
     document_number?: string
     phone?: string
+    photo_url?: string
 }
 
 interface PersonSearchInputProps {
