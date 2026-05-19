@@ -1050,3 +1050,45 @@ export const resetTourApi = async (tourKey: string): Promise<string[]> => {
   });
   return response.data || [];
 };
+
+export interface BroadcastPayload {
+  channel: 'push' | 'whatsapp';
+  title?: string;
+  message: string;
+  link?: string;
+  target: {
+    type: 'department' | 'class' | 'role' | 'people';
+    department_id?: string;
+    assigned_class?: string;
+    roles?: string[];
+    profile_ids?: string[];
+  };
+}
+
+export interface BroadcastResult {
+  recipients: number;
+  push?: { sent: number; fallbackToWa: number };
+  whatsapp?: { queued: number };
+}
+
+export const broadcastNotification = async (payload: BroadcastPayload): Promise<BroadcastResult> => {
+  const response = await apiCall('/notifications/broadcast', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return response;
+};
+
+export interface ProfileSearchResult {
+  id: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  phone?: string;
+}
+
+export const searchProfiles = async (query: string): Promise<ProfileSearchResult[]> => {
+  if (!query.trim()) return [];
+  const response = await apiCall(`/profiles/search?q=${encodeURIComponent(query)}`);
+  return response?.data || [];
+};

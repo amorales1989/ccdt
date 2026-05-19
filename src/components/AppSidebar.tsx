@@ -18,7 +18,7 @@ import {
   Users, UserPlus, ClipboardList, History, Home, Menu,
   FileText, LogOut, UserPlus2, UserRound, FolderIcon,
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
-  BarChart3, BookOpen, Wrench
+  BarChart3, BookOpen, Wrench, Megaphone
 } from "lucide-react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -98,6 +98,7 @@ const iconBgMap: Record<string, string> = {
   "Mantenimiento": "bg-orange-100 text-orange-600",
   "Solicitar Reparación": "bg-orange-100 text-orange-600",
   "Informes de Personal": "bg-purple-100 text-purple-600",
+  "Notificaciones": "bg-pink-100 text-pink-600",
 };
 
 const NavItem = ({
@@ -380,6 +381,13 @@ const NavigationContent = ({
             onClick={onItemClick}
           />
         ))}
+        {isAdminOrSecretary && (
+          <NavItem
+            item={{ title: "Notificaciones", url: "/notificaciones", icon: Megaphone }}
+            isActive={location.pathname === "/notificaciones"}
+            onClick={onItemClick}
+          />
+        )}
       </div>
 
       {/* Bottom section */}
