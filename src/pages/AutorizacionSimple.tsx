@@ -151,7 +151,7 @@ const AutorizacionRhema = () => {
 
       currentY += 5;
 
-      const parrafo2 = `La salida se realizará el día ${fechaEventoFormatted}, a las ${data.horaInicio} hs., regresando aproximadamente a las ${data.horaFin} hs.`;
+      const parrafo2 = `La salida se realizará el día ${fechaEventoFormatted}, a las ${data.horaInicio} hs., regresando aprox. a las ${data.horaFin} hs.`;
 
       const lines2 = doc.splitTextToSize(parrafo2, pageWidth - margin * 2);
       lines2.forEach((line) => {
@@ -218,7 +218,7 @@ const AutorizacionRhema = () => {
       doc.setFont("helvetica", "normal");
 
       const headerText = authPdfHeader[0]?.text || "Asociación de Beneficencia y Educación RHEMA";
-      const textoAutorizacion = `Autorizo a mi hijo/a ................................................................................................ a concurrir a ${data.tipoEvento.toLowerCase()} el día ${fechaEventoFormatted} que organiza "${headerText}", en ${data.lugarEvento}. Conste.-`;
+      const textoAutorizacion = `Autorizo a mi hijo/a ................................................................................................, con DNI .......................................,a concurrir a ${data.tipoEvento.toLowerCase()} el día ${fechaEventoFormatted} que organiza "${headerText}", en ${data.lugarEvento}. Conste.-`;
 
       const linesAuth = doc.splitTextToSize(textoAutorizacion, pageWidth - margin * 2);
       linesAuth.forEach((line) => {
@@ -226,12 +226,7 @@ const AutorizacionRhema = () => {
         currentY += 7;
       });
 
-      currentY += 15;
-
-      if (data.valorSalida) {
-        doc.text(`Valor de la salida: $${data.valorSalida}`, margin, currentY);
-        currentY += 15;
-      }
+      currentY += 7;
 
       // Firma del padre o tutor
       doc.text("FIRMA DEL PADRE ó TUTOR: …………................................................................................", margin, currentY);

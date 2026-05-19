@@ -86,7 +86,7 @@ export default function Index() {
         const initDeptId = activeAssignment?.department_id || profile.department_id || '';
         if (initDept) localStorage.setItem('selectedDepartment', initDept);
         if (initDeptId) localStorage.setItem('selectedDepartmentId', initDeptId);
-        navigate("/home");
+        navigate(profile.role === 'maestro' ? "/asistencia" : "/home");
       } else if (profile.departments && profile.departments.length > 1 && profile.role !== 'director_general') {
         setUserDepartments(profile.departments);
         setShowDepartmentSelect(true);
@@ -96,9 +96,9 @@ export default function Index() {
         if (profile.department_id) {
           localStorage.setItem('selectedDepartmentId', profile.department_id);
         }
-        navigate("/home");
+        navigate(profile.role === 'maestro' ? "/asistencia" : "/home");
       } else {
-        navigate("/home");
+        navigate(profile.role === 'maestro' ? "/asistencia" : "/home");
       }
     }
   }, [profile, navigate, company]);
