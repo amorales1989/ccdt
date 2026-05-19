@@ -283,6 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('selectedDepartment');
       localStorage.removeItem('selectedDepartmentId');
       sessionStorage.removeItem('profile_modal_postponed');
+      sessionStorage.removeItem('maestro_landed');
 
       // Clear all Supabase auth keys from localStorage
       Object.keys(localStorage).forEach((key) => {
