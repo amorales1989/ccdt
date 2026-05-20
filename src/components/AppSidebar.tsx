@@ -381,7 +381,7 @@ const NavigationContent = ({
             onClick={onItemClick}
           />
         ))}
-        {isAdminOrSecretary && (
+        {checkMenuPerm('menu_notificaciones') && (
           <NavItem
             item={{ title: "Notificaciones", url: "/notificaciones", icon: Megaphone }}
             isActive={location.pathname === "/notificaciones"}

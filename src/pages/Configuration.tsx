@@ -61,6 +61,7 @@ const MENU_PERMISSIONS = [
   { key: 'menu_gestion_usuarios', label: 'Gestión de Usuarios' },
   { key: 'menu_configuracion',    label: 'Configuración' },
   { key: 'menu_mantenimiento',    label: 'Solicitar Reparación' },
+  { key: 'menu_notificaciones',   label: 'Notificaciones' },
 ] as const;
 
 const NOTIFICATION_EVENTS = [
