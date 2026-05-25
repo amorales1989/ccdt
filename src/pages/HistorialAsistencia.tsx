@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
-import { getAttendance, getDepartmentByName, getDepartments } from "@/lib/api";
+import { getAttendance, getDepartmentByName, getDepartments, getStudents } from "@/lib/api";
 import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X, Save, MoreVertical, PersonStanding, CheckCircle2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from 'xlsx';
@@ -227,7 +227,7 @@ const HistorialAsistencia = () => {
   });
 
   const { data: departmentStudents = [], isLoading: isLoadingDepartmentStudents } = useQuery({
-    queryKey: ["students-for-attendance", userDepartmentId, selectedDepartment, selectedClass],
+    queryKey: ["students-for-attendance", userDepartmentId, selectedDepartment, selectedClass, userClass],
     queryFn: async () => {
       let departmentIdToUse = null;
       if (isAdminOrSecretaria && selectedDepartment !== "all") {
@@ -239,23 +239,23 @@ const HistorialAsistencia = () => {
         departmentIdToUse = userDepartmentId;
       }
       if (!departmentIdToUse) return [];
-      let query = supabase
-        .from('students')
-        .select('*, departments:department_id(name)')
-        .eq('department_id', departmentIdToUse)
-        .is('deleted_at', null);
 
-      if ((isAdminOrSecretaria || isDirector) && selectedClass !== "all") {
-        query = query.eq('assigned_class', selectedClass);
-      } else if (!isAdminOrSecretaria && !isDirector) {
-        query = query.eq('assigned_class', userClass || "");
-      }
-      const { data, error } = await query;
-      if (error) {
-        console.error("Error fetching students:", error);
-        return [];
-      }
-      return data || [];
+      // Clase a filtrar segun rol
+      const classToFilter = (isAdminOrSecretaria || isDirector) ? selectedClass : userClass;
+
+      // Usar getStudents (junction-aware) para traer el roster completo del depto+clase,
+      // igual que TomarAsistencia. La query directa a 'students' por columnas legacy
+      // omitia alumnos inscriptos via student_departments.
+      const params: Record<string, string> = { department_id: departmentIdToUse };
+      if (classToFilter && classToFilter !== "all") params.assigned_class = classToFilter;
+
+      const students = await getStudents(params) || [];
+      // Normalizar department_id/assigned_class al contexto editado para los registros virtuales
+      return students.map((s: any) => ({
+        ...s,
+        department_id: departmentIdToUse,
+        assigned_class: (classToFilter && classToFilter !== "all") ? classToFilter : s.assigned_class,
+      }));
     },
     enabled: isEditMode && Boolean(userDepartmentId || (isAdminOrSecretaria && selectedDepartment !== "all"))
   });
