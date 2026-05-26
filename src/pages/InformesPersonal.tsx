@@ -59,7 +59,7 @@ export default function InformesPersonal() {
     const assignedClass = profile?.assigned_class || "";
 
     // Determinar permisos
-    const isMaestro = role === "maestro";
+    const isMaestro = role === "maestro" || role === "auxiliar_maestro";
     const isDirector = role === "director" || role === "vicedirector";
     const canWrite = isMaestro;
     const canViewOthers = isDirector || role === "admin" || role === "director_general";

@@ -54,9 +54,9 @@ const LIDER_ROLES = ["lider"];
 const VICEDIR_ROLES = ["vicedirector"];
 const DIRECTOR_GENERAL_ROLES = ["director_general"];
 // Roles que solo deben ver el departamento de su rol activo
-const SINGLE_DEPT_ROLES = ["director", "lider", "maestro", "colaborador", "ayudante"];
+const SINGLE_DEPT_ROLES = ["director", "lider", "maestro", "colaborador", "auxiliar_maestro"];
 // Roles cuya vista debe quedar fijada a su clase activa
-const CLASS_LOCKED_ROLES = ["lider", "maestro", "colaborador", "ayudante"];
+const CLASS_LOCKED_ROLES = ["lider", "maestro", "colaborador", "auxiliar_maestro"];
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -147,7 +147,7 @@ export default function Estadisticas() {
       return allDepartments.filter(d => ids.has(d.id));
     }
 
-    // Director / lider / maestro / colaborador / ayudante:
+    // Director / lider / maestro / colaborador / auxiliar_maestro:
     // SOLO el departamento del rol activo (no unimos con otras asignaciones del usuario)
     if (SINGLE_DEPT_ROLES.includes(role) && currentProfile.department_id) {
       return allDepartments.filter(d => d.id === currentProfile.department_id);
@@ -249,7 +249,7 @@ export default function Estadisticas() {
 
   // ─── Data Processing ───────────────────────────────────────────────────────
   const data = useMemo(() => {
-    const STAFF_ROLES = ['lider', 'maestro', 'ayudante', 'colaborador', 'director', 'vicedirector'];
+    const STAFF_ROLES = ['lider', 'maestro', 'auxiliar_maestro', 'colaborador', 'director', 'vicedirector'];
 
     // ¿El alumno pertenece a la clase indicada? (usa dept_assignments, no el assigned_class resuelto)
     const studentInClass = (s: any, cls: string) => {

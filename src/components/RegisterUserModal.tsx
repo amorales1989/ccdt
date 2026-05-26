@@ -60,7 +60,7 @@ interface RegisterUserModalProps {
 // Roles that have per-department assignments
 const ASSIGNABLE_ROLES: AppRole[] = [
     'maestro', 'lider', 'director', 'vicedirector',
-    'colaborador', 'ayudante',
+    'colaborador', 'auxiliar_maestro',
 ];
 
 // Roles that don't require a department
@@ -73,7 +73,7 @@ const ROLE_LABELS: Record<string, string> = {
     vicedirector: 'Vicedirector',
     director_general: 'Director General',
     colaborador: 'Colaborador',
-    ayudante: 'Ayudante',
+    auxiliar_maestro: 'Auxiliar de maestro',
     secretaria: 'Secretaria',
     'secr.-calendario': 'Secr. Calendario',
     conserje: 'Conserje',
@@ -146,8 +146,8 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
     const isDirectorGeneralMode = standaloneRoles.includes('director_general' as AppRole);
     const isConserjeOnlyMode = standaloneRoles.length > 0 && assignments.length === 0 && selectedDepartments.length === 0;
 
-    const COLAB_ROLES = ['colaborador', 'ayudante'] as const;
-    const isColabOrAyudante = (() => {
+    const COLAB_ROLES = ['colaborador'] as const;
+    const isColaboradorOnly = (() => {
         if (isLockedToSingleDept) return COLAB_ROLES.includes(lockedRole as any);
         if (standaloneRoles.length > 0) return standaloneRoles.every(r => COLAB_ROLES.includes(r as any));
         if (assignments.length > 0) return assignments.every(a => COLAB_ROLES.includes(a.role as any));
@@ -416,7 +416,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                 }
             }
 
-            const hasColaboradorRole = finalRoles.includes('colaborador' as AppRole) || finalRoles.includes('ayudante' as AppRole);
+            const hasColaboradorRole = finalRoles.includes('colaborador' as AppRole);
             let finalEmail = email;
             let finalPassword = password;
 
@@ -513,7 +513,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                     }
 
                     // Lógica Obreros
-                    const hasMaestroRoles = finalRoles.some(r => ['maestro', 'colaborador', 'ayudante', 'lider'].includes(r as string));
+                    const hasMaestroRoles = finalRoles.some(r => ['maestro', 'colaborador', 'auxiliar_maestro', 'lider'].includes(r as string));
                     if (hasMaestroRoles && finalDeptId) {
                         const firstDeptObj = departments.find(d => d.id === finalDeptId);
                         if (firstDeptObj?.classes?.includes("Obreros")) {
@@ -552,7 +552,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                     student_id: existingStudent.id,
                                     department_id: finalDeptId,
                                     assigned_class: 'Obreros',
-                                    role_in_dept: finalRoles.find(r => ['maestro','colaborador','ayudante','lider'].includes(r as string)) || 'alumno',
+                                    role_in_dept: finalRoles.find(r => ['maestro','colaborador','auxiliar_maestro','lider'].includes(r as string)) || 'alumno',
                                     company_id: getPersistentCompanyId(),
                                 }, { onConflict: 'student_id,department_id,role_in_dept' });
                             } else {
@@ -604,9 +604,9 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
 
     // Roles available for the logged-in user to assign
     const rolesForLoggedIn: AppRole[] = isLoggedInDirector || isLoggedInVicedirector
-        ? ['maestro', 'colaborador', 'ayudante'] as AppRole[]
+        ? ['maestro', 'colaborador', 'auxiliar_maestro'] as AppRole[]
         : isLoggedInDirectorGeneral
-            ? ['maestro', 'colaborador', 'ayudante', 'director', 'vicedirector'] as AppRole[]
+            ? ['maestro', 'colaborador', 'auxiliar_maestro', 'director', 'vicedirector'] as AppRole[]
             : [...ASSIGNABLE_ROLES, 'director_general' as AppRole, 'secr.-calendario' as AppRole, 'conserje' as AppRole, 'admin' as AppRole, 'secretaria' as AppRole];
 
     // Whether the current set of roles needs departments
@@ -720,13 +720,13 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                             </div>
                         </div>
 
-                        {(!isColabOrAyudante || isEditMode) && (
+                        {(!isColaboradorOnly || isEditMode) && (
                           <>
                             <div className="space-y-2">
                                 <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                                     Correo Electrónico{isEditMode ? " (vacío = sin cambios)" : ""}
                                 </Label>
-                                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required={!isEditMode && !isColabOrAyudante} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "ejemplo@correo.com"} autoComplete="off" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
+                                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required={!isEditMode && !isColaboradorOnly} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "ejemplo@correo.com"} autoComplete="off" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
                             </div>
 
                             <div className="space-y-2">
@@ -734,7 +734,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                     {isEditMode ? "Nueva Contraseña (vacío = sin cambios)" : "Contraseña Temporal"}
                                 </Label>
                                 <div className="relative">
-                                    <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required={!isEditMode && !isColabOrAyudante} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "••••••••"} autoComplete="new-password" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12" />
+                                    <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required={!isEditMode && !isColaboradorOnly} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "••••••••"} autoComplete="new-password" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12" />
                                     <Button type="button" onClick={() => setShowPassword(!showPassword)} variant="ghost" size="icon" className="absolute right-1 top-1 h-10 w-10 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700">
                                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                     </Button>
@@ -743,9 +743,9 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                           </>
                         )}
 
-                        {isColabOrAyudante && !isEditMode && (
+                        {isColaboradorOnly && !isEditMode && (
                           <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl text-xs text-amber-700 dark:text-amber-300">
-                            <span>Los roles <strong>Colaborador</strong> y <strong>Ayudante</strong> no tienen acceso al sistema — no se requiere email ni contraseña.</span>
+                            <span>El rol <strong>Colaborador</strong> no tiene acceso al sistema — no se requiere email ni contraseña.</span>
                           </div>
                         )}
 
@@ -770,7 +770,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {(['maestro', 'colaborador', 'ayudante'] as AppRole[]).map(r => (
+                                                    {(['maestro', 'colaborador', 'auxiliar_maestro'] as AppRole[]).map(r => (
                                                         <SelectItem key={r} value={r}>{ROLE_LABELS[r] || r}</SelectItem>
                                                     ))}
                                                 </SelectContent>

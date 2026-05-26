@@ -59,7 +59,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
   });
 
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
-  const isMaestro = profile?.role === 'maestro';
+  const isMaestro = profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro';
   const isDirector = profile?.role === 'director';
 
   const availableDepartments = isAdminOrSecretaria

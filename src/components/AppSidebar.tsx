@@ -309,6 +309,7 @@ const NavigationContent = ({
     secretaria: { label: "Secretaria", color: "bg-blue-100 text-blue-700" },
     lider: { label: "Líder", color: "bg-orange-100 text-orange-700" },
     maestro: { label: "Maestro", color: "bg-green-100 text-green-700" },
+    auxiliar_maestro: { label: "Auxiliar de maestro", color: "bg-teal-100 text-teal-700" },
     director: { label: "Director", color: "bg-red-100 text-red-700" },
     "secr.-calendario": { label: "Secretaria", color: "bg-blue-100 text-blue-700" },
   }[profile?.role ?? ""] ?? { label: profile?.role ?? "", color: "bg-gray-100 text-gray-700" };

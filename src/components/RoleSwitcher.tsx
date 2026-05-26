@@ -20,7 +20,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
     secretaria: "Secretaria",
     "secr.-calendario": "Secretaria (Calendario)",
     colaborador: "Colaborador",
-    ayudante: "Ayudante",
+    auxiliar_maestro: "Auxiliar de maestro",
     vicedirector: "Vicedirector",
     conserje: "Conserje"
 };

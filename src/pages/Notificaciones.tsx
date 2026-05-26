@@ -32,7 +32,7 @@ const ROLES = [
   { value: "lider", label: "Líder" },
   { value: "maestro", label: "Maestro" },
   { value: "colaborador", label: "Colaborador" },
-  { value: "ayudante", label: "Ayudante" },
+  { value: "auxiliar_maestro", label: "Auxiliar de maestro" },
   { value: "director", label: "Director" },
   { value: "vicedirector", label: "Vicedirector" },
   { value: "secretaria", label: "Secretaria" },

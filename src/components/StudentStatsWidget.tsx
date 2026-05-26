@@ -113,7 +113,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
         statsTitle = "Estadísticas de Miembros";
     }
 
-    const STAFF_ROLES = ['maestro', 'lider', 'colaborador', 'ayudante'];
+    const STAFF_ROLES = ['maestro', 'lider', 'colaborador', 'auxiliar_maestro'];
 
     const getStatsForClass = (deptName: string, className: string): ClassStats => {
         const deptStudents = students.filter(s => {
@@ -216,7 +216,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                                 />
                             ))}
                         </>
-                    ) : (profile?.role === 'maestro' || profile?.role === 'lider' || profile?.role === 'colaborador' || profile?.role === 'ayudante') ? (
+                    ) : (profile?.role === 'maestro' || profile?.role === 'lider' || profile?.role === 'colaborador' || profile?.role === 'auxiliar_maestro') ? (
                         userAssignedClass ? (
                             <ClassStatsCard
                                 className={userAssignedClass}

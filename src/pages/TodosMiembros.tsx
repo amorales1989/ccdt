@@ -40,7 +40,7 @@ const deptColor = (name?: string) => {
 };
 
 const ROLE_IN_DEPT_LABELS: Record<string, string> = {
-  alumno: "Alumno", ayudante: "Ayudante", colaborador: "Colaborador",
+  alumno: "Alumno", auxiliar_maestro: "Auxiliar de maestro", colaborador: "Colaborador",
   maestro: "Maestro", lider: "Líder", visita: "Visita",
 };
 

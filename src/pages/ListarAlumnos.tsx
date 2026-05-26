@@ -97,7 +97,7 @@ const ListarAlumnos = () => {
   const isMobile = useIsMobile();
   const profile = useAuth().profile;
   const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector';
-  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector';
+  const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector';
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -559,7 +559,7 @@ const ListarAlumnos = () => {
 
     // For restricted roles (maestro/director/vicedirector), show the student's
     // assignment in the editor's department instead of the student's primary one.
-    const restrictedRole = profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'vicedirector';
+    const restrictedRole = (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'director' || profile?.role === 'vicedirector';
     let editDeptId = student.department_id || "";
     let editClass = student.assigned_class || "";
 
@@ -736,7 +736,7 @@ const ListarAlumnos = () => {
     if (!studentToEdit) return;
     setIsUpdating(true);
     try {
-      const restrictedRole = profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'vicedirector';
+      const restrictedRole = (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'director' || profile?.role === 'vicedirector';
       const editingOwnAssignment = restrictedRole
         && profile?.department_id
         && values.department_id === profile.department_id
@@ -1073,7 +1073,7 @@ const ListarAlumnos = () => {
           <TableCell className="text-slate-500 dark:text-slate-400 font-medium text-sm text-center">
             <span className="bg-slate-100/50 px-3 py-1 rounded-full border border-slate-200/40">
               {(() => {
-                const restrictedRole = profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'vicedirector';
+                const restrictedRole = (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'director' || profile?.role === 'vicedirector';
                 if (restrictedRole && profile?.department_id) {
                   const own = (student as any).dept_assignments?.find(
                     (a: any) => a.department_id === profile.department_id
@@ -1286,7 +1286,7 @@ const ListarAlumnos = () => {
                 </Button>
               </CustomTooltip>
             )}
-            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector' || profile?.role === 'lider' || profile?.role === 'maestro') && (
+            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector' || profile?.role === 'lider' || (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro')) && (
               <CustomTooltip title="Reporte de Asistencia (PDF)">
                 <Button
                   variant="outline"
@@ -1864,7 +1864,7 @@ const ListarAlumnos = () => {
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
-                          disabled={profile?.role === 'maestro' || profile?.role === 'director' || profile?.role === 'vicedirector'}
+                          disabled={(profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'director' || profile?.role === 'vicedirector'}
                         >
                           <FormControl>
                             <SelectTrigger>

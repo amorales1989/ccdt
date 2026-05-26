@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const allAssignments: UserAssignment[] = authUser?.user_metadata?.assignments || [];
-        const validAssignments = allAssignments.filter(a => a.role !== 'colaborador' && a.role !== 'ayudante');
+        const validAssignments = allAssignments.filter(a => a.role !== 'colaborador');
         const assignmentsForProfile = validAssignments.length > 0 ? validAssignments : allAssignments;
 
         // Para usuarios con múltiples assignments, mostrar solo el departamento activo

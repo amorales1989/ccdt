@@ -61,7 +61,7 @@ export default function Auth() {
 
     if (profile) {
       const allRoles = profile.roles?.length ? profile.roles : [profile.role];
-      const hasOnlyRestrictedRoles = allRoles.every(r => r === 'colaborador' || r === 'ayudante');
+      const hasOnlyRestrictedRoles = allRoles.every(r => r === 'colaborador');
       if (hasOnlyRestrictedRoles) {
         return;
       }

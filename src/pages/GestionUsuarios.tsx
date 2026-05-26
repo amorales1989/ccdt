@@ -235,7 +235,7 @@ const GestionUsuarios = () => {
         .update({ assigned_class: null })
         .eq('company_id', companyId)
         .contains('departments', [department])
-        .in('role', ['maestro', 'lider', 'colaborador', 'ayudante']);
+        .in('role', ['maestro', 'lider', 'colaborador', 'auxiliar_maestro']);
 
       if (error) throw error;
       return data;
@@ -327,7 +327,7 @@ const GestionUsuarios = () => {
 
   // Assignment logic filtering (accounts for pending local changes)
   const assignmentFilteredUsers = users.filter(user =>
-    (user.role === 'maestro' || user.role === 'lider' || user.role === 'colaborador' || user.role === 'ayudante') &&
+    (user.role === 'maestro' || user.role === 'lider' || user.role === 'colaborador' || user.role === 'auxiliar_maestro') &&
     user.departments?.includes(assignmentDept as DepartmentType)
   );
 

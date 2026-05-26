@@ -24,14 +24,14 @@ import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 const ALL_ROLES = [
   'admin', 'director_general', 'director', 'vicedirector',
   'secretaria', 'secr.-calendario', 'lider', 'maestro',
-  'conserje', 'colaborador', 'ayudante',
+  'conserje', 'colaborador', 'auxiliar_maestro',
 ] as const;
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin', director_general: 'Director General', director: 'Director',
   vicedirector: 'Vicedirector', secretaria: 'Secretaria', 'secr.-calendario': 'Secr. Calendario',
   lider: 'Líder', maestro: 'Maestro', conserje: 'Conserje',
-  colaborador: 'Colaborador', ayudante: 'Ayudante',
+  colaborador: 'Colaborador', auxiliar_maestro: 'Auxiliar de maestro',
 };
 
 const PERMISSIONS = [

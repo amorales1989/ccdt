@@ -196,13 +196,13 @@ export const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         // Validation lists logic
         const getFilteredRoles = (userRole: string | undefined): string[] => {
             if (userRole === 'director' || userRole === 'vicedirector') {
-                return ['maestro', 'colaborador', 'ayudante'];
+                return ['maestro', 'colaborador', 'auxiliar_maestro'];
             }
             if (userRole === 'director_general') {
-                return ['maestro', 'colaborador', 'ayudante', 'director', 'vicedirector'];
+                return ['maestro', 'colaborador', 'auxiliar_maestro', 'director', 'vicedirector'];
             }
             // For admin or others, return all possible roles
-            return ["admin", "lider", "director", "director_general", "maestro", "secretaria", "secr.-calendario", "colaborador", "ayudante", "vicedirector", "conserje"];
+            return ["admin", "lider", "director", "director_general", "maestro", "secretaria", "secr.-calendario", "colaborador", "auxiliar_maestro", "vicedirector", "conserje"];
         };
 
         const getFilteredDepartments = (userRole: string | undefined, userDepts: string[] | undefined): Department[] => {

@@ -96,7 +96,7 @@ const Home = () => {
 
         // Solo filtramos por clase si el usuario es maestro o líder
         // Los directores deben poder ver todas las clases de su departamento
-        if (profile.role === 'maestro' || profile.role === 'lider' || profile.role === 'colaborador' || profile.role === 'ayudante') {
+        if (profile.role === 'maestro' || profile.role === 'lider' || profile.role === 'colaborador' || profile.role === 'auxiliar_maestro') {
           params.assigned_class = profile.assigned_class;
         }
       }
@@ -179,7 +179,7 @@ const Home = () => {
     // Obtener clase del usuario
     const userAssignedClass = profile?.assigned_class;
     const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria";
-    const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
+    const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider" || profile?.role === "auxiliar_maestro";
     const isDirectorOrGeneral = profile?.role === "director" || profile?.role === "director_general";
 
     const studentsWithDaysUntilBirthday = studentsBasicInfo
@@ -296,7 +296,7 @@ const Home = () => {
   }, [events, upcomingBirthdays]);
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria" || profile?.role === "secr.-calendario";
-  const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider";
+  const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider" || profile?.role === "auxiliar_maestro";
 
   const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
 
