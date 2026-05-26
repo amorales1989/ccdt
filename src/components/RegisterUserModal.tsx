@@ -118,6 +118,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
     const [personSource, setPersonSource] = useState<'profile' | 'student' | null>(null);
     const [photoUrl, setPhotoUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
 
     const { profile } = useAuth();
     const { toast } = useToast();
@@ -153,6 +154,26 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
         if (assignments.length > 0) return assignments.every(a => COLAB_ROLES.includes(a.role as any));
         return false;
     })();
+
+    // Email availability check (debounced)
+    useEffect(() => {
+        const trimmed = email.trim();
+        if (!trimmed) { setEmailStatus('idle'); return; }
+        if (isEditMode && trimmed === (user?.email || '')) { setEmailStatus('idle'); return; }
+        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+        if (!valid) { setEmailStatus('invalid'); return; }
+        setEmailStatus('checking');
+        const t = setTimeout(async () => {
+            try {
+                const { data, error } = await supabase.functions.invoke('manage-users', {
+                    body: { action: 'check-email', userId: user?.id, userData: { email: trimmed } }
+                });
+                if (error) { setEmailStatus('idle'); return; }
+                setEmailStatus(data?.available ? 'available' : 'taken');
+            } catch { setEmailStatus('idle'); }
+        }, 500);
+        return () => clearTimeout(t);
+    }, [email, isEditMode, user?.id, user?.email]);
 
     // Locked dept classes
     useEffect(() => {
@@ -419,6 +440,17 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
             const hasColaboradorRole = finalRoles.includes('colaborador' as AppRole);
             let finalEmail = email;
             let finalPassword = password;
+
+            if (emailStatus === 'taken') {
+                toast({ title: "Email en uso", description: "Ese email ya pertenece a otro usuario.", variant: "destructive" });
+                setLoading(false);
+                return;
+            }
+            if (emailStatus === 'invalid') {
+                toast({ title: "Email inválido", description: "Revisá el formato del correo.", variant: "destructive" });
+                setLoading(false);
+                return;
+            }
 
             if (!isEditMode) {
                 if (hasColaboradorRole && !email) {
@@ -726,7 +758,11 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                 <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                                     Correo Electrónico{isEditMode ? " (vacío = sin cambios)" : ""}
                                 </Label>
-                                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required={!isEditMode && !isColaboradorOnly} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "ejemplo@correo.com"} autoComplete="off" className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
+                                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required={!isEditMode && !isColaboradorOnly} placeholder={isEditMode ? "Dejar vacío para no cambiar" : "ejemplo@correo.com"} autoComplete="off" className={`h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:border-transparent transition-all ${emailStatus === 'taken' || emailStatus === 'invalid' ? 'border-red-400 focus:ring-red-500' : emailStatus === 'available' ? 'border-green-400 focus:ring-green-500' : 'focus:ring-purple-500'}`} />
+                                {emailStatus === 'checking' && <p className="text-xs text-muted-foreground ml-1">Verificando disponibilidad...</p>}
+                                {emailStatus === 'available' && <p className="text-xs text-green-600 ml-1">✓ Email disponible</p>}
+                                {emailStatus === 'taken' && <p className="text-xs text-red-600 ml-1">✗ Este email ya está en uso</p>}
+                                {emailStatus === 'invalid' && <p className="text-xs text-red-600 ml-1">✗ Formato de email inválido</p>}
                             </div>
 
                             <div className="space-y-2">

@@ -34,6 +34,22 @@ serve(async (req) => {
     }
 
     switch (action) {
+      case 'check-email': {
+        const emailToCheck = (userData?.email || '').trim().toLowerCase();
+        if (!emailToCheck) {
+          return new Response(JSON.stringify({ available: false, reason: 'empty' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const { data: list, error: listErr } = await supabaseClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        if (listErr) throw listErr;
+        const found = list.users.find((u: any) => (u.email || '').toLowerCase() === emailToCheck);
+        const available = !found || (userId && found.id === userId);
+        return new Response(JSON.stringify({ available, existingUserId: found?.id || null }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       case 'list':
         const { data: listData, error: listError } = await supabaseClient.auth.admin.listUsers({ page: 1, perPage: 500 });
         if (listError) throw listError;
