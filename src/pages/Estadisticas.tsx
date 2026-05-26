@@ -22,6 +22,7 @@ import {
 import { format, subMonths, differenceInYears } from "date-fns";
 import { es } from "date-fns/locale";
 import { exportStatsReport } from "@/lib/statsPdfUtils";
+import { getStudents } from "@/lib/api";
 import { toast } from "sonner";
 import { useCompany } from "@/contexts/CompanyContext";
 import type { Student, Profile } from "@/types/database";
@@ -188,17 +189,25 @@ export default function Estadisticas() {
   const { data: students = [], isLoading: loadingStudents } = useQuery({
     queryKey: ['stats-students', selectedDeptId, companyId, currentProfile?.id],
     enabled: !loadingProfile,
-    queryFn: async () => fetchAllPaginated<Student>(() => {
-      let q = (supabase.from('students') as any)
-        .select('*').eq('company_id', companyId).is('deleted_at', null);
+    queryFn: async () => {
+      // Usar getStudents (SP get_students, junction-aware) para contemplar multi-inscripción
+      // via student_departments. La query directa por columnas legacy omitia alumnos inscriptos.
       if (selectedDeptId !== "all") {
-        q = q.eq('department_id', selectedDeptId);
-      } else if (!isGlobalView) {
-        const deptIds = allowedDepts.map(d => d.id);
-        if (deptIds.length > 0) q = q.in('department_id', deptIds);
+        return await getStudents({ department_id: selectedDeptId }) || [];
       }
-      return q;
-    })
+      if (isGlobalView) {
+        return await getStudents({}) || [];
+      }
+      const deptIds = allowedDepts.map(d => d.id);
+      if (deptIds.length === 0) return [];
+      const results = await Promise.all(deptIds.map(id => getStudents({ department_id: id })));
+      const seen = new Set<string>();
+      return results.flat().filter((s: any) => {
+        if (!s || seen.has(s.id)) return false;
+        seen.add(s.id);
+        return true;
+      });
+    }
   });
 
   const { data: attendance = [], isLoading: loadingAttendance } = useQuery({
@@ -220,14 +229,10 @@ export default function Estadisticas() {
     queryKey: ['stats-profiles', selectedDeptId, companyId, currentProfile?.id],
     enabled: !loadingProfile,
     queryFn: async () => fetchAllPaginated<Profile>(() => {
-      let q = (supabase.from('profiles') as any).select('*').eq('company_id', companyId);
-      if (selectedDeptId !== "all") {
-        q = q.eq('department_id', selectedDeptId);
-      } else if (!isGlobalView) {
-        const deptIds = allowedDepts.map(d => d.id);
-        if (deptIds.length > 0) q = q.in('department_id', deptIds);
-      }
-      return q;
+      // Traemos todos los profiles de la empresa; el filtrado por depto/clase se hace
+      // en el useMemo considerando assignments[] (multi-rol/multi-depto), no solo las
+      // columnas legacy department_id/role.
+      return (supabase.from('profiles') as any).select('*').eq('company_id', companyId);
     })
   });
 
@@ -244,17 +249,42 @@ export default function Estadisticas() {
 
   // ─── Data Processing ───────────────────────────────────────────────────────
   const data = useMemo(() => {
+    const STAFF_ROLES = ['lider', 'maestro', 'ayudante', 'colaborador', 'director', 'vicedirector'];
+
+    // ¿El alumno pertenece a la clase indicada? (usa dept_assignments, no el assigned_class resuelto)
+    const studentInClass = (s: any, cls: string) => {
+      const assigns = Array.isArray(s.dept_assignments) ? s.dept_assignments : [];
+      if (assigns.length === 0) return s.assigned_class === cls;
+      return assigns.some((d: any) => d.assigned_class === cls && (!effectiveDeptId || d.department_id === effectiveDeptId));
+    };
+
+    // ¿El profile tiene presencia en el depto (y clase si está seleccionada)? (usa assignments[])
+    const profileInScope = (p: any) => {
+      const assigns = Array.isArray(p.assignments) ? p.assignments : [];
+      if (!effectiveDeptId) return true; // vista global / mis deptos (ya filtrados aguas arriba)
+      if (assigns.length === 0) {
+        const deptOk = p.department_id === effectiveDeptId;
+        const classOk = selectedClass === "all" || p.assigned_class === selectedClass;
+        return deptOk && classOk;
+      }
+      return assigns.some((a: any) =>
+        a.department_id === effectiveDeptId &&
+        (selectedClass === "all" || a.assigned_class === selectedClass)
+      );
+    };
+
     const filteredStudents = selectedClass === "all"
       ? students
-      : students.filter(s => s.assigned_class === selectedClass);
+      : students.filter(s => studentInClass(s, selectedClass));
 
     const filteredAttendance = selectedClass === "all"
       ? attendance
       : attendance.filter(a => a.assigned_class === selectedClass);
 
-    const filteredProfiles = selectedClass === "all"
+    // Profiles del depto/clase en foco (solo aplica cuando hay depto; en global se toman todos)
+    const filteredProfiles = (!effectiveDeptId && isGlobalView)
       ? profiles
-      : profiles.filter(p => p.assigned_class === selectedClass);
+      : profiles.filter(profileInScope);
 
     const totalStudents = filteredStudents.length;
 
@@ -348,10 +378,26 @@ export default function Estadisticas() {
       m.rate = total > 0 ? Math.round((m.present / total) * 100) : 0;
     });
 
-    // Roles
+    // Rol efectivo de un profile dentro del depto (y clase si está seleccionada)
+    const rolesOfProfileInScope = (p: any): string[] => {
+      const assigns = Array.isArray(p.assignments) ? p.assignments : [];
+      if (effectiveDeptId && assigns.length > 0) {
+        return assigns
+          .filter((a: any) => a.department_id === effectiveDeptId && (selectedClass === "all" || a.assigned_class === selectedClass))
+          .map((a: any) => a.role)
+          .filter(Boolean);
+      }
+      const set = new Set<string>();
+      if (p.role) set.add(p.role);
+      if (Array.isArray(p.roles)) p.roles.forEach((r: string) => r && set.add(r));
+      return Array.from(set);
+    };
+
+    // Roles (distribución) — contamos por rol efectivo en el depto
     const rolesCount = filteredProfiles.reduce((acc: Record<string, number>, p) => {
-      const r = p.role || 'otro';
-      acc[r] = (acc[r] || 0) + 1;
+      const roles = rolesOfProfileInScope(p);
+      const primary = roles[0] || p.role || 'otro';
+      acc[primary] = (acc[primary] || 0) + 1;
       return acc;
     }, {});
     const roleData = Object.entries(rolesCount)
@@ -359,13 +405,16 @@ export default function Estadisticas() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 7);
 
-    // Class distribution
+    // Class distribution (junction-aware)
     const classDistributionData = (deptInfo?.classes || []).map((c: string) => ({
       name: c,
-      value: filteredStudents.filter(s => s.assigned_class === c).length
+      value: students.filter(s => studentInClass(s, c)).length
     }));
 
-    const totalVolunteers = filteredProfiles.filter(p => ['lider', 'maestro', 'ayudante', 'colaborador'].includes(p.role as string)).length;
+    // Equipo de servicio: profiles con algún rol de staff en el depto en foco
+    const totalVolunteers = filteredProfiles.filter(p =>
+      rolesOfProfileInScope(p).some(r => STAFF_ROLES.includes(r))
+    ).length;
     const newStudents = filteredStudents.filter((s: any) => s.nuevo).length;
 
     return {
@@ -374,7 +423,7 @@ export default function Estadisticas() {
       roleData, classDistributionData, totalAttendanceRecords: filteredAttendance.length,
       totalProfiles: filteredProfiles.length,
     };
-  }, [students, attendance, profiles, selectedClass, deptInfo]);
+  }, [students, attendance, profiles, selectedClass, deptInfo, effectiveDeptId, isGlobalView]);
 
   const handleExport = async () => {
     setIsExporting(true);
