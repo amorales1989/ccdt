@@ -383,7 +383,8 @@ const ListarAlumnos = () => {
 
 
   const handleDownloadAttendanceReport = async () => {
-    if (!students || students.length === 0) {
+    const reportStudents = filteredStudents || [];
+    if (reportStudents.length === 0) {
       toast({
         title: "Sin datos",
         description: "No hay miembros en la lista actual para generar el reporte.",
@@ -422,7 +423,7 @@ const ListarAlumnos = () => {
       }
 
       // Obtener los IDs de los estudiantes que están actualmente en la lista (filtrados)
-      const currentStudentIds = new Set(students.map(s => s.id));
+      const currentStudentIds = new Set(reportStudents.map(s => s.id));
 
       // Filtrar asistencias solo para los estudiantes visibles actualmente
       const relevantAttendance = filteredAttendance.filter(a => currentStudentIds.has(a.student_id));
@@ -442,7 +443,7 @@ const ListarAlumnos = () => {
       }
 
       // Procesar datos por estudiante
-      const reportData = students.map(student => {
+      const reportData = reportStudents.map(student => {
         const studentAttendances = relevantAttendance.filter(a => a.student_id === student.id && a.status === true);
         const presenceCount = studentAttendances.length;
         const percentage = (presenceCount / totalActivityDays) * 100;
