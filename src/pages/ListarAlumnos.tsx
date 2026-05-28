@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, User, Search, X } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, Table2, User, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { jsPDF } from "jspdf";
@@ -28,7 +28,7 @@ import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, get
 import AgregarAlumno from "@/pages/AgregarAlumno";
 import { CustomTabs } from "@/components/CustomTabs";
 import { BirthdayList } from "@/components/BirthdayList";
-import { exportAttendanceReport } from "@/lib/attendancePdfUtils";
+import { exportAttendanceReport, exportAttendanceMatrix } from "@/lib/attendancePdfUtils";
 import { Calendar } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
 import {
@@ -381,6 +381,72 @@ const ListarAlumnos = () => {
     }
   }, [profile, navigate, searchParams, departments, isFilterOpen]);
 
+
+  const handleDownloadAttendanceMatrix = async () => {
+    const reportStudents = filteredStudents || [];
+    if (reportStudents.length === 0) {
+      toast({ title: "Sin datos", description: "No hay miembros en la lista actual.", variant: "destructive" });
+      return;
+    }
+    setIsGeneratingReport(true);
+    try {
+      const currentYear = new Date().getFullYear();
+      const startDate = `${currentYear}-01-01`;
+      const endDate = `${currentYear}-12-31`;
+      const attendanceClassFilter = (profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector')
+        ? (filters.class || undefined)
+        : (profile?.assigned_class || undefined);
+      const allYearAttendance = await getAttendance(
+        startDate, endDate, undefined,
+        profile?.role !== 'admin' && profile?.role !== 'secretaria' ? profile?.department_id : (filters.department ? null : undefined),
+        attendanceClassFilter,
+      );
+      let filtered = allYearAttendance;
+      if (filters.department) filtered = filtered.filter((a: any) => a.department === filters.department);
+      if (filters.class) filtered = filtered.filter((a: any) => a.assigned_class === filters.class);
+      const ids = new Set(reportStudents.map(s => s.id));
+      const relevant = filtered.filter((a: any) => ids.has(a.student_id));
+      const titleParts = ['Asistencia'];
+      if (filters.department) titleParts.push(filters.department);
+      if (filters.class) titleParts.push(filters.class);
+      const contextDept = filters.department || profile?.departments?.[0] || null;
+
+      // Traer profile.assigned_class para los miembros que tienen profile_id (asignaciones de "Guardar Clase")
+      const profileIds = reportStudents.map(s => (s as any).profile_id).filter(Boolean) as string[];
+      const profileClassMap = new Map<string, string>();
+      if (profileIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, assigned_class')
+          .in('id', profileIds);
+        profilesData?.forEach((p: any) => {
+          if (p.assigned_class) profileClassMap.set(p.id, p.assigned_class);
+        });
+      }
+
+      await exportAttendanceMatrix(
+        reportStudents.map(s => ({
+          id: s.id,
+          first_name: s.first_name,
+          last_name: s.last_name,
+          assigned_class: s.assigned_class,
+          department: s.department,
+          dept_assignments: (s as any).dept_assignments,
+          profile_assigned_class: (s as any).profile_id ? profileClassMap.get((s as any).profile_id) || null : null,
+        })),
+        relevant.map((a: any) => ({ student_id: a.student_id, date: a.date, status: a.status })),
+        titleParts.join(' - '),
+        'CCDT',
+        contextDept,
+      );
+      toast({ title: "Matriz generada", description: "El PDF se descargó correctamente." });
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Error", description: e?.message || "No se pudo generar la matriz.", variant: "destructive" });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
 
   const handleDownloadAttendanceReport = async () => {
     const reportStudents = filteredStudents || [];
@@ -1284,6 +1350,18 @@ const ListarAlumnos = () => {
               <CustomTooltip title="Filtrar miembros">
                 <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95" onClick={() => setIsFilterOpen(!isFilterOpen)}>
                   <Filter className="h-4 w-4" />
+                </Button>
+              </CustomTooltip>
+            )}
+            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector' || profile?.role === 'lider' || (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro')) && (
+              <CustomTooltip title="Matriz Anual de Asistencia (PDF)">
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
+                  onClick={handleDownloadAttendanceMatrix}
+                  disabled={isGeneratingReport}
+                >
+                  {isGeneratingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <Table2 className="h-4 w-4 text-purple-600" />}
                 </Button>
               </CustomTooltip>
             )}
