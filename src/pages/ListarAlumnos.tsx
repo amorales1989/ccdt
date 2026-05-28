@@ -383,7 +383,21 @@ const ListarAlumnos = () => {
 
 
   const handleDownloadAttendanceMatrix = async () => {
-    const reportStudents = filteredStudents || [];
+    const baseStudents = filteredStudents || [];
+    // Excluir miembros que son maestros/colaboradores (no alumnos) de la clase filtrada
+    const reportStudents = baseStudents.filter((s: any) => {
+      if (!filters.department || !filters.class) return true;
+      // Para Obreros (grupo de staff), incluir todos los roles
+      if ((filters.class || '').toLowerCase() === 'obreros') return true;
+      const assigns = s.dept_assignments || [];
+      const match = assigns.find((a: any) =>
+        a.departments?.name === filters.department &&
+        (a.assigned_class || '').toLowerCase() === filters.class.toLowerCase()
+      );
+      if (!match) return true;
+      const role = (match.role_in_dept || 'alumno').toLowerCase();
+      return role === 'alumno';
+    });
     if (reportStudents.length === 0) {
       toast({ title: "Sin datos", description: "No hay miembros en la lista actual.", variant: "destructive" });
       return;
@@ -411,9 +425,10 @@ const ListarAlumnos = () => {
       if (filters.class) titleParts.push(filters.class);
       const contextDept = filters.department || profile?.departments?.[0] || null;
 
-      // Traer profile.assigned_class para los miembros que tienen profile_id (asignaciones de "Guardar Clase")
+      // Traer profile.assigned_class + teacher assignments (auth user_metadata) para cada miembro con profile_id
       const profileIds = reportStudents.map(s => (s as any).profile_id).filter(Boolean) as string[];
       const profileClassMap = new Map<string, string>();
+      const teacherAssignmentsMap = new Map<string, any[]>();
       if (profileIds.length > 0) {
         const { data: profilesData } = await supabase
           .from('profiles')
@@ -422,6 +437,15 @@ const ListarAlumnos = () => {
         profilesData?.forEach((p: any) => {
           if (p.assigned_class) profileClassMap.set(p.id, p.assigned_class);
         });
+        try {
+          const { data: asgData } = await supabase.functions.invoke('manage-users', {
+            body: { action: 'get-assignments', userData: { profileIds } }
+          });
+          const map = asgData?.assignments || {};
+          for (const pid of Object.keys(map)) teacherAssignmentsMap.set(pid, map[pid] || []);
+        } catch (e) {
+          console.warn('No se pudieron obtener teacher_assignments:', e);
+        }
       }
 
       await exportAttendanceMatrix(
@@ -433,6 +457,7 @@ const ListarAlumnos = () => {
           department: s.department,
           dept_assignments: (s as any).dept_assignments,
           profile_assigned_class: (s as any).profile_id ? profileClassMap.get((s as any).profile_id) || null : null,
+          teacher_assignments: (s as any).profile_id ? teacherAssignmentsMap.get((s as any).profile_id) || null : null,
         })),
         relevant.map((a: any) => ({ student_id: a.student_id, date: a.date, status: a.status })),
         titleParts.join(' - '),

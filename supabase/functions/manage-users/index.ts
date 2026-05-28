@@ -34,6 +34,35 @@ serve(async (req) => {
     }
 
     switch (action) {
+      case 'get-assignments': {
+        // userData.profileIds: string[] | userData.userIds: string[]
+        const ids: string[] = (userData?.profileIds || userData?.userIds || []).filter(Boolean);
+        if (ids.length === 0) {
+          return new Response(JSON.stringify({ assignments: {} }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const { data: list, error: listErr } = await supabaseClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        if (listErr) throw listErr;
+        const idSet = new Set(ids);
+        const result: Record<string, any[]> = {};
+        for (const u of list.users) {
+          if (idSet.has(u.id)) {
+            const meta: any = u.user_metadata || {};
+            const asgs = Array.isArray(meta.assignments) ? meta.assignments : [];
+            result[u.id] = asgs.map((a: any) => ({
+              role: a.role,
+              department: a.department,
+              department_id: a.department_id,
+              assigned_class: a.assigned_class,
+            }));
+          }
+        }
+        return new Response(JSON.stringify({ assignments: result }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       case 'check-email': {
         const emailToCheck = (userData?.email || '').trim().toLowerCase();
         if (!emailToCheck) {

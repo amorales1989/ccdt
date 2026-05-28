@@ -144,9 +144,10 @@ const TomarAsistencia = () => {
 
       const allStudents = await getStudents(params) || [];
 
-      // Si la clase es Obreros, traer profile.assigned_class para mostrar la clase real donde trabajan
+      // Si la clase es Obreros, traer profile.assigned_class + teacher_assignments para mostrar la clase real
       const isObrerosView = (classToFilter || '').toLowerCase() === 'obreros';
       let profileClassMap = new Map<string, string>();
+      let teacherAssignmentsMap = new Map<string, any[]>();
       if (isObrerosView) {
         const profileIds = (allStudents as any[]).map(s => s.profile_id).filter(Boolean);
         if (profileIds.length > 0) {
@@ -157,6 +158,15 @@ const TomarAsistencia = () => {
           profilesData?.forEach((p: any) => {
             if (p.assigned_class) profileClassMap.set(p.id, p.assigned_class);
           });
+          try {
+            const { data: asgData } = await supabase.functions.invoke('manage-users', {
+              body: { action: 'get-assignments', userData: { profileIds } }
+            });
+            const map = asgData?.assignments || {};
+            for (const pid of Object.keys(map)) teacherAssignmentsMap.set(pid, map[pid] || []);
+          } catch (e) {
+            console.warn('No se pudieron obtener teacher_assignments:', e);
+          }
         }
       }
 
@@ -170,8 +180,17 @@ const TomarAsistencia = () => {
         return false;
       };
       const effectiveClassFor = (s: any): string => {
+        // 1. teacher_assignments del depto en contexto
+        if (selectedDepartmentName && s.profile_id) {
+          const ta = teacherAssignmentsMap.get(s.profile_id) || [];
+          const inDept = ta.filter((a: any) => a.department === selectedDepartmentName && a.assigned_class);
+          const valid = inDept.find((a: any) => !isInvalidClass(a.assigned_class));
+          if (valid?.assigned_class) return valid.assigned_class;
+        }
+        // 2. profile.assigned_class
         const pc = s.profile_id ? profileClassMap.get(s.profile_id) : null;
         if (pc && !isInvalidClass(pc)) return pc;
+        // 3. dept_assignments (student_departments)
         if (selectedDepartmentName && s.dept_assignments?.length) {
           const inDept = s.dept_assignments.filter((a: any) => a.departments?.name === selectedDepartmentName && a.assigned_class);
           const valid = inDept.find((a: any) => !isInvalidClass(a.assigned_class));

@@ -108,6 +108,7 @@ interface MatrixStudent {
     department?: string | null;
     dept_assignments?: Array<{ departments?: { name?: string } | null; assigned_class?: string | null }> | null;
     profile_assigned_class?: string | null;
+    teacher_assignments?: Array<{ department?: string | null; assigned_class?: string | null; role?: string | null }> | null;
 }
 
 interface MatrixAttendance {
@@ -137,17 +138,23 @@ export const exportAttendanceMatrix = async (
         return false;
     };
     const classForStudent = (s: MatrixStudent): string => {
-        // 1. profile.assigned_class si es válida
+        // 1. Teacher assignment (user_metadata.assignments) en el depto en contexto con clase válida
+        if (contextDepartment && s.teacher_assignments?.length) {
+            const inDept = s.teacher_assignments.filter(a => a.department === contextDepartment && a.assigned_class);
+            const valid = inDept.find(a => !isInvalidClass(a.assigned_class));
+            if (valid?.assigned_class) return valid.assigned_class;
+        }
+        // 2. profile.assigned_class si es válida
         if (s.profile_assigned_class && !isInvalidClass(s.profile_assigned_class)) return s.profile_assigned_class;
-        // 2. Dept assignment del depto en contexto con clase válida
+        // 3. Dept assignment (student_departments) del depto en contexto con clase válida
         if (contextDepartment && s.dept_assignments?.length) {
             const inDept = s.dept_assignments.filter(a => a.departments?.name === contextDepartment && a.assigned_class);
             const valid = inDept.find(a => !isInvalidClass(a.assigned_class));
             if (valid?.assigned_class) return valid.assigned_class;
         }
-        // 3. Student.assigned_class si es válida
+        // 4. Student.assigned_class si es válida
         if (s.assigned_class && !isInvalidClass(s.assigned_class)) return s.assigned_class;
-        // 4. Fallback: lo que haya (puede ser "Obreros" o nombre de depto)
+        // 5. Fallback
         return s.profile_assigned_class || s.assigned_class || '-';
     };
     // 1. Unique dates with activity, ordered ASC
