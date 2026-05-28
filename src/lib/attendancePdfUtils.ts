@@ -123,19 +123,31 @@ export const exportAttendanceMatrix = async (
     companyName: string = "CCDT",
     contextDepartment?: string | null,
 ) => {
-    const isObreros = (v?: string | null) => (v || '').toLowerCase() === 'obreros';
+    // Valores que no son una "clase real" sino nombres del departamento/grupo
+    const deptTokens = (contextDepartment || '')
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean);
+    const isInvalidClass = (v?: string | null) => {
+        const val = (v || '').toLowerCase().trim();
+        if (!val) return true;
+        if (val === 'obreros') return true;
+        if (contextDepartment && val === contextDepartment.toLowerCase()) return true;
+        if (deptTokens.includes(val)) return true; // ej: "central" cuando depto es "Escuelita Central"
+        return false;
+    };
     const classForStudent = (s: MatrixStudent): string => {
-        // 1. Prefer profile.assigned_class (lo que se asigna desde "Guardar Clase")
-        if (s.profile_assigned_class && !isObreros(s.profile_assigned_class)) return s.profile_assigned_class;
-        // 2. Dept assignment del depto en contexto, distinto de Obreros
+        // 1. profile.assigned_class si es válida
+        if (s.profile_assigned_class && !isInvalidClass(s.profile_assigned_class)) return s.profile_assigned_class;
+        // 2. Dept assignment del depto en contexto con clase válida
         if (contextDepartment && s.dept_assignments?.length) {
             const inDept = s.dept_assignments.filter(a => a.departments?.name === contextDepartment && a.assigned_class);
-            const nonObreros = inDept.find(a => !isObreros(a.assigned_class));
-            if (nonObreros?.assigned_class) return nonObreros.assigned_class;
+            const valid = inDept.find(a => !isInvalidClass(a.assigned_class));
+            if (valid?.assigned_class) return valid.assigned_class;
         }
-        // 3. Student.assigned_class si no es Obreros
-        if (s.assigned_class && !isObreros(s.assigned_class)) return s.assigned_class;
-        // 4. Fallback: profile.assigned_class (puede ser Obreros) > student.assigned_class
+        // 3. Student.assigned_class si es válida
+        if (s.assigned_class && !isInvalidClass(s.assigned_class)) return s.assigned_class;
+        // 4. Fallback: lo que haya (puede ser "Obreros" o nombre de depto)
         return s.profile_assigned_class || s.assigned_class || '-';
     };
     // 1. Unique dates with activity, ordered ASC

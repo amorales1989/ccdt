@@ -130,7 +130,7 @@ const TomarAsistencia = () => {
   }, [departmentId]);
 
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
-    queryKey: ["students-attendance", departmentId, userClass, selectedClass],
+    queryKey: ["students-attendance", departmentId, userClass, selectedClass, selectedDepartmentName],
     queryFn: async () => {
       if (!departmentId) return [];
 
@@ -144,7 +144,54 @@ const TomarAsistencia = () => {
 
       const allStudents = await getStudents(params) || [];
 
-      return allStudents.sort((a: any, b: any) => {
+      // Si la clase es Obreros, traer profile.assigned_class para mostrar la clase real donde trabajan
+      const isObrerosView = (classToFilter || '').toLowerCase() === 'obreros';
+      let profileClassMap = new Map<string, string>();
+      if (isObrerosView) {
+        const profileIds = (allStudents as any[]).map(s => s.profile_id).filter(Boolean);
+        if (profileIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, assigned_class')
+            .in('id', profileIds);
+          profilesData?.forEach((p: any) => {
+            if (p.assigned_class) profileClassMap.set(p.id, p.assigned_class);
+          });
+        }
+      }
+
+      const deptTokens = (selectedDepartmentName || '').toLowerCase().split(/\s+/).filter(Boolean);
+      const isInvalidClass = (v?: string | null) => {
+        const val = (v || '').toLowerCase().trim();
+        if (!val) return true;
+        if (val === 'obreros') return true;
+        if (selectedDepartmentName && val === selectedDepartmentName.toLowerCase()) return true;
+        if (deptTokens.includes(val)) return true;
+        return false;
+      };
+      const effectiveClassFor = (s: any): string => {
+        const pc = s.profile_id ? profileClassMap.get(s.profile_id) : null;
+        if (pc && !isInvalidClass(pc)) return pc;
+        if (selectedDepartmentName && s.dept_assignments?.length) {
+          const inDept = s.dept_assignments.filter((a: any) => a.departments?.name === selectedDepartmentName && a.assigned_class);
+          const valid = inDept.find((a: any) => !isInvalidClass(a.assigned_class));
+          if (valid?.assigned_class) return valid.assigned_class;
+        }
+        if (s.assigned_class && !isInvalidClass(s.assigned_class)) return s.assigned_class;
+        return pc || s.assigned_class || '';
+      };
+
+      const enriched = (allStudents as any[]).map(s => ({
+        ...s,
+        _effectiveClass: isObrerosView ? effectiveClassFor(s) : null,
+      }));
+
+      return enriched.sort((a: any, b: any) => {
+        if (isObrerosView) {
+          const cA = (a._effectiveClass || 'zzz').toLowerCase();
+          const cB = (b._effectiveClass || 'zzz').toLowerCase();
+          if (cA !== cB) return cA.localeCompare(cB);
+        }
         const gA = (a.gender || '').toLowerCase();
         const gB = (b.gender || '').toLowerCase();
         if (gA !== gB) {
@@ -275,6 +322,11 @@ const TomarAsistencia = () => {
             {getFullName(student)}
           </span>
           <div className="flex gap-1.5 mt-0.5 flex-wrap">
+            {student._effectiveClass && (
+              <Badge className="text-[10px] px-1.5 py-0 h-4 bg-purple-100 text-purple-700 border-none font-bold">
+                {student._effectiveClass}
+              </Badge>
+            )}
             {isAuthorized && (
               <Badge className="text-[10px] px-1.5 py-0 h-4 bg-green-100 text-green-700 border-none font-bold">
                 Autorizado
