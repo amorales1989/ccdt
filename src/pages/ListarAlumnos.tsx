@@ -4,9 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, Table2, User, Search, X } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, Table2, User, Search, X, FileBarChart2, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { jsPDF } from "jspdf";
@@ -1378,42 +1378,66 @@ const ListarAlumnos = () => {
                 </Button>
               </CustomTooltip>
             )}
-            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector' || profile?.role === 'lider' || (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro')) && (
-              <CustomTooltip title="Matriz Anual de Asistencia (PDF)">
-                <Button
-                  variant="outline"
-                  className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
-                  onClick={handleDownloadAttendanceMatrix}
-                  disabled={isGeneratingReport}
-                >
-                  {isGeneratingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <Table2 className="h-4 w-4 text-purple-600" />}
-                </Button>
-              </CustomTooltip>
-            )}
-            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector' || profile?.role === 'lider' || (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro')) && (
-              <CustomTooltip title="Reporte de Asistencia (PDF)">
-                <Button
-                  variant="outline"
-                  className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
-                  onClick={handleDownloadAttendanceReport}
-                  disabled={isGeneratingReport}
-                >
-                  {isGeneratingReport ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileText className="h-4 w-4" />
-                  )}
-                </Button>
-              </CustomTooltip>
-            )}
-
-            {(profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') && (
-              <CustomTooltip title="Exportar a Excel">
-                <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95" onClick={exportToExcel}>
-                  <FileDown className="h-4 w-4" />
-                </Button>
-              </CustomTooltip>
-            )}
+            {(() => {
+              const role = profile?.role;
+              const teachingRoles = ['admin', 'secretaria', 'director', 'director_general', 'vicedirector', 'lider', 'maestro', 'auxiliar_maestro'];
+              const adminRoles = ['admin', 'secretaria', 'director', 'director_general', 'vicedirector'];
+              type ReportItem = { key: string; label: string; description: string; icon: React.ReactNode; onClick: () => void; visible: boolean };
+              const reports: ReportItem[] = [
+                {
+                  key: 'matrix',
+                  label: 'Matriz Anual de Asistencia',
+                  description: 'PDF con grilla de asistencias por fecha',
+                  icon: <Table2 className="h-4 w-4 text-purple-600" />,
+                  onClick: handleDownloadAttendanceMatrix,
+                  visible: teachingRoles.includes(role || ''),
+                },
+                {
+                  key: 'summary',
+                  label: 'Resumen de Asistencia',
+                  description: 'PDF con totales y porcentajes por miembro',
+                  icon: <FileText className="h-4 w-4 text-slate-600" />,
+                  onClick: handleDownloadAttendanceReport,
+                  visible: teachingRoles.includes(role || ''),
+                },
+                {
+                  key: 'excel',
+                  label: 'Exportar a Excel',
+                  description: 'Listado completo de miembros (.xlsx)',
+                  icon: <FileDown className="h-4 w-4 text-emerald-600" />,
+                  onClick: exportToExcel,
+                  visible: adminRoles.includes(role || ''),
+                },
+              ];
+              const visible = reports.filter(r => r.visible);
+              if (visible.length === 0) return null;
+              return (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 px-3 gap-1.5 transition-all active:scale-95" disabled={isGeneratingReport}>
+                      {isGeneratingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileBarChart2 className="h-4 w-4 text-purple-600" />}
+                      <span className="hidden sm:inline text-sm font-semibold">Reportes</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-72 rounded-xl">
+                    <DropdownMenuLabel className="text-xs uppercase tracking-wider text-muted-foreground">Generar reporte</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {visible.map(r => (
+                      <DropdownMenuItem key={r.key} onClick={r.onClick} disabled={isGeneratingReport} className="rounded-lg py-2.5 cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5">{r.icon}</div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-sm">{r.label}</div>
+                            <div className="text-xs text-muted-foreground">{r.description}</div>
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })()}
             <Button data-tour="lista-nuevo" onClick={() => setIsAddModalOpen(true)} className="button-gradient rounded-xl font-black h-10 px-5 shadow-lg shadow-primary/20">
               <UserPlus className="h-4 w-4 mr-2" />
               Nuevo Miembro
