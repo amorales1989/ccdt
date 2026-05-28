@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeName } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Department, DepartmentType } from "@/types/database";
 import { UserPlus, Eye, EyeOff, Plus, X, Pencil } from "lucide-react";
@@ -467,8 +468,8 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
             }
 
             const profileData = {
-                first_name: firstName,
-                last_name: lastName,
+                first_name: normalizeName(firstName),
+                last_name: normalizeName(lastName),
                 role: finalRole,
                 roles: finalRoles,
                 departments: finalDepts,

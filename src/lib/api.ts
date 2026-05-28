@@ -2,6 +2,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { StudentObservation } from "@/types/database";
 import type { Attendance, Student, Department, DepartmentType, Event, Profile } from "@/types/database";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { normalizeName } from "@/lib/utils";
+
+const normalizeStudentNames = <T extends Partial<Student>>(s: T): T => ({
+  ...s,
+  ...(s.first_name !== undefined ? { first_name: normalizeName(s.first_name) } : {}),
+  ...(s.last_name !== undefined ? { last_name: normalizeName(s.last_name) } : {}),
+});
 
 
 // Configuración de la API base
@@ -197,7 +204,7 @@ export const createStudent = async (student: { first_name: string; gender: strin
   try {
     const response = await apiCall('/students', {
       method: 'POST',
-      body: JSON.stringify(student),
+      body: JSON.stringify(normalizeStudentNames(student)),
     });
     return response.data || response;
   } catch (error) {
@@ -210,7 +217,7 @@ export const updateStudent = async (id: string, student: Partial<Student>) => {
   try {
     const response = await apiCall(`/students/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(student),
+      body: JSON.stringify(normalizeStudentNames(student)),
     });
     return response.data || response;
   } catch (error) {
