@@ -250,8 +250,24 @@ const HistorialAsistencia = () => {
       if (classToFilter && classToFilter !== "all") params.assigned_class = classToFilter;
 
       const students = await getStudents(params) || [];
+
+      // Excluir maestros/colaboradores/auxiliares cuando la clase no es Obreros
+      const isObrerosView = (classToFilter || '').toLowerCase() === 'obreros';
+      const onlyAlumnos = (!isObrerosView && classToFilter && classToFilter !== 'all')
+        ? (students as any[]).filter((s: any) => {
+            const assigns = s.dept_assignments || [];
+            const match = assigns.find((a: any) =>
+              a.department_id === departmentIdToUse &&
+              (a.assigned_class || '').toLowerCase() === (classToFilter || '').toLowerCase()
+            );
+            if (!match) return true;
+            const role = (match.role_in_dept || 'alumno').toLowerCase();
+            return role === 'alumno';
+          })
+        : (students as any[]);
+
       // Normalizar department_id/assigned_class al contexto editado para los registros virtuales
-      return students.map((s: any) => ({
+      return onlyAlumnos.map((s: any) => ({
         ...s,
         department_id: departmentIdToUse,
         assigned_class: (classToFilter && classToFilter !== "all") ? classToFilter : s.assigned_class,
