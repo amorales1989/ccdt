@@ -123,6 +123,7 @@ export const exportAttendanceMatrix = async (
     title: string = "Asistencia Anual",
     companyName: string = "CCDT",
     contextDepartment?: string | null,
+    showClassColumn: boolean = true,
 ) => {
     // Valores que no son una "clase real" sino nombres del departamento/grupo
     const deptTokens = (contextDepartment || '')
@@ -198,7 +199,9 @@ export const exportAttendanceMatrix = async (
     doc.setTextColor(0);
 
     // 5. Split dates across pages (panels)
-    const fixedColsWidth = 22 + 50 + 10; // CLASE + NOMBRE + ASIST
+    const classColW = showClassColumn ? 22 : 0;
+    const nameColW = showClassColumn ? 50 : 65;
+    const fixedColsWidth = classColW + nameColW + 10; // CLASE? + NOMBRE + ASIST
     const dateColWidth = 8;
     const availableWidth = pageWidth - margin * 2 - fixedColsWidth;
     const datesPerPage = Math.max(1, Math.floor(availableWidth / dateColWidth));
@@ -215,7 +218,7 @@ export const exportAttendanceMatrix = async (
 
         // Build grouped header: month row + day row
         const monthRow: any[] = [
-            { content: 'CLASE', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+            ...(showClassColumn ? [{ content: 'CLASE', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } }] : []),
             { content: 'MIEMBRO', rowSpan: 2, styles: { halign: 'left', valign: 'middle' } },
             { content: 'TOT', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
         ];
@@ -240,7 +243,7 @@ export const exportAttendanceMatrix = async (
             const studentAtt = attMap.get(s.id);
             const totalP = chunkDates.filter(d => studentAtt?.get(d) === 'P').length;
             const row: any[] = [
-                { content: classForStudent(s), styles: { halign: 'center', fontStyle: 'bold' } },
+                ...(showClassColumn ? [{ content: classForStudent(s), styles: { halign: 'center', fontStyle: 'bold' } }] : []),
                 { content: `${s.first_name} ${s.last_name}`, styles: { fontStyle: 'bold' } },
                 { content: totalP.toString(), styles: { halign: 'center', fontSize: 7 } },
             ];
@@ -253,13 +256,15 @@ export const exportAttendanceMatrix = async (
             return row;
         });
 
-        const colStyles: any = {
-            0: { cellWidth: 22 },
-            1: { cellWidth: 50 },
-            2: { cellWidth: 10 },
-        };
+        const colStyles: any = {};
+        let baseIdx = 0;
+        if (showClassColumn) {
+            colStyles[baseIdx++] = { cellWidth: 22 };
+        }
+        colStyles[baseIdx++] = { cellWidth: nameColW };
+        colStyles[baseIdx++] = { cellWidth: 10 };
         for (let i = 0; i < chunkDates.length; i++) {
-            colStyles[3 + i] = { cellWidth: dateColWidth };
+            colStyles[baseIdx + i] = { cellWidth: dateColWidth };
         }
 
         autoTable(doc, {

@@ -101,7 +101,22 @@ const Home = () => {
         }
       }
 
-      return getStudents(params);
+      const result = await getStudents(params);
+
+      // Excluir maestros/colaboradores/auxiliares de la clase filtrada (excepto Obreros)
+      if (params.department_id && params.assigned_class && (params.assigned_class || '').toLowerCase() !== 'obreros') {
+        return (result as any[]).filter((s: any) => {
+          const assigns = s.dept_assignments || [];
+          const match = assigns.find((a: any) =>
+            a.department_id === params.department_id &&
+            (a.assigned_class || '').toLowerCase() === (params.assigned_class || '').toLowerCase()
+          );
+          if (!match) return true;
+          const role = (match.role_in_dept || 'alumno').toLowerCase();
+          return role === 'alumno';
+        });
+      }
+      return result;
     },
     enabled: !isCalendarDepartment && !!profile?.id,
     staleTime: 1000 * 60 * 1, // 1 minuto

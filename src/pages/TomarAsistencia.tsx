@@ -200,7 +200,21 @@ const TomarAsistencia = () => {
         return pc || s.assigned_class || '';
       };
 
-      const enriched = (allStudents as any[]).map(s => ({
+      // Excluir maestros/colaboradores/auxiliares cuando la clase no es Obreros
+      const onlyAlumnos = !isObrerosView
+        ? (allStudents as any[]).filter(s => {
+            const assigns = s.dept_assignments || [];
+            const match = assigns.find((a: any) =>
+              a.department_id === departmentId &&
+              (a.assigned_class || '').toLowerCase() === (classToFilter || '').toLowerCase()
+            );
+            if (!match) return true;
+            const role = (match.role_in_dept || 'alumno').toLowerCase();
+            return role === 'alumno';
+          })
+        : (allStudents as any[]);
+
+      const enriched = onlyAlumnos.map(s => ({
         ...s,
         _effectiveClass: isObrerosView ? effectiveClassFor(s) : null,
       }));

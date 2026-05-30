@@ -135,10 +135,14 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      <MUIThemeProvider theme={muiTheme}>
-        <CssBaseline />
-        {children}
-      </MUIThemeProvider>
+      {React.createElement(
+        MUIThemeProvider,
+        { theme: muiTheme },
+        <>
+          <CssBaseline />
+          {children}
+        </>
+      )}
     </ThemeContext.Provider>
   );
 };

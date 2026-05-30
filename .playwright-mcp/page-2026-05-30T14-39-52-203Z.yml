@@ -1,0 +1,29 @@
+- generic [ref=e2]:
+  - generic [ref=e6]:
+    - img [ref=e8]
+    - generic [ref=e12]: Cargando sesión...
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - img "Logo" [ref=e23]
+        - paragraph [ref=e24]: Sistema de Gestión
+        - heading "Comunidad Cristiana Don Torcuato" [level=1] [ref=e25]
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - text: Correo Electrónico
+            - textbox "Correo Electrónico" [ref=e30]:
+              - /placeholder: ejemplo@correo.com
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - generic [ref=e33]: Contraseña
+              - button "¿Olvidaste tu contraseña?" [ref=e34] [cursor=pointer]
+            - generic [ref=e35]:
+              - textbox "Contraseña" [ref=e36]:
+                - /placeholder: ••••••••
+              - button [ref=e37] [cursor=pointer]:
+                - img [ref=e38]
+        - button "Ingresar al Sistema" [ref=e42] [cursor=pointer]
+    - paragraph [ref=e43]: "*Si no tienes una cuenta, por favor contacta al director o líder de tu área para solicitar acceso."
+  - region "Notifications (F8)":
+    - list

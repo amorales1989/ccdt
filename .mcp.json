@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "/home/alejandro/.nvm/versions/node/v22.12.0/bin/npx",
+      "args": ["-y", "@playwright/mcp@latest", "--headless"],
+      "env": {
+        "PATH": "/home/alejandro/.nvm/versions/node/v22.12.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    }
+  }
+}

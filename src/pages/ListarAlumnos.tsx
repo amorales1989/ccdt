@@ -218,9 +218,29 @@ const ListarAlumnos = () => {
          )))
         : true;
 
-      return nameMatch && departmentMatch && classMatch;
+      // Excluir maestros/colaboradores/auxiliares de la clase del usuario (no Obreros)
+      // Aplica tanto al filtro UI (departmentFilter+classFilter) como al filtro implícito del perfil
+      let roleMatch = true;
+      const restrictedClass = (profile?.role === 'maestro' || profile?.role === 'lider' || profile?.role === 'colaborador' || profile?.role === 'auxiliar_maestro')
+        ? profile?.assigned_class
+        : null;
+      const effectiveDept = departmentFilter || (restrictedClass ? (profile?.departments?.[0] || null) : null);
+      const effectiveClass = classFilter || restrictedClass;
+      if (effectiveDept && effectiveClass && effectiveClass.toLowerCase() !== 'obreros') {
+        const assigns = (student as any).dept_assignments || [];
+        const match = assigns.find((a: any) =>
+          (a.departments?.name === effectiveDept || a.department_id === profile?.department_id) &&
+          (a.assigned_class || '').toLowerCase() === effectiveClass.toLowerCase()
+        );
+        if (match) {
+          const role = (match.role_in_dept || 'alumno').toLowerCase();
+          roleMatch = role === 'alumno';
+        }
+      }
+
+      return nameMatch && departmentMatch && classMatch && roleMatch;
     });
-  }, [students, filters]);
+  }, [students, filters, profile?.role, profile?.assigned_class, profile?.department_id, profile?.departments]);
 
   const sortedStudents = React.useMemo(() => {
     if (!filteredStudents) return [];
@@ -383,21 +403,7 @@ const ListarAlumnos = () => {
 
 
   const handleDownloadAttendanceMatrix = async () => {
-    const baseStudents = filteredStudents || [];
-    // Excluir miembros que son maestros/colaboradores (no alumnos) de la clase filtrada
-    const reportStudents = baseStudents.filter((s: any) => {
-      if (!filters.department || !filters.class) return true;
-      // Para Obreros (grupo de staff), incluir todos los roles
-      if ((filters.class || '').toLowerCase() === 'obreros') return true;
-      const assigns = s.dept_assignments || [];
-      const match = assigns.find((a: any) =>
-        a.departments?.name === filters.department &&
-        (a.assigned_class || '').toLowerCase() === filters.class.toLowerCase()
-      );
-      if (!match) return true;
-      const role = (match.role_in_dept || 'alumno').toLowerCase();
-      return role === 'alumno';
-    });
+    const reportStudents = filteredStudents || [];
     if (reportStudents.length === 0) {
       toast({ title: "Sin datos", description: "No hay miembros en la lista actual.", variant: "destructive" });
       return;
@@ -424,6 +430,7 @@ const ListarAlumnos = () => {
       if (filters.department) titleParts.push(filters.department);
       if (filters.class) titleParts.push(filters.class);
       const contextDept = filters.department || profile?.departments?.[0] || null;
+      const showClassColumn = ['admin', 'secretaria', 'director', 'director_general', 'vicedirector'].includes(profile?.role || '');
 
       // Traer profile.assigned_class + teacher assignments (auth user_metadata) para cada miembro con profile_id
       const profileIds = reportStudents.map(s => (s as any).profile_id).filter(Boolean) as string[];
@@ -463,6 +470,7 @@ const ListarAlumnos = () => {
         titleParts.join(' - '),
         'CCDT',
         contextDept,
+        showClassColumn,
       );
       toast({ title: "Matriz generada", description: "El PDF se descargó correctamente." });
     } catch (e: any) {
@@ -1126,9 +1134,9 @@ const ListarAlumnos = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  const renderStudentRow = (student: Student) => (
-    <React.Fragment key={student.id}>
+  const renderStudentRow = (student: Student) => [
       <TableRow
+        key={`${student.id}-row`}
         className={`group cursor-pointer transition-all duration-200 border-b border-slate-100/60 hover:bg-slate-50/80 ${student.isAuthorized ? 'bg-emerald-50/30 dark:bg-emerald-900/5' : ''} ${student.nuevo ? 'bg-blue-50/30 dark:bg-blue-900/5' : ''}`}
         onClick={() => handleStudentClick(student.id)}
       >
@@ -1185,9 +1193,9 @@ const ListarAlumnos = () => {
         <TableCell className="text-right">
           {renderActionButtons(student)}
         </TableCell>
-      </TableRow>
-      {expandedStudentId === student.id && (
-        <TableRow>
+      </TableRow>,
+      expandedStudentId === student.id && (
+        <TableRow key={`${student.id}-details`}>
           <TableCell colSpan={4} className="bg-slate-50/80 dark:bg-slate-900/50 p-0">
             <StudentDetails
               student={student}
@@ -1195,9 +1203,8 @@ const ListarAlumnos = () => {
             />
           </TableCell>
         </TableRow>
-      )}
-    </React.Fragment>
-  );
+      ),
+  ];
 
   // Función para renderizar las acciones según si es móvil o no
   const renderActionButtons = (student: Student) => {
@@ -1380,7 +1387,7 @@ const ListarAlumnos = () => {
             )}
             {(() => {
               const role = profile?.role;
-              const teachingRoles = ['admin', 'secretaria', 'director', 'director_general', 'vicedirector', 'lider', 'maestro', 'auxiliar_maestro'];
+              const teachingRoles = ['admin', 'secretaria', 'director', 'director_general', 'vicedirector', 'lider', 'maestro'];
               const adminRoles = ['admin', 'secretaria', 'director', 'director_general', 'vicedirector'];
               type ReportItem = { key: string; label: string; description: string; icon: React.ReactNode; onClick: () => void; visible: boolean };
               const reports: ReportItem[] = [
