@@ -1,5 +1,8 @@
 
 project_id = "wnmxgjrjrckwtyttidkw"
 
+[db]
+major_version = 15
+
 [functions.manage-users]
 verify_jwt = true

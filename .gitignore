@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 .vercel
 .env*.local
+
+# Supabase local dev (no afecta prod)
+supabase/.temp/
+supabase/.branches/
+supabase/migrations_old/
+supabase/migrations/20260101000000_initial.sql
+supabase/functions/.env
