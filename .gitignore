@@ -31,3 +31,7 @@ supabase/.branches/
 supabase/migrations_old/
 supabase/migrations/20260101000000_initial.sql
 supabase/functions/.env
+
+# Scripts locales de dev
+dev-start.sh
+dev-stop.sh
