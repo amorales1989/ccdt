@@ -8,6 +8,7 @@ import { AlertTriangle, FileText, Check, Loader2, X } from "lucide-react";
 import { updateStudent } from "@/lib/api";
 import { toast } from "sonner";
 import type { Student } from "@/types/database";
+import { isDemoMode } from "@/lib/demo";
 
 interface Props {
     profileId: string;
@@ -56,7 +57,7 @@ export function MissingDniAlertModal({ profileId, students }: Props) {
     };
 
     const visible = missing.filter((s) => !savedIds.has(s.id));
-    if (missing.length === 0) return null;
+    if (missing.length === 0 || isDemoMode()) return null;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>

@@ -175,3 +175,21 @@
 .delay-300 {
   animation-delay: 0.3s;
 }
+
+/* Modo demo: baja toda la app 36px para no quedar tapada por el banner fijo.
+   El transform crea un containing block, así los elementos fixed internos
+   (sidebar y header mobile) también se desplazan. */
+body.demo-mode .demo-shift-wrapper {
+  transform: translateY(2.25rem);
+}
+
+/* Y se restan esos 36px a las alturas de viewport para evitar scroll extra. */
+body.demo-mode .demo-shift-wrapper .min-h-screen {
+  min-height: calc(100vh - 2.25rem);
+}
+body.demo-mode .demo-shift-wrapper .min-h-svh {
+  min-height: calc(100svh - 2.25rem);
+}
+body.demo-mode .demo-shift-wrapper .h-svh {
+  height: calc(100svh - 2.25rem);
+}

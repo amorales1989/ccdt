@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
+import { isDemoMode } from '@/lib/demo';
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -21,7 +22,7 @@ export const InstallPWA = () => {
     }
   };
 
-  if (isInstalled || !isInstallable || !showBanner) {
+  if (isInstalled || !isInstallable || !showBanner || isDemoMode() || window.location.pathname.startsWith('/presentacion')) {
     return null;
   }
 

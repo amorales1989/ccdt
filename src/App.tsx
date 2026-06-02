@@ -30,7 +30,9 @@ import ResetPassword from "@/pages/ResetPassword";
 
 import Estadisticas from "./pages/Estadisticas";
 import TodosMiembros from "./pages/TodosMiembros";
+import Landing from "@/pages/Landing";
 import { NotificationHandler } from '@/components/NotificationHandler';
+import { DemoBanner } from '@/components/DemoBanner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +50,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider>
+          <DemoBanner />
+          <div className="demo-shift-wrapper">
           <RouterProvider
             router={createBrowserRouter([
               {
@@ -152,11 +156,16 @@ function App() {
                 element: <ResetPassword />,
               },
               {
+                path: "/presentacion",
+                element: <Landing />,
+              },
+              {
                 path: "*",
                 element: <Navigate to="/" replace />,
               },
             ])}
           />
+          </div>
           <NotificationHandler />
           <Toaster />
           <InstallPWA />

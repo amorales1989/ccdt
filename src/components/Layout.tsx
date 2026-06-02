@@ -8,6 +8,7 @@ import { PhoneCollectionModal } from "./PhoneCollectionModal";
 import { CompleteProfileModal } from "./CompleteProfileModal";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { CompanyProvider } from "@/contexts/CompanyContext";
+import { isDemoMode } from "@/lib/demo";
 
 export function Layout() {
   const { user, profile, loading } = useAuth();
@@ -23,8 +24,8 @@ export function Layout() {
             <main className={`flex-1 overflow-x-hidden ${isMobile ? 'pt-20' : 'p-4'}`}>
               <Outlet />
             </main>
-            <PhoneCollectionModal />
-            <CompleteProfileModal />
+            {!isDemoMode() && <PhoneCollectionModal />}
+            {!isDemoMode() && <CompleteProfileModal />}
           </div>
         </SidebarProvider>
       ) : (

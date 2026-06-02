@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Joyride, STATUS, EVENTS, type Step } from "react-joyride";
 import { useAuth } from "@/contexts/AuthContext";
+import { isDemoMode } from "@/lib/demo";
 
 interface TourGuideProps {
   tourKey: string;
@@ -49,6 +50,8 @@ export const TourGuide = ({
       onClose?.();
     }
   };
+
+  if (isDemoMode()) return null;
 
   return (
     <Joyride

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import type { User, Session } from "@supabase/supabase-js";
 import type { DepartmentType, AppRole, UserAssignment } from "@/types/database";
+import { isDemoMode, getDemoRole, buildDemoProfile, buildDemoUser, buildDemoSession, exitDemo } from "@/lib/demo";
 
 type Profile = {
   id: string;
@@ -99,6 +100,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   useEffect(() => {
+    // Modo demo: sesión simulada, sin tocar Supabase.
+    if (isDemoMode()) {
+      const role = getDemoRole();
+      setSession(buildDemoSession(role) as any);
+      setUser(buildDemoUser(role) as any);
+      setProfile(buildDemoProfile(role) as any);
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
@@ -276,6 +287,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
+    // Modo demo: salir limpia el flag y vuelve a la presentación.
+    if (isDemoMode()) {
+      exitDemo();
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      window.location.href = "/presentacion";
+      return;
+    }
     try {
       console.log("Starting sign out process");
 

@@ -3,6 +3,7 @@ import { StudentObservation } from "@/types/database";
 import type { Attendance, Student, Department, DepartmentType, Event, Profile } from "@/types/database";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { normalizeName } from "@/lib/utils";
+import { isDemoMode, resolveDemoApiCall } from "@/lib/demo";
 
 const normalizeStudentNames = <T extends Partial<Student>>(s: T): T => ({
   ...s,
@@ -23,6 +24,7 @@ const API_BASE_URL = getApiBaseUrl();
 
 // Función helper para hacer llamadas a la API
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  if (isDemoMode()) return resolveDemoApiCall(endpoint, options);
   const url = `${API_BASE_URL}${endpoint}`;
   const companyId = getPersistentCompanyId();
 
