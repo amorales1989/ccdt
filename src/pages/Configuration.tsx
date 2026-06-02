@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { isDemoMode } from "@/lib/demo";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 
@@ -209,6 +210,10 @@ export default function Configuration() {
   }, []);
 
   const handleConnectWhatsapp = async () => {
+    if (isDemoMode()) {
+      toast({ title: "Modo demo", description: "No se puede vincular WhatsApp en la demostración." });
+      return;
+    }
     try {
       setIsConnectingWhatsapp(true);
       await connectWhatsapp(getPersistentCompanyId());
@@ -228,6 +233,10 @@ export default function Configuration() {
   };
 
   const handleDisconnectWhatsapp = async () => {
+    if (isDemoMode()) {
+      toast({ title: "Modo demo", description: "Acción no disponible en la demostración." });
+      return;
+    }
     try {
       await disconnectWhatsapp(getPersistentCompanyId());
       toast({
@@ -244,6 +253,10 @@ export default function Configuration() {
   };
 
   const handleSendTestMessage = async () => {
+    if (isDemoMode()) {
+      toast({ title: "Modo demo", description: "No se envían mensajes en la demostración." });
+      return;
+    }
     if (!testPhoneNumber) {
       toast({
         title: "Campo requerido",
@@ -556,7 +569,7 @@ export default function Configuration() {
           ...(profile?.role === 'admin' ? [
             { value: 'permissions', label: 'Permisos', icon: Shield },
             { value: 'notifications', label: 'Notificaciones', icon: Bell },
-            { value: 'security', label: 'Seguridad', icon: KeyRound },
+            ...(isDemoMode() ? [] : [{ value: 'security', label: 'Seguridad', icon: KeyRound }]),
           ] : []),
         ]}
         className="mb-6 w-full md:w-fit"
@@ -970,7 +983,7 @@ export default function Configuration() {
         )}
 
         {/* ── TAB: Seguridad ──────────────────────────────────────────────── */}
-        {activeTab === 'security' && (
+        {activeTab === 'security' && !isDemoMode() && (
           <div className="mt-0 outline-none space-y-6">
             <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl overflow-hidden">
               <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">

@@ -12,6 +12,8 @@ import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { format, parseISO } from "date-fns";
+import { isDemoMode } from "@/lib/demo";
+import { toast } from "sonner";
 
 
 const AutorizacionRhema = () => {
@@ -77,6 +79,10 @@ const AutorizacionRhema = () => {
   };
 
   const generatePDF = async (data) => {
+    if (isDemoMode()) {
+      toast.success("Autorización generada con éxito. En el modo demo no se descargan autorizaciones.");
+      return;
+    }
     const fechaEventoFormatted = formatDate(data.fechaEvento);
 
     const doc = new jsPDF("p", "mm", "a4");

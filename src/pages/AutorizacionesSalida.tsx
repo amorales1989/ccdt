@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { generateBlankFichaSalud } from "@/lib/pdfUtils";
+import { isDemoMode } from "@/lib/demo";
 import { FileText, HelpCircle } from "lucide-react";
 import { TourGuide } from "@/components/TourGuide";
 import type { Step } from "react-joyride";
@@ -30,6 +31,13 @@ const AutorizacionesSalida = () => {
   });
 
   const handleDownloadFicha = () => {
+    if (isDemoMode()) {
+      toast({
+        title: "Ficha de Salud",
+        description: "En el modo demo no se descargan documentos.",
+      });
+      return;
+    }
     try {
       generateBlankFichaSalud(company);
       toast({

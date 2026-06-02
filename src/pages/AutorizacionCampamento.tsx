@@ -12,6 +12,8 @@ import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { TimePickerField } from "@/components/TimePickerField";
+import { isDemoMode } from "@/lib/demo";
+import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 
 const AutorizacionCampamento = () => {
@@ -123,6 +125,10 @@ const AutorizacionCampamento = () => {
   };
 
   const generatePDF = () => {
+    if (isDemoMode()) {
+      toast.success("Autorización generada con éxito. En el modo demo no se descargan autorizaciones.");
+      return;
+    }
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
