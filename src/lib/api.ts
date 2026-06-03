@@ -555,6 +555,23 @@ export const markAttendance = async (attendanceData: {
   }
 };
 
+export const deleteAttendanceByDate = async (params: {
+  date: string;
+  department_id?: string | null;
+  assigned_class?: string;
+}): Promise<number> => {
+  try {
+    const response = await apiCall('/attendance/by-date', {
+      method: 'DELETE',
+      body: JSON.stringify(params),
+    });
+    return response.deleted || 0;
+  } catch (error) {
+    console.error('Error deleting attendance by date:', error);
+    throw error;
+  }
+};
+
 export const getEvents = async (): Promise<Event[]> => {
   try {
     const { data, error } = await supabase

@@ -6,7 +6,17 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { getAttendance, getDepartmentByName, getDepartments, getStudents } from "@/lib/api";
-import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X, Save, MoreVertical, PersonStanding, CheckCircle2, Users } from "lucide-react";
+import { Download, Search, UserCheck, UserX, Calendar as CalendarIcon, PenSquare, Check, X, Save, MoreVertical, PersonStanding, CheckCircle2, Users, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from 'xlsx';
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DepartmentType, Attendance } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
-import { markAttendance } from "@/lib/api";
+import { markAttendance, deleteAttendanceByDate } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { TourGuide } from "@/components/TourGuide";
@@ -69,6 +79,9 @@ const HistorialAsistencia = () => {
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingAttendance, setDeletingAttendance] = useState(false);
 
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const isDirector = profile?.role === 'director' || profile?.role === 'vicedirector';
@@ -358,6 +371,49 @@ const HistorialAsistencia = () => {
     }
   };
 
+  const handleDeleteAttendanceByDate = async () => {
+    setDeletingAttendance(true);
+    try {
+      let departmentIdToUse = null;
+      if (isAdminOrSecretaria && selectedDepartment !== "all") {
+        const departmentData = await getDepartmentByName(selectedDepartment as DepartmentType);
+        if (departmentData && departmentData.id) {
+          departmentIdToUse = departmentData.id;
+        }
+      } else if (userDepartmentId) {
+        departmentIdToUse = userDepartmentId;
+      }
+      const classToFilter = (isAdminOrSecretaria || isDirector)
+        ? (selectedClass !== "all" ? selectedClass : undefined)
+        : (userClass || undefined);
+
+      const deleted = await deleteAttendanceByDate({
+        date: format(editDate, "yyyy-MM-dd"),
+        department_id: departmentIdToUse,
+        assigned_class: classToFilter,
+      });
+
+      toast({
+        title: "Asistencia eliminada",
+        description: `Se eliminaron ${deleted} registros de la fecha ${format(editDate, "dd/MM/yyyy")}.`,
+      });
+      setDeleteDialogOpen(false);
+      setEditRecords([]);
+      setRefreshTrigger(prev => prev + 1);
+      await refetchDateAttendance();
+      await refetchAttendance();
+    } catch (error) {
+      console.error("Error deleting attendance:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la asistencia. Intentá nuevamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingAttendance(false);
+    }
+  };
+
   const attendanceStats = {
     present: attendance.filter(record => record.status).length,
     absent: attendance.filter(record => !record.status).length
@@ -516,10 +572,10 @@ const HistorialAsistencia = () => {
         {/* ── Filtros ────────────────────────────────────────────────────── */}
         <div data-tour="hist-filtros" className="bg-white dark:bg-slate-900 rounded-3xl shadow-lg shadow-slate-200/50 dark:shadow-slate-900 border border-slate-100 dark:border-slate-800 px-5 py-4">
           {isEditMode ? (
-            <div className="flex flex-wrap items-center gap-3 animate-fade-in">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 animate-fade-in">
+              <div className="flex items-center gap-2 px-3 h-10 bg-slate-50 dark:bg-slate-800 rounded-2xl">
                 <CalendarIcon className="h-4 w-4 text-purple-500 shrink-0" />
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha de edición</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Fecha</span>
                 <DatePickerField
                   value={editDate}
                   onChange={handleEditDateSelect}
@@ -544,6 +600,14 @@ const HistorialAsistencia = () => {
                   </Select>
                 </div>
               )}
+              <button
+                onClick={() => setDeleteDialogOpen(true)}
+                className="flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-[11px] font-black uppercase tracking-widest border border-rose-200 transition-all w-full sm:w-auto sm:ml-auto"
+                title="Eliminar toda la asistencia de esta fecha"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Borrar fecha
+              </button>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
@@ -763,6 +827,32 @@ const HistorialAsistencia = () => {
           )}
         </div>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar la asistencia de esta fecha?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminarán <strong>todos</strong> los registros de asistencia del{" "}
+              <strong>{format(editDate, "dd/MM/yyyy")}</strong>
+              {(isAdminOrSecretaria || isDirector) && selectedClass !== "all" && (
+                <> para la clase <strong>{selectedClass}</strong></>
+              )}
+              . Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingAttendance}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeleteAttendanceByDate(); }}
+              disabled={deletingAttendance}
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              {deletingAttendance ? "Eliminando..." : "Sí, eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -632,7 +632,7 @@ const ListarAlumnos = () => {
     }
   };
 
-  // ============ FUNCIÓN PARA MARCAR COMO NO NUEVO USANDO BACKEND API ============
+  // ============ FUNCIÓN PARA marcar como regular  USANDO BACKEND API ============
   const handleMarkAsOld = async (studentId: string) => {
     try {
       await updateStudent(studentId, { nuevo: false });
@@ -1237,7 +1237,7 @@ const ListarAlumnos = () => {
             </DropdownMenuItem>
             {student.nuevo && (
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}>
-                <Check className="mr-2 h-4 w-4" /> Marcar como no nuevo
+                <Check className="mr-2 h-4 w-4" /> marcar como regular 
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setExpandedStudentId(student.id); }}>
@@ -1319,7 +1319,7 @@ const ListarAlumnos = () => {
           </CustomTooltip>
 
           {student.nuevo ? (
-            <CustomTooltip title="Marcar como no nuevo">
+            <CustomTooltip title="marcar como regular ">
               <Button
                 variant="ghost"
                 size="sm"
