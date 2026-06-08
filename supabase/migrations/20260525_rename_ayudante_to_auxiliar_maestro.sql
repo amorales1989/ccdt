@@ -3,7 +3,17 @@
 -- y agregar miembros limitado a su departamento/clase (igual que maestro).
 
 -- 1. Renombrar el valor del enum (actualiza automaticamente profiles.role y demas columnas)
-ALTER TYPE app_role RENAME VALUE 'ayudante' TO 'auxiliar_maestro';
+-- Solo si todavia existe 'ayudante' (la initial ya puede traer 'auxiliar_maestro')
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_enum e
+    JOIN pg_type t ON t.oid = e.enumtypid
+    WHERE t.typname = 'app_role' AND e.enumlabel = 'ayudante'
+  ) THEN
+    ALTER TYPE app_role RENAME VALUE 'ayudante' TO 'auxiliar_maestro';
+  END IF;
+END $$;
 
 -- 2. Migrar overrides de permisos guardados por empresa (JSON key)
 UPDATE companies

@@ -851,6 +851,19 @@ export const testWhatsappMessage = async (companyId: string | number, phoneNumbe
   }
 };
 
+export const runBirthdayCron = async (companyId: string | number) => {
+  try {
+    const response = await apiCall('/whatsapp/run-birthday-cron', {
+      method: 'POST',
+      body: JSON.stringify({ companyId }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Error running birthday cron:', error);
+    throw error;
+  }
+};
+
 // ============ FUNCIONES DE OBSERVACIONES DE MIEMBROS ============
 
 // ============ FUNCIONES DE INFORMES DE PERSONAL ============

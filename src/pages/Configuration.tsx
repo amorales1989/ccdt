@@ -10,8 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage } from "@/lib/api";
-import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell, KeyRound } from "lucide-react";
+import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage, runBirthdayCron } from "@/lib/api";
+import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell, KeyRound, Cake } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
@@ -98,6 +98,7 @@ export default function Configuration() {
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [testMessage, setTestMessage] = useState("¡Hola! Mensaje de prueba de WhatsApp.");
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isRunningBirthdayCron, setIsRunningBirthdayCron] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>(DEFAULT_PERMISSIONS);
   const [notificationSettings, setNotificationSettings] = useState<Record<string, string[]>>(DEFAULT_NOTIFICATIONS);
@@ -281,6 +282,29 @@ export default function Configuration() {
       });
     } finally {
       setIsSendingTest(false);
+    }
+  };
+
+  const handleRunBirthdayCron = async () => {
+    if (isDemoMode()) {
+      toast({ title: "Modo demo", description: "No se ejecuta el cron en la demostración." });
+      return;
+    }
+    try {
+      setIsRunningBirthdayCron(true);
+      await runBirthdayCron(getPersistentCompanyId());
+      toast({
+        title: "Cron ejecutado",
+        description: "La verificación de cumpleaños se ejecutó correctamente.",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "No se pudo ejecutar el cron de cumpleaños.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRunningBirthdayCron(false);
     }
   };
 
@@ -881,6 +905,30 @@ export default function Configuration() {
                     </Button>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-purple-500/5 overflow-hidden">
+              <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
+                <div className="flex items-center gap-4">
+                  <div className="bg-pink-100 dark:bg-pink-900/30 p-2.5 rounded-xl text-pink-600 dark:text-pink-400 shadow-inner">
+                    <Cake className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Cron de Cumpleaños</CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Ejecuta manualmente la verificación diaria de cumpleaños (normalmente 08:00 AM).</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 md:p-8">
+                <Button
+                  className="w-full bg-gradient-to-r from-pink-600 to-rose-700 hover:from-pink-700 hover:to-rose-800 text-white shadow-xl shadow-pink-500/10 rounded-xl h-11 font-black uppercase text-[10px] tracking-widest gap-2"
+                  onClick={handleRunBirthdayCron}
+                  disabled={isRunningBirthdayCron}
+                >
+                  {isRunningBirthdayCron ? <Loader2 className="h-4 w-4 animate-spin" /> : <Cake className="h-3.5 w-3.5" />}
+                  Ejecutar Ahora
+                </Button>
               </CardContent>
             </Card>
           </div>
