@@ -25,6 +25,7 @@ import AutorizacionCampamento from "./pages/AutorizacionCampamento";
 import Material from "@/pages/Material";
 import Mantenimiento from "@/pages/Mantenimiento";
 import InformesPersonal from "./pages/InformesPersonal";
+import RegistroTemas from "@/pages/RegistroTemas";
 import ResetPassword from "@/pages/ResetPassword";
 
 
@@ -101,6 +102,10 @@ function App() {
                   {
                     path: "/informes",
                     element: <InformesPersonal />,
+                  },
+                  {
+                    path: "/registro-temas",
+                    element: <RegistroTemas />,
                   },
 
 

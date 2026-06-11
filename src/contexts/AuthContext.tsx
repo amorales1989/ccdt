@@ -5,6 +5,17 @@ import type { User, Session } from "@supabase/supabase-js";
 import type { DepartmentType, AppRole, UserAssignment } from "@/types/database";
 import { isDemoMode, getDemoRole, buildDemoProfile, buildDemoUser, buildDemoSession, exitDemo } from "@/lib/demo";
 
+const resolveLocalBackendUrl = async (): Promise<string> => {
+  if (typeof window === 'undefined' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+    return 'https://ccdt-back.onrender.com/api';
+  }
+  try {
+    const res = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(1000) });
+    if (res.ok) return 'http://localhost:3001/api';
+  } catch {}
+  return 'http://localhost:3002/api';
+};
+
 type Profile = {
   id: string;
   first_name: string | null;
@@ -80,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (!currentSession) return;
-        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const apiBase = import.meta.env.VITE_API_URL || (await resolveLocalBackendUrl());
         await fetch(`${apiBase.replace(/\/api$/, '')}/api/heartbeat`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${currentSession.access_token}` },

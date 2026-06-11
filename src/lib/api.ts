@@ -20,12 +20,29 @@ const getApiBaseUrl = () => {
   return import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://ccdt-back.onrender.com/api';
 };
 
+const resolveLocalPort = async (): Promise<string> => {
+  try {
+    const res = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(1000) });
+    if (res.ok) return 'http://localhost:3001/api';
+  } catch {}
+  return 'http://localhost:3002/api';
+};
+
+let _resolvedLocalUrl: string | null = null;
+const getResolvedBaseUrl = async (): Promise<string> => {
+  const base = getApiBaseUrl();
+  if (!base.includes('localhost')) return base;
+  if (!_resolvedLocalUrl) _resolvedLocalUrl = await resolveLocalPort();
+  return _resolvedLocalUrl;
+};
+
 const API_BASE_URL = getApiBaseUrl();
 
 // Función helper para hacer llamadas a la API
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   if (isDemoMode()) return resolveDemoApiCall(endpoint, options);
-  const url = `${API_BASE_URL}${endpoint}`;
+  const baseUrl = await getResolvedBaseUrl();
+  const url = `${baseUrl}${endpoint}`;
   const companyId = getPersistentCompanyId();
 
   // Obtener el token de autenticación de Supabase
@@ -1130,4 +1147,62 @@ export const searchProfiles = async (query: string): Promise<ProfileSearchResult
   if (!query.trim()) return [];
   const response = await apiCall(`/profiles/search?q=${encodeURIComponent(query)}`);
   return response?.data || [];
+};
+
+// ============ REGISTRO DE TEMAS ============
+
+export interface TopicRecord {
+  id: string;
+  company_id: number;
+  department_id?: string;
+  assigned_class?: string;
+  created_by: string;
+  fecha: string;
+  tema?: string;
+  base_biblica?: string;
+  ensenanza_principal?: string;
+  versiculo_memorizar?: string;
+  actividad_practica?: string;
+  estadistica_total?: number;
+  estadistica_presentes_regulares?: number;
+  estadistica_presentes_nuevos?: number;
+  estadistica_ausentes?: number;
+  firma?: string;
+  observaciones?: string;
+  created_at: string;
+  updated_at: string;
+  author?: { first_name: string; last_name: string } | null;
+}
+
+export const getTopicRecords = async (
+  userId: string,
+  userRole: string,
+  departmentId?: string,
+  assignedClass?: string
+): Promise<TopicRecord[]> => {
+  const params = new URLSearchParams({ user_id: userId, user_role: userRole });
+  if (departmentId) params.append('department_id', departmentId);
+  if (assignedClass) params.append('assigned_class', assignedClass);
+  const response = await apiCall(`/topic-records?${params.toString()}`);
+  return response?.data || [];
+};
+
+export const createTopicRecord = async (record: Omit<TopicRecord, 'id' | 'company_id' | 'created_at' | 'updated_at' | 'author'>): Promise<TopicRecord> => {
+  const response = await apiCall('/topic-records', {
+    method: 'POST',
+    body: JSON.stringify(record),
+  });
+  return response.data;
+};
+
+export const updateTopicRecord = async (id: string, record: Partial<TopicRecord>): Promise<TopicRecord> => {
+  const response = await apiCall(`/topic-records/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(record),
+  });
+  return response.data;
+};
+
+export const deleteTopicRecord = async (id: string): Promise<void> => {
+  await apiCall(`/topic-records/${id}`, { method: 'DELETE' });
 };

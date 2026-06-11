@@ -71,6 +71,7 @@ const getItems = (role: string | undefined, profile: any, unreadReportsCount: nu
     { title: "Promover Miembros", url: "/promover", icon: FolderUp },
     { title: "Historial", url: "/historial", icon: History },
     { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
+    { title: "Registro de Temas", url: "/registro-temas", icon: ClipboardCheck },
     { title: "Departamentos", url: "/departamentos", icon: FolderIcon },
     { title: "Gestión de Usuarios", url: "/gestion-usuarios", icon: UserRound },
   ];
@@ -97,6 +98,7 @@ const iconBgMap: Record<string, string> = {
   "Material Didáctico": "bg-emerald-100 text-emerald-600",
   "Mantenimiento": "bg-orange-100 text-orange-600",
   "Solicitar Reparación": "bg-orange-100 text-orange-600",
+  "Registro de Temas": "bg-lime-100 text-lime-600",
   "Informes de Personal": "bg-purple-100 text-purple-600",
   "Notificaciones": "bg-pink-100 text-pink-600",
 };
@@ -230,6 +232,7 @@ const NavigationContent = ({
     "Promover Miembros": "menu_promover",
     "Autorizaciones": "menu_autorizaciones",
     "Estadísticas": "menu_estadisticas",
+    "Registro de Temas": "menu_registro_temas",
     "Informes de Personal": "menu_informes",
     "Material Didáctico": "menu_material",
     "Departamentos": "menu_departamentos",
