@@ -322,18 +322,24 @@ export default function RegistroTemas() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground w-10">Desde</span>
               <Input
-                type="date"
+                type={filterDateFrom ? "date" : "text"}
                 className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
                 value={filterDateFrom}
+                placeholder="dd/mm/aaaa"
+                onFocus={e => { e.target.type = "date"; }}
+                onBlur={e => { if (!e.target.value) e.target.type = "text"; }}
                 onChange={e => setFilterDateFrom(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground w-10">Hasta</span>
               <Input
-                type="date"
+                type={filterDateTo ? "date" : "text"}
                 className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
                 value={filterDateTo}
+                placeholder="dd/mm/aaaa"
+                onFocus={e => { e.target.type = "date"; }}
+                onBlur={e => { if (!e.target.value) e.target.type = "text"; }}
                 onChange={e => setFilterDateTo(e.target.value)}
               />
               {(filterDateFrom || filterDateTo || filterClassFE) && (
