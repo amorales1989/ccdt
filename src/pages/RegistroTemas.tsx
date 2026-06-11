@@ -4,8 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
   getTopicRecords, createTopicRecord, updateTopicRecord, deleteTopicRecord,
-  TopicRecord
+  getDepartments, TopicRecord
 } from "@/lib/api";
+import type { Department } from "@/types/database";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,15 +72,44 @@ export default function RegistroTemas() {
   const departmentId = profile?.department_id || "";
   const assignedClass = profile?.assigned_class || "";
 
+  const isAdminOrSecretary = role === 'admin' || role === 'secretaria';
+  const isDirectorLevel = ['director', 'vicedirector', 'director_general'].includes(role);
+
+  const [filterDeptId, setFilterDeptId] = useState<string>('');
+  const [filterClass, setFilterClass] = useState<string>('');
+  const [filterClassFE, setFilterClassFE] = useState<string>('');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
+
   const { data: company } = useCompanyQuery({
     queryKey: ['company', getPersistentCompanyId()],
     queryFn: () => getCompany(getPersistentCompanyId()),
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: allDepartments = [] } = useQuery<Department[]>({
+    queryKey: ['departments'],
+    queryFn: getDepartments,
+    enabled: isAdminOrSecretary,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const selectedDept = allDepartments.find(d => d.id === filterDeptId);
+  const availableClasses: string[] = selectedDept?.classes || [];
+
+  // Para directors: pasan su dept_id sin filtrar por clase (ven todas las clases del dept)
+  // Para admin/secretaria: filtros opcionales desde la UI
+  // Para maestros: el backend filtra por created_by
+  const queryDeptId = isAdminOrSecretary ? (filterDeptId || undefined)
+    : isDirectorLevel ? (departmentId || undefined)
+    : (departmentId || undefined);
+  const queryClass = isAdminOrSecretary ? (filterClass || undefined)
+    : isDirectorLevel ? undefined
+    : (assignedClass || undefined);
+
   const { data: records = [], isLoading } = useQuery({
-    queryKey: ["topic_records", userId, role, departmentId, assignedClass],
-    queryFn: () => getTopicRecords(userId, role, departmentId, assignedClass),
+    queryKey: ["topic_records", userId, role, queryDeptId, queryClass],
+    queryFn: () => getTopicRecords(userId, role, queryDeptId, queryClass),
     enabled: !!userId,
   });
 
@@ -168,8 +201,19 @@ export default function RegistroTemas() {
   const presNuevos = parseInt(form.estadistica_presentes_nuevos || "0") || 0;
   const totalPresentes = presRegulares + presNuevos;
 
-  // Ordenar por fecha descendente
+  const showClassCol = isAdminOrSecretary || isDirectorLevel;
+
+  // Clases únicas para filtro frontend (director-level)
+  const directorClassOptions = isDirectorLevel
+    ? ([...new Set(records.map(r => r.assigned_class).filter(Boolean))] as string[])
+    : [];
+
   const sorted = [...records].sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  const displayed = sorted
+    .filter(r => !filterClassFE || r.assigned_class === filterClassFE)
+    .filter(r => !filterDateFrom || r.fecha >= filterDateFrom)
+    .filter(r => !filterDateTo || r.fecha <= filterDateTo);
 
   return (
     <div className="p-4 w-full">
@@ -182,15 +226,15 @@ export default function RegistroTemas() {
         <div className="flex items-center gap-2 ml-auto">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold">
             <BookOpenCheck className="h-3 w-3 text-slate-400" />
-            {sorted.length} {sorted.length === 1 ? 'registro' : 'registros'}
+            {displayed.length} {displayed.length === 1 ? 'registro' : 'registros'}
           </span>
 
-          {sorted.length > 0 && (
+          {displayed.length > 0 && (
             <Button
               variant="outline"
               className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
               onClick={() => exportTopicRecordsPdf(
-                sorted,
+                displayed,
                 company?.congregation_name || company?.name || 'CCDT',
                 profile?.departments?.[0],
                 assignedClass || undefined,
@@ -211,15 +255,100 @@ export default function RegistroTemas() {
         </div>
       </div>
 
+      {(isAdminOrSecretary || isDirectorLevel) && (
+        <div className="flex flex-wrap gap-3 mb-4">
+          {isAdminOrSecretary && (
+            <>
+              <Select
+                value={filterDeptId || '__all__'}
+                onValueChange={v => {
+                  setFilterDeptId(v === '__all__' ? '' : v);
+                  setFilterClass('');
+                }}
+              >
+                <SelectTrigger className="w-[200px] h-9 text-sm rounded-xl border-slate-200">
+                  <SelectValue placeholder="Todos los departamentos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todos los departamentos</SelectItem>
+                  {allDepartments.map(d => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filterClass || '__all__'}
+                onValueChange={v => setFilterClass(v === '__all__' ? '' : v)}
+                disabled={!filterDeptId || availableClasses.length === 0}
+              >
+                <SelectTrigger className="w-[160px] h-9 text-sm rounded-xl border-slate-200">
+                  <SelectValue placeholder="Todas las clases" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todas las clases</SelectItem>
+                  {availableClasses.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+
+          {isDirectorLevel && directorClassOptions.length > 0 && (
+            <Select
+              value={filterClassFE || '__all__'}
+              onValueChange={v => setFilterClassFE(v === '__all__' ? '' : v)}
+            >
+              <SelectTrigger className="w-[160px] h-9 text-sm rounded-xl border-slate-200">
+                <SelectValue placeholder="Todas las clases" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todas las clases</SelectItem>
+                {directorClassOptions.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
+              value={filterDateFrom}
+              onChange={e => setFilterDateFrom(e.target.value)}
+              placeholder="Desde"
+            />
+            <span className="text-muted-foreground text-sm">—</span>
+            <Input
+              type="date"
+              className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
+              value={filterDateTo}
+              onChange={e => setFilterDateTo(e.target.value)}
+              placeholder="Hasta"
+            />
+            {(filterDateFrom || filterDateTo || filterClassFE) && (
+              <button
+                onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setFilterClassFE(''); }}
+                className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : sorted.length === 0 ? (
+      ) : displayed.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <BookOpenCheck className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p>No hay registros todavía.</p>
-          <p className="text-sm">Creá el primer registro de tema.</p>
+          <p>No hay registros que coincidan con los filtros.</p>
+          <p className="text-sm">Probá con otros valores o limpiá los filtros.</p>
         </div>
       ) : (
         <div className="border rounded-lg overflow-x-auto">
@@ -227,6 +356,7 @@ export default function RegistroTemas() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="w-[90px]">Fecha</TableHead>
+                {showClassCol && <TableHead className="w-[110px]">Clase</TableHead>}
                 <TableHead>Tema</TableHead>
                 <TableHead className="table-cell">Base Bíblica</TableHead>
                 <TableHead className="table-cell">Enseñanza Principal</TableHead>
@@ -242,12 +372,17 @@ export default function RegistroTemas() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map((record, i) => {
+              {displayed.map((record, i) => {
                 return (
                   <TableRow key={record.id} className={i % 2 === 0 ? "" : "bg-muted/20"}>
                     <TableCell className="font-medium text-primary text-sm whitespace-nowrap">
                       {fmt(record.fecha)}
                     </TableCell>
+                    {showClassCol && (
+                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                        {record.assigned_class || "—"}
+                      </TableCell>
+                    )}
                     <TableCell className="max-w-[160px]">
                       <CustomTooltip title={record.tema || ""} placement="top" arrow>
                         <p className="truncate text-sm font-medium">{record.tema || <span className="text-muted-foreground italic">—</span>}</p>
