@@ -72,6 +72,7 @@ export default function RegistroTemas() {
   const departmentId = profile?.department_id || "";
   const assignedClass = profile?.assigned_class || "";
 
+  const isMaestro = role === 'maestro' || role === 'auxiliar_maestro';
   const isAdminOrSecretary = role === 'admin' || role === 'secretaria';
   const isDirectorLevel = ['director', 'vicedirector', 'director_general'].includes(role);
 
@@ -246,97 +247,104 @@ export default function RegistroTemas() {
             </Button>
           )}
 
-          <Button
-            onClick={openNew}
-            className="button-gradient rounded-xl font-black h-10 px-5 shadow-lg shadow-primary/20"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo registro
-          </Button>
+          {isMaestro && (
+            <Button
+              onClick={openNew}
+              className="button-gradient rounded-xl font-black h-10 px-5 shadow-lg shadow-primary/20"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo registro
+            </Button>
+          )}
         </div>
       </div>
 
       {(isAdminOrSecretary || isDirectorLevel) && (
-        <div className="flex flex-wrap gap-3 mb-4">
-          {isAdminOrSecretary && (
-            <>
-              <Select
-                value={filterDeptId || '__all__'}
-                onValueChange={v => {
-                  setFilterDeptId(v === '__all__' ? '' : v);
-                  setFilterClass('');
-                }}
-              >
-                <SelectTrigger className="w-[200px] h-9 text-sm rounded-xl border-slate-200">
-                  <SelectValue placeholder="Todos los departamentos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Todos los departamentos</SelectItem>
-                  {allDepartments.map(d => (
-                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <div className="flex flex-col gap-2 mb-4">
+          <div className="flex flex-wrap gap-2">
+            {isAdminOrSecretary && (
+              <>
+                <Select
+                  value={filterDeptId || '__all__'}
+                  onValueChange={v => {
+                    setFilterDeptId(v === '__all__' ? '' : v);
+                    setFilterClass('');
+                  }}
+                >
+                  <SelectTrigger className="h-9 w-full sm:w-[200px] text-sm rounded-xl border-slate-200">
+                    <SelectValue placeholder="Todos los departamentos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Todos los departamentos</SelectItem>
+                    {allDepartments.map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
+                <Select
+                  value={filterClass || '__all__'}
+                  onValueChange={v => setFilterClass(v === '__all__' ? '' : v)}
+                  disabled={!filterDeptId || availableClasses.length === 0}
+                >
+                  <SelectTrigger className="h-9 w-full sm:w-[160px] text-sm rounded-xl border-slate-200">
+                    <SelectValue placeholder="Todas las clases" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Todas las clases</SelectItem>
+                    {availableClasses.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+
+            {isDirectorLevel && directorClassOptions.length > 0 && (
               <Select
-                value={filterClass || '__all__'}
-                onValueChange={v => setFilterClass(v === '__all__' ? '' : v)}
-                disabled={!filterDeptId || availableClasses.length === 0}
+                value={filterClassFE || '__all__'}
+                onValueChange={v => setFilterClassFE(v === '__all__' ? '' : v)}
               >
-                <SelectTrigger className="w-[160px] h-9 text-sm rounded-xl border-slate-200">
+                <SelectTrigger className="h-9 w-full sm:w-[160px] text-sm rounded-xl border-slate-200">
                   <SelectValue placeholder="Todas las clases" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Todas las clases</SelectItem>
-                  {availableClasses.map(c => (
+                  {directorClassOptions.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </>
-          )}
-
-          {isDirectorLevel && directorClassOptions.length > 0 && (
-            <Select
-              value={filterClassFE || '__all__'}
-              onValueChange={v => setFilterClassFE(v === '__all__' ? '' : v)}
-            >
-              <SelectTrigger className="w-[160px] h-9 text-sm rounded-xl border-slate-200">
-                <SelectValue placeholder="Todas las clases" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas las clases</SelectItem>
-                {directorClassOptions.map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <div className="flex items-center gap-2">
-            <Input
-              type="date"
-              className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
-              value={filterDateFrom}
-              onChange={e => setFilterDateFrom(e.target.value)}
-              placeholder="Desde"
-            />
-            <span className="text-muted-foreground text-sm">—</span>
-            <Input
-              type="date"
-              className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
-              value={filterDateTo}
-              onChange={e => setFilterDateTo(e.target.value)}
-              placeholder="Hasta"
-            />
-            {(filterDateFrom || filterDateTo || filterClassFE) && (
-              <button
-                onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setFilterClassFE(''); }}
-                className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-              >
-                Limpiar
-              </button>
             )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground w-10">Desde</span>
+              <Input
+                type="date"
+                className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
+                value={filterDateFrom}
+                onChange={e => setFilterDateFrom(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground w-10">Hasta</span>
+              <Input
+                type="date"
+                className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
+                value={filterDateTo}
+                onChange={e => setFilterDateTo(e.target.value)}
+              />
+              {(filterDateFrom || filterDateTo || filterClassFE) && (
+                <button
+                  onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setFilterClassFE(''); }}
+                  className="text-xs text-muted-foreground hover:text-destructive transition-colors whitespace-nowrap"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -437,9 +445,12 @@ export default function RegistroTemas() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(record)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        {role !== 'auxiliar_maestro' && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(record)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {role !== 'auxiliar_maestro' && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive">
@@ -462,6 +473,7 @@ export default function RegistroTemas() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
