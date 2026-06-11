@@ -18,6 +18,7 @@ export const exportTopicRecordsPdf = (
   companyName = 'CCDT',
   departmentName?: string,
   assignedClass?: string,
+  showClassCol = false,
 ) => {
   const doc = new jsPDF('l', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -48,6 +49,7 @@ export const exportTopicRecordsPdf = (
   // ── TABLA ───────────────────────────────────────────────────────────────────
   // Columnas con dataKey para identificarlas en callbacks
   const columns = [
+    ...(showClassCol ? [{ header: 'Clase', dataKey: 'clase' }] : []),
     { header: 'Fecha',              dataKey: 'fecha' },
     { header: 'Tema',               dataKey: 'tema' },
     { header: 'Base Bíblica',       dataKey: 'base_biblica' },
@@ -63,6 +65,7 @@ export const exportTopicRecordsPdf = (
   ];
 
   const body = sorted.map(r => ({
+    clase:      r.assigned_class || '',
     fecha:      fmtDate(r.fecha),
     tema:       r.tema || '',
     base_biblica: r.base_biblica || '',
@@ -98,6 +101,7 @@ export const exportTopicRecordsPdf = (
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     columnStyles: {
+      clase:        { cellWidth: 22 },
       fecha:        { cellWidth: 18, halign: 'center' },
       tema:         { cellWidth: 38 },
       base_biblica: { cellWidth: 24 },

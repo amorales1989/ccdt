@@ -238,6 +238,7 @@ export default function RegistroTemas() {
                 company?.congregation_name || company?.name || 'CCDT',
                 profile?.departments?.[0],
                 assignedClass || undefined,
+                showClassCol,
               )}
             >
               <FileDown className="h-4 w-4 mr-2" />
@@ -355,8 +356,8 @@ export default function RegistroTemas() {
           <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[90px]">Fecha</TableHead>
                 {showClassCol && <TableHead className="w-[110px]">Clase</TableHead>}
+                <TableHead className="w-[90px]">Fecha</TableHead>
                 <TableHead>Tema</TableHead>
                 <TableHead className="table-cell">Base Bíblica</TableHead>
                 <TableHead className="table-cell">Enseñanza Principal</TableHead>
@@ -375,14 +376,14 @@ export default function RegistroTemas() {
               {displayed.map((record, i) => {
                 return (
                   <TableRow key={record.id} className={i % 2 === 0 ? "" : "bg-muted/20"}>
-                    <TableCell className="font-medium text-primary text-sm whitespace-nowrap">
-                      {fmt(record.fecha)}
-                    </TableCell>
                     {showClassCol && (
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {record.assigned_class || "—"}
                       </TableCell>
                     )}
+                    <TableCell className="font-medium text-primary text-sm whitespace-nowrap">
+                      {fmt(record.fecha)}
+                    </TableCell>
                     <TableCell className="max-w-[160px]">
                       <CustomTooltip title={record.tema || ""} placement="top" arrow>
                         <p className="truncate text-sm font-medium">{record.tema || <span className="text-muted-foreground italic">—</span>}</p>
