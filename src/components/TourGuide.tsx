@@ -53,9 +53,13 @@ export const TourGuide = ({
 
   if (isDemoMode()) return null;
 
+  // react-joyride 3.x: skipBeacon (no disableBeacon) hace que el tooltip
+  // aparezca directo sin el punto/beacon que requiere click.
+  const stepsNoBeacon = steps.map((s) => ({ ...s, skipBeacon: true }));
+
   return (
     <Joyride
-      steps={steps}
+      steps={stepsNoBeacon}
       run={run}
       continuous
       showSkipButton

@@ -156,7 +156,7 @@ export function NameSearchInput({
                                         {person.source === 'student' ? (
                                             <Avatar className="h-8 w-8 shrink-0 border border-slate-200">
                                                 <AvatarImage
-                                                    src={(person as any).photo_url || ((person.gender || '').toLowerCase() === 'femenino' ? '/avatarM.png' : '/avatarH.png')}
+                                                    src={(person as any).photo_url || ((person.gender || '').toLowerCase() === 'femenino' ? '/avatarM.svg' : '/avatarH.svg')}
                                                     alt={person.first_name}
                                                     className="object-cover"
                                                 />

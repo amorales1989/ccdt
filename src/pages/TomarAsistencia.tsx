@@ -340,7 +340,7 @@ const TomarAsistencia = () => {
         {/* Photo */}
         <Avatar className="h-10 w-10 border border-slate-200 shadow-sm shrink-0">
           <AvatarImage
-            src={student.photo_url || (isFemale ? '/avatarM.png' : '/avatarH.png')}
+            src={student.photo_url || (isFemale ? '/avatarM.svg' : '/avatarH.svg')}
             alt={student.first_name}
             className="object-cover"
           />

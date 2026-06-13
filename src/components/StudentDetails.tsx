@@ -7,6 +7,7 @@ import { Student } from "@/types/database";
 import { StudentObservations } from "./StudentObservations";
 import { User, MapPin, Phone, Calendar, Hash, Building2, BookA, UserSquare2 } from "lucide-react";
 import { PhotoUpload } from "./PhotoUpload";
+import { formatDni } from "@/lib/utils";
 
 interface StudentDetailsProps {
   student: Student;
@@ -75,7 +76,7 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
                 <Hash className="h-4 w-4 text-slate-400 mt-0.5" />
                 <div>
                   <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Documento</p>
-                  <p className="font-medium text-foreground">{student.document_number}</p>
+                  <p className="font-medium text-foreground">{formatDni(student.document_number)}</p>
                 </div>
               </div>
             )}

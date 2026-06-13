@@ -457,7 +457,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-gradient-hero opacity-[0.04]" />
         <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute top-40 -left-32 h-80 w-80 rounded-full bg-violet-400/10 blur-3xl" />
-        <div className="relative max-w-6xl mx-auto px-5 pt-16 pb-20 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="relative max-w-6xl mx-auto px-5 pt-10 pb-12 grid lg:grid-cols-2 gap-12 items-center">
           <div data-reveal className="opacity-0 translate-y-6 transition-all duration-700">
             <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-primary text-xs font-semibold px-3 py-1.5">
               <Sparkles className="h-3.5 w-3.5" /> La plataforma todo-en-uno para tu organización
@@ -494,7 +494,7 @@ export default function Landing() {
 
       {/* Stats strip */}
       <section className="border-y border-slate-100 bg-slate-50/60">
-        <div className="max-w-6xl mx-auto px-5 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div className="max-w-6xl mx-auto px-5 py-5 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
             { v: "9+", l: "Módulos integrados" },
             { v: "100%", l: "En la nube y PWA" },
@@ -510,16 +510,16 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section id="funciones" className="max-w-6xl mx-auto px-5 py-20">
+      <section id="funciones" className="max-w-6xl mx-auto px-5 py-10">
         <div className="text-center max-w-2xl mx-auto" data-reveal>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 opacity-0 translate-y-6 transition-all duration-700">
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
             Todo lo que tu organización necesita
           </h2>
-          <p className="mt-4 text-slate-500">
+          <p className="mt-3 text-slate-500">
             Reemplazá planillas, grupos de chat y papeles por una plataforma única.
           </p>
         </div>
-        <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((f, i) => (
             <div
               key={f.title}
@@ -539,7 +539,7 @@ export default function Landing() {
 
       {/* Demos alternating */}
       <section id="demos" className="bg-slate-50/60 border-y border-slate-100">
-        <div className="max-w-6xl mx-auto px-5 py-20 space-y-24">
+        <div className="max-w-6xl mx-auto px-5 py-10 space-y-12">
           {/* Demo 1 */}
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div data-reveal className="opacity-0 translate-y-6 transition-all duration-700 order-2 lg:order-1">
@@ -603,7 +603,7 @@ export default function Landing() {
       </section>
 
       {/* Significado del nombre */}
-      <section className="max-w-3xl mx-auto px-5 py-16 text-center">
+      <section className="max-w-3xl mx-auto px-5 py-8 text-center">
         <div data-reveal className="opacity-0 translate-y-6 transition-all duration-700">
           <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-primary text-xs font-semibold px-3 py-1.5">
             <Sparkles className="h-3.5 w-3.5" /> El nombre lo dice todo
@@ -621,7 +621,7 @@ export default function Landing() {
       </section>
 
       {/* Roles */}
-      <section id="roles" className="max-w-6xl mx-auto px-5 py-20">
+      <section id="roles" className="max-w-6xl mx-auto px-5 py-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div data-reveal className="opacity-0 translate-y-6 transition-all duration-700">
             <div className="inline-flex h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 grid place-items-center text-white mb-4">
@@ -663,7 +663,7 @@ export default function Landing() {
       {/* Mobile / PWA */}
       <section id="movil" className="bg-gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_30%,white,transparent_60%)]" />
-        <div className="relative max-w-6xl mx-auto px-5 py-20 grid lg:grid-cols-2 gap-12 items-center text-white">
+        <div className="relative max-w-6xl mx-auto px-5 py-12 grid lg:grid-cols-2 gap-12 items-center text-white">
           <div data-reveal className="opacity-0 translate-y-6 transition-all duration-700">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/15 text-white text-xs font-semibold px-3 py-1.5">
               <Smartphone className="h-3.5 w-3.5" /> Progressive Web App
@@ -690,7 +690,7 @@ export default function Landing() {
       </section>
 
       {/* Final CTA */}
-      <section className="max-w-4xl mx-auto px-5 py-24 text-center">
+      <section className="max-w-4xl mx-auto px-5 py-12 text-center">
         <div data-reveal className="opacity-0 translate-y-6 transition-all duration-700">
           <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">
             ¿Te interesa Nexus para tu organización?
@@ -708,7 +708,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="border-t border-slate-100">
-        <div className="max-w-6xl mx-auto px-5 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-5 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <img src="/fire.png" alt="Nexus" className="h-7 w-7 object-contain" />
             <span className="font-bold">Nexus</span>

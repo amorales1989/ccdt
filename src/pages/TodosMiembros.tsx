@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getStudents, deleteStudent } from "@/lib/api";
+import { formatDni } from "@/lib/utils";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
@@ -261,7 +262,7 @@ export default function TodosMiembros() {
                     {student.document_number && (
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <FileText className="h-3 w-3 shrink-0" />
-                        <span>DNI {student.document_number}</span>
+                        <span>DNI {formatDni(student.document_number)}</span>
                       </div>
                     )}
                     {student.phone && (

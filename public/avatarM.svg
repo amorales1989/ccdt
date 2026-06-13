@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Avatar femenino">
+  <defs>
+    <clipPath id="cf"><circle cx="256" cy="256" r="240"/></clipPath>
+  </defs>
+
+  <!-- Fondo -->
+  <circle cx="256" cy="256" r="240" fill="#EAEEF4"/>
+
+  <g clip-path="url(#cf)">
+    <!-- Sombra lateral derecha -->
+    <circle cx="300" cy="262" r="240" fill="#D6E0E9"/>
+    <circle cx="244" cy="250" r="240" fill="#EAEEF4"/>
+
+    <!-- Remera (cuello en V) -->
+    <path d="M116 474 C124 404 162 370 214 358 L256 412 L298 358 C350 370 388 404 396 474 Z" fill="#8C50DA"/>
+    <path d="M298 358 C350 370 388 404 396 474 L344 474 C344 420 326 380 286 360 Z" fill="#7A41C9"/>
+
+    <!-- Pelo (melena trasera, bloque sólido) -->
+    <path d="M150 350
+             C134 286 138 170 180 144
+             C206 110 306 110 332 144
+             C374 170 378 286 362 350
+             C338 366 300 368 256 368
+             C212 368 174 366 150 350 Z" fill="#4A3439"/>
+
+    <!-- Cuello (sobre el pelo) -->
+    <path d="M226 318 h60 v50 l-30 26 -30 -26 z" fill="#ED9F87"/>
+
+    <!-- Cara -->
+    <ellipse cx="256" cy="238" rx="80" ry="98" fill="#F4B49E"/>
+
+    <!-- Orejas -->
+    <circle cx="178" cy="246" r="19" fill="#F4B49E"/>
+    <circle cx="334" cy="246" r="19" fill="#F4B49E"/>
+
+    <!-- Flequillo / pelo superior con raya al medio -->
+    <path d="M174 232
+             C162 142 200 108 256 108
+             C312 108 350 142 338 232
+             C326 192 300 176 270 180
+             C262 182 258 188 256 196
+             C254 188 250 182 242 180
+             C212 176 186 192 174 232 Z" fill="#4A3439"/>
+  </g>
+
+  <!-- Borde -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#0B0B0B" stroke-width="15"/>
+</svg>

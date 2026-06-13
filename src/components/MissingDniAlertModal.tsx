@@ -97,7 +97,7 @@ export function MissingDniAlertModal({ profileId, students }: Props) {
                                     >
                                         <Avatar className="h-9 w-9 border border-slate-200">
                                             <AvatarImage
-                                                src={s.photo_url || (isFemale ? "/avatarM.png" : "/avatarH.png")}
+                                                src={s.photo_url || (isFemale ? "/avatarM.svg" : "/avatarH.svg")}
                                                 alt={s.first_name}
                                                 className="object-cover"
                                             />

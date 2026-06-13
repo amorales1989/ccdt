@@ -22,3 +22,12 @@ export function normalizeName(value?: string | null): string {
     })
     .join(' ');
 }
+
+// Formatea un número de documento agrupando los dígitos de a miles con puntos.
+// Ej: "50846091" -> "50.846.091". Conserva cualquier carácter no numérico tal cual.
+export function formatDni(value?: string | null): string {
+  if (!value) return '';
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return value;
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}

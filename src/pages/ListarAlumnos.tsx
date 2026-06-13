@@ -1,6 +1,7 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatDni } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
@@ -639,7 +640,7 @@ const ListarAlumnos = () => {
 
       toast({
         title: "Miembro actualizado",
-        description: "El miembro ya no está marcado como nuevo.",
+        description: "Esta persona ahora es un miembro regular.",
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["students", companyId] });
@@ -757,7 +758,7 @@ const ListarAlumnos = () => {
       const age = student.birthdate ? calculateAge(student.birthdate) : null;
       doc.text(`Edad: ${age ? `${age} años` : "No registrada"}`, leftCol, dataYStart);
 
-      doc.text(`DNI: ${student.document_number || "No registrado"}`, leftCol, dataYStart + rowHeight);
+      doc.text(`DNI: ${student.document_number ? formatDni(student.document_number) : "No registrado"}`, leftCol, dataYStart + rowHeight);
       doc.text(`Género: ${student.gender === 'masculino' ? 'Masculino' : 'Femenino'}`, leftCol, dataYStart + (rowHeight * 2));
       doc.text(`Fecha de Nacimiento: ${student.birthdate ? format(parseISO(student.birthdate), "dd/MM/yyyy") : "No registrada"}`, leftCol, dataYStart + (rowHeight * 3));
       doc.text(`Teléfono: ${student.phone || "No registrado"}`, leftCol, dataYStart + (rowHeight * 4));
@@ -1143,7 +1144,7 @@ const ListarAlumnos = () => {
         <TableCell className="font-medium p-4">
           <div className="flex items-center gap-3 text-sm">
             <Avatar className="h-10 w-10 border border-slate-200 dark:border-slate-700 shadow-sm flex-shrink-0">
-              <AvatarImage src={student.photo_url || (student.gender?.toLowerCase() === 'femenino' ? '/avatarM.png' : '/avatarH.png')} alt={`${student.first_name}`} className="object-cover" />
+              <AvatarImage src={student.photo_url || (student.gender?.toLowerCase() === 'femenino' ? '/avatarM.svg' : '/avatarH.svg')} alt={`${student.first_name}`} className="object-cover" />
               <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xs font-bold">
                 {student.first_name.charAt(0)}{student.last_name?.charAt(0) || ""}
               </AvatarFallback>
@@ -1556,7 +1557,7 @@ const ListarAlumnos = () => {
             <div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
               <Table>
                 <TableBody>
-                  <TableRow className="bg-slate-50 border-b border-slate-100">
+                  <TableRow className="bg-slate-50 border-b border-slate-100 hover:bg-slate-50">
                     <TableCell
                       className="font-bold text-slate-800 dark:text-slate-200 cursor-pointer hover:text-primary transition-colors group p-4"
                       onClick={() => handleSort('name')}

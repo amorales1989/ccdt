@@ -8,6 +8,13 @@ const ROLE_KEY = "nexus_demo_role";
 
 export type DemoRole = "admin" | "secretaria" | "director" | "maestro";
 
+export const DEMO_PDF_HEADER = [
+  { text: "Organización Comunitaria de Ejemplo", enabled: true },
+  { text: "Personería Jurídica N° 00.000 (Datos ficticios - Demo)", enabled: true },
+  { text: "Av. Demo 1234, Ciudad Ejemplo, Pcia. Bs. As.", enabled: true },
+  { text: "C.U.I.T. N° 30-00000000-0", enabled: true },
+];
+
 export const DEMO_ROLES: { value: DemoRole; label: string; desc: string }[] = [
   { value: "admin", label: "Administrador", desc: "Acceso total: usuarios, configuración y todos los departamentos." },
   { value: "secretaria", label: "Secretaría", desc: "Gestiona miembros, eventos e informes de toda la organización." },

@@ -12,7 +12,7 @@ import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { format, parseISO } from "date-fns";
-import { isDemoMode } from "@/lib/demo";
+import { isDemoMode, DEMO_PDF_HEADER } from "@/lib/demo";
 import { toast } from "sonner";
 
 
@@ -458,12 +458,12 @@ const AutorizacionRhema = () => {
               </div>
               <div className="p-4 bg-slate-50/50 flex justify-center py-8 overflow-hidden hidden md:flex">
                 <div className="w-[100%] max-w-[650px] bg-white p-8 sm:p-12 shadow-md font-sans text-black relative scale-[0.70] sm:scale-[0.80] md:scale-90 xl:scale-100 origin-top rounded-lg border border-slate-100">
-                  {((company as any)?.auth_pdf_header || [
+                  {(isDemoMode() ? DEMO_PDF_HEADER : ((company as any)?.auth_pdf_header || [
                     { text: "Asociación de Beneficencia y Educación RHEMA", enabled: true },
                     { text: "Personería Jurídica N° 23.212 (Leg. 111.169 – D.P.P.J.)", enabled: true },
                     { text: "Libertad 3248, El Talar, Pdo. de Tigre, Pcia. Bs. As.", enabled: true },
                     { text: "C.U.I.T. N° 30-70792033-1", enabled: true }
-                  ]).filter((l: any) => l.enabled).map((line: any, idx: number) => (
+                  ])).filter((l: any) => l.enabled).map((line: any, idx: number) => (
                     <div key={idx} className={idx === 0 ? "flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2" : "mb-1"}>
                       <div className={idx === 0 ? "font-bold text-base flex-1" : "text-sm text-gray-800"}>
                         {line.text}

@@ -149,7 +149,7 @@ const Notificaciones = () => {
   };
 
   const validate = (): string | null => {
-    if (channel === "push" && !title.trim()) return "El título es requerido para notificaciones push.";
+    if (channel === "push" && !title.trim()) return "El título es requerido para las notificaciones.";
     if (!message.trim()) return "El mensaje no puede estar vacío.";
     if (targetType === "department" && !departmentId) return "Seleccioná un departamento.";
     if (targetType === "class") {
@@ -219,10 +219,10 @@ const Notificaciones = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 md:p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="bg-slate-50 dark:bg-slate-900 p-2 md:p-4 rounded-2xl">
+      <div className="w-full max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
             <Megaphone className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
@@ -232,10 +232,12 @@ const Notificaciones = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-border shadow-sm p-6 space-y-6">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-border shadow-sm p-6 grid gap-6 lg:grid-cols-2 lg:gap-8">
+          {/* Columna izquierda: destinatarios */}
+          <div className="space-y-4">
           {/* Canal */}
           <div>
-            <Label className="text-sm font-bold text-foreground mb-3 block">Canal</Label>
+            <Label className="text-sm font-bold text-foreground mb-2 block">Canal</Label>
             <div className="flex gap-2">
               {(["push", "whatsapp"] as Channel[]).map((c) => (
                 <button
@@ -247,7 +249,7 @@ const Notificaciones = () => {
                       : "bg-slate-50 dark:bg-slate-700 text-muted-foreground border-border hover:border-purple-300"
                   }`}
                 >
-                  {c === "push" ? "Push" : "WhatsApp"}
+                  {c === "push" ? "Notificación" : "WhatsApp"}
                 </button>
               ))}
             </div>
@@ -255,7 +257,7 @@ const Notificaciones = () => {
 
           {/* Destino */}
           <div>
-            <Label className="text-sm font-bold text-foreground mb-3 block">Destino</Label>
+            <Label className="text-sm font-bold text-foreground mb-2 block">Destino</Label>
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
@@ -336,7 +338,7 @@ const Notificaciones = () => {
 
           {targetType === "role" && (
             <div>
-              <Label className="text-sm font-bold text-foreground mb-3 block">Roles</Label>
+              <Label className="text-sm font-bold text-foreground mb-2 block">Roles</Label>
               <div className="flex flex-wrap gap-2">
                 {ROLES.map((r) => (
                   <button
@@ -414,6 +416,10 @@ const Notificaciones = () => {
             </div>
           )}
 
+          </div>
+
+          {/* Columna derecha: contenido del mensaje */}
+          <div className="space-y-4">
           {/* Título (solo push) */}
           {channel === "push" && (
             <div>
@@ -485,6 +491,7 @@ const Notificaciones = () => {
               </span>
             )}
           </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -25,13 +25,18 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, Plus, Pencil, Trash2, BookOpenCheck, PenLine, FileDown } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, BookOpenCheck, PenLine, FileDown, HelpCircle } from "lucide-react";
+import { TourGuide } from "@/components/TourGuide";
+import type { Step } from "react-joyride";
 import { CustomTooltip } from "@/components/CustomTooltip";
 import { exportTopicRecordsPdf } from "@/lib/topicRecordsPdfUtils";
 import { useQuery as useCompanyQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { SignaturePad } from "@/components/SignaturePad";
+import { BibleReferencePicker } from "@/components/BibleReferencePicker";
+import { BibleReferenceMultiPicker } from "@/components/BibleReferenceMultiPicker";
+import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -63,6 +68,8 @@ export default function RegistroTemas() {
   const queryClient = useQueryClient();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [fechaOpen, setFechaOpen] = useState(false);
+  const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
   const [editing, setEditing] = useState<TopicRecord | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [previewFirma, setPreviewFirma] = useState<string | null>(null);
@@ -216,15 +223,26 @@ export default function RegistroTemas() {
     .filter(r => !filterDateFrom || r.fecha >= filterDateFrom)
     .filter(r => !filterDateTo || r.fecha <= filterDateTo);
 
+  const tourSteps: Step[] = [
+    { target: '[data-tour="rt-header"]', content: "Acá registrás los temas dados en cada clase: fecha, base bíblica, estadística de asistencia y firma." },
+    ...(isMaestro ? [{ target: '[data-tour="rt-nuevo"]', content: "Tocá acá para cargar un nuevo registro de tema.", placement: "left" as const }] : []),
+    ...((isAdminOrSecretary || isDirectorLevel) ? [{ target: '[data-tour="rt-filtros"]', content: "Filtrá los registros por departamento, clase y rango de fechas." }] : []),
+    ...(displayed.length > 0 ? [{ target: '[data-tour="rt-pdf"]', content: "Descargá todos los registros visibles en un PDF con sus firmas." }] : []),
+  ];
+
   return (
     <div className="p-4 w-full">
+      <TourGuide tourKey="registro_temas" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <div>
+        <div data-tour="rt-header">
           <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Registro de Temas</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Clases y estadísticas por fecha</p>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
+          <Button onClick={() => setRunTour(true)} variant="outline" size="sm" className="gap-1.5 rounded-xl h-10">
+            <HelpCircle className="h-4 w-4" /> Ayuda
+          </Button>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold">
             <BookOpenCheck className="h-3 w-3 text-slate-400" />
             {displayed.length} {displayed.length === 1 ? 'registro' : 'registros'}
@@ -232,6 +250,7 @@ export default function RegistroTemas() {
 
           {displayed.length > 0 && (
             <Button
+              data-tour="rt-pdf"
               variant="outline"
               className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
               onClick={() => exportTopicRecordsPdf(
@@ -249,6 +268,7 @@ export default function RegistroTemas() {
 
           {isMaestro && (
             <Button
+              data-tour="rt-nuevo"
               onClick={openNew}
               className="button-gradient rounded-xl font-black h-10 px-5 shadow-lg shadow-primary/20"
             >
@@ -260,70 +280,69 @@ export default function RegistroTemas() {
       </div>
 
       {(isAdminOrSecretary || isDirectorLevel) && (
-        <div className="flex flex-col gap-2 mb-4">
-          <div className="flex flex-wrap gap-2">
-            {isAdminOrSecretary && (
-              <>
-                <Select
-                  value={filterDeptId || '__all__'}
-                  onValueChange={v => {
-                    setFilterDeptId(v === '__all__' ? '' : v);
-                    setFilterClass('');
-                  }}
-                >
-                  <SelectTrigger className="h-9 w-full sm:w-[200px] text-sm rounded-xl border-slate-200">
-                    <SelectValue placeholder="Todos los departamentos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">Todos los departamentos</SelectItem>
-                    {allDepartments.map(d => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={filterClass || '__all__'}
-                  onValueChange={v => setFilterClass(v === '__all__' ? '' : v)}
-                  disabled={!filterDeptId || availableClasses.length === 0}
-                >
-                  <SelectTrigger className="h-9 w-full sm:w-[160px] text-sm rounded-xl border-slate-200">
-                    <SelectValue placeholder="Todas las clases" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">Todas las clases</SelectItem>
-                    {availableClasses.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
-
-            {isDirectorLevel && directorClassOptions.length > 0 && (
+        <div data-tour="rt-filtros" className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 mb-4">
+          {isAdminOrSecretary && (
+            <>
               <Select
-                value={filterClassFE || '__all__'}
-                onValueChange={v => setFilterClassFE(v === '__all__' ? '' : v)}
+                value={filterDeptId || '__all__'}
+                onValueChange={v => {
+                  setFilterDeptId(v === '__all__' ? '' : v);
+                  setFilterClass('');
+                }}
+              >
+                <SelectTrigger className="h-9 w-full sm:w-[200px] text-sm rounded-xl border-slate-200">
+                  <SelectValue placeholder="Todos los departamentos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todos los departamentos</SelectItem>
+                  {allDepartments.map(d => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filterClass || '__all__'}
+                onValueChange={v => setFilterClass(v === '__all__' ? '' : v)}
+                disabled={!filterDeptId || availableClasses.length === 0}
               >
                 <SelectTrigger className="h-9 w-full sm:w-[160px] text-sm rounded-xl border-slate-200">
                   <SelectValue placeholder="Todas las clases" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Todas las clases</SelectItem>
-                  {directorClassOptions.map(c => (
+                  {availableClasses.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            )}
-          </div>
+            </>
+          )}
 
-          <div className="flex flex-col gap-2">
+          {isDirectorLevel && directorClassOptions.length > 0 && (
+            <Select
+              value={filterClassFE || '__all__'}
+              onValueChange={v => setFilterClassFE(v === '__all__' ? '' : v)}
+            >
+              <SelectTrigger className="h-9 w-full sm:w-[160px] text-sm rounded-xl border-slate-200">
+                <SelectValue placeholder="Todas las clases" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todas las clases</SelectItem>
+                {directorClassOptions.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Fechas: apiladas en mobile, inline en desktop */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground w-10">Desde</span>
+              <span className="text-sm text-muted-foreground w-10 sm:w-auto">Desde</span>
               <Input
                 type={filterDateFrom ? "date" : "text"}
-                className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
+                className="h-9 w-full sm:w-[150px] text-sm rounded-xl border-slate-200"
                 value={filterDateFrom}
                 placeholder="dd/mm/aaaa"
                 onFocus={e => { e.target.type = "date"; }}
@@ -332,25 +351,25 @@ export default function RegistroTemas() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground w-10">Hasta</span>
+              <span className="text-sm text-muted-foreground w-10 sm:w-auto">Hasta</span>
               <Input
                 type={filterDateTo ? "date" : "text"}
-                className="h-9 w-[150px] text-sm rounded-xl border-slate-200"
+                className="h-9 w-full sm:w-[150px] text-sm rounded-xl border-slate-200"
                 value={filterDateTo}
                 placeholder="dd/mm/aaaa"
                 onFocus={e => { e.target.type = "date"; }}
                 onBlur={e => { if (!e.target.value) e.target.type = "text"; }}
                 onChange={e => setFilterDateTo(e.target.value)}
               />
-              {(filterDateFrom || filterDateTo || filterClassFE) && (
-                <button
-                  onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setFilterClassFE(''); }}
-                  className="text-xs text-muted-foreground hover:text-destructive transition-colors whitespace-nowrap"
-                >
-                  Limpiar
-                </button>
-              )}
             </div>
+            {(filterDateFrom || filterDateTo || filterClassFE) && (
+              <button
+                onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setFilterClassFE(''); }}
+                className="text-xs text-muted-foreground hover:text-destructive transition-colors whitespace-nowrap"
+              >
+                Limpiar
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -508,7 +527,13 @@ export default function RegistroTemas() {
           <div className="flex flex-col gap-4 py-2">
             <div>
               <Label>Fecha</Label>
-              <Input type="date" value={form.fecha} onChange={e => set("fecha", e.target.value)} />
+              <MuiDatePickerField
+                value={form.fecha ? parseISO(form.fecha) : undefined}
+                onChange={(date) => set("fecha", date ? format(date, "yyyy-MM-dd") : "")}
+                open={fechaOpen}
+                onOpenChange={setFechaOpen}
+                placeholder="Seleccionar fecha"
+              />
             </div>
 
             <div>
@@ -516,20 +541,20 @@ export default function RegistroTemas() {
               <Input value={form.tema} onChange={e => set("tema", e.target.value)} placeholder="Ej: El hijo pródigo regresa" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Base Bíblica</Label>
-                <Input value={form.base_biblica} onChange={e => set("base_biblica", e.target.value)} placeholder="Ej: Lucas 15:11-32" />
-              </div>
-              <div>
-                <Label>Versículo p/ Memorizar</Label>
-                <Input value={form.versiculo_memorizar} onChange={e => set("versiculo_memorizar", e.target.value)} placeholder="Ej: Lucas 19:10" />
-              </div>
+            <div>
+              <Label>Base Bíblica</Label>
+              <BibleReferenceMultiPicker value={form.base_biblica} onChange={v => set("base_biblica", v)} />
+            </div>
+            <div>
+              <Label>Versículo p/ Memorizar</Label>
+              <BibleReferencePicker value={form.versiculo_memorizar} onChange={v => set("versiculo_memorizar", v)} />
+              {form.versiculo_memorizar && <p className="text-xs text-muted-foreground mt-1">{form.versiculo_memorizar}</p>}
             </div>
 
             <div>
               <Label>Enseñanza Principal</Label>
-              <Textarea value={form.ensenanza_principal} onChange={e => set("ensenanza_principal", e.target.value)} placeholder="¿Cuál es el mensaje central de la clase?" rows={2} />
+              <Textarea value={form.ensenanza_principal} onChange={e => set("ensenanza_principal", e.target.value)} placeholder="¿Cuál es el mensaje central de la clase?" rows={2} maxLength={150} className="resize-none" />
+              <p className="text-right text-xs text-muted-foreground mt-1">{form.ensenanza_principal.length}/150</p>
             </div>
 
             <div>
@@ -575,7 +600,8 @@ export default function RegistroTemas() {
 
             <div>
               <Label>Observaciones</Label>
-              <Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} placeholder="Para uso del director o supervisor..." rows={2} />
+              <Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} placeholder="Para uso del director o supervisor..." rows={2} maxLength={150} className="resize-none" />
+              <p className="text-right text-xs text-muted-foreground mt-1">{form.observaciones.length}/150</p>
             </div>
           </div>
 

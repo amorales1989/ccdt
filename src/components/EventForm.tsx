@@ -335,10 +335,14 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
               <FormControl>
                 <Textarea
                   {...field}
+                  maxLength={150}
                   placeholder={isRequestMode ? "Ingrese la descripción de la solicitud" : "Ingrese la descripción del evento"}
-                  className="min-h-[100px]"
+                  className="min-h-[100px] resize-none"
                 />
               </FormControl>
+              <div className="text-xs text-muted-foreground text-right">
+                {(field.value?.length || 0)}/150
+              </div>
               <FormMessage />
             </FormItem>
           )}

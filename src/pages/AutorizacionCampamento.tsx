@@ -12,7 +12,7 @@ import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { TimePickerField } from "@/components/TimePickerField";
-import { isDemoMode } from "@/lib/demo";
+import { isDemoMode, DEMO_PDF_HEADER } from "@/lib/demo";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 
@@ -393,14 +393,16 @@ const AutorizacionCampamento = () => {
   };
 
   const companyData = company as any;
-  const authPdfHeader = (companyData?.auth_pdf_header && Array.isArray(companyData.auth_pdf_header))
-    ? companyData.auth_pdf_header
-    : [
-      { text: "Asociación de Beneficencia y Educación RHEMA", enabled: true },
-      { text: "Personería Jurídica N° 23.212 (Leg. 111.169 – D.P.P.J.)", enabled: true },
-      { text: "Libertad 3248, El Talar, Pdo. de Tigre, Pcia. Bs. As.", enabled: true },
-      { text: "C.U.I.T. N° 30-70792033-1", enabled: true }
-    ];
+  const authPdfHeader = isDemoMode()
+    ? DEMO_PDF_HEADER
+    : (companyData?.auth_pdf_header && Array.isArray(companyData.auth_pdf_header))
+      ? companyData.auth_pdf_header
+      : [
+        { text: "Asociación de Beneficencia y Educación RHEMA", enabled: true },
+        { text: "Personería Jurídica N° 23.212 (Leg. 111.169 – D.P.P.J.)", enabled: true },
+        { text: "Libertad 3248, El Talar, Pdo. de Tigre, Pcia. Bs. As.", enabled: true },
+        { text: "C.U.I.T. N° 30-70792033-1", enabled: true }
+      ];
 
   const inicioFormatted = formatDate(formData.fechaInicio);
   const finFormatted = formatDate(formData.fechaFin);

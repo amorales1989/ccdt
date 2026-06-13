@@ -144,7 +144,7 @@ export const BirthdayList: React.FC<BirthdayListProps> = ({ students }) => {
                                         <TableCell className="font-medium p-4">
                                             <div className="flex items-center gap-3 text-sm">
                                                 <Avatar className="h-10 w-10 border border-slate-200 dark:border-slate-700 shadow-sm flex-shrink-0">
-                                                    <AvatarImage src={student.photo_url || (student.gender?.toLowerCase() === 'femenino' ? '/avatarM.png' : '/avatarH.png')} alt={`${student.first_name}`} className="object-cover" />
+                                                    <AvatarImage src={student.photo_url || (student.gender?.toLowerCase() === 'femenino' ? '/avatarM.svg' : '/avatarH.svg')} alt={`${student.first_name}`} className="object-cover" />
                                                     <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xs font-bold">
                                                         {student.first_name.charAt(0)}{student.last_name?.charAt(0) || ""}
                                                     </AvatarFallback>

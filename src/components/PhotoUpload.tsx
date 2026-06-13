@@ -185,7 +185,7 @@ export const PhotoUpload = ({
     const endDrag = () => { dragRef.current = null; };
 
     const initials = `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase();
-    const fallbackImage = gender?.toLowerCase() === 'femenino' ? '/avatarM.png' : '/avatarH.png';
+    const fallbackImage = gender?.toLowerCase() === 'femenino' ? '/avatarM.svg' : '/avatarH.svg';
 
     return (
         <div className="flex flex-col items-center gap-4">
