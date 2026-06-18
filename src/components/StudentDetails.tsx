@@ -5,7 +5,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Student } from "@/types/database";
 import { StudentObservations } from "./StudentObservations";
-import { User, MapPin, Phone, Calendar, Hash, Building2, BookA, UserSquare2 } from "lucide-react";
+import { User, MapPin, Phone, Calendar, Hash, Building2, BookA, UserSquare2, Briefcase } from "lucide-react";
 import { PhotoUpload } from "./PhotoUpload";
 import { formatDni } from "@/lib/utils";
 
@@ -31,6 +31,28 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
     const parsedDate = parseISO(birthdate);
     return format(parsedDate, "dd MMMM yyyy", { locale: es });
   };
+
+  const isPrimaryAssignment = (a: { department_id?: string; departments?: { name?: string } }) => {
+    if (student.department_id && a.department_id) return a.department_id === student.department_id;
+    return a.departments?.name === (student.departments?.name || student.department);
+  };
+
+  // Ocultar la asignación genérica "Obreros" cuando el mismo departamento ya
+  // tiene una clase real (ej: auxiliar_maestro en clase E + obrero en Obreros).
+  const allAssignments = student.dept_assignments || [];
+  const sameDept = (a: { department_id?: string; departments?: { name?: string } }, b: typeof a) =>
+    (a.department_id && b.department_id) ? a.department_id === b.department_id : a.departments?.name === b.departments?.name;
+  const visibleAssignments = allAssignments.filter((a) => {
+    if ((a.assigned_class || '').toLowerCase() !== 'obreros') return true;
+    return !allAssignments.some((b) => b !== a && sameDept(a, b) && (b.assigned_class || '').toLowerCase() !== 'obreros');
+  });
+
+  // Clase del departamento primario (la asignación puede tener distinta clase que la primaria global)
+  const primaryAssignment = visibleAssignments.find(isPrimaryAssignment);
+  const primaryClass = primaryAssignment?.assigned_class || student.assigned_class;
+
+  // Otras asignaciones: departamentos donde participa además del primario
+  const otherAssignments = visibleAssignments.filter((a) => !isPrimaryAssignment(a));
 
   return (
     <div className="bg-gradient-to-br from-indigo-50/50 via-white/80 to-purple-50/50 dark:from-slate-900/80 dark:via-slate-800/80 dark:to-slate-900/80 rounded-2xl m-2 border border-indigo-100/50 dark:border-slate-700/50 shadow-inner overflow-hidden animate-fade-in p-6">
@@ -155,16 +177,45 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
                 </div>
               </div>
 
-              {student.assigned_class && (
+              {primaryClass && (
                 <div className="flex items-start gap-2.5">
                   <BookA className="h-4 w-4 text-primary mt-0.5" />
                   <div>
                     <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Clase</p>
-                    <p className="font-medium text-primary">{student.assigned_class}</p>
+                    <p className="font-medium text-primary">{primaryClass}</p>
                   </div>
                 </div>
               )}
             </div>
+
+            {otherAssignments.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="flex items-center gap-1.5 text-xs uppercase font-semibold text-muted-foreground tracking-wider">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  También participa en
+                </p>
+                {otherAssignments.map((a, idx) => (
+                  <div key={a.id || idx} className="grid grid-cols-2 gap-4 p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                    <div className="flex items-start gap-2.5">
+                      <Building2 className="h-4 w-4 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Departamento</p>
+                        <p className="font-medium text-primary">{a.departments?.name ? formatDepartment(a.departments.name) : "—"}</p>
+                      </div>
+                    </div>
+                    {a.assigned_class && (
+                      <div className="flex items-start gap-2.5">
+                        <BookA className="h-4 w-4 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Clase</p>
+                          <p className="font-medium text-primary">{a.assigned_class}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

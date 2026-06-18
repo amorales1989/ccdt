@@ -150,7 +150,8 @@ const Home = () => {
       last_name: student.last_name,
       birthdate: student.birthdate,
       department: student.departments?.name || student.department,
-      assigned_class: student.assigned_class
+      assigned_class: student.assigned_class,
+      dept_assignments: student.dept_assignments || []
     }));
   }, [students, isCalendarDepartment]);
 
@@ -205,24 +206,28 @@ const Home = () => {
           return false; // Los admin y secretarias no ven los cumpleaños
         }
 
-        // Para maestros y líderes, filtrar por departamento y clase
-        const studentDept = student.department;
-        const studentClass = student.assigned_class;
-
-        // Verificar si el miembro pertenece a los departamentos del usuario
-        const belongsToUserDepartment = userDepartments.includes(studentDept);
+        // Considerar TODAS las asignaciones del miembro (alumno o colaborador en
+        // otros departamentos), no solo su departamento primario. Fallback al
+        // departamento primario si no tiene asignaciones registradas.
+        const assignments = (student.dept_assignments && student.dept_assignments.length > 0)
+          ? student.dept_assignments.map((a: any) => ({
+              deptName: a.departments?.name || student.department,
+              className: a.assigned_class || student.assigned_class
+            }))
+          : [{ deptName: student.department, className: student.assigned_class }];
 
         // El Director General solo ve los cumpleaños de las clases "Obreros"
         if (profile?.role === 'director_general') {
-          return studentClass === 'Obreros';
+          return assignments.some(a => a.className === 'Obreros');
         }
 
-        // Si el usuario tiene una clase asignada, también verificar la clase
+        // Maestros/líderes con clase asignada: coincidir departamento y clase
         if (isTeacherOrLeader && userAssignedClass) {
-          return belongsToUserDepartment && studentClass === userAssignedClass;
+          return assignments.some(a => userDepartments.includes(a.deptName) && a.className === userAssignedClass);
         }
 
-        return belongsToUserDepartment;
+        // Directores: coincidir solo por departamento
+        return assignments.some(a => userDepartments.includes(a.deptName));
       })
       .map(student => {
         const cleanFirstName = student.first_name?.trim() || '';

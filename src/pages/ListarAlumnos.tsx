@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { toast } from "@/hooks/use-toast";
 import { StudentDetails } from "@/components/StudentDetails";
+import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, addStudentDepartment } from "@/lib/api";
@@ -72,6 +73,7 @@ const ListarAlumnos = () => {
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+  const [editBirthdateOpen, setEditBirthdateOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -660,7 +662,7 @@ const ListarAlumnos = () => {
 
     // For restricted roles (maestro/director/vicedirector), show the student's
     // assignment in the editor's department instead of the student's primary one.
-    const restrictedRole = (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'director' || profile?.role === 'vicedirector';
+    const restrictedRole = (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'lider' || profile?.role === 'director' || profile?.role === 'vicedirector';
     let editDeptId = student.department_id || "";
     let editClass = student.assigned_class || "";
 
@@ -680,7 +682,7 @@ const ListarAlumnos = () => {
       gender: student.gender || "masculino",
       birthdate: birthDate,
       address: student.address || "",
-      phone: student.phone || "",
+      phone: (student.phone || "").replace(/^549/, ""),
       document_number: student.document_number || "",
       department_id: editDeptId,
       assigned_class: editClass,
@@ -837,28 +839,34 @@ const ListarAlumnos = () => {
     if (!studentToEdit) return;
     setIsUpdating(true);
     try {
-      const restrictedRole = (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'director' || profile?.role === 'vicedirector';
+      const restrictedRole = (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'lider' || profile?.role === 'director' || profile?.role === 'vicedirector';
       const editingOwnAssignment = restrictedRole
         && profile?.department_id
         && values.department_id === profile.department_id
         && studentToEdit.department_id !== profile.department_id;
 
+      const rawPhone = (values.phone || '').replace(/\D/g, '');
       const payload: any = {
         ...values,
         birthdate: values.birthdate || null,
         document_number: values.document_number || null,
-        phone: values.phone || null,
+        phone: rawPhone ? (rawPhone.startsWith('54') ? rawPhone : '549' + rawPhone) : null,
         address: values.address || null,
         assigned_class: values.assigned_class || null,
       };
 
       if (editingOwnAssignment) {
-        // Update only their own dept_assignment, not the student's primary department.
+        // Editar solo la asignación propia, sin pisar el departamento primario
+        // ni las demás asignaciones del miembro. Preservar el rol (alumno/colaborador).
         delete payload.department_id;
         delete payload.assigned_class;
+        const ownAssignment = (studentToEdit as any).dept_assignments?.find(
+          (a: any) => a.department_id === profile.department_id
+        );
         await addStudentDepartment(studentToEdit.id, {
           department_id: profile.department_id!,
           assigned_class: values.assigned_class || null,
+          role_in_dept: ownAssignment?.role_in_dept || 'alumno',
         });
       }
 
@@ -1917,10 +1925,12 @@ const ListarAlumnos = () => {
                       <FormItem>
                         <FormLabel>Fecha de Nacimiento</FormLabel>
                         <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            value={field.value || ''}
+                          <MuiDatePickerField
+                            value={field.value ? parseISO(field.value) : undefined}
+                            onChange={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
+                            open={editBirthdateOpen}
+                            onOpenChange={setEditBirthdateOpen}
+                            placeholder="Seleccionar fecha de nacimiento"
                           />
                         </FormControl>
                         <FormMessage />
@@ -2000,7 +2010,7 @@ const ListarAlumnos = () => {
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
-                          disabled={(profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'director' || profile?.role === 'vicedirector'}
+                          disabled={(profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'lider' || profile?.role === 'director' || profile?.role === 'vicedirector'}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -2050,6 +2060,29 @@ const ListarAlumnos = () => {
                     )}
                   />
                 </div>
+
+                {(() => {
+                  const assignments = (studentToEdit as any)?.dept_assignments || [];
+                  if (assignments.length <= 1) return null;
+                  return (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1.5">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Departamentos del miembro</p>
+                      {assignments.map((a: any, idx: number) => {
+                        const isEditable = a.department_id === profile?.department_id;
+                        return (
+                          <div key={a.id || idx} className="flex items-center justify-between text-sm">
+                            <span className={isEditable ? 'font-semibold text-primary' : 'text-slate-600'}>
+                              {a.departments?.name || '—'}{a.assigned_class ? ` · ${a.assigned_class}` : ''}
+                            </span>
+                            {isEditable
+                              ? <span className="text-[10px] font-bold text-primary uppercase">Editable</span>
+                              : <span className="text-[10px] text-slate-400 uppercase">Solo lectura</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 <div className="flex justify-end">
                   <Button type="submit" disabled={isUpdating}>
