@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.ccdt.mobile',
-  appName: 'CCDT',
+  appName: 'Nexus',
   webDir: 'dist',
   // La app abre el sitio en produccion: se actualiza sola con cada deploy,
   // sin recompilar la APK (salvo cambios nativos: icono, nombre, permisos).

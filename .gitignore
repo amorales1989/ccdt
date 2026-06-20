@@ -35,3 +35,9 @@ supabase/functions/.env
 # Scripts locales de dev
 dev-start.sh
 dev-stop.sh
+
+# Capacitor: proyecto nativo Android (regenerable con `npx cap add android`)
+android/
+# Nunca commitear keystores ni sus passwords
+*.jks
+*.keystore
