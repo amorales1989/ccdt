@@ -156,16 +156,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data) {
-        // Validación multi-tenant: Restringir acceso si el company_id del usuario no coincide con la URL actual
-        const currentCompanyId = getPersistentCompanyId();
+        // La congregación es la del perfil del usuario autenticado (fuente de verdad).
+        // La persistimos para que getPersistentCompanyId() y las llamadas a la API la usen.
         const userCompanyId = (data as any)?.company_id;
-        if (userCompanyId && userCompanyId !== currentCompanyId) {
-          console.error(`Tenant mismatch! User ${userId} belongs to company ${userCompanyId} but was accessing ${currentCompanyId}. Signing out...`);
-          await supabase.auth.signOut();
-          setProfile(null);
-          setUser(null);
-          setSession(null);
-          throw new Error("company_mismatch");
+        if (userCompanyId) {
+          localStorage.setItem('ccdt_company_id', userCompanyId.toString());
         }
 
         const allAssignments: UserAssignment[] = authUser?.user_metadata?.assignments || [];
@@ -243,23 +238,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
 
-    // Validación multi-tenant en el momento exacto del login
+    // Fijar la congregación a partir del perfil del usuario autenticado.
     if (authData?.user) {
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("*")
+        .select("company_id")
         .eq("id", authData.user.id)
         .single();
 
-      const currentCompanyId = getPersistentCompanyId();
       const userCompanyId = (profileData as any)?.company_id;
-
-      if (userCompanyId && userCompanyId !== currentCompanyId) {
-        console.error(`Tenant mismatch on login! User belongs to ${userCompanyId} but tried to login to ${currentCompanyId}`);
-        await supabase.auth.signOut();
-        throw new Error("company_mismatch");
+      if (userCompanyId) {
+        localStorage.setItem('ccdt_company_id', userCompanyId.toString());
       }
-
     }
 
     lastActivity.current = Date.now();

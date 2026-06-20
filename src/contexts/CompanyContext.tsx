@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CompanyContextType {
     companyId: number;
@@ -11,11 +12,20 @@ const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [searchParams, setSearchParams] = useSearchParams();
+    const { profile } = useAuth();
     const [companyId, setCompanyIdState] = useState<number>(1);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // 1. Intentar obtener de URL
+        // 0. Prioridad máxima: la congregación del usuario autenticado (fuente de verdad)
+        if (profile?.company_id) {
+            setCompanyIdState(profile.company_id);
+            localStorage.setItem('ccdt_company_id', profile.company_id.toString());
+            setIsLoading(false);
+            return;
+        }
+
+        // 1. Intentar obtener de URL (flujos pre-login, ej. registro)
         const urlId = searchParams.get('companyId');
 
         if (urlId) {
@@ -38,7 +48,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
 
         setIsLoading(false);
-    }, [searchParams]);
+    }, [searchParams, profile]);
 
     const setCompanyId = (id: number) => {
         setCompanyIdState(id);
