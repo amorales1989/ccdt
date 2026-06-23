@@ -1,0 +1,217 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e6]
+      - generic [ref=e9]: Modo demo · datos de ejemplo · los cambios no se guardan
+    - button "Salir" [ref=e10] [cursor=pointer]:
+      - img [ref=e11]
+      - text: Salir
+  - generic [ref=e16]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - img "Logo" [ref=e27]
+        - generic [ref=e28]:
+          - generic [ref=e29]: Congregación Central
+          - generic [ref=e30]: Sistema de Gestión
+      - generic [ref=e32] [cursor=pointer]:
+        - generic [ref=e33]: AD
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: Ana Director
+            - img [ref=e37]
+          - generic [ref=e41]: Admin
+      - generic [ref=e42]:
+        - generic [ref=e43]: Navegación
+        - link "Inicio" [ref=e44] [cursor=pointer]:
+          - /url: /
+          - img [ref=e46]
+          - generic [ref=e49]: Inicio
+        - link "Todos los Miembros" [ref=e50] [cursor=pointer]:
+          - /url: /todos-los-miembros
+          - img [ref=e52]
+          - generic [ref=e57]: Todos los Miembros
+        - link "Lista de Miembros" [ref=e58] [cursor=pointer]:
+          - /url: /listar
+          - img [ref=e60]
+          - generic [ref=e65]: Lista de Miembros
+        - link "Calendario" [ref=e66] [cursor=pointer]:
+          - /url: /calendario
+          - img [ref=e68]
+          - generic [ref=e71]: Calendario
+        - link "Material Didáctico" [ref=e72] [cursor=pointer]:
+          - /url: /material
+          - img [ref=e74]
+          - generic [ref=e76]: Material Didáctico
+        - link "Informes de Personal" [ref=e77] [cursor=pointer]:
+          - /url: /informes
+          - img [ref=e79]
+          - generic [ref=e84]: Informes de Personal
+        - link "Autorizaciones" [ref=e85] [cursor=pointer]:
+          - /url: /autorizaciones
+          - img [ref=e87]
+          - generic [ref=e93]: Autorizaciones
+        - link "Promover Miembros" [ref=e94] [cursor=pointer]:
+          - /url: /promover
+          - img [ref=e96]
+          - generic [ref=e99]: Promover Miembros
+        - link "Historial" [ref=e100] [cursor=pointer]:
+          - /url: /historial
+          - img [ref=e102]
+          - generic [ref=e106]: Historial
+        - link "Estadísticas" [ref=e107] [cursor=pointer]:
+          - /url: /estadisticas
+          - img [ref=e109]
+          - generic [ref=e111]: Estadísticas
+        - link "Registro de Temas" [ref=e112] [cursor=pointer]:
+          - /url: /registro-temas
+          - img [ref=e114]
+          - generic [ref=e118]: Registro de Temas
+        - link "Departamentos" [ref=e119] [cursor=pointer]:
+          - /url: /departamentos
+          - img [ref=e121]
+          - generic [ref=e123]: Departamentos
+        - link "Contabilidad" [ref=e124] [cursor=pointer]:
+          - /url: /contabilidad
+          - img [ref=e126]
+          - generic [ref=e129]: Contabilidad
+        - link "Gestión de Usuarios" [ref=e130] [cursor=pointer]:
+          - /url: /gestion-usuarios
+          - img [ref=e132]
+          - generic [ref=e135]: Gestión de Usuarios
+        - link "Notificaciones" [ref=e136] [cursor=pointer]:
+          - /url: /notificaciones
+          - img [ref=e138]
+          - generic [ref=e141]: Notificaciones
+      - generic [ref=e142]:
+        - link "Guía de Uso" [ref=e143] [cursor=pointer]:
+          - /url: /guia
+          - img [ref=e145]
+          - generic [ref=e148]: Guía de Uso
+          - img [ref=e149]
+        - link "Solicitar Reparación" [ref=e151] [cursor=pointer]:
+          - /url: /mantenimiento
+          - img [ref=e153]
+          - generic [ref=e155]: Solicitar Reparación
+        - link "Configuración" [ref=e156] [cursor=pointer]:
+          - /url: /configuracion
+          - img [ref=e158]
+          - generic [ref=e161]: Configuración
+        - button "Cerrar Sesión" [ref=e163] [cursor=pointer]:
+          - img [ref=e165]
+          - generic [ref=e168]: Cerrar Sesión
+    - main [ref=e169]:
+      - generic [ref=e170]:
+        - generic [ref=e172]:
+          - paragraph [ref=e173]: Centro de ayuda
+          - heading "Guía de Uso" [level=1] [ref=e174]:
+            - img [ref=e175]
+            - text: Guía de Uso
+          - paragraph [ref=e178]: Qué hace y cómo se usa cada opción del menú. Tocá una sección para ver el paso a paso.
+        - generic [ref=e179]:
+          - img [ref=e180]
+          - textbox "Buscar una pantalla o función…" [ref=e183]
+        - generic [ref=e184]:
+          - heading "Inicio" [level=3] [ref=e186]:
+            - button "Inicio" [ref=e187] [cursor=pointer]:
+              - generic [ref=e188]:
+                - img [ref=e190]
+                - generic [ref=e193]: Inicio
+              - img [ref=e194]
+          - heading "Todos los Miembros" [level=3] [ref=e197]:
+            - button "Todos los Miembros" [ref=e198] [cursor=pointer]:
+              - generic [ref=e199]:
+                - img [ref=e201]
+                - generic [ref=e206]: Todos los Miembros
+              - img [ref=e207]
+          - heading "Lista de Miembros" [level=3] [ref=e210]:
+            - button "Lista de Miembros" [ref=e211] [cursor=pointer]:
+              - generic [ref=e212]:
+                - img [ref=e214]
+                - generic [ref=e219]: Lista de Miembros
+              - img [ref=e220]
+          - heading "Calendario" [level=3] [ref=e223]:
+            - button "Calendario" [ref=e224] [cursor=pointer]:
+              - generic [ref=e225]:
+                - img [ref=e227]
+                - generic [ref=e230]: Calendario
+              - img [ref=e231]
+          - heading "Material Didáctico" [level=3] [ref=e234]:
+            - button "Material Didáctico" [ref=e235] [cursor=pointer]:
+              - generic [ref=e236]:
+                - img [ref=e238]
+                - generic [ref=e240]: Material Didáctico
+              - img [ref=e241]
+          - heading "Informes de Personal" [level=3] [ref=e244]:
+            - button "Informes de Personal" [ref=e245] [cursor=pointer]:
+              - generic [ref=e246]:
+                - img [ref=e248]
+                - generic [ref=e253]: Informes de Personal
+              - img [ref=e254]
+          - heading "Autorizaciones" [level=3] [ref=e257]:
+            - button "Autorizaciones" [ref=e258] [cursor=pointer]:
+              - generic [ref=e259]:
+                - img [ref=e261]
+                - generic [ref=e267]: Autorizaciones
+              - img [ref=e268]
+          - heading "Promover Miembros" [level=3] [ref=e271]:
+            - button "Promover Miembros" [ref=e272] [cursor=pointer]:
+              - generic [ref=e273]:
+                - img [ref=e275]
+                - generic [ref=e278]: Promover Miembros
+              - img [ref=e279]
+          - heading "Historial" [level=3] [ref=e282]:
+            - button "Historial" [ref=e283] [cursor=pointer]:
+              - generic [ref=e284]:
+                - img [ref=e286]
+                - generic [ref=e290]: Historial
+              - img [ref=e291]
+          - heading "Estadísticas" [level=3] [ref=e294]:
+            - button "Estadísticas" [ref=e295] [cursor=pointer]:
+              - generic [ref=e296]:
+                - img [ref=e298]
+                - generic [ref=e300]: Estadísticas
+              - img [ref=e301]
+          - heading "Registro de Temas" [level=3] [ref=e304]:
+            - button "Registro de Temas" [ref=e305] [cursor=pointer]:
+              - generic [ref=e306]:
+                - img [ref=e308]
+                - generic [ref=e312]: Registro de Temas
+              - img [ref=e313]
+          - heading "Departamentos" [level=3] [ref=e316]:
+            - button "Departamentos" [ref=e317] [cursor=pointer]:
+              - generic [ref=e318]:
+                - img [ref=e320]
+                - generic [ref=e322]: Departamentos
+              - img [ref=e323]
+          - heading "Contabilidad" [level=3] [ref=e326]:
+            - button "Contabilidad" [ref=e327] [cursor=pointer]:
+              - generic [ref=e328]:
+                - img [ref=e330]
+                - generic [ref=e333]: Contabilidad
+              - img [ref=e334]
+          - heading "Gestión de Usuarios" [level=3] [ref=e337]:
+            - button "Gestión de Usuarios" [ref=e338] [cursor=pointer]:
+              - generic [ref=e339]:
+                - img [ref=e341]
+                - generic [ref=e344]: Gestión de Usuarios
+              - img [ref=e345]
+          - heading "Notificaciones" [level=3] [ref=e348]:
+            - button "Notificaciones" [ref=e349] [cursor=pointer]:
+              - generic [ref=e350]:
+                - img [ref=e352]
+                - generic [ref=e355]: Notificaciones
+              - img [ref=e356]
+          - heading "Solicitar Reparación" [level=3] [ref=e359]:
+            - button "Solicitar Reparación" [ref=e360] [cursor=pointer]:
+              - generic [ref=e361]:
+                - img [ref=e363]
+                - generic [ref=e365]: Solicitar Reparación
+              - img [ref=e366]
+          - heading "Configuración" [level=3] [ref=e369]:
+            - button "Configuración" [ref=e370] [cursor=pointer]:
+              - generic [ref=e371]:
+                - img [ref=e373]
+                - generic [ref=e376]: Configuración
+              - img [ref=e377]
+  - region "Notifications (F8)":
+    - list

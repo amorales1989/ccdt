@@ -1,0 +1,183 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e6]
+      - generic [ref=e9]: Modo demo · datos de ejemplo · los cambios no se guardan
+    - button "Salir" [ref=e10] [cursor=pointer]:
+      - img [ref=e11]
+      - text: Salir
+  - generic [ref=e16]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - img "Logo" [ref=e27]
+        - generic [ref=e28]:
+          - generic [ref=e29]: Congregación Central
+          - generic [ref=e30]: Sistema de Gestión
+      - generic [ref=e32] [cursor=pointer]:
+        - generic [ref=e33]: AD
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: Ana Director
+            - img [ref=e37]
+          - generic [ref=e41]: Admin
+      - generic [ref=e42]:
+        - generic [ref=e43]: Navegación
+        - link "Inicio" [ref=e44] [cursor=pointer]:
+          - /url: /
+          - img [ref=e46]
+          - generic [ref=e49]: Inicio
+        - link "Todos los Miembros" [ref=e50] [cursor=pointer]:
+          - /url: /todos-los-miembros
+          - img [ref=e52]
+          - generic [ref=e57]: Todos los Miembros
+        - link "Lista de Miembros" [ref=e58] [cursor=pointer]:
+          - /url: /listar
+          - img [ref=e60]
+          - generic [ref=e65]: Lista de Miembros
+        - link "Calendario" [ref=e66] [cursor=pointer]:
+          - /url: /calendario
+          - img [ref=e68]
+          - generic [ref=e71]: Calendario
+        - link "Material Didáctico" [ref=e72] [cursor=pointer]:
+          - /url: /material
+          - img [ref=e74]
+          - generic [ref=e76]: Material Didáctico
+        - link "Informes de Personal" [ref=e77] [cursor=pointer]:
+          - /url: /informes
+          - img [ref=e79]
+          - generic [ref=e84]: Informes de Personal
+        - link "Autorizaciones" [ref=e85] [cursor=pointer]:
+          - /url: /autorizaciones
+          - img [ref=e87]
+          - generic [ref=e93]: Autorizaciones
+        - link "Promover Miembros" [ref=e94] [cursor=pointer]:
+          - /url: /promover
+          - img [ref=e96]
+          - generic [ref=e99]: Promover Miembros
+        - link "Historial" [ref=e100] [cursor=pointer]:
+          - /url: /historial
+          - img [ref=e102]
+          - generic [ref=e106]: Historial
+        - link "Estadísticas" [ref=e107] [cursor=pointer]:
+          - /url: /estadisticas
+          - img [ref=e109]
+          - generic [ref=e111]: Estadísticas
+        - link "Registro de Temas" [ref=e112] [cursor=pointer]:
+          - /url: /registro-temas
+          - img [ref=e114]
+          - generic [ref=e118]: Registro de Temas
+        - link "Departamentos" [ref=e119] [cursor=pointer]:
+          - /url: /departamentos
+          - img [ref=e121]
+          - generic [ref=e123]: Departamentos
+        - link "Contabilidad" [ref=e124] [cursor=pointer]:
+          - /url: /contabilidad
+          - img [ref=e126]
+          - generic [ref=e129]: Contabilidad
+        - link "Gestión de Usuarios" [ref=e130] [cursor=pointer]:
+          - /url: /gestion-usuarios
+          - img [ref=e132]
+          - generic [ref=e135]: Gestión de Usuarios
+        - link "Notificaciones" [ref=e136] [cursor=pointer]:
+          - /url: /notificaciones
+          - img [ref=e138]
+          - generic [ref=e141]: Notificaciones
+      - generic [ref=e142]:
+        - link "Guía de Uso" [ref=e143] [cursor=pointer]:
+          - /url: /guia
+          - img [ref=e145]
+          - generic [ref=e148]: Guía de Uso
+        - link "Solicitar Reparación" [ref=e149] [cursor=pointer]:
+          - /url: /mantenimiento
+          - img [ref=e151]
+          - generic [ref=e153]: Solicitar Reparación
+        - link "Configuración" [ref=e154] [cursor=pointer]:
+          - /url: /configuracion
+          - img [ref=e156]
+          - generic [ref=e159]: Configuración
+        - button "Cerrar Sesión" [ref=e161] [cursor=pointer]:
+          - img [ref=e163]
+          - generic [ref=e166]: Cerrar Sesión
+    - main [ref=e167]:
+      - generic [ref=e168]:
+        - generic [ref=e172]:
+          - img [ref=e173]
+          - textbox "Buscar miembro de la congregación" [ref=e176]
+        - generic [ref=e178]:
+          - generic [ref=e179]:
+            - heading "Estadísticas de Miembros" [level=1] [ref=e181]
+            - button "2 Reparaciones Pendientes" [ref=e182] [cursor=pointer]:
+              - img [ref=e183]
+              - text: 2 Reparaciones Pendientes
+          - region [ref=e186]:
+            - generic [ref=e188]:
+              - group [ref=e189]:
+                - generic [ref=e190] [cursor=pointer]:
+                  - generic [ref=e191]:
+                    - heading "Escuelita" [level=3] [ref=e192]
+                    - generic [ref=e193]:
+                      - generic [ref=e194]:
+                        - generic [ref=e195]: "12"
+                        - generic [ref=e196]: Miembros
+                      - img [ref=e198]
+                  - generic [ref=e206]:
+                    - generic [ref=e209]: Masculino 5
+                    - generic [ref=e212]: Femenino 7
+              - group [ref=e213]:
+                - generic [ref=e214] [cursor=pointer]:
+                  - generic [ref=e215]:
+                    - heading "Adolescentes" [level=3] [ref=e216]
+                    - generic [ref=e217]:
+                      - generic [ref=e218]:
+                        - generic [ref=e219]: "7"
+                        - generic [ref=e220]: Miembros
+                      - img [ref=e222]
+                  - generic [ref=e230]:
+                    - generic [ref=e233]: Masculino 4
+                    - generic [ref=e236]: Femenino 3
+              - group [ref=e237]:
+                - generic [ref=e238] [cursor=pointer]:
+                  - generic [ref=e239]:
+                    - heading "Jovenes" [level=3] [ref=e240]
+                    - generic [ref=e241]:
+                      - generic [ref=e242]:
+                        - generic [ref=e243]: "8"
+                        - generic [ref=e244]: Miembros
+                      - img [ref=e246]
+                  - generic [ref=e254]:
+                    - generic [ref=e257]: Masculino 4
+                    - generic [ref=e260]: Femenino 4
+              - group [ref=e261]:
+                - generic [ref=e262] [cursor=pointer]:
+                  - generic [ref=e263]:
+                    - heading "Adultos" [level=3] [ref=e264]
+                    - generic [ref=e265]:
+                      - generic [ref=e266]:
+                        - generic [ref=e267]: "12"
+                        - generic [ref=e268]: Miembros
+                      - img [ref=e270]
+                  - generic [ref=e278]:
+                    - generic [ref=e281]: Masculino 6
+                    - generic [ref=e284]: Femenino 6
+            - button "Previous slide" [disabled]:
+              - img
+              - generic: Previous slide
+            - button "Next slide" [disabled]:
+              - img
+              - generic: Next slide
+        - generic [ref=e285]:
+          - generic [ref=e287]:
+            - generic [ref=e288]:
+              - heading "Próximos Eventos" [level=2] [ref=e290]
+              - button "Agregar Evento" [ref=e291] [cursor=pointer]:
+                - img [ref=e292]
+                - text: Agregar Evento
+            - generic [ref=e294]:
+              - img [ref=e295]
+              - paragraph [ref=e297]: No hay eventos próximos programados
+              - paragraph [ref=e298]: Usa el botón superior para crear el primero
+          - generic [ref=e299]:
+            - heading "Estadisticas generales" [level=2] [ref=e300]
+            - img [ref=e302]
+  - region "Notifications (F8)":
+    - list

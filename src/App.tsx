@@ -27,6 +27,7 @@ import Mantenimiento from "@/pages/Mantenimiento";
 import InformesPersonal from "./pages/InformesPersonal";
 import RegistroTemas from "@/pages/RegistroTemas";
 import ResetPassword from "@/pages/ResetPassword";
+import Guia from "@/pages/Guia";
 
 
 import Estadisticas from "./pages/Estadisticas";
@@ -129,6 +130,10 @@ function App() {
                   {
                     path: "/configuracion",
                     element: <Configuration />,
+                  },
+                  {
+                    path: "/guia",
+                    element: <Guia />,
                   },
                   {
                     path: "/secretaria",

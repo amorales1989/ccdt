@@ -18,7 +18,7 @@ import {
   Users, UserPlus, ClipboardList, History, Home, Menu,
   FileText, LogOut, UserPlus2, UserRound, FolderIcon,
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
-  BarChart3, BookOpen, Wrench, Megaphone
+  BarChart3, BookOpen, Wrench, Megaphone, HelpCircle
 } from "lucide-react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -101,6 +101,7 @@ const iconBgMap: Record<string, string> = {
   "Registro de Temas": "bg-lime-100 text-lime-600",
   "Informes de Personal": "bg-purple-100 text-purple-600",
   "Notificaciones": "bg-pink-100 text-pink-600",
+  "Guía de Uso": "bg-rose-100 text-rose-600",
 };
 
 const NavItem = ({
@@ -396,6 +397,11 @@ const NavigationContent = ({
 
       {/* Bottom section */}
       <div className="px-2 py-2 border-t border-border space-y-1">
+        <NavItem
+          item={{ title: "Guía de Uso", url: "/guia", icon: HelpCircle }}
+          isActive={location.pathname === "/guia"}
+          onClick={onItemClick}
+        />
         {profile?.role !== "conserje" && checkMenuPerm("menu_mantenimiento") && (
           <NavItem
             item={{ title: "Solicitar Reparación", url: "/mantenimiento", icon: Wrench }}
