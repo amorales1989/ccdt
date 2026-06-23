@@ -18,7 +18,7 @@ import {
   Users, UserPlus, ClipboardList, History, Home, Menu,
   FileText, LogOut, UserPlus2, UserRound, FolderIcon,
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
-  BarChart3, BookOpen, Wrench, Megaphone, HelpCircle
+  BarChart3, BookOpen, Wrench, Megaphone, HelpCircle, Wallet
 } from "lucide-react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -73,6 +73,7 @@ const getItems = (role: string | undefined, profile: any, unreadReportsCount: nu
     { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
     { title: "Registro de Temas", url: "/registro-temas", icon: ClipboardCheck },
     { title: "Departamentos", url: "/departamentos", icon: FolderIcon },
+    { title: "Contabilidad", url: "/contabilidad", icon: Wallet },
     { title: "Gestión de Usuarios", url: "/gestion-usuarios", icon: UserRound },
   ];
 
@@ -237,6 +238,7 @@ const NavigationContent = ({
     "Informes de Personal": "menu_informes",
     "Material Didáctico": "menu_material",
     "Departamentos": "menu_departamentos",
+    "Contabilidad": "menu_contabilidad",
     "Gestión de Usuarios": "menu_gestion_usuarios",
     "Configuración": "menu_configuracion",
     "Mantenimiento": "menu_mantenimiento",

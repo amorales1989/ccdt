@@ -41,3 +41,6 @@ android/
 # Nunca commitear keystores ni sus passwords
 *.jks
 *.keystore
+
+# Video promocional (assets pesados, no versionar)
+promo-video/
