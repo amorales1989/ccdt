@@ -227,6 +227,33 @@ export function buildDemoSession(role: DemoRole) {
   };
 }
 
+/* ----------------------------- Contabilidad demo ----------------------------- */
+
+const ACC_OPENING = 50000;
+const ACC_TX = [
+  { id: "acc-1", date: "2026-03-02", type: "ingreso", category: "Ofrenda",       description: "Ofrenda dominical",        amount: 18500, who: ["María", "González"] },
+  { id: "acc-2", date: "2026-03-16", type: "ingreso", category: "Diezmos",       description: "Diezmos del mes",          amount: 32000, who: ["Carlos", "Fernández"] },
+  { id: "acc-3", date: "2026-04-05", type: "egreso",  category: "Materiales",    description: "Cartulinas y útiles",      amount: 12400, who: ["Lucía", "Martínez"] },
+  { id: "acc-4", date: "2026-04-20", type: "ingreso", category: "Ofrenda",       description: "Ofrenda especial",         amount: 9500,  who: ["María", "González"] },
+  { id: "acc-5", date: "2026-05-04", type: "egreso",  category: "Merienda",      description: "Merienda de los niños",    amount: 8600,  who: ["Lucía", "Martínez"] },
+  { id: "acc-6", date: "2026-05-18", type: "egreso",  category: "Mantenimiento", description: "Reparación de aula",       amount: 15000, who: ["Carlos", "Fernández"] },
+  { id: "acc-7", date: "2026-06-01", type: "ingreso", category: "Donación",      description: "Donación de una familia",  amount: 25000, who: ["María", "González"] },
+];
+
+function demoAccountingTx(deptId: string) {
+  return ACC_TX.map((t) => ({
+    id: t.id,
+    department_id: deptId,
+    type: t.type,
+    amount: t.amount,
+    category: t.category,
+    description: t.description,
+    movement_date: t.date,
+    created_at: t.date + "T10:00:00Z",
+    profiles: { first_name: t.who[0], last_name: t.who[1] },
+  }));
+}
+
 /* ----------------------------- Interceptor apiCall ----------------------------- */
 
 function param(endpoint: string, key: string): string | null {
@@ -273,6 +300,27 @@ export function resolveDemoApiCall(endpoint: string, options: RequestInit = {}):
   if (path.startsWith("/observations/")) return { data: [] };
   if (path.startsWith("/profiles/search")) return { data: [] };
   if (path.startsWith("/whatsapp")) return { data: { status: "disconnected" } };
+
+  if (path === "/accounting/transactions") {
+    const depId = param(endpoint, "department_id") || "";
+    const type = param(endpoint, "type");
+    const from = param(endpoint, "from");
+    const to = param(endpoint, "to");
+    let list = demoAccountingTx(depId);
+    if (type) list = list.filter((t) => t.type === type);
+    if (from) list = list.filter((t) => t.movement_date >= from);
+    if (to) list = list.filter((t) => t.movement_date <= to);
+    return { data: list };
+  }
+  if (path === "/accounting/balance") {
+    const list = demoAccountingTx(param(endpoint, "department_id") || "");
+    const ing = list.filter((t) => t.type === "ingreso").reduce((a, t) => a + t.amount, 0);
+    const egr = list.filter((t) => t.type === "egreso").reduce((a, t) => a + t.amount, 0);
+    return { data: { opening_balance: ACC_OPENING, total_ingresos: ing, total_egresos: egr, balance: ACC_OPENING + ing - egr } };
+  }
+  if (path === "/accounting/opening-balance") return { data: { opening_balance: ACC_OPENING } };
+  if (path === "/accounting/categories")
+    return { data: ["Ofrenda", "Diezmos", "Donación", "Materiales", "Merienda", "Mantenimiento"] };
 
   return { data: [] };
 }

@@ -1206,3 +1206,112 @@ export const updateTopicRecord = async (id: string, record: Partial<TopicRecord>
 export const deleteTopicRecord = async (id: string): Promise<void> => {
   await apiCall(`/topic-records/${id}`, { method: 'DELETE' });
 };
+
+// ===== Contabilidad =====
+export interface AccountingTransaction {
+  id: string;
+  department_id: string;
+  type: 'ingreso' | 'egreso';
+  amount: number;
+  category: string | null;
+  description: string | null;
+  movement_date: string;
+  created_by: string | null;
+  created_at: string;
+  departments?: { name: string };
+  profiles?: { first_name: string; last_name: string };
+}
+
+export interface AccountingBalance {
+  opening_balance: number;
+  total_ingresos: number;
+  total_egresos: number;
+  balance: number;
+}
+
+export const getAccountingTransactions = async (params: {
+  department_id: string;
+  from?: string;
+  to?: string;
+  type?: 'ingreso' | 'egreso';
+}): Promise<AccountingTransaction[]> => {
+  const qs = new URLSearchParams();
+  qs.set('department_id', params.department_id);
+  if (params.from) qs.set('from', params.from);
+  if (params.to) qs.set('to', params.to);
+  if (params.type) qs.set('type', params.type);
+  const response = await apiCall(`/accounting/transactions?${qs.toString()}`);
+  return response.data || [];
+};
+
+export const createAccountingTransaction = async (tx: {
+  department_id: string;
+  type: 'ingreso' | 'egreso';
+  amount: number;
+  category?: string | null;
+  description?: string | null;
+  movement_date: string;
+}): Promise<AccountingTransaction> => {
+  const response = await apiCall('/accounting/transactions', {
+    method: 'POST',
+    body: JSON.stringify(tx),
+  });
+  return response.data;
+};
+
+export const updateAccountingTransaction = async (
+  id: string,
+  tx: Partial<{
+    type: 'ingreso' | 'egreso';
+    amount: number;
+    category: string | null;
+    description: string | null;
+    movement_date: string;
+  }>
+): Promise<AccountingTransaction> => {
+  const response = await apiCall(`/accounting/transactions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(tx),
+  });
+  return response.data;
+};
+
+export const deleteAccountingTransaction = async (id: string): Promise<void> => {
+  await apiCall(`/accounting/transactions/${id}`, { method: 'DELETE' });
+};
+
+export const getAccountingCategories = async (
+  department_id: string,
+  type?: 'ingreso' | 'egreso'
+): Promise<string[]> => {
+  const qs = new URLSearchParams();
+  qs.set('department_id', department_id);
+  if (type) qs.set('type', type);
+  const response = await apiCall(`/accounting/categories?${qs.toString()}`);
+  return response.data || [];
+};
+
+export const getAccountingBalance = async (params: {
+  department_id: string;
+  from?: string;
+  to?: string;
+}): Promise<AccountingBalance> => {
+  const qs = new URLSearchParams();
+  qs.set('department_id', params.department_id);
+  if (params.from) qs.set('from', params.from);
+  if (params.to) qs.set('to', params.to);
+  const response = await apiCall(`/accounting/balance?${qs.toString()}`);
+  return response.data;
+};
+
+export const getOpeningBalance = async (department_id: string): Promise<number> => {
+  const response = await apiCall(`/accounting/opening-balance?department_id=${encodeURIComponent(department_id)}`);
+  return response.data?.opening_balance ?? 0;
+};
+
+export const setOpeningBalance = async (department_id: string, opening_balance: number): Promise<void> => {
+  await apiCall('/accounting/opening-balance', {
+    method: 'PUT',
+    body: JSON.stringify({ department_id, opening_balance }),
+  });
+};

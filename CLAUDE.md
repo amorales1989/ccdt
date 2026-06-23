@@ -53,3 +53,33 @@
 ## 13. No usar Agent cuando Grep/Read basta
 - Agent duplica todo el contexto en un subproceso. Solo usalo para busquedas amplias o tareas complejas.
 - Para buscar una funcion o archivo especifico, usa Grep o Glob directo.
+
+---
+
+# Estandares de Desarrollo — Frontend (ccdt)
+
+## 14. Las APIs viven en ccdt-back, no en el front
+- TODA logica de negocio, escritura de datos y operaciones sensibles van por el API Express de `ccdt-back` (vía `src/lib/api.ts` con axios + token Bearer).
+- NO agregar nuevas funciones serverless en `api/` ni nuevos `supabase.from()` directos para crear/editar/borrar. Si necesitas un endpoint nuevo, créalo en ccdt-back.
+- `supabase.from()` directo desde el browser SOLO se permite para lecturas no sensibles ya existentes que dependen 100% de RLS. Toda escritura nueva = endpoint en el back.
+- Al tocar codigo que hace `supabase.from()` directo para mutaciones, migrarlo al API si es de bajo riesgo; si no, dejar comentario `// TODO: mover a API back`.
+
+## 15. Auth y multi-tenant
+- Nunca confiar en `company_id` del cliente como fuente de verdad: el back lo deriva del perfil. El front solo lo manda como header `x-company-id` por conveniencia.
+- No exponer la `service_key` de Supabase en el front jamas. El front solo usa `VITE_SUPABASE_ANON_KEY`.
+- Toda llamada al API debe incluir el token Bearer; si un endpoint nuevo no lo requiere, justificarlo.
+
+## 16. Seguridad en el front
+- Nunca hardcodear secrets, URLs de servicio con keys, ni tokens. Usar `import.meta.env.VITE_*`.
+- Sanitizar/escapar cualquier HTML que venga de datos de usuario. No usar `dangerouslySetInnerHTML` sin sanitizar.
+- Validar inputs en el form (zod/react-hook-form ya está disponible) ademas de en el back.
+- No loguear datos personales (DNI, telefonos, tokens) en `console.log` en codigo que va a prod.
+
+## 17. Tests antes de declarar hecho (regla 5 reforzada)
+- Cambios de UI: correr `npm run lint` y verificar el build (`npm run build`) sin errores de TS.
+- Cambios de logica en `src/lib/`: agregar/actualizar test (Vitest). Si no hay setup de tests aun, crearlo minimalista antes de la primera funcion critica.
+- Flujos criticos (login, asistencia, autorizaciones): verificar manualmente o con Playwright MCP antes de cerrar.
+
+## 18. Consistencia visual y componentes
+- Reusar componentes de `src/components/ui` (shadcn). No crear botones/inputs custom si existe el de la libreria.
+- No mezclar MUI y shadcn para el mismo proposito en una misma vista sin razon; preferir el que ya domina la pantalla.
