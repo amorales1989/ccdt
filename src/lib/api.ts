@@ -17,7 +17,7 @@ const getApiBaseUrl = () => {
   if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
     return 'http://localhost:3001/api';
   }
-  return import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://ccdt-back.onrender.com/api';
+  return import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://ccdt-back.116.203.244.65.sslip.io/api';
 };
 
 const resolveLocalPort = async (): Promise<string> => {

@@ -40,8 +40,8 @@ import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-const WRITE_ROLES = ["admin", "lider"];
-const ALL_DEPT_ROLES = ["admin", "secretaria"];
+const WRITE_ROLES = ["admin", "lider", "director", "vicedirector", "director_general"];
+const ALL_DEPT_ROLES = ["admin", "secretaria", "director_general"];
 
 const fmtMoney = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(n || 0);
