@@ -21,15 +21,6 @@ import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { DatePickerField } from "@/components/DatePickerField";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 const TomarAsistencia = () => {
   const { toast } = useToast();
@@ -37,13 +28,13 @@ const TomarAsistencia = () => {
   const [asistencias, setAsistencias] = useState<Record<string, boolean>>({});
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isLoading, setIsLoading] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [authorizedStudents, setAuthorizedStudents] = useState<Record<string, boolean>>({});
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [deptClasses, setDeptClasses] = useState<string[]>([]);
   const [dateOpen, setDateOpen] = useState(false);
   const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
+  const [hasExistingRecord, setHasExistingRecord] = useState(false);
 
   const tourSteps: Step[] = [
     {
@@ -237,6 +228,36 @@ const TomarAsistencia = () => {
     enabled: Boolean(profile) && (Boolean(departmentId)),
   });
 
+  // Si la fecha seleccionada ya tiene asistencia tomada, cargarla en la lista (presentes en "P")
+  useEffect(() => {
+    let cancelled = false;
+    const loadExisting = async () => {
+      const classToFilter = isDirector ? selectedClass : userClass;
+      if (!departmentId || !selectedDate || (students as any[]).length === 0 || (isDirector && !selectedClass)) {
+        setHasExistingRecord(false);
+        return;
+      }
+      try {
+        const data = await getAttendance(selectedDate, selectedDate, undefined, departmentId, classToFilter || undefined);
+        if (cancelled) return;
+        if (data && data.length > 0) {
+          const map: Record<string, boolean> = {};
+          data.forEach((a: any) => { map[a.student_id] = !!a.status; });
+          setAsistencias(map);
+          setHasExistingRecord(true);
+        } else {
+          setAsistencias({});
+          setHasExistingRecord(false);
+        }
+      } catch {
+        // si falla la consulta, no bloquear la toma de asistencia
+      }
+    };
+    loadExisting();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, departmentId, selectedClass, userClass, students]);
+
   const regularStudents = (students as any[])?.filter(s => !s.nuevo) || [];
   const newStudents = (students as any[])?.filter(s => s.nuevo === true) || [];
   const hasNewStudents = newStudents.length > 0;
@@ -254,16 +275,6 @@ const TomarAsistencia = () => {
     setAsistencias(prev => ({ ...prev, [id]: presente }));
   };
 
-  const checkExistingAttendance = async (date: string, classId?: string) => {
-    if (!departmentId) return false;
-    try {
-      const data = await getAttendance(date, date, undefined, departmentId, classId);
-      return data && data.length > 0;
-    } catch {
-      return false;
-    }
-  };
-
   const handleSaveAttendance = async () => {
     if (!selectedDate) {
       toast({ title: "Error", description: "Por favor seleccione una fecha", variant: "destructive" });
@@ -272,8 +283,6 @@ const TomarAsistencia = () => {
     setIsLoading(true);
     try {
       const classToFilter = isDirector ? selectedClass : userClass;
-      const hasExisting = await checkExistingAttendance(selectedDate, classToFilter);
-      if (hasExisting) { setShowAlert(true); setIsLoading(false); return; }
 
       // Use the selectedDate directly as it's already in YYYY-MM-DD format
       const adjustedDate = selectedDate;
@@ -294,8 +303,12 @@ const TomarAsistencia = () => {
         })
       );
 
-      toast({ title: "Asistencia guardada", description: "Registrada exitosamente", variant: "success" });
-      setAsistencias({});
+      toast({
+        title: hasExistingRecord ? "Cambios guardados" : "Asistencia guardada",
+        description: "Registrada exitosamente",
+        variant: "success",
+      });
+      setHasExistingRecord(true);
     } catch {
       toast({ title: "Error", description: "Hubo un error al guardar la asistencia", variant: "destructive" });
     } finally {
@@ -404,6 +417,11 @@ const TomarAsistencia = () => {
               Tomar Asistencia
             </h1>
             <p className="text-sm text-muted-foreground capitalize">{displayDate}</p>
+            {hasExistingRecord && (
+              <Badge className="mt-1 bg-orange-100 text-orange-700 border-none font-bold text-[11px]">
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Asistencia ya registrada — editando
+              </Badge>
+            )}
           </div>
           <button
             onClick={() => setRunTour(true)}
@@ -569,38 +587,12 @@ const TomarAsistencia = () => {
           ) : (
             <div className="flex items-center gap-2">
               <Save className="h-5 w-5" />
-              Guardar Asistencia
+              {hasExistingRecord ? "Guardar cambios" : "Guardar Asistencia"}
             </div>
           )}
         </Button>
       </div>
 
-      {/* Alert Dialog */}
-      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
-        <AlertDialogContent className="glass-card border-none shadow-2xl">
-          <AlertDialogHeader>
-            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-2">
-              <CheckCircle2 className="h-6 w-6 text-orange-500" />
-            </div>
-            <AlertDialogTitle className="text-center font-black text-foreground">
-              Asistencia ya registrada
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-slate-500">
-              Ya existe un registro para el{" "}
-              <strong>{selectedDate.split('-').reverse().join('/')}</strong>
-              {" "}en {isDirector ? `la clase "${selectedClass}" de este departamento` : "esta clase"}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="sm:justify-center">
-            <AlertDialogAction
-              onClick={() => setShowAlert(false)}
-              className="button-gradient px-8 rounded-xl"
-            >
-              Entendido
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

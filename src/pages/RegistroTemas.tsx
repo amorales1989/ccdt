@@ -72,6 +72,7 @@ export default function RegistroTemas() {
   const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
   const [editing, setEditing] = useState<TopicRecord | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [basePending, setBasePending] = useState(false);
   const [previewFirma, setPreviewFirma] = useState<string | null>(null);
 
   const role = profile?.role || "";
@@ -179,6 +180,15 @@ export default function RegistroTemas() {
     setForm(prev => ({ ...prev, [field]: value }));
 
   const handleSubmit = () => {
+    if (basePending) {
+      toast({
+        title: "Falta agregar la cita",
+        description: "Tocá el botón + para agregar la referencia a la base bíblica antes de guardar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const payload = {
       fecha: form.fecha,
       tema: form.tema || undefined,
@@ -543,7 +553,7 @@ export default function RegistroTemas() {
 
             <div>
               <Label>Base Bíblica</Label>
-              <BibleReferenceMultiPicker value={form.base_biblica} onChange={v => set("base_biblica", v)} />
+              <BibleReferenceMultiPicker value={form.base_biblica} onChange={v => set("base_biblica", v)} onPendingChange={setBasePending} />
             </div>
             <div>
               <Label>Versículo p/ Memorizar</Label>

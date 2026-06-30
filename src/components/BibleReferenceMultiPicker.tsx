@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
@@ -7,11 +7,19 @@ import { BibleReferencePicker } from "./BibleReferencePicker";
 interface BibleReferenceMultiPickerProps {
   value?: string;
   onChange: (value: string) => void;
+  // Avisa al padre si hay una cita empezada (libro seleccionado) que todavía no se agregó con "+".
+  onPendingChange?: (pending: boolean) => void;
 }
 
-export function BibleReferenceMultiPicker({ value, onChange }: BibleReferenceMultiPickerProps) {
+export function BibleReferenceMultiPicker({ value, onChange, onPendingChange }: BibleReferenceMultiPickerProps) {
   const [draft, setDraft] = useState("");
   const refs = (value || "").split(";").map((s) => s.trim()).filter(Boolean);
+  const pending = !!draft.trim();
+
+  useEffect(() => {
+    onPendingChange?.(pending);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending]);
 
   const add = () => {
     const r = draft.trim();
@@ -33,15 +41,20 @@ export function BibleReferenceMultiPicker({ value, onChange }: BibleReferenceMul
         <Button
           type="button"
           size="icon"
-          variant="outline"
-          className="h-9 w-9 shrink-0"
+          variant={pending ? "default" : "outline"}
+          className={`h-9 w-9 shrink-0 ${pending ? "animate-pulse" : ""}`}
           onClick={add}
-          disabled={!draft.trim()}
+          disabled={!pending}
           title="Agregar referencia"
         >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+      {pending && (
+        <p className="text-xs font-medium text-amber-600">
+          Tocá <span className="font-bold">+</span> para agregar esta cita a la base bíblica.
+        </p>
+      )}
       {refs.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {refs.map((r, i) => (

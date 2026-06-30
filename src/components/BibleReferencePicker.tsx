@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -11,7 +11,21 @@ interface BibleReferencePickerProps {
 }
 
 export function BibleReferencePicker({ value, onChange }: BibleReferencePickerProps) {
-  const { book, chapter, verseFrom, verseTo } = useMemo(() => parseReference(value), [value]);
+  const { book, chapter, verseFrom: pVerseFrom, verseTo: pVerseTo } = useMemo(() => parseReference(value), [value]);
+
+  // Los versículos se guardan en estado local: el string canónico (buildReference) es
+  // "lossy" mid-tipeo (descarta "hasta" cuando es igual a "desde"), así que no podemos
+  // derivar el valor del input de él o se pierden dígitos al escribir.
+  const [verseFrom, setVerseFrom] = useState(pVerseFrom);
+  const [verseTo, setVerseTo] = useState(pVerseTo);
+
+  // Re-sincronizar solo cuando cambia la referencia externa (libro/capítulo): carga de un
+  // registro existente o reset del borrador. No depende de los versículos para no pisar el tipeo.
+  useEffect(() => {
+    setVerseFrom(pVerseFrom);
+    setVerseTo(pVerseTo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book, chapter]);
 
   const selectedBook = BIBLE_BOOKS.find((b) => b.name === book);
   const chapterCount = selectedBook?.chapters || 0;
@@ -29,7 +43,7 @@ export function BibleReferencePicker({ value, onChange }: BibleReferencePickerPr
       {/* Libro */}
       <Select
         value={book || undefined}
-        onValueChange={(b) => emit({ book: b, chapter: "", verseFrom: "", verseTo: "" })}
+        onValueChange={(b) => { setVerseFrom(""); setVerseTo(""); emit({ book: b, chapter: "", verseFrom: "", verseTo: "" }); }}
       >
         <SelectTrigger className="col-span-2 h-9 text-sm">
           <SelectValue placeholder="Libro" />
@@ -44,7 +58,7 @@ export function BibleReferencePicker({ value, onChange }: BibleReferencePickerPr
       {/* Capítulo */}
       <Select
         value={chapter || undefined}
-        onValueChange={(c) => emit({ chapter: c, verseFrom: "", verseTo: "" })}
+        onValueChange={(c) => { setVerseFrom(""); setVerseTo(""); emit({ chapter: c, verseFrom: "", verseTo: "" }); }}
         disabled={!selectedBook}
       >
         <SelectTrigger className="h-9 text-sm">
@@ -68,6 +82,8 @@ export function BibleReferencePicker({ value, onChange }: BibleReferencePickerPr
         onChange={(e) => {
           const vf = e.target.value;
           const clearTo = verseTo && vf && Number(verseTo) < Number(vf);
+          setVerseFrom(vf);
+          if (clearTo) setVerseTo("");
           emit({ verseFrom: vf, ...(clearTo ? { verseTo: "" } : {}) });
         }}
       />
@@ -80,10 +96,12 @@ export function BibleReferencePicker({ value, onChange }: BibleReferencePickerPr
         className="h-9 text-sm"
         value={verseTo}
         disabled={!verseFrom}
-        onChange={(e) => emit({ verseTo: e.target.value })}
+        onChange={(e) => { setVerseTo(e.target.value); emit({ verseTo: e.target.value }); }}
         onBlur={(e) => {
           if (e.target.value && verseFrom && Number(e.target.value) <= Number(verseFrom)) {
-            emit({ verseTo: String(Number(verseFrom) + 1) });
+            const fixed = String(Number(verseFrom) + 1);
+            setVerseTo(fixed);
+            emit({ verseTo: fixed });
           }
         }}
       />
