@@ -300,5 +300,12 @@ export const exportAttendanceMatrix = async (
         });
     }
 
-    doc.save(`Matriz_Asistencia_${format(new Date(), "yyyyMMdd")}.pdf`);
+    // Nombre del archivo con depto/clase (del título) para diferenciarlos a simple vista.
+    const slug = (title || '')
+        .replace(/^Asistencia\s*-?\s*/i, '')
+        .trim()
+        .replace(/[^\p{L}\p{N}]+/gu, '_')
+        .replace(/^_+|_+$/g, '');
+    const namePart = slug ? `${slug}_` : '';
+    doc.save(`Matriz_Asistencia_${namePart}${format(new Date(), "yyyyMMdd")}.pdf`);
 };

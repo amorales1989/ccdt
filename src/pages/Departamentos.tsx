@@ -37,6 +37,7 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
   const [description, setDescription] = useState("");
   const [newClass, setNewClass] = useState("");
   const [classes, setClasses] = useState<string[]>([]);
+  const [activityDays, setActivityDays] = useState<number[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingName, setEditingName] = useState<string>("");
 
@@ -76,8 +77,8 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
   });
 
   const updateDepartmentMutation = useMutation({
-    mutationFn: async ({ id, name, description, classes }: { id: string; name?: string; description?: string; classes?: string[] }) => {
-      return updateDepartment(id, { name: name as DepartmentType, description, classes });
+    mutationFn: async ({ id, name, description, classes, activity_days }: { id: string; name?: string; description?: string; classes?: string[]; activity_days?: number[] }) => {
+      return updateDepartment(id, { name: name as DepartmentType, description, classes, activity_days });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
@@ -140,6 +141,7 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
     setEditingName(department.name);
     setDescription(department.description || "");
     setClasses(department.classes || []);
+    setActivityDays(department.activity_days || []);
     setIsCreating(false);
     setIsEditing(true);
     setIsModalOpen(true);
@@ -149,10 +151,18 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
     setName("");
     setDescription("");
     setClasses([]);
+    setActivityDays([]);
     setIsEditing(false);
     setIsCreating(true);
     setIsModalOpen(true);
   };
+
+  const WEEKDAYS = [
+    { n: 0, label: "Dom" }, { n: 1, label: "Lun" }, { n: 2, label: "Mar" },
+    { n: 3, label: "Mié" }, { n: 4, label: "Jue" }, { n: 5, label: "Vie" }, { n: 6, label: "Sáb" },
+  ];
+  const toggleActivityDay = (n: number) =>
+    setActivityDays((prev) => (prev.includes(n) ? prev.filter((d) => d !== n) : [...prev, n].sort()));
 
   if (isLoading) {
     return <LoadingOverlay message="Cargando departamentos..." />;
@@ -374,6 +384,30 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
                 <p className="text-xs text-slate-400 italic pt-1">Sin clases definidas.</p>
               )}
             </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Días de actividad</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {WEEKDAYS.map((d) => {
+                  const active = activityDays.includes(d.n);
+                  return (
+                    <button
+                      key={d.n}
+                      type="button"
+                      onClick={() => toggleActivityDay(d.n)}
+                      className={`h-9 w-12 rounded-xl text-xs font-bold transition-all ${active
+                        ? "bg-primary text-white shadow-sm"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200"}`}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Se usa para sugerir por defecto la última fecha con actividad en la cobertura de asistencia.
+              </p>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -383,9 +417,9 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
             <Button
               onClick={() => {
                 if (isEditing && selectedDepartment) {
-                  updateDepartmentMutation.mutate({ id: selectedDepartment.id, name: editingName, description, classes });
+                  updateDepartmentMutation.mutate({ id: selectedDepartment.id, name: editingName, description, classes, activity_days: activityDays });
                 } else {
-                  createDepartmentMutation.mutate({ name: name as DepartmentType, description: description.trim() || undefined, classes });
+                  createDepartmentMutation.mutate({ name: name as DepartmentType, description: description.trim() || undefined, classes, activity_days: activityDays });
                 }
               }}
               disabled={isEditing ? (!editingName || updateDepartmentMutation.isPending) : (!name || createDepartmentMutation.isPending)}

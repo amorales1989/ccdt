@@ -429,9 +429,11 @@ const ListarAlumnos = () => {
       if (filters.class) filtered = filtered.filter((a: any) => a.assigned_class === filters.class);
       const ids = new Set(reportStudents.map(s => s.id));
       const relevant = filtered.filter((a: any) => ids.has(a.student_id));
+      const titleDept = filters.department || profile?.departments?.[0];
+      const titleClass = attendanceClassFilter; // clase efectiva: filtro o la del perfil (maestro/líder)
       const titleParts = ['Asistencia'];
-      if (filters.department) titleParts.push(filters.department);
-      if (filters.class) titleParts.push(filters.class);
+      if (titleDept) titleParts.push(titleDept);
+      if (titleClass) titleParts.push(titleClass);
       const contextDept = filters.department || profile?.departments?.[0] || null;
       const showClassColumn = ['admin', 'secretaria', 'director', 'director_general', 'vicedirector'].includes(profile?.role || '');
 

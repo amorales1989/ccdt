@@ -103,6 +103,7 @@ export interface Department {
   name: DepartmentType;
   description?: string;
   classes: string[];
+  activity_days?: number[]; // días con actividad (0=Domingo .. 6=Sábado)
   created_at: string;
   updated_at: string;
 }

@@ -1,0 +1,163 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e6]
+      - generic [ref=e9]: Modo demo · datos de ejemplo · los cambios no se guardan
+    - button "Salir" [ref=e10] [cursor=pointer]:
+      - img [ref=e11]
+      - text: Salir
+  - generic [ref=e16]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - img "Logo" [ref=e27]
+        - generic [ref=e28]:
+          - generic [ref=e29]: Congregación Central
+          - generic [ref=e30]: Sistema de Gestión
+      - generic [ref=e32] [cursor=pointer]:
+        - generic [ref=e33]: CI
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: Carlos Ibáñez
+            - img [ref=e37]
+          - generic [ref=e40]:
+            - generic [ref=e41]: Director
+            - generic [ref=e42]: jovenes
+      - generic [ref=e43]:
+        - generic [ref=e44]: Navegación
+        - link "Inicio" [ref=e45] [cursor=pointer]:
+          - /url: /
+          - img [ref=e47]
+          - generic [ref=e50]: Inicio
+        - link "Lista de Miembros" [ref=e51] [cursor=pointer]:
+          - /url: /listar
+          - img [ref=e53]
+          - generic [ref=e58]: Lista de Miembros
+        - link "Calendario" [ref=e59] [cursor=pointer]:
+          - /url: /calendario
+          - img [ref=e61]
+          - generic [ref=e64]: Calendario
+        - link "Informes de Personal" [ref=e65] [cursor=pointer]:
+          - /url: /informes
+          - img [ref=e67]
+          - generic [ref=e72]: Informes de Personal
+        - link "Tomar Asistencia" [ref=e73] [cursor=pointer]:
+          - /url: /asistencia
+          - img [ref=e75]
+          - generic [ref=e78]: Tomar Asistencia
+        - link "Promover Miembros" [ref=e79] [cursor=pointer]:
+          - /url: /promover
+          - img [ref=e81]
+          - generic [ref=e84]: Promover Miembros
+        - link "Historial" [ref=e85] [cursor=pointer]:
+          - /url: /historial
+          - img [ref=e87]
+          - generic [ref=e91]: Historial
+        - link "Estadísticas" [ref=e92] [cursor=pointer]:
+          - /url: /estadisticas
+          - img [ref=e94]
+          - generic [ref=e96]: Estadísticas
+        - link "Registro de Temas" [ref=e97] [cursor=pointer]:
+          - /url: /registro-temas
+          - img [ref=e99]
+          - generic [ref=e103]: Registro de Temas
+        - link "Gestión de Usuarios" [ref=e104] [cursor=pointer]:
+          - /url: /gestion-usuarios
+          - img [ref=e106]
+          - generic [ref=e109]: Gestión de Usuarios
+      - generic [ref=e110]:
+        - link "Guía de Uso" [ref=e111] [cursor=pointer]:
+          - /url: /guia
+          - img [ref=e113]
+          - generic [ref=e116]: Guía de Uso
+        - link "Solicitar Reparación" [ref=e117] [cursor=pointer]:
+          - /url: /mantenimiento
+          - img [ref=e119]
+          - generic [ref=e121]: Solicitar Reparación
+        - button "Cerrar Sesión" [ref=e123] [cursor=pointer]:
+          - img [ref=e125]
+          - generic [ref=e128]: Cerrar Sesión
+    - main [ref=e129]:
+      - generic [ref=e130]:
+        - generic [ref=e132]:
+          - heading "Jovenes" [level=1] [ref=e135]
+          - generic [ref=e136]:
+            - generic [ref=e137] [cursor=pointer]:
+              - generic [ref=e138]:
+                - heading "Pre-juveniles" [level=3] [ref=e139]
+                - generic [ref=e140]:
+                  - generic [ref=e141]:
+                    - generic [ref=e142]: "5"
+                    - generic [ref=e143]: Miembros
+                  - img [ref=e145]
+              - generic [ref=e153]:
+                - generic [ref=e156]: Masculino 3
+                - generic [ref=e159]: Femenino 2
+            - generic [ref=e160] [cursor=pointer]:
+              - generic [ref=e161]:
+                - heading "Juveniles" [level=3] [ref=e162]
+                - generic [ref=e163]:
+                  - generic [ref=e164]:
+                    - generic [ref=e165]: "3"
+                    - generic [ref=e166]: Miembros
+                  - img [ref=e168]
+              - generic [ref=e176]:
+                - generic [ref=e179]: Masculino 1
+                - generic [ref=e182]: Femenino 2
+        - generic [ref=e183]:
+          - generic [ref=e185]:
+            - heading "Próximos Eventos" [level=2] [ref=e188]
+            - generic [ref=e189]:
+              - generic [ref=e190]:
+                - generic [ref=e191]:
+                  - generic [ref=e192]: "10"
+                  - generic [ref=e193]: JUL
+                - generic [ref=e194]:
+                  - heading "Emma Fernández" [level=3] [ref=e196]
+                  - generic [ref=e197]:
+                    - generic [ref=e198]: Cumpleaños
+                    - generic [ref=e199]: Pre-juveniles
+              - generic [ref=e200]:
+                - generic [ref=e201]:
+                  - generic [ref=e202]: "11"
+                  - generic [ref=e203]: AGO
+                - generic [ref=e204]:
+                  - heading "Santiago López" [level=3] [ref=e206]
+                  - generic [ref=e207]:
+                    - generic [ref=e208]: Cumpleaños
+                    - generic [ref=e209]: Pre-juveniles
+              - generic [ref=e210]:
+                - generic [ref=e211]:
+                  - generic [ref=e212]: "17"
+                  - generic [ref=e213]: AGO
+                - generic [ref=e214]:
+                  - heading "Lautaro Sánchez" [level=3] [ref=e216]
+                  - generic [ref=e217]:
+                    - generic [ref=e218]: Cumpleaños
+                    - generic [ref=e219]: Juveniles
+              - generic [ref=e220]:
+                - generic [ref=e221]:
+                  - generic [ref=e222]: "12"
+                  - generic [ref=e223]: SEP
+                - generic [ref=e224]:
+                  - heading "Olivia Martínez" [level=3] [ref=e226]
+                  - generic [ref=e227]:
+                    - generic [ref=e228]: Cumpleaños
+                    - generic [ref=e229]: Pre-juveniles
+          - generic [ref=e231]:
+            - generic [ref=e232]:
+              - generic [ref=e233]:
+                - generic [ref=e234]:
+                  - img [ref=e235]
+                  - generic [ref=e239]: 0%
+                - generic [ref=e240]:
+                  - generic [ref=e241]:
+                    - img [ref=e242]
+                    - generic [ref=e245]: Cobertura de asistencia
+                  - paragraph [ref=e246]: Sin clases para mostrar
+                - button "29/06/2026" [ref=e248] [cursor=pointer]:
+                  - img [ref=e249]
+                  - generic [ref=e251]: 29/06/2026
+              - paragraph [ref=e252]: lunes, 29 de junio 2026
+            - paragraph [ref=e254]: Cargando…
+  - region "Notifications (F8)":
+    - list

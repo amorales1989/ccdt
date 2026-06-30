@@ -49,10 +49,10 @@ export function exitDemo() {
 const COMPANY_ID = 1;
 
 const DEPARTMENTS = [
-  { id: "dep-escuelita", name: "escuelita", description: "Niños de 3 a 8 años", classes: ["Sala 3", "Sala 4", "Sala 5"], created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z", company_id: COMPANY_ID },
-  { id: "dep-adolescentes", name: "adolescentes", description: "De 9 a 13 años", classes: ["Clase A", "Clase B"], created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z", company_id: COMPANY_ID },
-  { id: "dep-jovenes", name: "jovenes", description: "De 14 a 25 años", classes: ["Pre-juveniles", "Juveniles"], created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z", company_id: COMPANY_ID },
-  { id: "dep-adultos", name: "adultos", description: "Mayores de 25", classes: ["Matrimonios", "Damas", "Caballeros"], created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z", company_id: COMPANY_ID },
+  { id: "dep-escuelita", name: "escuelita", description: "Niños de 3 a 8 años", classes: ["Sala 3", "Sala 4", "Sala 5"], activity_days: [0], created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z", company_id: COMPANY_ID },
+  { id: "dep-adolescentes", name: "adolescentes", description: "De 9 a 13 años", classes: ["Clase A", "Clase B"], activity_days: [0], created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z", company_id: COMPANY_ID },
+  { id: "dep-jovenes", name: "jovenes", description: "De 14 a 25 años", classes: ["Pre-juveniles", "Juveniles"], activity_days: [6], created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z", company_id: COMPANY_ID },
+  { id: "dep-adultos", name: "adultos", description: "Mayores de 25", classes: ["Matrimonios", "Damas", "Caballeros"], activity_days: [0], created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z", company_id: COMPANY_ID },
 ];
 
 const MALE = ["Mateo", "Lucas", "Benjamín", "Thiago", "Joaquín", "Santiago", "Bautista", "Lautaro", "Nicolás", "Tomás", "Gael", "Dylan"];
@@ -321,6 +321,70 @@ export function resolveDemoApiCall(endpoint: string, options: RequestInit = {}):
   if (path === "/accounting/opening-balance") return { data: { opening_balance: ACC_OPENING } };
   if (path === "/accounting/categories")
     return { data: ["Ofrenda", "Diezmos", "Donación", "Materiales", "Merienda", "Mantenimiento"] };
+
+  if (path === "/attendance/coverage") {
+    const role = getDemoRole();
+    const allDeptRoles = ["admin", "secretaria", "director_general"];
+    const profile = PROFILES.find((p) => p.role === role);
+    let deps = DEPARTMENTS;
+    if (!allDeptRoles.includes(role)) {
+      const names = (profile?.departments || []) as string[];
+      deps = DEPARTMENTS.filter((d) => names.includes(d.name));
+    }
+    // Fecha: la pedida, o la última con actividad segun activity_days de los deptos.
+    // Usamos UTC de forma consistente (igual que el back) para que el día de semana y el string coincidan.
+    let date = param(endpoint, "date") || "";
+    if (!date) {
+      const days = new Set<number>();
+      deps.forEach((d) => ((d as any).activity_days || []).forEach((n: number) => days.add(n)));
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      if (days.size === 0) {
+        date = todayStr;
+      } else {
+        const [y, m, dd] = todayStr.split("-").map(Number);
+        const baseDay = new Date(Date.UTC(y, m - 1, dd)).getUTCDate();
+        for (let i = 0; i < 7; i++) {
+          const dt = new Date(Date.UTC(y, m - 1, dd));
+          dt.setUTCDate(baseDay - i);
+          if (days.has(dt.getUTCDay())) { date = dt.toISOString().slice(0, 10); break; }
+        }
+        if (!date) date = todayStr;
+      }
+    }
+    const departments = deps.map((d) => {
+      const counts: Record<string, number> = {};
+      STUDENTS.filter((s) => s.department_id === d.id).forEach((s) => {
+        const c = (s.assigned_class || "").toLowerCase();
+        if (c) counts[c] = (counts[c] || 0) + 1;
+      });
+      const att = ATTENDANCE.filter((a) => a.date === date && a.department_id === d.id);
+      const takenSet = new Set(att.map((a) => (a.assigned_class || "").toLowerCase()));
+      const hasAnyThatDate = att.length > 0;
+      const classes = (d.classes || [])
+        .filter((label) => counts[label.toLowerCase()] > 0)
+        .map((label, i) => {
+          const key = label.toLowerCase();
+          // Si ese día no hay datos demo, alternamos para mostrar tomadas y pendientes.
+          const tomada = hasAnyThatDate ? takenSet.has(key) : i % 2 === 0;
+          const present = att.filter((a) => (a.assigned_class || "").toLowerCase() === key && a.status).length;
+          return {
+            clase: label,
+            tomada,
+            presentes: tomada ? present || Math.ceil((counts[key] || 0) * 0.7) : 0,
+            total: counts[key] || 0,
+          };
+        });
+      return {
+        department_id: d.id,
+        name: d.name,
+        total_clases: classes.length,
+        tomadas: classes.filter((c) => c.tomada).length,
+        classes,
+      };
+    });
+    return { success: true, date, departments };
+  }
 
   return { data: [] };
 }

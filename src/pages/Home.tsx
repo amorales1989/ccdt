@@ -19,6 +19,7 @@ import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MaintenanceSummaryWidget } from "@/components/MaintenanceSummaryWidget";
+import { AttendanceCoverageWidget } from "@/components/AttendanceCoverageWidget";
 import { MissingDniAlertModal } from "@/components/MissingDniAlertModal";
 import {
   DropdownMenu,
@@ -56,6 +57,7 @@ const Home = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const isConserje = profile?.role === 'conserje';
+  const isDirectorRole = profile?.role === 'director' || profile?.role === 'vicedirector' || profile?.role === 'director_general';
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -448,17 +450,24 @@ const Home = () => {
 
       {/* 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
-        {/* Left Column: Events */}
-        <section data-tour="home-calendar" className={`transition-all duration-500 ${isAdminOrSecretary ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+        {/* Left Column: Events (en celular va después de la cobertura) */}
+        <section data-tour="home-calendar" className={`order-2 lg:order-1 transition-all duration-500 ${(isAdminOrSecretary && !isConserje) || isDirectorRole ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
           <CalendarWidget
             auth={{ isAdminOrSecretary }}
             data={{ events: futureEvents, eventsLoading, searchTerm, setSearchTerm }}
           />
         </section>
 
+        {/* Right Column: Cobertura de asistencia (directores / vicedirectores) */}
+        {isDirectorRole && (
+          <section className="order-1 lg:order-2 lg:col-span-1 animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right-8 duration-700">
+            <AttendanceCoverageWidget />
+          </section>
+        )}
+
         {/* Right Column: Actions & Resources */}
         {isAdminOrSecretary && !isConserje && (
-          <section className="space-y-6 lg:col-span-1 animate-in fade-in slide-in-from-right-8 duration-700 delay-300">
+          <section className="order-1 lg:order-2 space-y-6 lg:col-span-1 animate-in fade-in slide-in-from-right-8 duration-700 delay-300">
             <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100 mb-4 px-2">
               Estadisticas generales
             </h2>

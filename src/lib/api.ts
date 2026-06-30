@@ -454,6 +454,7 @@ export const createDepartment = async (department: {
   name: DepartmentType;
   description: string;
   classes: string[];
+  activity_days?: number[];
 }) => {
   try {
     const { data, error } = await supabase
@@ -587,6 +588,23 @@ export const deleteAttendanceByDate = async (params: {
     console.error('Error deleting attendance by date:', error);
     throw error;
   }
+};
+
+export type CoverageClass = { clase: string; tomada: boolean; presentes: number; total: number };
+export type CoverageDept = { department_id: string; name: string; total_clases: number; tomadas: number; classes: CoverageClass[] };
+
+// Cobertura de asistencia: qué clases tomaron asistencia un día y cuáles no (directores/vicedir.)
+// Si no se pasa `date`, el back resuelve la última fecha con actividad segun los días del depto.
+export const getAttendanceCoverage = async (
+  date?: string,
+  departmentId?: string
+): Promise<{ date: string; departments: CoverageDept[] }> => {
+  const qs = new URLSearchParams();
+  if (date) qs.set('date', date);
+  if (departmentId) qs.set('department_id', departmentId);
+  const q = qs.toString();
+  const response = await apiCall(`/attendance/coverage${q ? `?${q}` : ''}`);
+  return { date: response?.date || date || '', departments: response?.departments || [] };
 };
 
 export const getEvents = async (): Promise<Event[]> => {
