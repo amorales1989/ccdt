@@ -65,6 +65,21 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Network error' }));
 
+    // Empresa suspendida (ej. falta de pago): cerrar sesión y mostrar modal en el login.
+    if (errorData.code === 'COMPANY_INACTIVE') {
+      sessionStorage.setItem('company_suspended', '1');
+      if (errorData.role) sessionStorage.setItem('company_suspended_role', errorData.role);
+      await supabase.auth.signOut({ scope: 'global' });
+      localStorage.removeItem('selectedDepartment');
+      localStorage.removeItem('selectedDepartmentId');
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      window.location.href = '/';
+    }
+
     // Si el backend reporta tiempo de inactividad, forzar logout
     if (errorData.code === 'INACTIVITY_TIMEOUT') {
       console.warn('Sesión expirada por inactividad. Redirigiendo...');
@@ -193,6 +208,66 @@ export const updateCompany = async (id: number, updates: any) => {
     console.error('Error updating company:', error);
     throw error;
   }
+};
+
+// ============ SYSTEM ADMIN (super admin / panel de empresas) ============
+
+export type AdminCompany = {
+  id: number;
+  name: string;
+  congregation_name: string | null;
+  is_active: boolean;
+  created_at: string;
+  user_count: number;
+  member_count: number;
+};
+
+export type CompanyAdmin = {
+  id: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+};
+
+export const getAllCompanies = async (): Promise<AdminCompany[]> => {
+  const res = await apiCall('/system/companies');
+  return res.data;
+};
+
+export const createCompany = async (data: { name: string; congregation_name?: string }): Promise<AdminCompany> => {
+  const res = await apiCall('/system/companies', { method: 'POST', body: JSON.stringify(data) });
+  return res.data;
+};
+
+export const setCompanyStatus = async (id: number, is_active: boolean): Promise<AdminCompany> => {
+  const res = await apiCall(`/system/companies/${id}/status`, { method: 'PATCH', body: JSON.stringify({ is_active }) });
+  return res.data;
+};
+
+export const updateCompanyInfo = async (id: number, data: { name: string; congregation_name?: string }): Promise<AdminCompany> => {
+  const res = await apiCall(`/system/companies/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  return res.data;
+};
+
+export const deleteCompany = async (id: number) => {
+  return apiCall(`/system/companies/${id}`, { method: 'DELETE' });
+};
+
+export const getCompanyAdmins = async (id: number): Promise<CompanyAdmin[]> => {
+  const res = await apiCall(`/system/companies/${id}/admins`);
+  return res.data;
+};
+
+export const createCompanyAdmin = async (
+  id: number,
+  data: { email: string; password: string; first_name?: string; last_name?: string }
+) => {
+  const res = await apiCall(`/system/companies/${id}/admin`, { method: 'POST', body: JSON.stringify(data) });
+  return res.data;
+};
+
+export const updateAdminPassword = async (userId: string, password: string) => {
+  return apiCall(`/system/admins/${userId}/password`, { method: 'PATCH', body: JSON.stringify({ password }) });
 };
 
 // ============ FUNCIONES DE MIEMBROS ACTUALIZADAS PARA USAR EL BACKEND ============

@@ -158,7 +158,7 @@ export interface Profile {
   assignments?: UserAssignment[];
 }
 
-export type AppRole = "admin" | "lider" | "director" | "director_general" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador" | "auxiliar_maestro" | "vicedirector" | "conserje";
+export type AppRole = "admin" | "lider" | "director" | "director_general" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador" | "auxiliar_maestro" | "vicedirector" | "conserje" | "system_admin";
 
 export interface StudentAuthorization {
   id: string;

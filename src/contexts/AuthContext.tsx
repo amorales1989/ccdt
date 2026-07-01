@@ -54,6 +54,8 @@ type AuthContextType = {
   getProfile: (userId: string) => Promise<void>;
   switchAssignment: (assignment: UserAssignment) => Promise<void>;
   markTourCompleted: (tourKey: string) => Promise<void>;
+  suspendedRole: string | null;
+  clearSuspended: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [suspendedRole, setSuspendedRole] = useState<string | null>(null);
   const lastActivity = useRef(Date.now());
 
   useEffect(() => {
@@ -160,6 +163,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // La persistimos para que getPersistentCompanyId() y las llamadas a la API la usen.
         const userCompanyId = (data as any)?.company_id;
         if (userCompanyId) {
+          // Empresa suspendida: NO montar la app (evita render de Home con token revocado).
+          const { data: companyData } = await supabase
+            .from("companies")
+            .select("is_active")
+            .eq("id", userCompanyId)
+            .single();
+
+          if (companyData && (companyData as any).is_active === false) {
+            setSuspendedRole((data as any).role || 'unknown');
+            setProfile(null);
+            setUser(null);
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+
           localStorage.setItem('ccdt_company_id', userCompanyId.toString());
         }
 
@@ -194,6 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           address: data.address || null,
           assignments: assignmentsForProfile,
         };
+        setSuspendedRole(null);
         setProfile(typedProfile);
       }
     } catch (error) {
@@ -402,8 +422,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const clearSuspended = () => setSuspendedRole(null);
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut, getProfile, switchAssignment, markTourCompleted }}>
+    <AuthContext.Provider value={{ user, profile, loading, session, signIn, signUp, signOut, getProfile, switchAssignment, markTourCompleted, suspendedRole, clearSuspended }}>
       {children}
     </AuthContext.Provider>
   );

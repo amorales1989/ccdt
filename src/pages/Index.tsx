@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Mail, ArrowLeft, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -28,11 +28,12 @@ export default function Index() {
   const [companyName, setCompanyName] = useState("");
   const [showCompanyName, setShowCompanyName] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuspended, setShowSuspended] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
-  const { signIn, signOut, profile, loading } = useAuth();
+  const { signIn, signOut, profile, loading, suspendedRole, clearSuspended } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -41,6 +42,37 @@ export default function Index() {
     queryFn: () => getCompany(getPersistentCompanyId()),
     staleTime: 1000 * 60 * 30, // 30 minutes
   });
+
+  const handleSuspended = (role?: string | null) => {
+    if (role === 'admin' || role === 'secretaria') {
+      setShowSuspended(true);
+    } else {
+      toast({
+        title: "Sistema suspendido",
+        description: "El acceso de tu congregación está suspendido. Comuníquese con el admin o secretaría de su congregación.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Empresa suspendida detectada al cargar el perfil (login o refresh).
+  useEffect(() => {
+    if (suspendedRole) {
+      setIsSubmitting(false);
+      handleSuspended(suspendedRole);
+      clearSuspended();
+    }
+  }, [suspendedRole]);
+
+  // Empresa suspendida detectada por el API con sesión activa (recarga completa).
+  useEffect(() => {
+    if (sessionStorage.getItem('company_suspended') === '1') {
+      const role = sessionStorage.getItem('company_suspended_role');
+      handleSuspended(role);
+      sessionStorage.removeItem('company_suspended');
+      sessionStorage.removeItem('company_suspended_role');
+    }
+  }, []);
 
   useEffect(() => {
     // Set company name if available and show_name is true
@@ -62,6 +94,11 @@ export default function Index() {
     }
 
     if (profile) {
+      if (profile.role === 'system_admin') {
+        navigate('/admin-sistema');
+        return;
+      }
+
       if (profile.role === 'colaborador') {
         toast({
           title: "Acceso denegado",
@@ -342,6 +379,27 @@ navigate(isMaestroFirstLogin ? "/asistencia" : "/home");
           *Si no tienes una cuenta, por favor contacta al director o líder de tu área para solicitar acceso.
         </p>
       </div>
+
+      {/* Suspended Company Modal Overlay */}
+      {showSuspended && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 shadow-2xl rounded-3xl p-8 sm:p-10 text-center">
+            <div className="bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 p-4 rounded-2xl mb-5 shadow-inner inline-block">
+              <AlertTriangle className="h-10 w-10 text-amber-600" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Sistema suspendido</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              El acceso a tu congregación está suspendido por falta de pago. Regularizá el pago para reactivar el sistema. Si creés que es un error, contactá al administrador.
+            </p>
+            <Button
+              onClick={() => setShowSuspended(false)}
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold shadow-lg"
+            >
+              Entendido
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Forgot Password Modal Overlay */}
       {showForgotPassword && (

@@ -18,7 +18,7 @@ import {
   Users, UserPlus, ClipboardList, History, Home, Menu,
   FileText, LogOut, UserPlus2, UserRound, FolderIcon,
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
-  BarChart3, BookOpen, Wrench, Megaphone, HelpCircle, Wallet
+  BarChart3, BookOpen, Wrench, Megaphone, HelpCircle, Wallet, Building
 } from "lucide-react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -50,6 +50,12 @@ const getItems = (role: string | undefined, profile: any, unreadReportsCount: nu
       { title: "Inicio", url: "/", icon: Home },
       { title: "Calendario", url: "/calendario", icon: FileText },
       { title: "Mantenimiento", url: "/mantenimiento", icon: Wrench }
+    ] as { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[];
+  }
+
+  if (role === 'system_admin') {
+    return [
+      { title: "Empresas", url: "/admin-sistema", icon: Building }
     ] as { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[];
   }
 

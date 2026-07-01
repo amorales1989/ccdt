@@ -24,8 +24,8 @@ export function Layout() {
             <main className={`flex-1 overflow-x-hidden ${isMobile ? 'pt-20' : 'p-4'}`}>
               <Outlet />
             </main>
-            {!isDemoMode() && <PhoneCollectionModal />}
-            {!isDemoMode() && <CompleteProfileModal />}
+            {!isDemoMode() && profile.role !== 'system_admin' && <PhoneCollectionModal />}
+            {!isDemoMode() && profile.role !== 'system_admin' && <CompleteProfileModal />}
           </div>
         </SidebarProvider>
       ) : (

@@ -33,6 +33,7 @@ import Guia from "@/pages/Guia";
 
 import Estadisticas from "./pages/Estadisticas";
 import TodosMiembros from "./pages/TodosMiembros";
+import AdminSistema from "@/pages/AdminSistema";
 import Landing from "@/pages/Landing";
 import { NotificationHandler } from '@/components/NotificationHandler';
 import { DemoBanner } from '@/components/DemoBanner';
@@ -119,6 +120,10 @@ function App() {
                   {
                     path: "/gestion-usuarios",
                     element: <GestionUsuarios />,
+                  },
+                  {
+                    path: "/admin-sistema",
+                    element: <AdminSistema />,
                   },
                   {
                     path: "/departamentos",
