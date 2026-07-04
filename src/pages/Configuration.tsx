@@ -10,8 +10,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage, runBirthdayCron } from "@/lib/api";
-import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell, KeyRound, Cake } from "lucide-react";
+import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage, runBirthdayCron, getMemberCount, getSubscription, renewSubscription, subscribe, getQuote, changePlan, changePacks, getMyPayments, SubscriptionQuote, Payment } from "@/lib/api";
+import { planLabel, effectiveLimit, planLimit, PACK_SIZE } from "@/lib/plans";
+import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell, KeyRound, Cake, Layers, Users, Infinity as InfinityIcon, Plus, Minus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
 import { FcmDebug } from "@/components/FcmDebug";
@@ -27,6 +29,13 @@ const ALL_ROLES = [
   'secretaria', 'secr.-calendario', 'lider', 'maestro',
   'conserje', 'colaborador', 'auxiliar_maestro',
 ] as const;
+
+const PAYMENT_SOURCE_LABELS: Record<string, string> = {
+  manual: 'Pago manual',
+  transferencia: 'Transferencia',
+  mp_link: 'Pago único (MP)',
+  mp_subscription: 'Débito automático (MP)',
+};
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin', director_general: 'Director General', director: 'Director',
@@ -128,6 +137,146 @@ export default function Configuration() {
     queryKey: ['company', getPersistentCompanyId()],
     queryFn: () => getCompany(getPersistentCompanyId())
   });
+
+  const { data: memberCount = 0 } = useQuery({
+    queryKey: ['member-count'],
+    queryFn: getMemberCount,
+  });
+
+  const { data: subscription } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: getSubscription,
+    enabled: profile?.role === 'admin' || profile?.role === 'secretaria',
+  });
+
+  const { data: myPayments = [] } = useQuery({
+    queryKey: ['my-payments'],
+    queryFn: getMyPayments,
+    enabled: profile?.role === 'admin' || profile?.role === 'secretaria',
+  });
+
+  const renewMutation = useMutation({
+    mutationFn: (billing_cycle: 'mensual' | 'anual') => renewSubscription(billing_cycle),
+    onSuccess: (data) => {
+      window.location.href = data.init_point;
+    },
+    onError: (error: any) => {
+      toast({
+        title: error?.message?.includes('no configurados') ? 'Pagos no disponibles' : 'Error',
+        description: error?.message || 'No se pudo generar el link de pago',
+        variant: "destructive",
+      });
+    },
+  });
+
+  // ─── Suscripción automática (débito) — opción principal (Paso 3) ────────
+  const [subscribeCycle, setSubscribeCycle] = useState<'mensual' | 'anual'>('mensual');
+  const subscribeMutation = useMutation({
+    mutationFn: (billing_cycle: 'mensual' | 'anual') => subscribe(billing_cycle),
+    onSuccess: (data) => {
+      window.location.href = data.init_point;
+    },
+    onError: (error: any) => {
+      toast({
+        title: error?.message?.includes('no configurados') ? 'Pagos no disponibles' : 'Error',
+        description: error?.message || 'No se pudo iniciar la suscripción',
+        variant: "destructive",
+      });
+    },
+  });
+
+  // ─── Cambio de plan / packs (self-service, Paso 2) ───────────────────────
+  const [selectedPlan, setSelectedPlan] = useState<string>('');
+  const [planQuote, setPlanQuote] = useState<SubscriptionQuote | null>(null);
+  const [packsDelta, setPacksDelta] = useState(0);
+  const [packsQuote, setPacksQuote] = useState<SubscriptionQuote | null>(null);
+
+  useEffect(() => {
+    if (subscription?.plan && !selectedPlan) setSelectedPlan(subscription.plan);
+  }, [subscription?.plan]);
+
+  useEffect(() => {
+    if (!selectedPlan || selectedPlan === subscription?.plan) { setPlanQuote(null); return; }
+    let active = true;
+    getQuote({ type: 'plan', plan: selectedPlan })
+      .then((q) => { if (active) setPlanQuote(q); })
+      .catch((error: any) => {
+        if (!active) return;
+        setPlanQuote(null);
+        toast({ title: 'No se puede cambiar de plan', description: error?.message, variant: "destructive" });
+      });
+    return () => { active = false; };
+  }, [selectedPlan, subscription?.plan]);
+
+  useEffect(() => {
+    if (packsDelta === 0) { setPacksQuote(null); return; }
+    let active = true;
+    getQuote({ type: 'packs', delta: packsDelta })
+      .then((q) => { if (active) setPacksQuote(q); })
+      .catch((error: any) => {
+        if (!active) return;
+        setPacksQuote(null);
+        toast({ title: 'No se puede cambiar la capacidad', description: error?.message, variant: "destructive" });
+      });
+    return () => { active = false; };
+  }, [packsDelta]);
+
+  const changePlanMutation = useMutation({
+    mutationFn: (plan: string) => changePlan(plan),
+    onSuccess: (data) => {
+      if (data.mode === 'charge' && data.init_point) {
+        window.location.href = data.init_point;
+        return;
+      }
+      toast({ title: "Cambio de plan programado", description: "Se aplicará al renovar el ciclo." });
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error?.message || 'No se pudo cambiar el plan', variant: "destructive" });
+    },
+  });
+
+  const changePacksMutation = useMutation({
+    mutationFn: (delta: number) => changePacks(delta),
+    onSuccess: (data) => {
+      if (data.mode === 'charge' && data.init_point) {
+        window.location.href = data.init_point;
+        return;
+      }
+      toast({ title: "Cambio de capacidad programado", description: "Se aplicará al renovar el ciclo." });
+      setPacksDelta(0);
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error?.message || 'No se pudo cambiar la capacidad', variant: "destructive" });
+    },
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    const subStatus = params.get('sub');
+    if (!paymentStatus && !subStatus) return;
+    if (paymentStatus === 'success') {
+      toast({ title: "Pago recibido", description: "Se está acreditando en tu cuenta." });
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['my-payments'] });
+    } else if (paymentStatus === 'failure') {
+      toast({ title: "Pago no completado", description: "El pago no se pudo procesar.", variant: "destructive" });
+    }
+    if (subStatus === 'success') {
+      toast({ title: "Suscripción creada", description: "Se está activando el débito automático." });
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+    }
+    params.delete('payment');
+    params.delete('sub');
+    const newSearch = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
+  }, []);
 
   const { mutate: updateCompanyMutate } = useMutation({
     mutationFn: (updates: any) => updateCompany(getPersistentCompanyId(), updates),
@@ -590,6 +739,7 @@ export default function Configuration() {
         onChange={setActiveTab}
         options={[
           { value: 'general', label: 'Marca', icon: LayoutGrid },
+          { value: 'plan', label: 'Plan', icon: Layers },
           { value: 'authorizations', label: 'Membrete', icon: FileText },
           { value: 'whatsapp', label: 'Whatsapp', icon: Smartphone },
           ...(profile?.role === 'admin' ? [
@@ -602,6 +752,380 @@ export default function Configuration() {
       />
 
       <div className="space-y-6">
+        {activeTab === 'plan' && (() => {
+          const plan = (company as any)?.plan as string | null | undefined;
+          const packs = (company as any)?.extra_member_packs || 0;
+          const base = planLimit(plan);
+          const effLimit = effectiveLimit(plan, packs);
+          const unlimited = effLimit == null;
+          const pct = unlimited ? 0 : Math.min(100, Math.round((memberCount / effLimit) * 100));
+          const barColor = pct >= 100 ? 'bg-red-500' : pct >= 90 ? 'bg-amber-500' : 'bg-indigo-500';
+          // Facturación
+          const plansList = subscription?.plans || [];
+          const curPlanRow = plansList.find((p) => p.value === plan);
+          const planPrice = curPlanRow?.price_monthly ?? 0;
+          const packPrice = curPlanRow?.pack_price_monthly ?? 3000;
+          const currentMonthly = planPrice + packs * packPrice;
+          const selPlanRow = plansList.find((p) => p.value === (selectedPlan || plan));
+          const projectedPlanPrice = selPlanRow?.price_monthly ?? planPrice;
+          const projectedPackPrice = selPlanRow?.pack_price_monthly ?? packPrice;
+          const projectedPacks = Math.max(0, packs + packsDelta);
+          const projectedMonthly = projectedPlanPrice + projectedPacks * projectedPackPrice;
+          const changed = (!!selectedPlan && selectedPlan !== plan) || packsDelta !== 0;
+          const noPrice = planPrice <= 0 && unlimited;
+          const fmt = (n: number) => '$' + Number(n || 0).toLocaleString('es-AR');
+          const canManage = profile?.role === 'admin' || profile?.role === 'secretaria';
+          return (
+            <div className="mt-0 outline-none">
+              <div className="w-full">
+                <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-indigo-500/5 overflow-hidden font-inter">
+                  <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-2xl text-indigo-600 dark:text-indigo-400 shadow-xl shadow-indigo-500/10">
+                        <Layers className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Tu Plan</CardTitle>
+                        <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">Características y uso de tu suscripción.</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6 md:p-8 space-y-8">
+                    {/* Plan actual */}
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Plan actual</span>
+                      <Badge className="bg-indigo-600 hover:bg-indigo-600 text-white font-black text-sm px-4 py-1.5 rounded-xl">
+                        {planLabel(plan) || 'Sin plan asignado'}
+                      </Badge>
+                    </div>
+
+                    {/* Capacidad de miembros */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5" /> Miembros
+                        </span>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                          {memberCount}
+                          {unlimited
+                            ? <span className="flex items-center gap-1 text-slate-400">/ <InfinityIcon className="h-4 w-4" /></span>
+                            : <span className="text-slate-400">/ {effLimit}</span>}
+                        </span>
+                      </div>
+                      {!unlimited && (
+                        <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+                      {!unlimited && memberCount >= effLimit && (
+                        <p className="text-xs font-semibold text-red-600 dark:text-red-400">Alcanzaste el límite de tu plan. Contactá al administrador para ampliarlo o agregar packs.</p>
+                      )}
+                      {!unlimited && memberCount < effLimit && (
+                        <p className="text-xs text-slate-400">Quedan {effLimit - memberCount} lugares disponibles.</p>
+                      )}
+                    </div>
+
+                    {/* Detalle */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 p-4">
+                        <div className="text-2xl font-black text-slate-800 dark:text-white">{base == null ? '∞' : base}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Límite base del plan</div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 p-4">
+                        <div className="text-2xl font-black text-slate-800 dark:text-white">{packs} <span className="text-sm font-bold text-slate-400">(+{packs * PACK_SIZE})</span></div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Packs extra (×{PACK_SIZE})</div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 p-4">
+                        <div className="text-2xl font-black text-slate-800 dark:text-white">{unlimited ? '∞' : effLimit}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Capacidad total</div>
+                      </div>
+                    </div>
+
+                    {/* Detalle de facturación */}
+                    <div className="border-t border-slate-200/60 dark:border-slate-800 pt-6 space-y-3">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Detalle de facturación</span>
+                      {noPrice ? (
+                        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 p-4 text-sm font-bold text-slate-600 dark:text-slate-300">
+                          Plan Corporativo — precio a convenir con el administrador.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 overflow-hidden">
+                            <div className="flex items-center justify-between px-4 py-3 text-sm">
+                              <span className="text-slate-500 dark:text-slate-400">Plan {planLabel(plan)}</span>
+                              <span className="font-bold text-slate-800 dark:text-white">{fmt(planPrice)}/mes</span>
+                            </div>
+                            <div className="flex items-center justify-between px-4 py-3 text-sm border-t border-slate-200/60 dark:border-slate-800">
+                              <span className="text-slate-500 dark:text-slate-400">Packs: {packs} × {fmt(packPrice)}</span>
+                              <span className="font-bold text-slate-800 dark:text-white">{fmt(packs * packPrice)}/mes</span>
+                            </div>
+                            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
+                              <span className="text-sm font-black uppercase tracking-wide text-slate-600 dark:text-slate-300">Total mensual</span>
+                              <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{fmt(currentMonthly)}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-4 py-2 text-xs border-t border-slate-200/60 dark:border-slate-800">
+                              <span className="text-slate-400">Total anual (2 meses gratis)</span>
+                              <span className="font-bold text-slate-500 dark:text-slate-400">{fmt(currentMonthly * 10)}/año</span>
+                            </div>
+                          </div>
+                          {changed ? (
+                            <div className="rounded-2xl border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 p-5 flex flex-col justify-center">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Con los cambios seleccionados</span>
+                              <p className="text-sm font-bold text-indigo-700/80 dark:text-indigo-300/80 mt-1">
+                                {planLabel(selectedPlan || plan)} + {projectedPacks} pack(s) → {(base == null ? '∞' : (selPlanRow?.member_limit ?? base)) } { selPlanRow?.member_limit != null ? `+ ${projectedPacks * PACK_SIZE} miembros` : ''}
+                              </p>
+                              <div className="mt-3 flex items-end justify-between">
+                                <div>
+                                  <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{fmt(projectedMonthly)}<span className="text-sm font-bold">/mes</span></div>
+                                  <div className="text-xs text-indigo-500">{fmt(projectedMonthly * 10)}/año</div>
+                                </div>
+                                <div className="text-right text-xs font-bold">
+                                  {projectedMonthly > currentMonthly ? (
+                                    <span className="text-emerald-600 dark:text-emerald-400">+{fmt(projectedMonthly - currentMonthly)}/mes</span>
+                                  ) : projectedMonthly < currentMonthly ? (
+                                    <span className="text-amber-600 dark:text-amber-400">{fmt(projectedMonthly - currentMonthly)}/mes</span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-5 flex items-center justify-center text-center text-xs text-slate-400">
+                              Modificá el plan o los packs abajo para ver el nuevo total acá.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Estado de suscripción */}
+                    {(() => {
+                      const dueDate = (company as any)?.due_date as string | null | undefined;
+                      const lastPayment = (company as any)?.last_payment_date as string | null | undefined;
+                      const billingCycle = (company as any)?.billing_cycle as string | null | undefined;
+                      const todayStr = new Date().toISOString().slice(0, 10);
+                      let subStatus: 'vencido' | 'por_vencer' | 'al_dia' | 'sin_registro' = 'sin_registro';
+                      if (dueDate) {
+                        if (dueDate < todayStr) subStatus = 'vencido';
+                        else {
+                          const daysLeft = Math.ceil((new Date(dueDate).getTime() - new Date(todayStr).getTime()) / (1000 * 60 * 60 * 24));
+                          subStatus = daysLeft <= 7 ? 'por_vencer' : 'al_dia';
+                        }
+                      }
+                      const statusMeta: Record<typeof subStatus, { label: string; className: string }> = {
+                        vencido: { label: 'Vencido', className: 'bg-red-600 hover:bg-red-600 text-white' },
+                        por_vencer: { label: 'Por vencer', className: 'bg-amber-500 hover:bg-amber-500 text-white' },
+                        al_dia: { label: 'Al día', className: 'bg-emerald-600 hover:bg-emerald-600 text-white' },
+                        sin_registro: { label: 'Sin suscripción registrada', className: 'bg-slate-400 hover:bg-slate-400 text-white' },
+                      };
+                      const meta = statusMeta[subStatus];
+                      return (
+                        <div className="space-y-3 border-t border-slate-200/60 dark:border-slate-800 pt-6">
+                          <div className="flex items-center justify-between flex-wrap gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estado de suscripción</span>
+                            <Badge className={`font-black text-xs px-4 py-1.5 rounded-xl ${meta.className}`}>{meta.label}</Badge>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 p-4">
+                              <div className="text-sm font-black text-slate-800 dark:text-white">{dueDate ? new Date(dueDate).toLocaleDateString('es-AR') : '—'}</div>
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Próximo vencimiento</div>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 p-4">
+                              <div className="text-sm font-black text-slate-800 dark:text-white">{lastPayment ? new Date(lastPayment).toLocaleDateString('es-AR') : '—'}</div>
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Último pago</div>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 p-4">
+                              <div className="text-sm font-black text-slate-800 dark:text-white">{billingCycle === 'anual' ? 'Anual' : 'Mensual'}</div>
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Ciclo</div>
+                            </div>
+                          </div>
+                          {canManage && (
+                            subscription?.subscription_status === 'authorized' ? (
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <Badge className="font-black text-xs px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-600 text-white">
+                                  Suscripción activa
+                                </Badge>
+                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Débito automático activo</span>
+                              </div>
+                            ) : (
+                              <div className="space-y-3 w-full">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <Select value={subscribeCycle} onValueChange={(v) => setSubscribeCycle(v as 'mensual' | 'anual')}>
+                                    <SelectTrigger className="rounded-xl bg-slate-50 dark:bg-slate-800 h-11 w-40">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                      <SelectItem value="mensual">Mensual</SelectItem>
+                                      <SelectItem value="anual">Anual (2 meses gratis)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    className="button-gradient rounded-xl font-black h-11 px-6 shadow-lg shadow-primary/20"
+                                    onClick={() => subscribeMutation.mutate(subscribeCycle)}
+                                    disabled={subscribeMutation.isPending}
+                                  >
+                                    {subscribeMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                    Suscribirme (débito automático)
+                                  </Button>
+                                </div>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="text-xs text-slate-400">¿Preferís pago único o transferencia?</span>
+                                  <Button
+                                    variant="outline"
+                                    className="rounded-xl font-bold h-9 px-4"
+                                    onClick={() => renewMutation.mutate((subscription?.billing_cycle as 'mensual' | 'anual') || (billingCycle as 'mensual' | 'anual') || 'mensual')}
+                                    disabled={renewMutation.isPending}
+                                  >
+                                    {renewMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                    Renovar / Pagar
+                                  </Button>
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Cambios pendientes (downgrade/remove programados para el próximo ciclo) */}
+                    {(subscription?.pending_plan || (subscription?.pending_extra_member_packs != null && subscription.pending_extra_member_packs !== packs)) && (
+                      <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 space-y-1">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Cambios pendientes al renovar</span>
+                        {subscription?.pending_plan && (
+                          <p className="text-sm font-bold text-amber-700 dark:text-amber-300">Plan pendiente: {planLabel(subscription.pending_plan)}</p>
+                        )}
+                        {subscription?.pending_extra_member_packs != null && subscription.pending_extra_member_packs !== packs && (
+                          <p className="text-sm font-bold text-amber-700 dark:text-amber-300">Packs pendientes: {subscription.pending_extra_member_packs}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {canManage && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-200/60 dark:border-slate-800 pt-6">
+                        {/* Cambiar plan */}
+                        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 p-4 space-y-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cambiar plan</span>
+                          <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                            <SelectTrigger className="rounded-xl bg-slate-50 dark:bg-slate-800 h-11">
+                              <SelectValue placeholder="Elegí un plan" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                              {(subscription?.plans || []).map((p) => (
+                                <SelectItem key={p.value} value={p.value}>
+                                  {p.label} — ${p.price_monthly}/mes
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {selectedPlan && selectedPlan !== plan && planQuote && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                {planQuote.mode === 'charge'
+                                  ? `Cargo prorrateado: $${planQuote.amount}`
+                                  : planQuote.effect || 'Se aplica al renovar el ciclo'}
+                              </p>
+                              <Button
+                                className="button-gradient rounded-xl font-black h-10 px-5 w-full"
+                                onClick={() => changePlanMutation.mutate(selectedPlan)}
+                                disabled={changePlanMutation.isPending}
+                              >
+                                {changePlanMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                {planQuote.mode === 'charge' ? 'Pagar y cambiar' : 'Programar cambio'}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Packs */}
+                        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 p-4 space-y-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Packs de miembros (×{PACK_SIZE})</span>
+                          <div className="flex items-center justify-center gap-4">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="rounded-xl h-10 w-10"
+                              onClick={() => setPacksDelta((d) => d - 1)}
+                              disabled={packs + packsDelta <= 0}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="text-lg font-black text-slate-800 dark:text-white w-10 text-center">{packs + packsDelta}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="rounded-xl h-10 w-10"
+                              onClick={() => setPacksDelta((d) => d + 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          {packsDelta !== 0 && packsQuote && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                {packsQuote.mode === 'charge'
+                                  ? `Cargo prorrateado: $${packsQuote.amount}`
+                                  : packsQuote.effect || 'Se aplica al renovar el ciclo'}
+                              </p>
+                              <Button
+                                className="button-gradient rounded-xl font-black h-10 px-5 w-full"
+                                onClick={() => changePacksMutation.mutate(packsDelta)}
+                                disabled={changePacksMutation.isPending}
+                              >
+                                {changePacksMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                {packsQuote.mode === 'charge' ? 'Pagar y agregar' : 'Programar'}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Historial de pagos */}
+                    <div className="border-t border-slate-200/60 dark:border-slate-800 pt-6 space-y-3">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Historial de pagos</span>
+                      {myPayments.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center text-xs text-slate-400">
+                          Todavía no hay pagos registrados.
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 overflow-hidden divide-y divide-slate-200/60 dark:divide-slate-800">
+                          {myPayments.map((p: Payment) => {
+                            const period = p.period_start && p.period_end
+                              ? `${new Date(p.period_start).toLocaleDateString('es-AR')} → ${new Date(p.period_end).toLocaleDateString('es-AR')}`
+                              : null;
+                            const detail = [
+                              PAYMENT_SOURCE_LABELS[p.source] || p.source,
+                              p.billing_cycle === 'anual' ? 'Anual' : p.billing_cycle === 'mensual' ? 'Mensual' : null,
+                              p.notes || null,
+                            ].filter(Boolean).join(' · ');
+                            return (
+                              <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                                <div className="min-w-0">
+                                  <div className="text-sm font-bold text-slate-800 dark:text-white">
+                                    {new Date(p.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                  </div>
+                                  <div className="text-xs text-slate-400 truncate">{detail}{period ? ` · ${period}` : ''}</div>
+                                </div>
+                                <div className="text-sm font-black text-slate-800 dark:text-white whitespace-nowrap">
+                                  ${Number(p.amount).toLocaleString('es-AR')}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-slate-400 border-t border-slate-200/60 dark:border-slate-800 pt-4">
+                      {canManage
+                        ? 'Los downgrades y reducciones de packs se aplican al renovar el ciclo; nunca por debajo de tus miembros actuales.'
+                        : 'Para cambiar de plan o sumar packs de miembros, contactá al administrador del sistema.'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          );
+        })()}
         {activeTab === 'general' && (
           <div className="mt-0 outline-none space-y-6">
             <div className="w-full max-w-4xl mx-auto">

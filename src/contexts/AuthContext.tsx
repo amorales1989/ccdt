@@ -166,11 +166,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Empresa suspendida: NO montar la app (evita render de Home con token revocado).
           const { data: companyData } = await supabase
             .from("companies")
-            .select("is_active")
+            .select("is_active, due_date")
             .eq("id", userCompanyId)
             .single();
 
-          if (companyData && (companyData as any).is_active === false) {
+          const today = new Date().toISOString().slice(0, 10);
+          const expired = (companyData as any)?.due_date && (companyData as any).due_date < today;
+          if (companyData && ((companyData as any).is_active === false || expired)) {
             setSuspendedRole((data as any).role || 'unknown');
             setProfile(null);
             setUser(null);

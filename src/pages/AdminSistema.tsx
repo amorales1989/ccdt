@@ -7,12 +7,20 @@ import {
   getAllCompanies,
   createCompany,
   setCompanyStatus,
+  setCompanyPlan,
+  setCompanyPacks,
   updateCompanyInfo,
   deleteCompany,
   getCompanyAdmins,
   createCompanyAdmin,
   updateAdminPassword,
+  recordPayment,
+  getCompanyPayments,
+  getPlans,
+  updatePlanPricing,
   type AdminCompany,
+  type Payment,
+  type PlanRow,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +29,24 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, Plus, KeyRound, Loader2, Users, UserRound, CheckCircle2, Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
+import { Building2, Plus, KeyRound, Loader2, Users, UserRound, CheckCircle2, Eye, EyeOff, Pencil, Trash2, Layers, Wallet, DollarSign } from "lucide-react";
+import { PLANS, planLabel, effectiveLimit } from "@/lib/plans";
+
+const formatDate = (d?: string | null) => {
+  if (!d) return "—";
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
 
 export default function AdminSistema() {
   const { profile } = useAuth();
@@ -42,6 +61,12 @@ export default function AdminSistema() {
   const [editTarget, setEditTarget] = useState<AdminCompany | null>(null);
   const [editForm, setEditForm] = useState({ name: "", congregation_name: "" });
   const [deleteTarget, setDeleteTarget] = useState<AdminCompany | null>(null);
+  const [planTarget, setPlanTarget] = useState<AdminCompany | null>(null);
+  const [planValue, setPlanValue] = useState<string>("");
+  const [packsValue, setPacksValue] = useState<number>(0);
+  const [payTarget, setPayTarget] = useState<AdminCompany | null>(null);
+  const [payForm, setPayForm] = useState<{ amount: string; billing_cycle: "mensual" | "anual"; notes: string }>({ amount: "", billing_cycle: "mensual", notes: "" });
+  const [pricesOpen, setPricesOpen] = useState(false);
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["admin-companies"],
@@ -78,9 +103,50 @@ export default function AdminSistema() {
     onError: (e: any) => toast({ title: "No se pudo eliminar", description: e.message, variant: "destructive" }),
   });
 
+  const planMutation = useMutation({
+    mutationFn: async () => {
+      await setCompanyPlan(planTarget!.id, planValue || null);
+      await setCompanyPacks(planTarget!.id, packsValue);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+      toast({ title: "Plan actualizado" });
+      setPlanTarget(null);
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const payMutation = useMutation({
+    mutationFn: () => recordPayment(payTarget!.id, {
+      amount: Number(payForm.amount),
+      billing_cycle: payForm.billing_cycle,
+      source: "manual",
+      notes: payForm.notes || undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["company-payments", payTarget?.id] });
+      toast({ title: "Pago registrado" });
+      setPayTarget(null);
+      setPayForm({ amount: "", billing_cycle: "mensual", notes: "" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const openPay = (c: AdminCompany) => {
+    setPayForm({ amount: "", billing_cycle: (c.billing_cycle as "mensual" | "anual") || "mensual", notes: "" });
+    setPayTarget(c);
+  };
+
   const openEdit = (c: AdminCompany) => {
     setEditForm({ name: c.name, congregation_name: c.congregation_name || "" });
     setEditTarget(c);
+  };
+
+  const openPlan = (c: AdminCompany) => {
+    setPlanValue(c.plan || "");
+    setPacksValue(c.extra_member_packs || 0);
+    setPlanTarget(c);
   };
 
   const createMutation = useMutation({
@@ -111,7 +177,7 @@ export default function AdminSistema() {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
-      <div className="p-4 md:p-6 pb-28 max-w-[1400px] mx-auto animate-fade-in space-y-6">
+      <div className="p-4 md:p-6 pb-28 w-full animate-fade-in space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -123,12 +189,21 @@ export default function AdminSistema() {
               <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Administración del sistema</p>
             </div>
           </div>
-          <Button
-            onClick={() => setNewOpen(true)}
-            className="button-gradient rounded-xl font-black h-11 px-5 shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95 transition-all"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Nueva empresa
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPricesOpen(true)}
+              className="rounded-xl font-black h-11 px-5 border-slate-200"
+            >
+              <DollarSign className="h-4 w-4 mr-2" /> Precios de planes
+            </Button>
+            <Button
+              onClick={() => setNewOpen(true)}
+              className="button-gradient rounded-xl font-black h-11 px-5 shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95 transition-all"
+            >
+              <Plus className="h-4 w-4 mr-2" /> Nueva empresa
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -148,24 +223,29 @@ export default function AdminSistema() {
                 <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4">Empresa</TableCell>
                 <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4 text-center">Usuarios</TableCell>
                 <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4 text-center">Miembros</TableCell>
+                <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4 text-center">Plan</TableCell>
+                <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4 text-center">Último pago</TableCell>
+                <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4 text-center">Próx. vto</TableCell>
                 <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4 text-center">Estado</TableCell>
                 <TableCell className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] p-4 text-right">Acciones</TableCell>
               </TableRow>
 
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12">
+                  <TableCell colSpan={9} className="text-center py-12">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : companies.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-slate-400 py-12 font-medium">
+                  <TableCell colSpan={9} className="text-center text-slate-400 py-12 font-medium">
                     No hay empresas todavía.
                   </TableCell>
                 </TableRow>
               ) : (
-                companies.map((c) => (
+                companies.map((c) => {
+                const expired = !!(c.due_date && c.due_date < new Date().toISOString().slice(0, 10));
+                return (
                   <TableRow key={c.id} className="group border-b border-slate-100/60 dark:border-slate-800/60 hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors">
                     <TableCell className="p-4">
                       <span className="font-mono text-xs font-bold text-slate-400 bg-slate-100/70 dark:bg-slate-800 px-2.5 py-1 rounded-lg">{c.id}</span>
@@ -190,8 +270,23 @@ export default function AdminSistema() {
                     </TableCell>
                     <TableCell className="p-4 text-center">
                       <span className="inline-flex items-center gap-1.5 bg-indigo-50/60 dark:bg-indigo-900/20 px-3 py-1 rounded-full border border-indigo-100/50 dark:border-indigo-800 text-sm font-bold text-indigo-600 dark:text-indigo-300">
-                        <Users className="h-3.5 w-3.5" /> {c.member_count}
+                        <Users className="h-3.5 w-3.5" /> {c.member_count}{(() => { const l = effectiveLimit(c.plan, c.extra_member_packs); return l == null ? '' : ` / ${l}`; })()}
                       </span>
+                    </TableCell>
+                    <TableCell className="p-4 text-center">
+                      {planLabel(c.plan) ? (
+                        <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-100/50 text-[10px] font-bold">
+                          {planLabel(c.plan)}
+                        </Badge>
+                      ) : (
+                        <span className="text-sm font-medium text-slate-400">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="p-4 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
+                      {formatDate(c.last_payment_date)}
+                    </TableCell>
+                    <TableCell className="p-4 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
+                      {formatDate(c.due_date)}
                     </TableCell>
                     <TableCell className="p-4">
                       <div className="flex items-center justify-center gap-2">
@@ -202,23 +297,44 @@ export default function AdminSistema() {
                         />
                         <Badge
                           variant="secondary"
-                          className={c.is_active
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-100/50 text-[10px] font-bold"
-                            : "bg-slate-100 text-slate-500 border-slate-200 text-[10px] font-bold"}
+                          className={!c.is_active
+                            ? "bg-slate-100 text-slate-500 border-slate-200 text-[10px] font-bold"
+                            : expired
+                              ? "bg-red-50 text-red-700 border-red-100/50 text-[10px] font-bold"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-100/50 text-[10px] font-bold"}
                         >
-                          {c.is_active ? "Activa" : "Inactiva"}
+                          {!c.is_active ? "Inactiva" : expired ? "Vencida" : "Activa"}
                         </Badge>
                       </div>
                     </TableCell>
                     <TableCell className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
-                          variant="outline"
-                          size="sm"
-                          className="rounded-xl border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold shadow-sm"
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
+                          title="Gestionar admin"
                           onClick={() => setAdminCompany(c)}
                         >
-                          <KeyRound className="h-4 w-4 mr-1.5" /> Admin
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
+                          title="Cambiar plan"
+                          onClick={() => openPlan(c)}
+                        >
+                          <Layers className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
+                          title="Registrar pago"
+                          onClick={() => openPay(c)}
+                        >
+                          <Wallet className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -241,7 +357,7 @@ export default function AdminSistema() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                );})
               )}
             </TableBody>
           </Table>
@@ -349,9 +465,157 @@ export default function AdminSistema() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Cambiar plan */}
+      <Dialog open={!!planTarget} onOpenChange={(o) => !o && setPlanTarget(null)}>
+        <DialogContent className="rounded-2xl border-slate-200">
+          <DialogHeader>
+            <DialogTitle>Plan de {planTarget?.name}</DialogTitle>
+            <DialogDescription>Elegí el plan de la congregación.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Plan</Label>
+            <Select value={planValue} onValueChange={setPlanValue}>
+              <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
+                <SelectValue placeholder="Sin plan" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {PLANS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label} — {p.limit == null ? "ilimitado" : `hasta ${p.limit} miembros`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Packs de miembros extra (+25 c/u)</Label>
+            <Input type="number" min={0} className="rounded-xl bg-slate-50 border-slate-200 h-11"
+              value={packsValue}
+              onChange={(e) => setPacksValue(Math.max(0, parseInt(e.target.value, 10) || 0))} />
+            <p className="text-xs text-slate-400">Cada pack agrega 25 miembros a la capacidad del plan.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl border-slate-200 font-bold" onClick={() => setPlanTarget(null)}>Cancelar</Button>
+            <Button
+              className="button-gradient rounded-xl font-black px-6 shadow-lg shadow-primary/20"
+              onClick={() => planMutation.mutate()}
+              disabled={planMutation.isPending}
+            >
+              {planMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Registrar pago */}
+      <PayDialog
+        company={payTarget}
+        form={payForm}
+        setForm={setPayForm}
+        onSubmit={() => payMutation.mutate()}
+        isPending={payMutation.isPending}
+        onClose={() => setPayTarget(null)}
+      />
+
       {/* Gestionar admin de empresa */}
       <AdminDialog company={adminCompany} onClose={() => setAdminCompany(null)} />
+
+      {/* Precios de planes */}
+      <PricesDialog open={pricesOpen} onClose={() => setPricesOpen(false)} />
     </div>
+  );
+}
+
+function PricesDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [edits, setEdits] = useState<Record<string, { price_monthly: string; pack_price_monthly: string }>>({});
+
+  const { data: plans = [], isLoading } = useQuery({
+    queryKey: ["plans"],
+    queryFn: getPlans,
+    enabled: open,
+  });
+
+  const getValue = (p: PlanRow, field: "price_monthly" | "pack_price_monthly") =>
+    edits[p.value]?.[field] ?? String(p[field]);
+
+  const setValue = (value: string, field: "price_monthly" | "pack_price_monthly", raw: string) => {
+    setEdits((prev) => ({
+      ...prev,
+      [value]: {
+        price_monthly: prev[value]?.price_monthly ?? String(plans.find((p) => p.value === value)?.price_monthly ?? 0),
+        pack_price_monthly: prev[value]?.pack_price_monthly ?? String(plans.find((p) => p.value === value)?.pack_price_monthly ?? 0),
+        [field]: raw,
+      },
+    }));
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: (value: string) => updatePlanPricing(value, {
+      price_monthly: Number(getValue(plans.find((p) => p.value === value)!, "price_monthly")),
+      pack_price_monthly: Number(getValue(plans.find((p) => p.value === value)!, "pack_price_monthly")),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      toast({ title: "Precio actualizado" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="rounded-2xl border-slate-200 max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Precios de planes</DialogTitle>
+          <DialogDescription>Precio mensual por plan y por pack extra. Anual = ×10.</DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin" /></div>
+        ) : (
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {plans.map((p) => (
+              <div key={p.value} className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-3">
+                <div className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                  {p.label} <span className="text-xs text-slate-400 font-medium">({p.member_limit == null ? "ilimitado" : `hasta ${p.member_limit}`})</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Precio mensual</Label>
+                    <Input
+                      type="number" min={0} className="rounded-xl bg-slate-50 border-slate-200 h-10"
+                      value={getValue(p, "price_monthly")}
+                      onChange={(e) => setValue(p.value, "price_monthly", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Precio pack (+25)</Label>
+                    <Input
+                      type="number" min={0} className="rounded-xl bg-slate-50 border-slate-200 h-10"
+                      value={getValue(p, "pack_price_monthly")}
+                      onChange={(e) => setValue(p.value, "pack_price_monthly", e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="button-gradient rounded-xl font-black"
+                  onClick={() => saveMutation.mutate(p.value)}
+                  disabled={saveMutation.isPending}
+                >
+                  {saveMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Guardar
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" className="rounded-xl border-slate-200 font-bold" onClick={onClose}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -439,6 +703,101 @@ function AdminDialog({ company, onClose }: { company: AdminCompany | null; onClo
           >
             {pwMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Cambiar contraseña
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PayDialog({
+  company, form, setForm, onSubmit, isPending, onClose,
+}: {
+  company: AdminCompany | null;
+  form: { amount: string; billing_cycle: "mensual" | "anual"; notes: string };
+  setForm: (f: { amount: string; billing_cycle: "mensual" | "anual"; notes: string }) => void;
+  onSubmit: () => void;
+  isPending: boolean;
+  onClose: () => void;
+}) {
+  const { data: payments = [], isLoading } = useQuery({
+    queryKey: ["company-payments", company?.id],
+    queryFn: () => getCompanyPayments(company!.id),
+    enabled: !!company,
+  });
+
+  return (
+    <Dialog open={!!company} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="rounded-2xl border-slate-200">
+        <DialogHeader>
+          <DialogTitle>Registrar pago — {company?.name}</DialogTitle>
+          <DialogDescription>El monto lo definís manualmente. Extiende la suscripción desde hoy o desde el vencimiento actual.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Monto (ARS) *</Label>
+            <Input
+              type="number" min={0} step="0.01"
+              className="rounded-xl bg-slate-50 border-slate-200 h-11"
+              value={form.amount}
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Ciclo</Label>
+            <Select value={form.billing_cycle} onValueChange={(v) => setForm({ ...form, billing_cycle: v as "mensual" | "anual" })}>
+              <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="mensual">Mensual</SelectItem>
+                <SelectItem value="anual">Anual</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Nota</Label>
+            <Input
+              className="rounded-xl bg-slate-50 border-slate-200 h-11"
+              placeholder="Ej: transferencia, efectivo..."
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="border-t pt-4 space-y-2">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Historial de pagos</p>
+          {isLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
+          ) : payments.length === 0 ? (
+            <p className="text-sm text-slate-400 font-medium py-2">Sin pagos registrados.</p>
+          ) : (
+            <div className="max-h-48 overflow-y-auto space-y-2">
+              {payments.map((p) => (
+                <div key={p.id} className="text-xs bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 flex flex-col gap-0.5">
+                  <div className="flex justify-between font-bold text-slate-700 dark:text-slate-200">
+                    <span>{formatDate(p.created_at)}</span>
+                    <span>{p.currency} {p.amount}</span>
+                  </div>
+                  <div className="text-slate-400">
+                    {p.billing_cycle || "—"} · {formatDate(p.period_start)} → {formatDate(p.period_end)} · {p.source}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" className="rounded-xl border-slate-200 font-bold" onClick={onClose}>Cancelar</Button>
+          <Button
+            className="button-gradient rounded-xl font-black px-6 shadow-lg shadow-primary/20"
+            onClick={onSubmit}
+            disabled={isPending || !form.amount || Number(form.amount) < 0}
+          >
+            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Registrar pago
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -220,6 +220,33 @@ export type AdminCompany = {
   created_at: string;
   user_count: number;
   member_count: number;
+  plan?: string | null;
+  billing_cycle?: string;
+  last_payment_date?: string | null;
+  due_date?: string | null;
+  extra_member_packs: number;
+};
+
+export type Payment = {
+  id: number;
+  company_id: number;
+  amount: number;
+  currency: string;
+  billing_cycle: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  source: string;
+  notes: string | null;
+  created_at: string;
+};
+
+export type PlanRow = {
+  value: string;
+  label: string;
+  member_limit: number | null;
+  price_monthly: number;
+  pack_price_monthly: number;
+  sort: number;
 };
 
 export type CompanyAdmin = {
@@ -241,6 +268,26 @@ export const createCompany = async (data: { name: string; congregation_name?: st
 
 export const setCompanyStatus = async (id: number, is_active: boolean): Promise<AdminCompany> => {
   const res = await apiCall(`/system/companies/${id}/status`, { method: 'PATCH', body: JSON.stringify({ is_active }) });
+  return res.data;
+};
+
+export const setCompanyPlan = async (id: number, plan: string | null): Promise<AdminCompany> => {
+  const res = await apiCall(`/system/companies/${id}/plan`, { method: 'PATCH', body: JSON.stringify({ plan }) });
+  return res.data;
+};
+
+export const setCompanyPacks = async (id: number, extra_member_packs: number): Promise<AdminCompany> => {
+  const res = await apiCall(`/system/companies/${id}/packs`, { method: 'PATCH', body: JSON.stringify({ extra_member_packs }) });
+  return res.data;
+};
+
+export const recordPayment = async (id: number, data: { amount: number; billing_cycle: string; source?: string; notes?: string }): Promise<AdminCompany> => {
+  const res = await apiCall(`/system/companies/${id}/payments`, { method: 'POST', body: JSON.stringify(data) });
+  return res.data;
+};
+
+export const getCompanyPayments = async (id: number): Promise<Payment[]> => {
+  const res = await apiCall(`/system/companies/${id}/payments`);
   return res.data;
 };
 
@@ -268,6 +315,73 @@ export const createCompanyAdmin = async (
 
 export const updateAdminPassword = async (userId: string, password: string) => {
   return apiCall(`/system/admins/${userId}/password`, { method: 'PATCH', body: JSON.stringify({ password }) });
+};
+
+export const getPlans = async (): Promise<PlanRow[]> => {
+  const res = await apiCall('/system/plans');
+  return res.data;
+};
+
+export const updatePlanPricing = async (
+  value: string,
+  data: { price_monthly: number; pack_price_monthly: number }
+): Promise<PlanRow> => {
+  const res = await apiCall(`/system/plans/${value}`, { method: 'PUT', body: JSON.stringify(data) });
+  return res.data;
+};
+
+// ============ SUSCRIPCIÓN (empresa) ============
+
+export type SubscriptionInfo = {
+  plan: string | null;
+  extra_member_packs: number;
+  billing_cycle: string;
+  due_date: string | null;
+  last_payment_date: string | null;
+  pending_plan: string | null;
+  pending_extra_member_packs: number | null;
+  member_count: number;
+  plans: PlanRow[];
+  mp_preapproval_id?: string | null;
+  subscription_status?: string | null;
+};
+
+export const getSubscription = async (): Promise<SubscriptionInfo> => {
+  return apiCall('/subscription');
+};
+
+export const getMyPayments = async (): Promise<Payment[]> => {
+  const res = await apiCall('/subscription/payments');
+  return res.data;
+};
+
+export const renewSubscription = async (billing_cycle: 'mensual' | 'anual'): Promise<{ init_point: string; amount: number }> => {
+  return apiCall('/subscription/renew', { method: 'POST', body: JSON.stringify({ billing_cycle }) });
+};
+
+export const subscribe = async (billing_cycle: 'mensual' | 'anual'): Promise<{ init_point: string }> => {
+  return apiCall('/subscription/subscribe', { method: 'POST', body: JSON.stringify({ billing_cycle }) });
+};
+
+export type SubscriptionQuote = { mode: 'charge' | 'schedule'; amount: number; effect?: string };
+
+export const getQuote = async (
+  params: { type: 'plan'; plan: string } | { type: 'packs'; delta: number }
+): Promise<SubscriptionQuote> => {
+  const qs = params.type === 'plan'
+    ? `type=plan&plan=${encodeURIComponent(params.plan)}`
+    : `type=packs&delta=${params.delta}`;
+  return apiCall(`/subscription/quote?${qs}`);
+};
+
+export const changePlan = async (plan: string): Promise<{ mode: 'charge' | 'schedule'; init_point?: string; amount?: number }> => {
+  return apiCall('/subscription/change-plan', { method: 'POST', body: JSON.stringify({ plan }) });
+};
+
+export const changePacks = async (
+  delta: number
+): Promise<{ mode: 'charge' | 'schedule'; init_point?: string; amount?: number; pending_extra_member_packs?: number }> => {
+  return apiCall('/subscription/packs', { method: 'POST', body: JSON.stringify({ delta }) });
 };
 
 // ============ FUNCIONES DE MIEMBROS ACTUALIZADAS PARA USAR EL BACKEND ============
@@ -413,6 +527,11 @@ export const getStudentStats = async () => {
     console.error('Error fetching student stats:', error);
     throw error;
   }
+};
+
+export const getMemberCount = async (): Promise<number> => {
+  const res = await apiCall('/students/stats?group_by=general');
+  return res?.data?.total ?? 0;
 };
 
 export const getUpcomingBirthdays = async () => {
