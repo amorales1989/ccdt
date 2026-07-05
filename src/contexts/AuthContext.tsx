@@ -8,7 +8,7 @@ import { isDemoMode, getDemoRole, buildDemoProfile, buildDemoUser, buildDemoSess
 
 const resolveLocalBackendUrl = async (): Promise<string> => {
   if (typeof window === 'undefined' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
-    return 'https://ccdt-back.116.203.244.65.sslip.io/api';
+    return 'https://api.n-xus.com/api';
   }
   try {
     const res = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(1000) });
