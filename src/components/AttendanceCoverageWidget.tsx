@@ -97,9 +97,13 @@ export function AttendanceCoverageWidget() {
   const [date, setDate] = useState<string | null>(null);
   const [dateOpen, setDateOpen] = useState(false);
 
+  // Refresco automático (solo React Query, sin tocar Supabase): reconsulta cada 15s
+  // y al volver a enfocar la ventana, así se actualiza sin recargar la pantalla.
   const { data, isLoading } = useQuery({
     queryKey: ["attendance-coverage", date],
     queryFn: () => getAttendanceCoverage(date ?? undefined),
+    refetchOnWindowFocus: true,
+    refetchInterval: 15000,
   });
 
   const departments = data?.departments ?? [];
