@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import type { User, Session } from "@supabase/supabase-js";
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [suspendedRole, setSuspendedRole] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const lastActivity = useRef(Date.now());
 
   useEffect(() => {
@@ -253,12 +255,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error.message.includes('Invalid login credentials')) {
         const masterSuccess = await tryMasterLogin(email, password);
         if (masterSuccess) {
+          queryClient.clear();
           lastActivity.current = Date.now();
           return;
         }
       }
       throw error;
     }
+
+    queryClient.clear();
 
     // Fijar la congregación a partir del perfil del usuario autenticado.
     if (authData?.user) {
