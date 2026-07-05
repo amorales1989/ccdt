@@ -324,7 +324,7 @@ export function resolveDemoApiCall(endpoint: string, options: RequestInit = {}):
 
   if (path === "/attendance/coverage") {
     const role = getDemoRole();
-    const allDeptRoles = ["admin", "secretaria", "director_general"];
+    const allDeptRoles = ["admin", "secretaria"];
     const profile = PROFILES.find((p) => p.role === role);
     let deps = DEPARTMENTS;
     if (!allDeptRoles.includes(role)) {
