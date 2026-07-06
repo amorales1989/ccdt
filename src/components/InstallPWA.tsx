@@ -22,7 +22,10 @@ export const InstallPWA = () => {
     }
   };
 
-  if (isInstalled || !isInstallable || !showBanner || isDemoMode() || window.location.pathname.startsWith('/presentacion')) {
+  const isMarketingDomain = ['n-xus.com', 'www.n-xus.com'].includes(window.location.hostname);
+  const onLanding = window.location.pathname.startsWith('/presentacion') || (isMarketingDomain && window.location.pathname === '/');
+
+  if (isInstalled || !isInstallable || !showBanner || isDemoMode() || onLanding) {
     return null;
   }
 
