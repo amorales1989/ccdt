@@ -49,6 +49,10 @@ const queryClient = new QueryClient({
   },
 });
 
+const isMarketingDomain =
+  typeof window !== "undefined" &&
+  ["n-xus.com", "www.n-xus.com"].includes(window.location.hostname);
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -64,6 +68,10 @@ function App() {
                 children: [
                   {
                     index: true,
+                    element: isMarketingDomain ? <Landing /> : <Index />,
+                  },
+                  {
+                    path: "/login",
                     element: <Index />,
                   },
                   {

@@ -39,8 +39,8 @@ export function Layout() {
     </CompanyProvider>
   );
 
-  // Si no hay usuario y no estamos en el login (/), redirigir
-  if (!loading && !user && window.location.pathname !== "/") {
+  // Si no hay usuario y no estamos en una pantalla de login (/ o /login), redirigir
+  if (!loading && !user && !["/", "/login"].includes(window.location.pathname)) {
     return <Navigate to="/" replace />;
   }
 
