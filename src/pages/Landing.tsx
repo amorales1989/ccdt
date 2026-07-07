@@ -130,7 +130,7 @@ const roles = [
 
 /* ----------------------------- Mockups ----------------------------- */
 
-function BrowserFrame({ children, title = "nexus.app" }: { children: React.ReactNode; title?: string }) {
+function BrowserFrame({ children, title = "nexus.app", flush = false }: { children: React.ReactNode; title?: string; flush?: boolean }) {
   return (
     <div className="rounded-2xl bg-white shadow-large ring-1 ring-slate-200/70 overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
@@ -141,93 +141,31 @@ function BrowserFrame({ children, title = "nexus.app" }: { children: React.React
           {title}
         </div>
       </div>
-      <div className="p-5 bg-gradient-to-br from-slate-50 to-white">{children}</div>
+      <div className={flush ? "" : "p-5 bg-gradient-to-br from-slate-50 to-white"}>{children}</div>
     </div>
   );
 }
 
 function AttendanceMock() {
-  const people = [
-    { n: "Sofía R.", on: true },
-    { n: "Mateo G.", on: true },
-    { n: "Valentina P.", on: false },
-    { n: "Lucas M.", on: true },
-    { n: "Martina L.", on: true },
-  ];
   return (
-    <BrowserFrame title="nexus.app/asistencia">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <p className="text-xs text-slate-400">Clase Intermedios · Sáb 31 May</p>
-          <p className="text-base font-semibold text-slate-800">Tomar Asistencia</p>
-        </div>
-        <span className="rounded-full bg-success/10 text-success text-xs font-semibold px-3 py-1">
-          4 / 5 presentes
-        </span>
-      </div>
-      <div className="space-y-2">
-        {people.map((p, i) => (
-          <div
-            key={p.n}
-            className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-3 py-2.5"
-            style={{ animationDelay: `${i * 90}ms` }}
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 grid place-items-center text-white text-xs font-bold">
-                {p.n[0]}
-              </div>
-              <span className="text-sm text-slate-700">{p.n}</span>
-            </div>
-            <span
-              className={`grid place-items-center h-6 w-6 rounded-full transition ${
-                p.on ? "bg-success text-white" : "bg-slate-100 text-slate-300"
-              }`}
-            >
-              <CheckCircle2 className="h-4 w-4" />
-            </span>
-          </div>
-        ))}
-      </div>
+    <BrowserFrame title="nexus.app/asistencia" flush>
+      <img
+        src="/screens/attendance.png"
+        alt="Pantalla de Tomar Asistencia de Nexus"
+        className="w-full h-auto block"
+      />
     </BrowserFrame>
   );
 }
 
 function StatsMock() {
-  const bars = [55, 72, 48, 90, 66, 80];
-  const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun"];
   return (
-    <BrowserFrame title="nexus.app/estadisticas">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-xs text-slate-400">Asistencia mensual</p>
-          <p className="text-base font-semibold text-slate-800">Crecimiento 2026</p>
-        </div>
-        <span className="flex items-center gap-1 rounded-full bg-blue-50 text-primary text-xs font-semibold px-3 py-1">
-          <TrendingUp className="h-3.5 w-3.5" /> +18%
-        </span>
-      </div>
-      <div className="flex items-end justify-between gap-3 h-40">
-        {bars.map((h, i) => (
-          <div key={i} className="flex-1 h-full flex flex-col items-center justify-end gap-2">
-            <div className="w-full rounded-t-lg bg-gradient-to-t from-blue-600 to-blue-400 relative overflow-hidden" style={{ height: `${h}%` }}>
-              <div className="absolute inset-0 bg-white/20 animate-pulse-slow" />
-            </div>
-            <span className="text-[10px] text-slate-400">{months[i]}</span>
-          </div>
-        ))}
-      </div>
-      <div className="mt-5 grid grid-cols-3 gap-3">
-        {[
-          { k: "Miembros", v: "248" },
-          { k: "Promedio", v: "76%" },
-          { k: "Eventos", v: "12" },
-        ].map((s) => (
-          <div key={s.k} className="rounded-xl bg-slate-50 p-3 text-center">
-            <p className="text-lg font-bold text-slate-800">{s.v}</p>
-            <p className="text-[11px] text-slate-400">{s.k}</p>
-          </div>
-        ))}
-      </div>
+    <BrowserFrame title="nexus.app/estadisticas" flush>
+      <img
+        src="/screens/stats.png"
+        alt="Pantalla de estadísticas de Nexus"
+        className="w-full h-auto block"
+      />
     </BrowserFrame>
   );
 }
@@ -278,40 +216,12 @@ function PhoneMock() {
   return (
     <div className="relative mx-auto w-[260px]">
       <div className="rounded-[2.5rem] bg-slate-900 p-3 shadow-large ring-1 ring-slate-800">
-        <div className="rounded-[2rem] bg-white overflow-hidden">
-          <div className="bg-gradient-hero px-5 pt-8 pb-12 text-white">
-            <div className="flex items-center gap-2">
-              <img src="/fire.png" alt="Nexus" className="h-8 w-8 object-contain" />
-              <span className="font-bold tracking-tight">Nexus</span>
-            </div>
-            <p className="mt-4 text-sm text-white/80">Buen día,</p>
-            <p className="text-xl font-bold">Director 👋</p>
-          </div>
-          <div className="-mt-6 px-4 space-y-3">
-            <div className="rounded-2xl bg-white shadow-medium p-4 ring-1 ring-slate-100">
-              <p className="text-xs text-slate-400">Asistencia de hoy</p>
-              <div className="mt-2 flex items-end gap-2">
-                <span className="text-3xl font-extrabold text-slate-800">82</span>
-                <span className="text-success text-xs font-semibold mb-1">presentes</span>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div className="h-full w-4/5 rounded-full bg-gradient-to-r from-blue-500 to-blue-700" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 pb-6">
-              {[
-                { i: Users, l: "Miembros" },
-                { i: Bell, l: "Avisos" },
-                { i: CalendarDays, l: "Eventos" },
-                { i: BarChart3, l: "Stats" },
-              ].map((q) => (
-                <div key={q.l} className="rounded-2xl bg-slate-50 p-3 grid place-items-center gap-1">
-                  <q.i className="h-5 w-5 text-primary" />
-                  <span className="text-[11px] text-slate-500">{q.l}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="rounded-[2rem] bg-white overflow-hidden h-[480px]">
+          <img
+            src="/screens/stats.png"
+            alt="Estadísticas de Nexus en el celular"
+            className="w-full h-full object-cover object-top"
+          />
         </div>
       </div>
       <div className="absolute -right-4 top-24 rounded-2xl bg-white shadow-large px-3 py-2 flex items-center gap-2 ring-1 ring-slate-100 animate-pulse-slow">
