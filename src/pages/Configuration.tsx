@@ -81,6 +81,7 @@ const NOTIFICATION_EVENTS = [
   { key: 'solicitudes_pendientes', label: 'Solicitudes de eventos pendientes', description: 'Alerta diaria sobre solicitudes de calendario sin aprobar' },
   { key: 'eventos_aprobados', label: 'Eventos aprobados', description: 'Notifica a los roles seleccionados cuando una solicitud es aprobada. Los rechazos solo se notifican al solicitante.' },
   { key: 'mantenimiento', label: 'Solicitudes de mantenimiento', description: 'Notifica cuando se registra un nuevo pedido de mantenimiento' },
+  { key: 'ausencias', label: 'Ausencias de alumnos', description: 'Notifica a los responsables cuando un alumno lleva 4 semanas consecutivas sin asistir a su clase' },
 ] as const;
 
 
@@ -89,6 +90,7 @@ const DEFAULT_NOTIFICATIONS: Record<string, string[]> = {
   solicitudes_pendientes: ['secr.-calendario', 'admin'],
   eventos_aprobados: ['director', 'vicedirector'],
   mantenimiento: ['conserje', 'admin'],
+  ausencias: ['lider', 'maestro'],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
