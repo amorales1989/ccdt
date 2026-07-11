@@ -44,35 +44,44 @@ interface PersonSearchInputProps {
     placeholder?: string
     className?: string
     selectedName?: string
+    // Si se pasa, restringe la búsqueda (profiles y students) a ese departamento.
+    // Sin esto, busca en toda la congregación.
+    departmentId?: string
+    // ids a excluir de los resultados (ej: gente que ya es miembro de algo, para no
+    // dejar seleccionar de nuevo a alguien que ya está agregado).
+    excludeIds?: string[]
+    disabled?: boolean
 }
 
-export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o apellido...", className, selectedName }: PersonSearchInputProps) {
+export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o apellido...", className, selectedName, departmentId, excludeIds, disabled }: PersonSearchInputProps) {
     const [open, setOpen] = React.useState(false)
     const [searchValue, setSearchValue] = React.useState("")
 
     const { data: results = [], isLoading } = useQuery({
-        queryKey: ['person-search', searchValue],
+        queryKey: ['person-search', searchValue, departmentId],
         queryFn: async () => {
             if (searchValue.length < 2) return []
 
             const term = `%${searchValue}%`
 
             // Search profiles
-            const { data: profiles, error: pError } = await supabase
+            let profileQuery = supabase
                 .from('profiles')
                 .select('*')
                 .or(`first_name.ilike.${term},last_name.ilike.${term},document_number.ilike.${term}`)
                 .eq('company_id', getPersistentCompanyId())
-                .limit(5) as { data: any[], error: any }
+            if (departmentId) profileQuery = profileQuery.eq('department_id', departmentId)
+            const { data: profiles, error: pError } = await profileQuery.limit(5) as { data: any[], error: any }
 
             // Search students
-            const { data: students, error: sError } = await supabase
+            let studentQuery = supabase
                 .from('students')
                 .select('*')
                 .or(`first_name.ilike.${term},last_name.ilike.${term},document_number.ilike.${term}`)
                 .eq('company_id', getPersistentCompanyId())
                 .is('deleted_at', null)
-                .limit(5) as { data: any[], error: any }
+            if (departmentId) studentQuery = studentQuery.eq('department_id', departmentId)
+            const { data: students, error: sError } = await studentQuery.limit(5) as { data: any[], error: any }
 
             const flattened: PersonSearchResult[] = [
                 ...(profiles?.map(p => ({
@@ -113,6 +122,10 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
         staleTime: 1000 * 60 * 5, // 5 minutes
     })
 
+    const visibleResults = excludeIds?.length
+        ? results.filter((p) => !excludeIds.includes(p.id))
+        : results
+
     return (
         <div className={cn("w-full", className)}>
             <Popover open={open} onOpenChange={setOpen}>
@@ -121,7 +134,8 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                         variant="outline"
                         role="combobox"
                         aria-expanded={open}
-                        className="w-full justify-between h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 font-normal hover:bg-slate-100 transition-all text-slate-700 dark:text-slate-300"
+                        disabled={disabled}
+                        className="w-full justify-between h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 font-normal hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-700 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-300"
                     >
                         <div className="flex items-center gap-2">
                             <Search className="h-4 w-4 shrink-0 opacity-50" />
@@ -136,7 +150,7 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                             placeholder="Escribe para buscar..."
                             value={searchValue}
                             onValueChange={setSearchValue}
-                            className="h-12 border-none focus:ring-0"
+                            className="h-12 border-none focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400"
                         />
                         <CommandList className="max-h-[300px]">
                             <CommandEmpty>
@@ -156,7 +170,7 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                                 )}
                             </CommandEmpty>
                             <CommandGroup>
-                                {results.map((person) => (
+                                {visibleResults.map((person) => (
                                     <CommandItem
                                         key={`${person.source}-${person.id}`}
                                         value={`${person.first_name} ${person.last_name} ${person.id}`}

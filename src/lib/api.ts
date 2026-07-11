@@ -1527,3 +1527,139 @@ export const setOpeningBalance = async (department_id: string, opening_balance: 
     body: JSON.stringify({ department_id, opening_balance }),
   });
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Grupos pequeños
+
+export type SmallGroup = {
+  id: string;
+  company_id: number;
+  name: string;
+  description: string | null;
+  category: string | null;
+  requires_approval: boolean;
+  capacity: number | null;
+  frequency: string | null;
+  weekday: number | null;
+  meeting_time: string | null;
+  location: string | null;
+  status: 'active' | 'inactive' | 'archived';
+  department_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  member_count?: number;
+  leaders?: { id: string; first_name: string; last_name: string | null; role_in_group: 'leader' | 'co_leader' }[];
+};
+
+export type SmallGroupMember = {
+  id: string;
+  role_in_group: 'leader' | 'co_leader' | 'member';
+  status: 'pending' | 'active' | 'rejected' | 'left';
+  requested_at: string | null;
+  approved_at: string | null;
+  created_at: string;
+  student: { id: string; first_name: string; last_name: string | null; phone: string | null } | null;
+  profile: { id: string; first_name: string; last_name: string | null; phone: string | null; email: string | null } | null;
+};
+
+export type SmallGroupMeeting = {
+  id: string;
+  group_id: string;
+  meeting_date: string;
+  notes: string | null;
+  created_at: string;
+};
+
+export type SmallGroupAttendanceRow = SmallGroupMember & { present: boolean | null };
+
+export const getSmallGroups = async (status: 'active' | 'archived' = 'active'): Promise<SmallGroup[]> => {
+  const res = await apiCall(`/small-groups?status=${status}`);
+  return res.data || [];
+};
+
+export const getSmallGroup = async (id: string): Promise<SmallGroup> => {
+  const res = await apiCall(`/small-groups/${id}`);
+  return res.data;
+};
+
+export const createSmallGroup = async (data: {
+  name: string;
+  description?: string;
+  category?: string;
+  requires_approval?: boolean;
+  capacity?: number;
+  frequency?: string;
+  weekday?: number;
+  meeting_time?: string;
+  location?: string;
+  leader_profile_id?: string;
+  department_id?: string;
+}): Promise<SmallGroup> => {
+  const res = await apiCall('/small-groups', { method: 'POST', body: JSON.stringify(data) });
+  return res.data;
+};
+
+export const updateSmallGroup = async (id: string, data: Partial<SmallGroup>): Promise<SmallGroup> => {
+  const res = await apiCall(`/small-groups/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  return res.data;
+};
+
+export const archiveSmallGroup = async (id: string): Promise<void> => {
+  await apiCall(`/small-groups/${id}`, { method: 'DELETE' });
+};
+
+export const getSmallGroupMembers = async (groupId: string): Promise<SmallGroupMember[]> => {
+  const res = await apiCall(`/small-groups/${groupId}/members`);
+  return res.data || [];
+};
+
+export const addSmallGroupMember = async (groupId: string, data: {
+  role_in_group?: 'leader' | 'co_leader' | 'member';
+  profile_id?: string;
+  student_id?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  gender?: string;
+}): Promise<SmallGroupMember> => {
+  const res = await apiCall(`/small-groups/${groupId}/members`, { method: 'POST', body: JSON.stringify(data) });
+  return res.data;
+};
+
+export const updateSmallGroupMember = async (groupId: string, memberId: string, data: {
+  role_in_group?: 'leader' | 'co_leader' | 'member';
+  status?: 'pending' | 'active' | 'rejected' | 'left';
+}): Promise<SmallGroupMember> => {
+  const res = await apiCall(`/small-groups/${groupId}/members/${memberId}`, { method: 'PATCH', body: JSON.stringify(data) });
+  return res.data;
+};
+
+export const removeSmallGroupMember = async (groupId: string, memberId: string): Promise<void> => {
+  await apiCall(`/small-groups/${groupId}/members/${memberId}`, { method: 'DELETE' });
+};
+
+export const getSmallGroupMeetings = async (groupId: string): Promise<SmallGroupMeeting[]> => {
+  const res = await apiCall(`/small-groups/${groupId}/meetings`);
+  return res.data || [];
+};
+
+export const createSmallGroupMeeting = async (groupId: string, data: { meeting_date: string; notes?: string }): Promise<SmallGroupMeeting> => {
+  const res = await apiCall(`/small-groups/${groupId}/meetings`, { method: 'POST', body: JSON.stringify(data) });
+  return res.data;
+};
+
+export const getSmallGroupAttendance = async (groupId: string, meetingId: string): Promise<SmallGroupAttendanceRow[]> => {
+  const res = await apiCall(`/small-groups/${groupId}/meetings/${meetingId}/attendance`);
+  return res.data || [];
+};
+
+export const saveSmallGroupAttendance = async (
+  groupId: string,
+  meetingId: string,
+  records: { member_id: string; present: boolean }[]
+): Promise<void> => {
+  await apiCall(`/small-groups/${groupId}/meetings/${meetingId}/attendance`, {
+    method: 'POST',
+    body: JSON.stringify({ records }),
+  });
+};

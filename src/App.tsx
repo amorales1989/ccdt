@@ -15,6 +15,7 @@ import NotFound from "@/pages/NotFound";
 import GestionUsuarios from "@/pages/GestionUsuarios";
 import Calendario from "@/pages/Calendario";
 import Departamentos from "@/pages/Departamentos";
+import GruposPequenos from "@/pages/GruposPequenos";
 import Contabilidad from "@/pages/Contabilidad";
 import PromoverAlumnos from "@/pages/PromoverAlumnos";
 import Configuration from "@/pages/Configuration";
@@ -136,6 +137,10 @@ function App() {
                   {
                     path: "/departamentos",
                     element: <Departamentos />,
+                  },
+                  {
+                    path: "/grupos",
+                    element: <GruposPequenos />,
                   },
                   {
                     path: "/contabilidad",

@@ -22,7 +22,7 @@ export function Layout() {
         <SidebarProvider>
           <div className="flex min-h-screen w-full bg-background">
             <AppSidebar />
-            <main className={`flex-1 min-w-0 overflow-x-hidden ${isMobile ? 'pt-20' : 'p-4'}`}>
+            <main className={`flex-1 min-w-0 overflow-x-hidden bg-[#f8fafc] dark:bg-slate-900/50 ${isMobile ? 'pt-20' : 'p-4'}`}>
               <PlanLimitBanner />
               <Outlet />
             </main>

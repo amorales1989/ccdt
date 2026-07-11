@@ -8,6 +8,7 @@ import AuthorizationOption from "@/components/AuthorizationOption";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 import { generateBlankFichaSalud } from "@/lib/pdfUtils";
 import { isDemoMode } from "@/lib/demo";
 import { FileText, HelpCircle } from "lucide-react";
@@ -54,12 +55,18 @@ const AutorizacionesSalida = () => {
   };
 
   useEffect(() => {
-    if (profile) {
-      const authorized = profile.role === 'admin' || profile.role === 'secretaria' || profile.role === 'lider';
+    // Esperar a que cargue company para no evaluar permisos con datos incompletos.
+    if (profile && company !== undefined) {
+      // Permiso configurable desde Configuración › Permisos (role_permissions),
+      // con fallback a los permisos por defecto del rol.
+      const role = profile.role || '';
+      const savedPerms = (company as any)?.role_permissions?.[role];
+      const authorized = savedPerms && 'menu_autorizaciones' in savedPerms
+        ? savedPerms.menu_autorizaciones !== false
+        : DEFAULT_PERMISSIONS[role]?.menu_autorizaciones !== false;
       setIsAuthorized(authorized);
 
       if (!authorized) {
-        console.log("User not authorized:", profile.role);
         toast({
           title: "Acceso restringido",
           description: "No tienes permisos para acceder a esta sección",
@@ -68,7 +75,7 @@ const AutorizacionesSalida = () => {
         navigate("/");
       }
     }
-  }, [profile, navigate, toast]);
+  }, [profile, company, navigate, toast]);
 
   if (!profile) {
     window.location.href = '/';

@@ -69,6 +69,7 @@ const MENU_PERMISSIONS = [
   { key: 'menu_informes',         label: 'Informes de Personal' },
   { key: 'menu_material',         label: 'Material Didáctico' },
   { key: 'menu_departamentos',    label: 'Departamentos' },
+  { key: 'menu_grupos',           label: 'Grupos Pequeños' },
   { key: 'menu_contabilidad',     label: 'Contabilidad' },
   { key: 'menu_gestion_usuarios', label: 'Gestión de Usuarios' },
   { key: 'menu_configuracion',    label: 'Configuración' },

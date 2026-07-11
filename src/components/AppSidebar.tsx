@@ -18,12 +18,12 @@ import {
   Users, UserPlus, ClipboardList, History, Home, Menu,
   FileText, LogOut, UserPlus2, UserRound, FolderIcon,
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
-  BarChart3, BookOpen, Wrench, Megaphone, HelpCircle, Wallet, Building
+  BarChart3, BookOpen, Wrench, Megaphone, HelpCircle, Wallet, Building, Users2
 } from "lucide-react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUnreadStaffReportsCount } from "@/lib/api";
+import { getUnreadStaffReportsCount, getSmallGroups } from "@/lib/api";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -79,6 +79,7 @@ const getItems = (role: string | undefined, profile: any, unreadReportsCount: nu
     { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
     { title: "Registro de Temas", url: "/registro-temas", icon: ClipboardCheck },
     { title: "Departamentos", url: "/departamentos", icon: FolderIcon },
+    { title: "Grupos Pequeños", url: "/grupos", icon: Users2 },
     { title: "Contabilidad", url: "/contabilidad", icon: Wallet },
     { title: "Gestión de Usuarios", url: "/gestion-usuarios", icon: UserRound },
   ];
@@ -100,6 +101,7 @@ const iconBgMap: Record<string, string> = {
   "Todos los Miembros": "bg-slate-100 text-slate-700",
   "Gestión de Usuarios": "bg-violet-100 text-violet-600",
   "Departamentos": "bg-amber-100 text-amber-600",
+  "Grupos Pequeños": "bg-teal-100 text-teal-600",
   "Estadísticas": "bg-indigo-100 text-indigo-600",
   "Configuración": "bg-slate-100 text-slate-600",
   "Material Didáctico": "bg-emerald-100 text-emerald-600",
@@ -232,6 +234,18 @@ const NavigationContent = ({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Roles que pueden CREAR grupos ven el menú siempre. El resto (maestro, auxiliar, colaborador)
+  // solo lo ve si está a cargo o es miembro de al menos un grupo — se resuelve consultando.
+  const GROUP_CREATOR_ROLES = ['admin', 'secretaria', 'director', 'vicedirector', 'director_general', 'lider'];
+  const isGroupCreatorRole = GROUP_CREATOR_ROLES.includes(profile?.role || '');
+  const { data: myGroups = [] } = useQuery({
+    queryKey: ['sidebar-small-groups', profile?.id],
+    queryFn: () => getSmallGroups('active'),
+    enabled: !!profile?.id && !isGroupCreatorRole,
+    staleTime: 5 * 60 * 1000,
+  });
+  const hasSmallGroups = isGroupCreatorRole || myGroups.length > 0;
+
   const MENU_KEY_MAP: Record<string, string> = {
     "Todos los Miembros": "menu_todos_miembros",
     "Lista de Miembros": "menu_lista_miembros",
@@ -244,6 +258,7 @@ const NavigationContent = ({
     "Informes de Personal": "menu_informes",
     "Material Didáctico": "menu_material",
     "Departamentos": "menu_departamentos",
+    "Grupos Pequeños": "menu_grupos",
     "Contabilidad": "menu_contabilidad",
     "Gestión de Usuarios": "menu_gestion_usuarios",
     "Configuración": "menu_configuracion",
@@ -265,10 +280,12 @@ const NavigationContent = ({
     return allItems.filter(item => {
       const menuKey = MENU_KEY_MAP[item.title];
       if (!menuKey) return true; // Inicio, Calendario always visible
+      // Grupos: aunque el permiso esté activo, si el rol no crea grupos y no está en ninguno, se oculta.
+      if (menuKey === 'menu_grupos' && !hasSmallGroups) return false;
       if (savedPerms && menuKey in savedPerms) return savedPerms[menuKey] !== false;
       return DEFAULT_PERMISSIONS[role]?.[menuKey] !== false;
     });
-  }, [profile?.role, profile?.departments, unreadReportsCount, company]);
+  }, [profile?.role, profile?.departments, unreadReportsCount, company, hasSmallGroups]);
 
   const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
 
