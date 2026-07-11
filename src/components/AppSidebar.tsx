@@ -82,10 +82,23 @@ const getItems = (role: string | undefined, profile: any, unreadReportsCount: nu
     { title: "Grupos Pequeños", url: "/grupos", icon: Users2 },
     { title: "Contabilidad", url: "/contabilidad", icon: Wallet },
     { title: "Gestión de Usuarios", url: "/gestion-usuarios", icon: UserRound },
+    { title: "Notificaciones", url: "/notificaciones", icon: Megaphone },
   ];
 
   return allItems;
 };
+
+// Agrupación del menú en desplegables. Los ítems que no caen en ningún grupo (Inicio, Calendario,
+// y los de roles especiales como Mantenimiento/Empresas) quedan sueltos. Un grupo se oculta solo
+// si no le queda ningún hijo visible según los permisos del rol.
+const TOP_LEVEL_ORDER = ["Inicio", "Calendario"];
+const MENU_GROUPS: { title: string; icon: any; children: string[] }[] = [
+  { title: "Miembros", icon: Users, children: ["Todos los Miembros", "Lista de Miembros", "Promover Miembros"] },
+  { title: "Clases", icon: BookOpen, children: ["Tomar Asistencia", "Historial", "Registro de Temas", "Material Didáctico"] },
+  { title: "Comunidad", icon: Users2, children: ["Grupos Pequeños", "Autorizaciones"] },
+  { title: "Reportes", icon: BarChart3, children: ["Estadísticas", "Informes de Personal"] },
+  { title: "Administración", icon: FolderIcon, children: ["Departamentos", "Gestión de Usuarios", "Contabilidad", "Notificaciones"] },
+];
 
 // Icon background color by category
 const iconBgMap: Record<string, string> = {
@@ -111,43 +124,62 @@ const iconBgMap: Record<string, string> = {
   "Informes de Personal": "bg-purple-100 text-purple-600",
   "Notificaciones": "bg-pink-100 text-pink-600",
   "Guía de Uso": "bg-rose-100 text-rose-600",
+  // Grupos del menú (headers desplegables)
+  "Miembros": "bg-blue-100 text-blue-600",
+  "Clases": "bg-emerald-100 text-emerald-600",
+  "Comunidad": "bg-teal-100 text-teal-600",
+  "Reportes": "bg-indigo-100 text-indigo-600",
+  "Administración": "bg-amber-100 text-amber-600",
 };
 
 const NavItem = ({
   item,
   isActive,
-  onClick
+  onClick,
+  openGroup,
+  setOpenGroup,
 }: {
-  item: { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number };
+  item: { title: string; url: string; icon: any; subItems?: { title: string; url: string; badge?: number }[]; badge?: number };
   isActive: boolean;
   onClick?: () => void;
+  openGroup?: string | null;
+  setOpenGroup?: (t: string | null) => void;
 }) => {
   const iconColor = iconBgMap[item.title] || "bg-gray-100 text-gray-500";
-  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
-  // Auto-expand if sub-item is active
+  // ¿Alguna página de este grupo está activa? (para marcar el header y auto-abrirlo)
+  const childActive = !!item.subItems?.some(sub => location.pathname + location.search === sub.url);
+
+  // Auto-abrir el grupo cuyo hijo está activo (acordeón: uno solo abierto a la vez).
   useEffect(() => {
-    if (item.subItems?.some(sub => location.pathname + location.search === sub.url)) {
-      setIsOpen(true);
-    }
-  }, [location.pathname, location.search, item.subItems]);
+    if (childActive) setOpenGroup?.(item.title);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search]);
 
   if (item.subItems) {
+    const isOpen = openGroup === item.title;
+    const headerActive = isActive || childActive;
+    // Badge agregado del grupo (ej. informes de personal sin leer) para verlo aun colapsado.
+    const groupBadge = item.subItems.reduce((sum, s) => sum + (s.badge || 0), 0);
     return (
       <div className="space-y-1">
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 group ${isActive
-            ? "bg-primary text-white shadow-md shadow-primary/20"
+          onClick={() => setOpenGroup?.(isOpen ? null : item.title)}
+          className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all duration-200 group ${headerActive
+            ? "bg-primary/10 text-primary font-semibold"
             : "text-muted-foreground hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-primary"
             }`}
         >
-          <div className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 shrink-0 ${isActive ? "bg-white/20" : iconColor
-            }`}>
+          <div className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 shrink-0 ${iconColor}`}>
             <item.icon className="h-3.5 w-3.5" />
           </div>
           <span className="font-semibold text-[13px] flex-1 leading-tight text-left">{item.title}</span>
+          {groupBadge > 0 && !isOpen && (
+            <div className="bg-red-500 text-white rounded-full min-w-[18px] h-4 px-1 flex items-center justify-center text-[10px] font-bold shadow-sm">
+              {groupBadge}
+            </div>
+          )}
           <ChevronRight className={`h-3.5 w-3.5 opacity-70 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
         </button>
 
@@ -160,13 +192,18 @@ const NavItem = ({
                   key={sub.title}
                   to={sub.url}
                   onClick={onClick}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 text-[12px] font-bold ${isSubActive
-                    ? "text-primary bg-purple-50 dark:bg-purple-900/20"
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all duration-200 text-[12px] font-bold ${isSubActive
+                    ? "text-primary bg-primary/10 dark:bg-primary/20"
                     : "text-muted-foreground hover:text-primary hover:bg-purple-50/50"
                     }`}
                 >
                   <div className={`w-1.5 h-1.5 rounded-full ${isSubActive ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                  {sub.title}
+                  <span className="flex-1">{sub.title}</span>
+                  {sub.badge !== undefined && sub.badge > 0 && (
+                    <div className="bg-red-500 text-white rounded-full min-w-[18px] h-4 px-1 flex items-center justify-center text-[10px] font-bold shadow-sm">
+                      {sub.badge}
+                    </div>
+                  )}
                 </Link>
               );
             })}
@@ -180,13 +217,12 @@ const NavItem = ({
     <Link
       to={item.url}
       onClick={onClick}
-      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 group ${isActive
-        ? "bg-primary text-white shadow-md shadow-primary/20"
+      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all duration-200 group ${isActive
+        ? "bg-primary/10 text-primary font-semibold"
         : "text-muted-foreground hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-primary"
         }`}
     >
-      <div className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 shrink-0 ${isActive ? "bg-white/20" : iconColor
-        }`}>
+      <div className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 shrink-0 ${iconColor}`}>
         <item.icon className="h-3.5 w-3.5" />
       </div>
       <span className="font-semibold text-[13px] flex-1 leading-tight">{item.title}</span>
@@ -217,6 +253,8 @@ const NavigationContent = ({
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  // Acordeón del menú: solo un grupo abierto a la vez.
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   const selectedDepartment = typeof window !== 'undefined' ? localStorage.getItem('selectedDepartment') : null;
   const isDirector = profile?.role === 'director' || profile?.role === 'vicedirector';
@@ -261,6 +299,7 @@ const NavigationContent = ({
     "Grupos Pequeños": "menu_grupos",
     "Contabilidad": "menu_contabilidad",
     "Gestión de Usuarios": "menu_gestion_usuarios",
+    "Notificaciones": "menu_notificaciones",
     "Configuración": "menu_configuracion",
     "Mantenimiento": "menu_mantenimiento",
     "Solicitar Reparación": "menu_mantenimiento",
@@ -277,14 +316,36 @@ const NavigationContent = ({
     const allItems = getItems(profile?.role, profile, unreadReportsCount);
     const role = profile?.role || '';
     const savedPerms = (company as any)?.role_permissions?.[role];
-    return allItems.filter(item => {
+
+    // 1. Filtrar por permisos (igual que antes, no cambia nada de la lógica de acceso).
+    const visibleFlat = allItems.filter(item => {
       const menuKey = MENU_KEY_MAP[item.title];
-      if (!menuKey) return true; // Inicio, Calendario always visible
-      // Grupos: aunque el permiso esté activo, si el rol no crea grupos y no está en ninguno, se oculta.
+      if (!menuKey) return true; // Inicio, Calendario siempre visibles
       if (menuKey === 'menu_grupos' && !hasSmallGroups) return false;
       if (savedPerms && menuKey in savedPerms) return savedPerms[menuKey] !== false;
       return DEFAULT_PERMISSIONS[role]?.[menuKey] !== false;
     });
+
+    // 2. Armar la estructura agrupada: sueltos arriba, luego grupos con sus hijos visibles,
+    //    y al final cualquier ítem que no caiga en un grupo (ej. Mantenimiento/Empresas).
+    const byTitle = new Map(visibleFlat.map(i => [i.title, i]));
+    const grouped: typeof visibleFlat = [];
+
+    for (const t of TOP_LEVEL_ORDER) {
+      if (byTitle.has(t)) { grouped.push(byTitle.get(t)!); byTitle.delete(t); }
+    }
+    for (const g of MENU_GROUPS) {
+      const children = g.children
+        .filter(t => byTitle.has(t))
+        .map(t => { const it = byTitle.get(t)!; byTitle.delete(t); return { title: it.title, url: it.url, badge: it.badge }; });
+      if (children.length > 0) {
+        grouped.push({ title: g.title, url: "", icon: g.icon, subItems: children });
+      }
+    }
+    for (const it of visibleFlat) {
+      if (byTitle.has(it.title)) { grouped.push(it); byTitle.delete(it.title); }
+    }
+    return grouped;
   }, [profile?.role, profile?.departments, unreadReportsCount, company, hasSmallGroups]);
 
   const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
@@ -409,15 +470,10 @@ const NavigationContent = ({
             item={item}
             isActive={location.pathname === item.url}
             onClick={onItemClick}
+            openGroup={openGroup}
+            setOpenGroup={setOpenGroup}
           />
         ))}
-        {checkMenuPerm('menu_notificaciones') && (
-          <NavItem
-            item={{ title: "Notificaciones", url: "/notificaciones", icon: Megaphone }}
-            isActive={location.pathname === "/notificaciones"}
-            onClick={onItemClick}
-          />
-        )}
       </div>
 
       {/* Bottom section */}

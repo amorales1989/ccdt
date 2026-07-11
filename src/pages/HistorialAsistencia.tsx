@@ -191,10 +191,6 @@ const HistorialAsistencia = () => {
         departmentIdToUse = userDepartmentId;
       }
 
-      if (isDirector && selectedClass === "all") {
-        return [];
-      }
-
       const attendanceData = await getAttendance(
         formattedStartDate,
         formattedEndDate,
@@ -589,10 +585,10 @@ const HistorialAsistencia = () => {
                   <Users className="h-4 w-4 text-blue-500 shrink-0" />
                   <Select value={selectedClass} onValueChange={setSelectedClass}>
                     <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
-                      <SelectValue placeholder="Seleccionar Clase" />
+                      <SelectValue placeholder="Todas las Clases" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all" className="text-xs font-medium">Seleccionar Clase</SelectItem>
+                      <SelectItem value="all" className="text-xs font-medium">Todas las Clases</SelectItem>
                       {availableClasses.map((c) => (
                         <SelectItem key={c} value={c} className="text-xs font-medium">{c}</SelectItem>
                       ))}
@@ -678,11 +674,11 @@ const HistorialAsistencia = () => {
                     disabled={selectedDepartment === "all"}
                   >
                     <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-[13px] font-semibold w-full">
-                      <SelectValue placeholder={isDirector ? "Clase" : "Todas las Clases"} />
+                      <SelectValue placeholder="Todas las Clases" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all" className="text-xs font-medium">
-                        {isDirector ? "Seleccionar Clase" : "Todas las Clases"}
+                        Todas las Clases
                       </SelectItem>
                       {availableClasses.map((c) => (
                         <SelectItem key={c} value={c} className="text-xs font-medium">{c}</SelectItem>
