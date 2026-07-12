@@ -30,6 +30,20 @@ function ProgressRing({ value, total, size = 56 }: { value: number; total: numbe
   );
 }
 
+function StatCounter({ label, presentes, total }: { label: string; presentes: number; total: number }) {
+  const pct = total > 0 ? Math.round((presentes / total) * 100) : 0;
+  return (
+    <div className="rounded-xl border border-border bg-background px-3 py-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-lg font-black text-foreground">{presentes}</span>
+        <span className="text-xs text-muted-foreground">de {total}</span>
+        <span className="ml-auto text-xs font-bold text-primary">{pct}%</span>
+      </div>
+    </div>
+  );
+}
+
 // showHeader: solo cuando hay varios departamentos (con uno solo, el resumen de arriba ya lo cubre).
 function DeptBlock({ dept, showHeader }: { dept: CoverageDept; showHeader: boolean }) {
   const pct = dept.total_clases > 0 ? Math.round((dept.tomadas / dept.total_clases) * 100) : 0;
@@ -81,7 +95,16 @@ function DeptBlock({ dept, showHeader }: { dept: CoverageDept; showHeader: boole
               </div>
               <span className="flex-1 text-sm font-medium text-foreground truncate">{c.clase}</span>
               <span className={`text-[11px] font-bold shrink-0 ${c.tomada ? "text-green-700" : "text-muted-foreground"}`}>
-                {c.tomada ? `${c.presentes}/${c.total}` : "Pendiente"}
+                {c.tomada ? (
+                  <>
+                    {c.presentes}/{c.total} ·{" "}
+                    <span className="text-blue-600 dark:text-blue-400">
+                      {c.total > 0 ? Math.round((c.presentes / c.total) * 100) : 0}%
+                    </span>
+                  </>
+                ) : (
+                  "Pendiente"
+                )}
               </span>
             </div>
           ))}
@@ -112,6 +135,21 @@ export function AttendanceCoverageWidget() {
   const totalClases = departments.reduce((a, d) => a + d.total_clases, 0);
   const totalTomadas = departments.reduce((a, d) => a + d.tomadas, 0);
   const allDone = totalClases > 0 && totalTomadas === totalClases;
+
+  // Asistencia del día separada en obreros vs el resto (solo clases con asistencia ya tomada).
+  const esObreros = (clase: string) => clase.toLowerCase().includes("obrero");
+  const asistencia = departments
+    .flatMap((d) => d.classes)
+    .filter((c) => c.tomada)
+    .reduce(
+      (acc, c) => {
+        const k = esObreros(c.clase) ? "obreros" : "miembros";
+        acc[k].presentes += c.presentes;
+        acc[k].total += c.total;
+        return acc;
+      },
+      { miembros: { presentes: 0, total: 0 }, obreros: { presentes: 0, total: 0 } }
+    );
 
   return (
     <Card className="overflow-hidden border-purple-100 dark:border-slate-700 shadow-sm">
@@ -146,6 +184,12 @@ export function AttendanceCoverageWidget() {
               />
             </div>
           </div>
+        </div>
+
+        {/* Asistencia del día: miembros (todas las clases menos obreros) y obreros */}
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <StatCounter label="Miembros" {...asistencia.miembros} />
+          <StatCounter label="Obreros" {...asistencia.obreros} />
         </div>
       </CardHeader>
 
