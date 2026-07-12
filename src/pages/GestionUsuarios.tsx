@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { Department, DepartmentType } from "@/types/database";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Pencil, Trash2, Eye, EyeOff, Search, ChevronLeft, ChevronRight, Filter, ArrowRight, ArrowLeft, ArrowUpRight, GraduationCap, Plus } from "lucide-react";
+import { Users, Pencil, Trash2, Eye, EyeOff, Search, ChevronLeft, ChevronRight, Filter, ArrowRight, ArrowLeft, ArrowUpRight, GraduationCap, Plus, UserMinus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -30,6 +30,7 @@ import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog"
 import { RegisterUserModal } from "@/components/RegisterUserModal";
 import { FileUp } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
+import { convertUserToMember } from "@/lib/api";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -76,6 +77,8 @@ const GestionUsuarios = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
+  const [userToConvert, setUserToConvert] = useState<string | null>(null);
   const [isCleanupDialogOpen, setIsCleanupDialogOpen] = useState(false);
 
   const isDirector = profile?.role === 'director';
@@ -257,6 +260,28 @@ const GestionUsuarios = () => {
     },
   });
 
+
+  // Deja de trabajar en la iglesia: se borra la cuenta pero la persona sigue existiendo
+  // como miembro de la congregación (a diferencia de "eliminar", que también la da de baja).
+  const convertToMemberMutation = useMutation({
+    mutationFn: (userId: string) => convertUserToMember(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({
+        title: "Convertido en miembro",
+        description: "Se eliminó la cuenta de usuario. La persona sigue registrada como miembro."
+      });
+      setIsConvertDialogOpen(false);
+      setUserToConvert(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo convertir en miembro",
+        variant: "destructive"
+      });
+    }
+  });
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -522,6 +547,15 @@ const GestionUsuarios = () => {
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                 </RegisterUserModal>
+                                <Button variant="ghost" size="icon" title="Convertir en miembro (borra la cuenta, conserva a la persona)"
+                                  className="h-8 w-8 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 rounded-full transition-colors"
+                                  disabled={convertToMemberMutation.isPending}
+                                  onClick={() => {
+                                    setUserToConvert(user.id);
+                                    setIsConvertDialogOpen(true);
+                                  }}>
+                                  <UserMinus className="h-4 w-4" />
+                                </Button>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-full transition-colors"
                                   disabled={deleteUserMutation.isPending}
                                   onClick={() => {
@@ -795,6 +829,16 @@ const GestionUsuarios = () => {
         title="¿Eliminar usuario?"
         description="Esta acción no se puede deshacer. Se eliminará permanentemente la cuenta y el perfil del usuario."
         isLoading={deleteUserMutation.isPending}
+      />
+      <DeleteConfirmationDialog
+        open={isConvertDialogOpen}
+        onOpenChange={setIsConvertDialogOpen}
+        onConfirm={() => {
+          if (userToConvert) convertToMemberMutation.mutate(userToConvert);
+        }}
+        title="¿Convertir en miembro?"
+        description="Se elimina la cuenta de usuario y sus roles, pero la persona sigue registrada como miembro de la congregación (sin departamento). No podrá volver a iniciar sesión."
+        isLoading={convertToMemberMutation.isPending}
       />
     </div >
   );

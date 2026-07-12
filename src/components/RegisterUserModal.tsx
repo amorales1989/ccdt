@@ -17,6 +17,7 @@ import { NameSearchInput } from "./NameSearchInput";
 import { DniIdentityInput } from "./DniIdentityInput";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { clearMemberDepartments } from "@/lib/api";
 import {
     Dialog,
     DialogContent,
@@ -65,7 +66,7 @@ const ASSIGNABLE_ROLES: AppRole[] = [
 ];
 
 // Roles that don't require a department
-const STANDALONE_ROLE_VALUES = ['conserje', 'admin', 'secr.-calendario', 'secretaria'];
+const STANDALONE_ROLE_VALUES = ['conserje', 'admin', 'secr.-calendario', 'secretaria', 'miembro'];
 
 const ROLE_LABELS: Record<string, string> = {
     maestro: 'Maestro',
@@ -79,6 +80,7 @@ const ROLE_LABELS: Record<string, string> = {
     'secr.-calendario': 'Secr. Calendario',
     conserje: 'Conserje',
     admin: 'Admin',
+    miembro: 'Miembro (sin funciones)',
 };
 
 export function RegisterUserModal({ children, onSuccess, user }: RegisterUserModalProps) {
@@ -146,6 +148,8 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
     // Determine "mode" from current assignments + standaloneRoles
     // A user is "director_general mode" if standaloneRoles includes director_general
     const isDirectorGeneralMode = standaloneRoles.includes('director_general' as AppRole);
+    // Miembro: no trabaja en ningún departamento, así que no se le piden asignaciones.
+    const isMiembroMode = standaloneRoles.includes('miembro' as AppRole);
     const isConserjeOnlyMode = standaloneRoles.length > 0 && assignments.length === 0 && selectedDepartments.length === 0;
 
     const COLAB_ROLES = ['colaborador'] as const;
@@ -364,6 +368,15 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                     department_id: deptObj?.id || '',
                     assigned_class: finalClass || '',
                 }];
+            } else if (isMiembroMode) {
+                // Deja de trabajar en la iglesia pero conserva la cuenta: sin departamento,
+                // sin clase y sin ningún otro rol.
+                finalDepts = [];
+                finalDeptId = undefined;
+                finalClass = undefined;
+                finalRole = 'miembro' as AppRole;
+                finalRoles = ['miembro' as AppRole];
+                finalAssignments = [];
             } else if (isDirectorGeneralMode) {
                 if (selectedDepartments.length === 0) {
                     toast({ title: "Error", description: "Seleccione al menos un departamento", variant: "destructive" });
@@ -398,11 +411,15 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                 finalAssignments = [];
             } else {
                 if (assignments.length === 0 && standaloneRoles.length === 0) {
-                    toast({ title: "Error", description: "Agregue al menos un rol o asignación", variant: "destructive" });
-                    setLoading(false);
-                    return;
-                }
-                if (assignments.length === 0) {
+                    // Sin ningún rol ni asignación: ya no trabaja en la iglesia, queda como
+                    // miembro sin departamento (conserva la cuenta pero sin permisos).
+                    finalDepts = [];
+                    finalDeptId = undefined;
+                    finalClass = undefined;
+                    finalRole = 'miembro' as AppRole;
+                    finalRoles = ['miembro' as AppRole];
+                    finalAssignments = [];
+                } else if (assignments.length === 0) {
                     // Solo standalone roles (ej: solo secretaria sin dept)
                     finalDepts = [];
                     finalDeptId = undefined;
@@ -509,6 +526,12 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                         gender: gender || null,
                     })
                     .eq('profile_id', user!.id);
+
+                // Rol "miembro": ya no trabaja en ningún lado, así que su ficha de miembro
+                // también sale de todos los departamentos.
+                if (finalRole === ('miembro' as AppRole)) {
+                    await clearMemberDepartments(user!.id);
+                }
             } else {
                 const { data: registerData, error: registerError } = await supabase.functions.invoke('manage-users', {
                     body: { action: 'create', userData: { email: finalEmail, password: finalPassword, ...profileData } }
@@ -640,11 +663,11 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
         ? ['maestro', 'colaborador', 'auxiliar_maestro'] as AppRole[]
         : isLoggedInDirectorGeneral
             ? ['maestro', 'colaborador', 'auxiliar_maestro', 'director', 'vicedirector'] as AppRole[]
-            : [...ASSIGNABLE_ROLES, 'director_general' as AppRole, 'secr.-calendario' as AppRole, 'conserje' as AppRole, 'admin' as AppRole, 'secretaria' as AppRole];
+            : [...ASSIGNABLE_ROLES, 'director_general' as AppRole, 'secr.-calendario' as AppRole, 'conserje' as AppRole, 'admin' as AppRole, 'secretaria' as AppRole, 'miembro' as AppRole];
 
     // Whether the current set of roles needs departments
     const needsDepartment = !standaloneRoles.some(r =>
-        ['conserje', 'admin', 'secr.-calendario'].includes(r as string)
+        ['conserje', 'admin', 'secr.-calendario', 'miembro'].includes(r as string)
     ) || assignments.length > 0;
 
     return (
@@ -839,7 +862,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                     <div className="space-y-2">
                                         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Roles sin departamento</p>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                            {(['director_general', 'conserje', 'admin', 'secr.-calendario', 'secretaria'] as AppRole[])
+                                            {(['director_general', 'conserje', 'admin', 'secr.-calendario', 'secretaria', 'miembro'] as AppRole[])
                                                 .filter(r => rolesForLoggedIn.includes(r))
                                                 .map(r => (
                                                     <label key={r} className="flex items-center gap-2 cursor-pointer">
@@ -848,7 +871,14 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                                             checked={standaloneRoles.includes(r)}
                                                             onChange={(e) => {
                                                                 if (e.target.checked) {
-                                                                    setStandaloneRoles([...standaloneRoles, r]);
+                                                                    // "miembro" es excluyente: no trabaja en ningún departamento
+                                                                    // ni comparte rol con nadie.
+                                                                    if (r === ('miembro' as AppRole)) {
+                                                                        setStandaloneRoles([r]);
+                                                                        setAssignments([]);
+                                                                        return;
+                                                                    }
+                                                                    setStandaloneRoles([...standaloneRoles.filter(x => x !== ('miembro' as AppRole)), r]);
                                                                     if (r === 'director_general') {
                                                                         setAssignments([]);
                                                                     }
@@ -887,8 +917,16 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                         </div>
                                     )}
 
+                                    {isMiembroMode && (
+                                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                                            <p className="text-xs text-muted-foreground italic">
+                                                Solo asiste a la iglesia: no se le asigna ningún departamento ni clase.
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {/* Per-dept assignments (role + dept + class) */}
-                                    {!isDirectorGeneralMode && (
+                                    {!isDirectorGeneralMode && !isMiembroMode && (
                                         <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-700">
                                             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Asignaciones (rol + departamento + clase)</p>
 
@@ -982,7 +1020,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
 
                                             {assignments.length === 0 && standaloneRoles.length === 0 && (
                                                 <p className="text-xs text-amber-600 dark:text-amber-400 italic text-center py-1">
-                                                    Agregá al menos una asignación o un rol sin departamento
+                                                    Sin roles ni asignaciones: se guardará como Miembro (sin funciones), sin departamento.
                                                 </p>
                                             )}
                                         </div>

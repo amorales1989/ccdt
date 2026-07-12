@@ -487,6 +487,16 @@ export const removeStudentDepartment = async (studentId: string, departmentId: s
   await apiCall(`/students/${studentId}/departments/${departmentId}`, { method: 'DELETE' });
 };
 
+// Borra la cuenta de usuario pero conserva a la persona como miembro de la congregación.
+export const convertUserToMember = async (userId: string) => {
+  return apiCall(`/profiles/${userId}/convert-to-member`, { method: 'POST' });
+};
+
+// Saca la ficha de miembro del usuario de todos sus departamentos (rol "miembro").
+export const clearMemberDepartments = async (userId: string) => {
+  return apiCall(`/profiles/${userId}/clear-member-departments`, { method: 'POST' });
+};
+
 export const checkDniExists = async (dni: string) => {
   try {
     const response = await apiCall(`/students/search?document_number=${encodeURIComponent(dni)}`);

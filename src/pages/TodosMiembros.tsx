@@ -85,7 +85,12 @@ export default function TodosMiembros() {
       const doc = (s.document_number || "").toLowerCase();
       const matchSearch = !search || fullName.includes(search.toLowerCase()) || doc.includes(search.toLowerCase());
       const depts = s.dept_assignments?.map(d => d.departments?.name) ?? [s.departments?.name];
-      const matchDept = filterDept === "all" || depts.some(d => d === filterDept);
+      const sinDept = (s.dept_assignments?.length ?? 0) === 0 && !s.department_id;
+      const matchDept = filterDept === "all"
+        ? true
+        : filterDept === "__none__"
+          ? sinDept
+          : depts.some(d => d === filterDept);
       const matchGender = filterGender === "all" || s.gender === filterGender;
       return matchSearch && matchDept && matchGender;
     });
@@ -191,6 +196,7 @@ export default function TodosMiembros() {
               className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               <option value="all">Todos los departamentos</option>
+              <option value="__none__">Sin departamento</option>
               {allDepts.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
 

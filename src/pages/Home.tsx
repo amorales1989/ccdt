@@ -152,6 +152,7 @@ const Home = () => {
       last_name: student.last_name,
       birthdate: student.birthdate,
       department: student.departments?.name || student.department,
+      department_id: student.department_id,
       assigned_class: student.assigned_class,
       dept_assignments: student.dept_assignments || []
     }));
@@ -204,9 +205,16 @@ const Home = () => {
       .filter(student => student.birthdate)
       // Filtrar por departamento y clase según el perfil del usuario
       .filter(student => {
+        // Los miembros sin departamento no tienen líder que los vea: los muestra admin/secretaría,
+        // que es quien los administra. No se envía push ni WhatsApp por ellos.
+        const sinDepartamento = (student.dept_assignments?.length ?? 0) === 0
+          && !student.department_id
+          && !student.department;
+
         if (isAdminOrSecretary) {
-          return false; // Los admin y secretarias no ven los cumpleaños
+          return sinDepartamento;
         }
+        if (sinDepartamento) return false;
 
         // Considerar TODAS las asignaciones del miembro (alumno o colaborador en
         // otros departamentos), no solo su departamento primario. Fallback al

@@ -26,7 +26,7 @@ import { StudentDetails } from "@/components/StudentDetails";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, addStudentDepartment } from "@/lib/api";
+import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, addStudentDepartment, removeStudentDepartment } from "@/lib/api";
 import AgregarAlumno from "@/pages/AgregarAlumno";
 import { CustomTabs } from "@/components/CustomTabs";
 import { BirthdayList } from "@/components/BirthdayList";
@@ -76,6 +76,7 @@ const ListarAlumnos = () => {
   const [editBirthdateOpen, setEditBirthdateOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [removingDept, setRemovingDept] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [excelError, setExcelError] = useState<string | null>(null);
@@ -890,6 +891,27 @@ const ListarAlumnos = () => {
       });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Quitar un departamento del miembro. Si era el único, queda sin departamento: sigue contando
+  // como miembro de la congregación pero sale de asistencia, ausencias y cobertura.
+  const handleRemoveDepartment = async (departmentId: string) => {
+    if (!studentToEdit) return;
+    setRemovingDept(departmentId);
+    try {
+      await removeStudentDepartment(studentToEdit.id, departmentId);
+      toast({ title: "Departamento quitado", variant: "success" });
+      setIsEditModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["students", companyId] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo quitar el departamento.",
+        variant: "destructive",
+      });
+    } finally {
+      setRemovingDept(null);
     }
   };
 
@@ -2064,21 +2086,60 @@ const ListarAlumnos = () => {
                 </div>
 
                 {(() => {
-                  const assignments = (studentToEdit as any)?.dept_assignments || [];
-                  if (assignments.length <= 1) return null;
+                  const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
+                  const raw = (studentToEdit as any)?.dept_assignments || [];
+                  // Fallback al departamento primario cuando el miembro no tiene filas en la junction.
+                  const assignments = raw.length > 0
+                    ? raw
+                    : (studentToEdit as any)?.department_id
+                      ? [{
+                          department_id: (studentToEdit as any).department_id,
+                          departments: { name: (studentToEdit as any).departments?.name || (studentToEdit as any).department },
+                          assigned_class: (studentToEdit as any).assigned_class,
+                        }]
+                      : [];
+
+                  // Admin/secretaría pueden quitar departamentos (y dejar al miembro sin ninguno).
+                  // Para el resto se mantiene el listado informativo solo cuando hay más de uno.
+                  if (!isAdminOrSecretaria && assignments.length <= 1) return null;
+
+                  if (isAdminOrSecretaria && assignments.length === 0) {
+                    return (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Departamentos del miembro</p>
+                        <p className="text-sm italic text-slate-500">
+                          Sin departamento. Cuenta como miembro de la congregación pero no aparece en asistencia.
+                        </p>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1.5">
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Departamentos del miembro</p>
                       {assignments.map((a: any, idx: number) => {
                         const isEditable = a.department_id === profile?.department_id;
                         return (
-                          <div key={a.id || idx} className="flex items-center justify-between text-sm">
+                          <div key={a.id || idx} className="flex items-center justify-between text-sm gap-2">
                             <span className={isEditable ? 'font-semibold text-primary' : 'text-slate-600'}>
                               {a.departments?.name || '—'}{a.assigned_class ? ` · ${a.assigned_class}` : ''}
                             </span>
-                            {isEditable
-                              ? <span className="text-[10px] font-bold text-primary uppercase">Editable</span>
-                              : <span className="text-[10px] text-slate-400 uppercase">Solo lectura</span>}
+                            {isAdminOrSecretaria ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50"
+                                disabled={removingDept === a.department_id}
+                                onClick={() => handleRemoveDepartment(a.department_id)}
+                              >
+                                {removingDept === a.department_id ? 'Quitando…' : 'Quitar'}
+                              </Button>
+                            ) : isEditable ? (
+                              <span className="text-[10px] font-bold text-primary uppercase">Editable</span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 uppercase">Solo lectura</span>
+                            )}
                           </div>
                         );
                       })}
