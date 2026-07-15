@@ -6,7 +6,6 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { getMyNotifications, markNotificationsRead, UserNotification } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 // @ts-expect-error — hook JS sin tipos
@@ -129,7 +128,7 @@ export function NotificationBell() {
             <p className="text-sm font-bold text-slate-500">No tenés notificaciones</p>
           </div>
         ) : (
-          <ScrollArea className="max-h-[400px]">
+          <div className="max-h-[400px] overflow-y-auto">
             <ul className="divide-y divide-slate-50 dark:divide-slate-800/50">
               {notifications.map(n => (
                 <li
@@ -150,7 +149,7 @@ export function NotificationBell() {
                 </li>
               ))}
             </ul>
-          </ScrollArea>
+          </div>
         )}
       </PopoverContent>
     </Popover>

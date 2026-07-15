@@ -1,11 +1,11 @@
 
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Plus } from "lucide-react";
 import { Student } from "@/types/database";
 import { StudentDetails } from "./StudentDetails";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 
 interface StudentSearchProps {
@@ -20,11 +20,8 @@ export const StudentSearch = ({ students, compact }: StudentSearchProps) => {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-    if (e.target.value.length > 0) {
-      setShowResults(true);
-    } else {
-      setShowResults(false);
-    }
+    // Buscar recién a partir de 3 caracteres
+    setShowResults(e.target.value.trim().length >= 3);
     setSelectedStudent(null);
   };
 
@@ -66,7 +63,12 @@ export const StudentSearch = ({ students, compact }: StudentSearchProps) => {
 
       {showResults && filteredStudents.length > 0 && (
         <div className="absolute top-full mt-2 w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in slide-in-from-top-2">
-          <ScrollArea className="max-h-[350px]">
+          <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800">
+            <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+              {filteredStudents.length} {filteredStudents.length === 1 ? 'resultado' : 'resultados'}
+            </p>
+          </div>
+          <div className="max-h-[350px] overflow-y-auto">
             <ul className="py-2">
               {filteredStudents.map((student, index) => {
                 const displayName = student.last_name
@@ -90,7 +92,7 @@ export const StudentSearch = ({ students, compact }: StudentSearchProps) => {
                 );
               })}
             </ul>
-          </ScrollArea>
+          </div>
         </div>
       )}
 
@@ -101,7 +103,9 @@ export const StudentSearch = ({ students, compact }: StudentSearchProps) => {
         </div>
       )}
 
-      {selectedStudent && (
+      {/* Portal: el navbar tiene backdrop-blur, que convierte al header en containing block
+          de position:fixed y desplazaría el modal. Renderizarlo en body lo evita. */}
+      {selectedStudent && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in p-4" onClick={(e) => { if (e.target === e.currentTarget) setSelectedStudent(null) }}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl shadow-2xl relative" onClick={e => e.stopPropagation()}>
             <Button variant="ghost" size="icon" className="absolute top-4 right-4 z-10 bg-white/50 backdrop-blur hover:bg-white" onClick={() => setSelectedStudent(null)}>
@@ -109,7 +113,8 @@ export const StudentSearch = ({ students, compact }: StudentSearchProps) => {
             </Button>
             <StudentDetails student={selectedStudent} />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
