@@ -225,9 +225,6 @@ export default function Mantenimiento() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button onClick={() => setRunTour(true)} variant="outline" size="sm" className="gap-1.5">
-                        <HelpCircle className="h-4 w-4" /> Ayuda
-                    </Button>
                     <Button
                         data-tour="mant-nuevo"
                         onClick={() => setNewDialogOpen(true)}

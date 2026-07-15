@@ -34,6 +34,7 @@ import { STORAGE_URL } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { RoleSwitcher } from "./RoleSwitcher";
+import { NotificationBell } from "./NotificationBell";
 import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 
 const getItems = (role: string | undefined, profile: any, unreadReportsCount: number = 0) => {
@@ -598,10 +599,23 @@ export function AppSidebar() {
           </div>
         </div>
 
-        {/* Right: Congregation name if available */}
-        {showCongregationName && congregationName && (
-          <span className="text-[10px] font-bold text-muted-foreground text-right leading-tight ml-auto max-w-[150px]">{congregationName}</span>
-        )}
+        {/* Right: Notificaciones + ayuda (+ nombre de congregación si entra) */}
+        <div className="flex items-center gap-0.5 ml-auto">
+          {showCongregationName && congregationName && (
+            <span className="text-[10px] font-bold text-muted-foreground text-right leading-tight max-w-[110px] mr-1">{congregationName}</span>
+          )}
+          <NotificationBell />
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-purple-50 dark:hover:bg-purple-900/20"
+          >
+            <Link to="/guia" aria-label="Guía de uso">
+              <HelpCircle className="h-5 w-5" />
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }

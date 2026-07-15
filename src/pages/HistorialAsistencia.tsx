@@ -480,14 +480,6 @@ const HistorialAsistencia = () => {
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <button
-              onClick={() => setRunTour(true)}
-              className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-black uppercase tracking-widest border border-white/20 backdrop-blur-sm transition-all"
-              title="Ver guía"
-            >
-              <HelpCircle className="h-3.5 w-3.5" />
-              Ayuda
-            </button>
-            <button
               data-tour="hist-edit"
               onClick={isEditMode ? exitEditMode : enterEditMode}
               className={cn(

@@ -1357,6 +1357,28 @@ export const broadcastNotification = async (payload: BroadcastPayload): Promise<
   return response;
 };
 
+export interface UserNotification {
+  id: string;
+  title: string;
+  body: string;
+  link: string | null;
+  type: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+export const getMyNotifications = async (): Promise<{ data: UserNotification[]; unread: number }> => {
+  const response = await apiCall('/notifications/mine');
+  return { data: response.data || [], unread: response.unread || 0 };
+};
+
+export const markNotificationsRead = async (ids?: string[]): Promise<void> => {
+  await apiCall('/notifications/mine/read', {
+    method: 'POST',
+    body: JSON.stringify(ids && ids.length > 0 ? { ids } : {}),
+  });
+};
+
 export interface ProfileSearchResult {
   id: string;
   first_name: string;

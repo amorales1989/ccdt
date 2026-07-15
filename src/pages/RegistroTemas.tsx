@@ -250,9 +250,6 @@ export default function RegistroTemas() {
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <Button onClick={() => setRunTour(true)} variant="outline" size="sm" className="gap-1.5 rounded-xl h-10">
-            <HelpCircle className="h-4 w-4" /> Ayuda
-          </Button>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold">
             <BookOpenCheck className="h-3 w-3 text-slate-400" />
             {displayed.length} {displayed.length === 1 ? 'registro' : 'registros'}

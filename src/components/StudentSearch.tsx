@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 
 interface StudentSearchProps {
   students: Student[];
+  compact?: boolean;
 }
 
-export const StudentSearch = ({ students }: StudentSearchProps) => {
+export const StudentSearch = ({ students, compact }: StudentSearchProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showResults, setShowResults] = useState(false);
@@ -44,14 +45,14 @@ export const StudentSearch = ({ students }: StudentSearchProps) => {
   });
 
   return (
-    <div className="relative w-full z-50">
+    <div className="relative w-full z-30">
       <div className="relative flex items-center bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 focus-within:bg-white dark:focus-within:bg-slate-900 shadow-sm">
-        <Search className="ml-4 h-5 w-5 text-slate-400" />
+        <Search className={`${compact ? 'ml-3 h-4 w-4' : 'ml-4 h-5 w-5'} text-slate-400`} />
         <Input
           placeholder="Buscar miembro de la congregación"
           value={searchTerm}
           onChange={handleSearch}
-          className="border-0 focus-visible:ring-0 py-6 px-3 text-sm font-medium bg-transparent placeholder:text-slate-400 w-full"
+          className={`border-0 focus-visible:ring-0 ${compact ? 'py-2 h-9' : 'py-6'} px-3 text-sm font-medium bg-transparent placeholder:text-slate-400 w-full`}
         />
         {searchTerm && (
           <button

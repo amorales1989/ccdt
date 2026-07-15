@@ -10,6 +10,7 @@ import { LoadingOverlay } from "./LoadingOverlay";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { isDemoMode } from "@/lib/demo";
 import { PlanLimitBanner } from "./PlanLimitBanner";
+import { AppNavbar } from "./AppNavbar";
 
 export function Layout() {
   const { user, profile, loading } = useAuth();
@@ -22,10 +23,13 @@ export function Layout() {
         <SidebarProvider>
           <div className="flex min-h-screen w-full bg-background">
             <AppSidebar />
-            <main className={`flex-1 min-w-0 overflow-x-hidden bg-[#f8fafc] dark:bg-slate-900/50 ${isMobile ? 'pt-20' : 'p-4'}`}>
-              <PlanLimitBanner />
-              <Outlet />
-            </main>
+            <div className="flex-1 min-w-0 flex flex-col">
+              {!isMobile && <AppNavbar />}
+              <main className={`flex-1 min-w-0 overflow-x-hidden bg-[#f8fafc] dark:bg-slate-900/50 ${isMobile ? 'pt-20' : 'p-4'}`}>
+                <PlanLimitBanner />
+                <Outlet />
+              </main>
+            </div>
             {!isDemoMode() && profile.role !== 'system_admin' && <PhoneCollectionModal />}
             {!isDemoMode() && profile.role !== 'system_admin' && <CompleteProfileModal />}
           </div>

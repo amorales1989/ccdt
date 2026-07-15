@@ -742,7 +742,7 @@ export default function Configuration() {
         onChange={setActiveTab}
         options={[
           { value: 'general', label: 'Marca', icon: LayoutGrid },
-          { value: 'plan', label: 'Plan', icon: Layers },
+          ...(getPersistentCompanyId() === 1 ? [] : [{ value: 'plan', label: 'Plan', icon: Layers }]),
           { value: 'authorizations', label: 'Membrete', icon: FileText },
           { value: 'whatsapp', label: 'Whatsapp', icon: Smartphone },
           ...(profile?.role === 'admin' ? [
@@ -751,6 +751,7 @@ export default function Configuration() {
             ...(isDemoMode() ? [] : [{ value: 'security', label: 'Seguridad', icon: KeyRound }]),
           ] : []),
         ]}
+        scrollable
         className="mb-6 w-full md:w-fit"
       />
 

@@ -567,9 +567,6 @@ const PromoverAlumnos = () => {
               Promové o autorizá a los miembros a diferentes departamentos.
             </p>
           </div>
-          <Button onClick={() => setRunTour(true)} variant="outline" size="sm" className="gap-1.5">
-            <HelpCircle className="h-4 w-4" /> Ayuda
-          </Button>
         </div>
 
         {/* Tabs */}

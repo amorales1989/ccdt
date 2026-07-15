@@ -409,7 +409,8 @@ const Home = () => {
         <MissingDniAlertModal profileId={profile.id} students={students} />
       )}
       {/* Top Navbar Section */}
-      <header className="flex flex-col items-center justify-center gap-6 mb-8 mt-2 animate-in fade-in slide-in-from-top-4 duration-500">
+      {/* En desktop el buscador vive en el AppNavbar; acá solo se muestra en móvil */}
+      <header className="md:hidden flex flex-col items-center justify-center gap-6 mb-8 mt-2 animate-in fade-in slide-in-from-top-4 duration-500">
         <div className="w-full max-w-2xl mx-auto">
           {isAdminOrSecretary && !isConserje && !studentsLoading && (
             <StudentSearch students={students} />
@@ -425,17 +426,6 @@ const Home = () => {
             run={runTour}
             onClose={() => setRunTour(false)}
           />
-          <div className="flex justify-end -mb-4">
-            <button
-              data-tour="home-help"
-              onClick={() => setRunTour(true)}
-              className="inline-flex items-center gap-1 text-xs font-bold text-primary bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-xl transition-colors"
-              title="Ver guía de la pantalla"
-            >
-              <HelpCircle className="h-4 w-4" />
-              Ayuda
-            </button>
-          </div>
         </>
       )}
 

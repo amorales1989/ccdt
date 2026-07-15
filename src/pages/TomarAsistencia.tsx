@@ -423,14 +423,6 @@ const TomarAsistencia = () => {
               </Badge>
             )}
           </div>
-          <button
-            onClick={() => setRunTour(true)}
-            className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-primary bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-xl transition-colors"
-            title="Ver guía de la pantalla"
-          >
-            <HelpCircle className="h-4 w-4" />
-            Ayuda
-          </button>
         </div>
 
         {/* Stats + Date row */}

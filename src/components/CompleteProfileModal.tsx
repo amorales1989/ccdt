@@ -30,6 +30,11 @@ export function CompleteProfileModal() {
 
     useEffect(() => {
         if (profile && !loading) {
+            // Secretaría es una cuenta operativa compartida: no pedirle datos personales
+            if (profile.role === 'secretaria') {
+                setOpen(false);
+                return;
+            }
             const wasPostponed = sessionStorage.getItem("profile_modal_postponed") === "true";
 
             const isMissingData =
