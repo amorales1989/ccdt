@@ -363,10 +363,10 @@ export default function Estadisticas() {
       return { monthKey: format(d, 'yyyy-MM'), name: format(d, 'MMM', { locale: es }), present: 0, absent: 0, rate: 0 };
     });
     filteredAttendance.forEach((a: any) => {
-      const dateStr = a.created_at || a.date;
+      const dateStr = a.date || a.created_at;
       if (!dateStr) return;
       try {
-        const m = format(new Date(dateStr), 'yyyy-MM');
+        const m = /^\d{4}-\d{2}/.test(dateStr) ? dateStr.slice(0, 7) : format(new Date(dateStr), 'yyyy-MM');
         const idx = last6Months.findIndex(lm => lm.monthKey === m);
         if (idx === -1) return;
         if (a.status === true) last6Months[idx].present++;
