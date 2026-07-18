@@ -19,10 +19,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CustomTabs } from "@/components/CustomTabs";
+import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
 
 const profileSchema = z.object({
   first_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   last_name: z.string().min(2, "El apellido debe tener al menos 2 caracteres"),
+  baptized: z.boolean().optional(),
 });
 
 const passwordSchema = z.object({
@@ -44,6 +46,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<"profile" | "password">("profile");
+  const baptizedEnabled = useBaptizedEnabled();
   const queryClient = useQueryClient();
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
@@ -51,6 +54,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
     defaultValues: {
       first_name: profile?.first_name || "",
       last_name: profile?.last_name || "",
+      baptized: profile?.baptized || false,
     },
   });
 
@@ -74,6 +78,7 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
         .update({
           first_name: values.first_name,
           last_name: values.last_name,
+          baptized: values.baptized || false,
         })
         .eq('id', user.id);
 
@@ -201,6 +206,25 @@ export function ProfileEditor({ onClose }: ProfileEditorProps) {
                 )}
               />
             </div>
+
+            {baptizedEnabled && (
+              <FormField
+                control={profileForm.control}
+                name="baptized"
+                render={({ field }) => (
+                  <FormItem className="space-y-0">
+                    <FormControl>
+                      <LabeledSwitch
+                        boxed
+                        label="Bautizado"
+                        checked={!!field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
               <Button variant="ghost" type="button" onClick={onClose} className="rounded-xl h-12 px-6">

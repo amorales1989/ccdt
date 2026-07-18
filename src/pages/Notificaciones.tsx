@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
@@ -8,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   broadcastNotification,
   searchProfiles,
+  getBroadcastHistory,
   type BroadcastPayload,
   type ProfileSearchResult,
 } from "@/lib/api";
@@ -23,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Megaphone, X, Search, Send } from "lucide-react";
+import { Megaphone, X, Search, Send, History, Smartphone, MessageCircle } from "lucide-react";
 
 type Channel = "push" | "whatsapp";
 type TargetType = "department" | "class" | "role" | "people";
@@ -75,6 +77,12 @@ const Notificaciones = () => {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const [sending, setSending] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: history = [], isLoading: loadingHistory } = useQuery({
+    queryKey: ["broadcast-history", getPersistentCompanyId()],
+    queryFn: getBroadcastHistory,
+  });
 
   const { data: departments = [] } = useQuery({
     queryKey: ["departments", getPersistentCompanyId()],
@@ -207,6 +215,9 @@ const Notificaciones = () => {
       setAssignedClass("");
       setSelectedRoles([]);
       setSelectedPersons([]);
+      // El contador de WhatsApp se actualiza en background: refrescar ahora y en unos segundos
+      queryClient.invalidateQueries({ queryKey: ["broadcast-history"] });
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["broadcast-history"] }), 8000);
     } catch (err: any) {
       toast({
         title: "Error al enviar",
@@ -492,6 +503,68 @@ const Notificaciones = () => {
             )}
           </Button>
           </div>
+        </div>
+
+        {/* Historial de envíos */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-border shadow-sm p-6 mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <History className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            <h2 className="text-base font-black text-foreground">Historial de envíos</h2>
+          </div>
+
+          {loadingHistory ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Cargando historial...</p>
+          ) : history.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Todavía no se enviaron notificaciones.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-wider text-muted-foreground whitespace-nowrap">Fecha</th>
+                    <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-wider text-muted-foreground whitespace-nowrap">Destino</th>
+                    <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-wider text-muted-foreground">Título</th>
+                    <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-wider text-muted-foreground">Mensaje</th>
+                    <th className="py-2 pr-3 text-[11px] font-black uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Push</th>
+                    <th className="py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">WhatsApp</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {history.map((h) => (
+                    <tr key={h.id} className="align-top">
+                      <td className="py-2.5 pr-4 whitespace-nowrap text-muted-foreground">
+                        {format(new Date(h.created_at), "dd/MM/yyyy HH:mm")}
+                      </td>
+                      <td className="py-2.5 pr-4 max-w-[220px]">
+                        <span className="font-semibold text-foreground">{h.target_label}</span>
+                        {h.target_type !== 'importado' && (
+                          <span className="block text-[11px] text-muted-foreground">{h.recipients} destinatario{h.recipients !== 1 ? 's' : ''}</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 pr-4 font-semibold text-foreground max-w-[180px]">
+                        <span className="line-clamp-2">{h.title || '—'}</span>
+                      </td>
+                      <td className="py-2.5 pr-4 text-muted-foreground max-w-[280px]">
+                        <span className="line-clamp-2 whitespace-pre-line">{h.message}</span>
+                      </td>
+                      <td className="py-2.5 pr-3 text-center">
+                        <span className="inline-flex items-center gap-1 font-bold text-indigo-600 dark:text-indigo-400">
+                          <Smartphone className="h-3.5 w-3.5" />
+                          {h.push_sent}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-center">
+                        <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {h.wa_sent}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

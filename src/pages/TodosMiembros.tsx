@@ -1,18 +1,24 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getStudents, deleteStudent } from "@/lib/api";
+import { getStudents, deleteStudent, updateStudent } from "@/lib/api";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
+import { LabeledSwitch } from "@/components/LabeledSwitch";
 import { formatDni } from "@/lib/utils";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STORAGE_URL } from "@/integrations/supabase/client";
 import {
   Users, Search, UserPlus, Trash2, Edit2, Phone, MapPin,
-  Calendar, FileText, Filter, X, ChevronDown, ChevronLeft, ChevronRight
+  Calendar, FileText, Filter, X, ChevronDown, ChevronLeft, ChevronRight, Droplets
 } from "lucide-react";
 import { differenceInYears, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -54,12 +60,64 @@ export default function TodosMiembros() {
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("all");
   const [filterGender, setFilterGender] = useState("all");
+  const [filterBaptized, setFilterBaptized] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editStudent, setEditStudent] = useState<Student | null>(null);
+  const [editForm, setEditForm] = useState({
+    first_name: "", last_name: "", gender: "masculino", birthdate: "",
+    document_number: "", phone: "", address: "", baptized: false,
+  });
+  const [editBirthdateOpen, setEditBirthdateOpen] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const openEdit = (student: Student) => {
+    setEditForm({
+      first_name: student.first_name || "",
+      last_name: student.last_name || "",
+      gender: student.gender || "masculino",
+      birthdate: student.birthdate || "",
+      document_number: student.document_number || "",
+      phone: (student.phone || "").replace(/^549/, ""),
+      address: student.address || "",
+      baptized: (student as any).baptized || false,
+    });
+    setEditStudent(student);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editStudent) return;
+    if (!editForm.first_name.trim()) {
+      toast.error("El nombre es requerido");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const rawPhone = editForm.phone.replace(/\D/g, "");
+      await updateStudent(editStudent.id, {
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
+        gender: editForm.gender,
+        birthdate: editForm.birthdate || null,
+        document_number: editForm.document_number || null,
+        phone: rawPhone ? (rawPhone.startsWith("54") ? rawPhone : "549" + rawPhone) : null,
+        address: editForm.address || null,
+        baptized: editForm.baptized,
+      } as any);
+      toast.success("Miembro actualizado");
+      setEditStudent(null);
+      queryClient.invalidateQueries({ queryKey: ["all-students", companyId] });
+    } catch (err: any) {
+      toast.error(err?.message || "Error al actualizar el miembro");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const canEdit = profile?.role === "admin" || profile?.role === "secretaria";
+  const baptizedEnabled = useBaptizedEnabled();
 
   const { data: rawStudents = [], isLoading } = useQuery({
     queryKey: ["all-students", companyId],
@@ -92,12 +150,13 @@ export default function TodosMiembros() {
           ? sinDept
           : depts.some(d => d === filterDept);
       const matchGender = filterGender === "all" || s.gender === filterGender;
-      return matchSearch && matchDept && matchGender;
+      const matchBaptized = !filterBaptized || (s as any).baptized === true;
+      return matchSearch && matchDept && matchGender && matchBaptized;
     });
-  }, [students, search, filterDept, filterGender]);
+  }, [students, search, filterDept, filterGender, filterBaptized]);
 
   // Reset to page 1 when filters change
-  React.useEffect(() => { setPage(1); }, [search, filterDept, filterGender]);
+  React.useEffect(() => { setPage(1); }, [search, filterDept, filterGender, filterBaptized]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -210,9 +269,19 @@ export default function TodosMiembros() {
               <option value="femenino">Femenino</option>
             </select>
 
-            {(filterDept !== "all" || filterGender !== "all") && (
+            {baptizedEnabled && (
+              <LabeledSwitch
+                boxed
+                label="Solo bautizados"
+                checked={filterBaptized}
+                onCheckedChange={setFilterBaptized}
+                className="h-9 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+              />
+            )}
+
+            {(filterDept !== "all" || filterGender !== "all" || filterBaptized) && (
               <button
-                onClick={() => { setFilterDept("all"); setFilterGender("all"); }}
+                onClick={() => { setFilterDept("all"); setFilterGender("all"); setFilterBaptized(false); }}
                 className="h-9 px-3 rounded-xl text-xs font-bold text-slate-500 hover:text-red-500 flex items-center gap-1"
               >
                 <X className="h-3 w-3" /> Limpiar
@@ -259,9 +328,16 @@ export default function TodosMiembros() {
                         </p>
                       </div>
                     </div>
-                    {student.nuevo && (
-                      <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5 shrink-0">NUEVO</span>
-                    )}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {student.nuevo && (
+                        <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">NUEVO</span>
+                      )}
+                      {baptizedEnabled && (student as any).baptized && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black bg-sky-100 text-sky-700 border border-sky-200 rounded-full px-2 py-0.5">
+                          <Droplets className="h-3 w-3" /> BAUTIZADO
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-1.5 mb-4">
@@ -314,7 +390,7 @@ export default function TodosMiembros() {
                       size="sm"
                       variant="ghost"
                       className="flex-1 h-8 text-xs font-bold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg gap-1.5"
-                      onClick={() => navigate(`/listar?edit=${student.id}`)}
+                      onClick={() => openEdit(student)}
                     >
                       <Edit2 className="h-3.5 w-3.5" /> Editar
                     </Button>
@@ -404,6 +480,76 @@ export default function TodosMiembros() {
         </div>
       )}
     </div>
+
+    <Dialog open={!!editStudent} onOpenChange={(open) => { if (!open) setEditStudent(null); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Editar Miembro</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Nombre</Label>
+              <Input value={editForm.first_name} onChange={e => setEditForm({ ...editForm, first_name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Apellido</Label>
+              <Input value={editForm.last_name} onChange={e => setEditForm({ ...editForm, last_name: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Género</Label>
+              <Select value={editForm.gender} onValueChange={v => setEditForm({ ...editForm, gender: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="masculino">Masculino</SelectItem>
+                  <SelectItem value="femenino">Femenino</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Fecha de Nacimiento</Label>
+              <MuiDatePickerField
+                value={editForm.birthdate ? new Date(editForm.birthdate + 'T00:00:00') : undefined}
+                onChange={(date: Date | null) => setEditForm({ ...editForm, birthdate: date ? format(date, 'yyyy-MM-dd') : '' })}
+                open={editBirthdateOpen}
+                onOpenChange={setEditBirthdateOpen}
+                placeholder="Seleccionar fecha"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>DNI</Label>
+              <Input value={editForm.document_number} onChange={e => setEditForm({ ...editForm, document_number: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Teléfono</Label>
+              <Input value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Dirección</Label>
+            <Input value={editForm.address} onChange={e => setEditForm({ ...editForm, address: e.target.value })} />
+          </div>
+          {baptizedEnabled && (
+            <LabeledSwitch
+              boxed
+              label="Bautizado"
+              checked={editForm.baptized}
+              onCheckedChange={v => setEditForm({ ...editForm, baptized: v })}
+            />
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setEditStudent(null)} disabled={savingEdit}>Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? "Guardando..." : "Guardar"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
 
     <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

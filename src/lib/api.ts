@@ -1357,6 +1357,25 @@ export const broadcastNotification = async (payload: BroadcastPayload): Promise<
   return response;
 };
 
+export interface BroadcastHistoryItem {
+  id: string;
+  channel: 'push' | 'whatsapp';
+  title: string | null;
+  message: string;
+  link: string | null;
+  target_type: string;
+  target_label: string;
+  recipients: number;
+  push_sent: number;
+  wa_sent: number;
+  created_at: string;
+}
+
+export const getBroadcastHistory = async (): Promise<BroadcastHistoryItem[]> => {
+  const response = await apiCall('/notifications/broadcasts');
+  return response.data || [];
+};
+
 export interface UserNotification {
   id: string;
   title: string;

@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { createStudent, getDepartments, checkDniExists } from "@/lib/api";
@@ -19,6 +18,8 @@ import { DniIdentityInput } from "@/components/DniIdentityInput";
 import { NameSearchInput } from "@/components/NameSearchInput";
 import type { PersonSearchResult } from "@/components/PersonSearchInput";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
+import { LabeledSwitch } from "@/components/LabeledSwitch";
 
 interface AgregarAlumnoProps {
   onSuccess?: () => void;
@@ -47,12 +48,14 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
     department_id: "",
     assigned_class: "",
     nuevo: true, // Por defecto marcado como nuevo
+    baptized: false,
     profile_id: null as string | null,
     person_source: null as 'profile' | 'student' | null,
     existing_student_id: null as string | null,
   });
 
   const companyId = getPersistentCompanyId();
+  const baptizedEnabled = useBaptizedEnabled();
   const { data: departments = [] } = useQuery({
     queryKey: ["departments", companyId],
     queryFn: getDepartments,
@@ -248,6 +251,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
         department_id: formData.department_id || undefined,
         assigned_class: formData.assigned_class || null,
         nuevo: formData.nuevo,
+        baptized: formData.baptized,
         profile_id: formData.profile_id || undefined,
         person_source: formData.person_source || undefined,
         existing_student_id: formData.existing_student_id || undefined,
@@ -515,20 +519,19 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
             />
           </div>
 
-          <div className="flex items-center space-x-2 pt-4 pb-4 border-b">
-            <Checkbox
-              id="nuevo"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 pb-4 border-b">
+            <LabeledSwitch
+              label="Marcar como nuevo"
               checked={formData.nuevo}
-              onCheckedChange={(checked) =>
-                setFormData({ ...formData, nuevo: checked as boolean })
-              }
+              onCheckedChange={(checked) => setFormData({ ...formData, nuevo: checked })}
             />
-            <Label
-              htmlFor="nuevo"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Marcar miembro como nuevo
-            </Label>
+            {baptizedEnabled && (
+              <LabeledSwitch
+                label="Bautizado"
+                checked={formData.baptized}
+                onCheckedChange={(checked) => setFormData({ ...formData, baptized: checked })}
+              />
+            )}
           </div>
 
           <Button

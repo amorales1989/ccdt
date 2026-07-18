@@ -34,6 +34,7 @@ export interface Student {
   assigned_class?: string;
   document_number?: string;
   nuevo?: boolean;
+  baptized?: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string;
@@ -154,6 +155,7 @@ export interface Profile {
   birthdate?: string;
   gender?: string;
   document_number?: string;
+  baptized?: boolean;
   company_id?: number;
   assignments?: UserAssignment[];
 }

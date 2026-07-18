@@ -127,6 +127,7 @@ export default function Configuration() {
     autoSave: true,
     notifications: true,
     showName: true,
+    baptized: true,
   });
 
   const [authPdfHeader, setAuthPdfHeader] = useState<{ text: string, enabled: boolean }[]>([
@@ -319,7 +320,8 @@ export default function Configuration() {
       darkMode: company.dark_mode || false,
       autoSave: company.auto_save !== false,
       notifications: company.notifications !== false,
-      showName: company.show_name !== false
+      showName: company.show_name !== false,
+      baptized: (company as any).baptized_enabled !== false
     });
 
     const companyData = company as any;
@@ -474,7 +476,8 @@ export default function Configuration() {
       darkMode: 'dark_mode',
       autoSave: 'auto_save',
       notifications: 'notifications',
-      showName: 'show_name'
+      showName: 'show_name',
+      baptized: 'baptized_enabled'
     };
 
     if (setting === 'darkMode') {
@@ -1231,6 +1234,16 @@ export default function Configuration() {
                         <Switch
                           checked={generalSettings.notifications}
                           onCheckedChange={() => handleGeneralSettingChange('notifications')}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-slate-700 dark:text-slate-200">Campo Bautizado</Label>
+                          <p className="text-[10px] text-slate-500 font-medium tracking-tight">Mostrar el campo bautizado en miembros y perfiles</p>
+                        </div>
+                        <Switch
+                          checked={generalSettings.baptized}
+                          onCheckedChange={() => handleGeneralSettingChange('baptized')}
                         />
                       </div>
                     </div>

@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, LabelList } from "recharts";
 import { format, subMonths, differenceInYears, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -15,7 +15,10 @@ interface MiniStatsCarouselProps {
     currentProfile: any;
 }
 
-const COLORS = ["#002366", "#003a8c", "#0050b3", "#096dd9", "#1890ff", "#40a9ff", "#69c0ff"];
+// Hue principal de datos (indigo de la marca) + par de género validado (indigo/fucsia)
+const DATA_HUE = "#6366f1";
+const FEMALE_HUE = "#ec4899";
+const INK_MUTED = "#64748b";
 const GLOBAL_ROLES = ["admin", "secretaria", "director_general"];
 
 export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouselProps) {
@@ -140,14 +143,14 @@ export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouse
             content: (
                 <div className="grid grid-cols-2 gap-3 w-full px-2">
                     {[
-                        { icon: Users, label: "Total miembros", value: data.total, color: "bg-blue-50 text-blue-700" },
-                        { icon: TrendingUp, label: "Nuevos este mes", value: data.newThisMonth, color: "bg-emerald-50 text-emerald-700" },
-                        { icon: Baby, label: "Menores de 18", value: data.minors, color: "bg-violet-50 text-violet-700" },
-                        { icon: UserCheck, label: "Personal", value: profiles.length, color: "bg-amber-50 text-amber-700" },
+                        { icon: Users, label: "Total miembros", value: data.total, color: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300" },
+                        { icon: TrendingUp, label: "Nuevos este mes", value: data.newThisMonth, color: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300" },
+                        { icon: Baby, label: "Menores de 18", value: data.minors, color: "bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300" },
+                        { icon: UserCheck, label: "Personal", value: profiles.length, color: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300" },
                     ].map(({ icon: Icon, label, value, color }) => (
                         <div key={label} className={`rounded-2xl p-4 flex flex-col gap-1 ${color}`}>
                             <Icon className="h-4 w-4 opacity-70" />
-                            <p className="text-2xl font-black">{value}</p>
+                            <p className="text-2xl font-black tabular-nums">{value}</p>
                             <p className="text-[10px] font-semibold opacity-70 leading-tight">{label}</p>
                         </div>
                     ))}
@@ -158,13 +161,14 @@ export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouse
             title: "Por Departamento",
             description: "Miembros activos por área",
             content: (
-                <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={data.deptData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                <ResponsiveContainer width="100%" height={230}>
+                    <BarChart data={data.deptData} layout="vertical" margin={{ top: 5, right: 36, left: 10, bottom: 0 }}>
                         <XAxis type="number" hide />
-                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} width={90} />
-                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '10px', fontSize: '12px' }} />
-                        <Bar dataKey="value" name="Miembros" fill="#002366" radius={[0, 4, 4, 0]} barSize={14} />
+                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: INK_MUTED }} width={90} />
+                        <Tooltip cursor={{ fill: 'rgba(100,116,139,0.06)' }} contentStyle={{ borderRadius: '12px', fontSize: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+                        <Bar dataKey="value" name="Miembros" fill={DATA_HUE} radius={[0, 4, 4, 0]} barSize={10}>
+                            <LabelList dataKey="value" position="right" style={{ fontSize: 10, fontWeight: 700, fill: INK_MUTED }} />
+                        </Bar>
                     </BarChart>
                 </ResponsiveContainer>
             )
@@ -181,11 +185,11 @@ export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouse
                                 <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.15)" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} dy={8} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} width={28} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} width={28} domain={['dataMin - 2', 'dataMax + 2']} allowDecimals={false} />
                         <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                        <Area type="monotone" dataKey="total" name="Miembros" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#growthGrad)" dot={{ fill: '#6366f1', r: 4 }} />
+                        <Area type="monotone" dataKey="total" name="Miembros" stroke={DATA_HUE} strokeWidth={2} fillOpacity={1} fill="url(#growthGrad)" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
                     </AreaChart>
                 </ResponsiveContainer>
             )
@@ -194,26 +198,29 @@ export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouse
             title: "Género",
             description: "Composición de la congregación",
             content: (
-                <div className="flex items-center justify-center gap-8 w-full py-4">
-                    <div className="flex flex-col items-center gap-2">
-                        <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center">
-                            <span className="text-3xl font-black text-blue-700">{data.males}</span>
+                <div className="w-full max-w-md px-4 py-6 space-y-5">
+                    <div className="flex items-end justify-between">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: DATA_HUE }} />
+                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Varones</p>
+                            </div>
+                            <p className="text-3xl font-black text-slate-800 dark:text-white tabular-nums mt-1">{data.males}</p>
+                            <p className="text-xs font-semibold text-slate-400">{data.total ? Math.round(data.males / data.total * 100) : 0}%</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-600">Varones</p>
-                        <p className="text-xs text-slate-400">{data.total ? Math.round(data.males / data.total * 100) : 0}%</p>
+                        <p className="text-xs font-semibold text-slate-400 pb-1">{data.total} total</p>
+                        <div className="text-right">
+                            <div className="flex items-center gap-2 justify-end">
+                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Mujeres</p>
+                                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: FEMALE_HUE }} />
+                            </div>
+                            <p className="text-3xl font-black text-slate-800 dark:text-white tabular-nums mt-1">{data.females}</p>
+                            <p className="text-xs font-semibold text-slate-400">{data.total ? Math.round(data.females / data.total * 100) : 0}%</p>
+                        </div>
                     </div>
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="h-2 w-32 rounded-full bg-slate-100 overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-blue-500 to-pink-500 rounded-full" style={{ width: '100%' }} />
-                        </div>
-                        <p className="text-xs text-slate-400 font-semibold">{data.total} total</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                        <div className="h-24 w-24 rounded-full bg-pink-100 flex items-center justify-center">
-                            <span className="text-3xl font-black text-pink-600">{data.females}</span>
-                        </div>
-                        <p className="text-sm font-bold text-slate-600">Mujeres</p>
-                        <p className="text-xs text-slate-400">{data.total ? Math.round(data.females / data.total * 100) : 0}%</p>
+                    <div className="flex h-3 w-full rounded-full overflow-hidden gap-0.5 bg-slate-100 dark:bg-slate-800">
+                        <div className="h-full rounded-l-full" style={{ backgroundColor: DATA_HUE, width: `${data.total ? (data.males / data.total * 100) : 0}%` }} />
+                        <div className="h-full rounded-r-full" style={{ backgroundColor: FEMALE_HUE, width: `${data.total ? (data.females / data.total * 100) : 0}%` }} />
                     </div>
                 </div>
             )
@@ -222,20 +229,23 @@ export function MiniStatsCarousel({ students, currentProfile }: MiniStatsCarouse
             title: "Rangos Etarios",
             description: "Distribución por edad",
             content: (
-                <div className="w-full space-y-2 px-2 py-1">
-                    {data.ageData.filter(d => d.name !== 'Sin datos' && d.value > 0).map(d => (
-                        <div key={d.name} className="flex items-center gap-3">
-                            <span className="text-[10px] font-bold text-slate-500 w-16 shrink-0">{d.name}</span>
-                            <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full flex items-center justify-end pr-2 transition-all"
-                                    style={{ width: `${data.total ? Math.max(6, Math.round(d.value / data.total * 100)) : 0}%` }}
-                                >
-                                    <span className="text-[9px] font-black text-white">{d.value}</span>
+                <div className="w-full space-y-2.5 px-2 py-1">
+                    {(() => {
+                        const rows = data.ageData.filter(d => d.name !== 'Sin datos' && d.value > 0);
+                        const max = Math.max(...rows.map(r => r.value), 1);
+                        return rows.map(d => (
+                            <div key={d.name} className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 w-16 shrink-0">{d.name}</span>
+                                <div className="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-700"
+                                        style={{ backgroundColor: DATA_HUE, width: `${Math.max(3, Math.round(d.value / max * 100))}%` }}
+                                    />
                                 </div>
+                                <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 tabular-nums w-7 text-right shrink-0">{d.value}</span>
                             </div>
-                        </div>
-                    ))}
+                        ));
+                    })()}
                 </div>
             )
         },

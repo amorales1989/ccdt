@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, Table2, User, Search, X, FileBarChart2, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, Table2, User, Search, X, FileBarChart2, ChevronDown, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { jsPDF } from "jspdf";
@@ -27,6 +27,8 @@ import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, addStudentDepartment, removeStudentDepartment } from "@/lib/api";
+import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
+import { LabeledSwitch } from "@/components/LabeledSwitch";
 import AgregarAlumno from "@/pages/AgregarAlumno";
 import { CustomTabs } from "@/components/CustomTabs";
 import { BirthdayList } from "@/components/BirthdayList";
@@ -57,6 +59,7 @@ import { HelpCircle } from "lucide-react";
 import type { Step } from "react-joyride";
 
 const ListarAlumnos = () => {
+  const baptizedEnabled = useBaptizedEnabled();
   const [importModalState, setImportModalState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [importResults, setImportResults] = useState<{
     failed: number;
@@ -338,6 +341,7 @@ const ListarAlumnos = () => {
     department_id: z.string().optional(),
 
     assigned_class: z.string().optional(),
+    baptized: z.boolean().optional(),
   });
 
   // ========== ACTUALIZAR DEFAULT VALUES (línea ~124) ==========
@@ -351,7 +355,8 @@ const ListarAlumnos = () => {
       phone: "",
       document_number: "",
       department_id: "",
-      assigned_class: ""
+      assigned_class: "",
+      baptized: false
     },
     resolver: zodResolver(formSchema),
   });
@@ -604,6 +609,7 @@ const ListarAlumnos = () => {
         'Nombre': student.first_name || '',
         'Apellido': student.last_name || '',
         'Género': student.gender || '',
+        ...(baptizedEnabled ? { 'Bautizado': (student as any).baptized ? 'Sí' : 'No' } : {}),
         'Fecha de Nacimiento': student.birthdate || '', // ⭐ Solo birthdate
         'Edad': calculateAge(student.birthdate || '') || '', // ⭐ Solo birthdate
         'Documento Número': student.document_number || '',
@@ -638,14 +644,16 @@ const ListarAlumnos = () => {
     }
   };
 
-  // ============ FUNCIÓN PARA marcar como regular  USANDO BACKEND API ============
-  const handleMarkAsOld = async (studentId: string) => {
+  // ============ FUNCIÓN PARA alternar nuevo/regular USANDO BACKEND API ============
+  const handleToggleNuevo = async (studentId: string, nuevo: boolean) => {
     try {
-      await updateStudent(studentId, { nuevo: false });
+      await updateStudent(studentId, { nuevo });
 
       toast({
         title: "Miembro actualizado",
-        description: "Esta persona ahora es un miembro regular.",
+        description: nuevo
+          ? "Esta persona ahora está marcada como miembro nuevo."
+          : "Esta persona ahora es un miembro regular.",
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["students", companyId] });
@@ -689,6 +697,7 @@ const ListarAlumnos = () => {
       document_number: student.document_number || "",
       department_id: editDeptId,
       assigned_class: editClass,
+      baptized: (student as any).baptized || false,
     });
     setIsEditModalOpen(true);
   };
@@ -1268,11 +1277,9 @@ const ListarAlumnos = () => {
               </svg>
               WhatsApp
             </DropdownMenuItem>
-            {student.nuevo && (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}>
-                <Check className="mr-2 h-4 w-4" /> marcar como regular 
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleNuevo(student.id, !student.nuevo); }}>
+              <Check className="mr-2 h-4 w-4" /> {student.nuevo ? "Marcar como regular" : "Marcar como nuevo"}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setExpandedStudentId(student.id); }}>
               <MessageSquare className="mr-2 h-4 w-4" /> Observaciones
             </DropdownMenuItem>
@@ -1351,20 +1358,16 @@ const ListarAlumnos = () => {
             </Button>
           </CustomTooltip>
 
-          {student.nuevo ? (
-            <CustomTooltip title="marcar como regular ">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                onClick={(e) => { e.stopPropagation(); handleMarkAsOld(student.id); }}
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-            </CustomTooltip>
-          ) : (
-            <div className="w-8 h-8 invisible" />
-          )}
+          <CustomTooltip title={student.nuevo ? "Marcar como regular" : "Marcar como nuevo"}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-8 w-8 p-0 ${student.nuevo ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"}`}
+              onClick={(e) => { e.stopPropagation(); handleToggleNuevo(student.id, !student.nuevo); }}
+            >
+              {student.nuevo ? <Check className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+            </Button>
+          </CustomTooltip>
 
         </div>
       );
@@ -1882,7 +1885,7 @@ const ListarAlumnos = () => {
         </Dialog>
 
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
             <DialogHeader>
               <DialogTitle>Editar Miembro</DialogTitle>
               <DialogDescription>
@@ -1919,24 +1922,26 @@ const ListarAlumnos = () => {
                       </FormItem>
                     )}
                   />
+                </div>
 
                   <FormField
                     control={form.control}
-                    name="gender"
+                    name="document_number"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Género</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccione el género" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="masculino">Masculino</SelectItem>
-                            <SelectItem value="femenino">Femenino</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Número de Documento</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Número de documento"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              field.onChange(value);
+                            }}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1964,62 +1969,21 @@ const ListarAlumnos = () => {
 
                   <FormField
                     control={form.control}
-                    name="document_number"
+                    name="gender"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Número de Documento</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Número de documento"
-                            {...field}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              field.onChange(value);
-                            }}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* ⭐ ACTUALIZADO: phone en lugar de phone_number */}
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Teléfono</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Teléfono"
-                            {...field}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              field.onChange(value);
-                            }}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-
-
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Dirección</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Dirección" {...field} />
-                        </FormControl>
+                        <FormLabel>Género</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccione el género" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="masculino">Masculino</SelectItem>
+                            <SelectItem value="femenino">Femenino</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -2083,7 +2047,63 @@ const ListarAlumnos = () => {
                       </FormItem>
                     )}
                   />
-                </div>
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Teléfono"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              field.onChange(value);
+                            }}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+
+
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dirección</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Dirección" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {baptizedEnabled && (
+                    <FormField
+                      control={form.control}
+                      name="baptized"
+                      render={({ field }) => (
+                        <FormItem className="space-y-0">
+                          <FormControl>
+                            <LabeledSwitch
+                              label="Bautizado"
+                              checked={!!field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                 {(() => {
                   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';

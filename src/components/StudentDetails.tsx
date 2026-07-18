@@ -5,9 +5,10 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Student } from "@/types/database";
 import { StudentObservations } from "./StudentObservations";
-import { User, MapPin, Phone, Calendar, Hash, Building2, BookA, UserSquare2, Briefcase } from "lucide-react";
+import { User, MapPin, Phone, Calendar, Hash, Building2, BookA, UserSquare2, Briefcase, Droplets } from "lucide-react";
 import { PhotoUpload } from "./PhotoUpload";
 import { formatDni } from "@/lib/utils";
+import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
 
 interface StudentDetailsProps {
   student: Student;
@@ -15,6 +16,7 @@ interface StudentDetailsProps {
 }
 
 export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) => {
+  const baptizedEnabled = useBaptizedEnabled();
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState(student.photo_url);
 
   const handlePhotoSuccess = (newUrl: string) => {
@@ -117,6 +119,16 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
                 <div>
                   <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Nacimiento</p>
                   <p className="font-medium text-foreground">{formatBirthdate(student.birthdate)}</p>
+                </div>
+              </div>
+            )}
+
+            {baptizedEnabled && (
+              <div className="flex items-start gap-2.5">
+                <Droplets className="h-4 w-4 text-slate-400 mt-0.5" />
+                <div>
+                  <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Bautizado</p>
+                  <p className="font-medium text-foreground">{student.baptized ? 'Sí' : 'No'}</p>
                 </div>
               </div>
             )}
