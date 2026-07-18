@@ -11,9 +11,14 @@ interface ClassStats {
     male: number;
     female: number;
     total: number;
+    /** Obreros/staff que trabajan en el departamento (solo cards de departamento) */
+    workers?: number;
 }
 
 type DepartmentStatsMap = Record<DepartmentType, ClassStats>;
+
+// Roles dentro del departamento que cuentan como obrero/staff (no miembro)
+const WORKER_ROLES = ['maestro', 'lider', 'colaborador', 'auxiliar_maestro', 'obrero'];
 
 export interface StudentStatsWidgetProps {
     auth: {
@@ -86,10 +91,23 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
             return studentDept === dept || inDeptViaAssignments;
         });
 
+        // Separar obreros (rol de trabajo en el dept o clase "Obreros") de los miembros
+        const isWorkerInDept = (s: Student) => {
+            const workerViaAssignment = s.dept_assignments?.some((da: any) =>
+                da.departments?.name === dept &&
+                (WORKER_ROLES.includes(da.role_in_dept) || da.assigned_class === 'Obreros')
+            );
+            const workerViaPrimary = (s.departments?.name || s.department) === dept && s.assigned_class === 'Obreros';
+            return workerViaAssignment || workerViaPrimary;
+        };
+        const workers = deptStudents.filter(isWorkerInDept);
+        const members = deptStudents.filter(s => !isWorkerInDept(s));
+
         acc[dept] = {
-            male: deptStudents.filter(s => s.gender === "masculino").length,
-            female: deptStudents.filter(s => s.gender === "femenino").length,
-            total: deptStudents.length
+            male: members.filter(s => s.gender === "masculino").length,
+            female: members.filter(s => s.gender === "femenino").length,
+            total: members.length,
+            workers: workers.length
         };
         return acc;
     }, {} as DepartmentStatsMap);
