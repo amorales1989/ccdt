@@ -1,4 +1,7 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getProfilesWithAssignments } from "@/lib/api";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,12 +16,19 @@ interface ClassStats {
     total: number;
     /** Obreros/staff que trabajan en el departamento (solo cards de departamento) */
     workers?: number;
+    /** Directores y vicedirectores del departamento (solo cards de departamento) */
+    directives?: number;
 }
 
 type DepartmentStatsMap = Record<DepartmentType, ClassStats>;
 
 // Roles dentro del departamento que cuentan como obrero/staff (no miembro)
 const WORKER_ROLES = ['maestro', 'lider', 'colaborador', 'auxiliar_maestro', 'obrero'];
+// Roles que cuentan como directivos (contador aparte de obreros)
+const DIRECTIVE_ROLES = ['director', 'vicedirector'];
+
+const normalizeName = (first?: string, last?: string) =>
+    `${first || ''} ${last || ''}`.trim().toLowerCase();
 
 export interface StudentStatsWidgetProps {
     auth: {
@@ -50,6 +60,15 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
 
     const { profile, isAdminOrSecretary, isTeacherOrLeader } = auth;
     const { students, departments, pendingRequests } = data;
+    const { companyId } = useCompany();
+
+    // Usuarios de la empresa con assignments reales (user_metadata, vía API back)
+    // para sumar al conteo de obreros (unión con miembros-staff)
+    const { data: companyProfiles = [] } = useQuery({
+        queryKey: ['stats-widget-profiles', companyId],
+        queryFn: getProfilesWithAssignments,
+        staleTime: 5 * 60 * 1000,
+    });
     const { onPendingRequestsClick, onClassClick } = actions;
     const isDirectorOrAdminOrSecretary = isAdminOrSecretary || profile?.role === "director" || profile?.role === "director_general" || profile?.role === "vicedirector";
 
@@ -103,11 +122,45 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
         const workers = deptStudents.filter(isWorkerInDept);
         const members = deptStudents.filter(s => !isWorkerInDept(s));
 
+        // Usuarios con rol en este departamento (assignments de user_metadata o columnas legacy)
+        const deptObj = departments.find(d => d.name === dept);
+        const profilesWithRoles = (roles: string[]) => deptObj ? companyProfiles.filter((p: any) => {
+            const assigns = Array.isArray(p.assignments) ? p.assignments : [];
+            if (assigns.length > 0) {
+                // Los assignments de user_metadata pueden traer department_id o solo el nombre
+                return assigns.some((a: any) =>
+                    (a.department_id === deptObj.id || a.department === dept) &&
+                    roles.includes(a.role)
+                );
+            }
+            return p.department_id === deptObj.id && roles.includes(p.role);
+        }) : [];
+
+        const profileWorkers = profilesWithRoles(WORKER_ROLES);
+        const directives = profilesWithRoles(DIRECTIVE_ROLES);
+
+        // Unión sin duplicar: descartar usuarios ya contados como miembro-staff, y
+        // si alguien es directivo, contarlo solo en directivos (no en obreros).
+        const directiveIds = new Set(directives.map((p: any) => p.id));
+        const directiveNames = new Set(directives.map((p: any) => normalizeName(p.first_name, p.last_name)));
+        const memberWorkers = workers.filter((s: any) =>
+            !(s.profile_id && directiveIds.has(s.profile_id)) &&
+            !directiveNames.has(normalizeName(s.first_name, s.last_name))
+        );
+        const workerProfileIds = new Set(memberWorkers.map((s: any) => s.profile_id).filter(Boolean));
+        const workerNames = new Set(memberWorkers.map((s: any) => normalizeName(s.first_name, s.last_name)));
+        const extraProfileWorkers = profileWorkers.filter((p: any) =>
+            !workerProfileIds.has(p.id) &&
+            !workerNames.has(normalizeName(p.first_name, p.last_name)) &&
+            !directiveIds.has(p.id)
+        );
+
         acc[dept] = {
             male: members.filter(s => s.gender === "masculino").length,
             female: members.filter(s => s.gender === "femenino").length,
             total: members.length,
-            workers: workers.length
+            workers: memberWorkers.length + extraProfileWorkers.length,
+            directives: directives.length
         };
         return acc;
     }, {} as DepartmentStatsMap);

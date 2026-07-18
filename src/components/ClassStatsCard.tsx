@@ -1,5 +1,4 @@
 import React from "react";
-import { PersonStanding } from "lucide-react";
 
 interface ClassStats {
     male: number;
@@ -7,6 +6,8 @@ interface ClassStats {
     total: number;
     /** Obreros/staff del departamento; si viene, se muestra separado de los miembros */
     workers?: number;
+    /** Directores y vicedirectores del departamento */
+    directives?: number;
 }
 
 interface ClassStatsCardProps {
@@ -27,7 +28,7 @@ export function ClassStatsCard({ className, stats, onClick, isSingleCard }: Clas
         >
             <div className="mb-4 sm:mb-8 text-center text-slate-800 dark:text-slate-100">
                 <h3 className="text-base sm:text-xl font-bold mb-1 truncate">{className}</h3>
-                <div className="flex items-center justify-center sm:justify-between sm:px-2">
+                <div className="flex items-center justify-center sm:px-2">
                     <div className="flex items-end justify-center gap-3 sm:gap-4">
                         <div className="flex items-baseline gap-1.5 sm:gap-2">
                             <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white leading-none">
@@ -43,9 +44,14 @@ export function ClassStatsCard({ className, stats, onClick, isSingleCard }: Clas
                                 <span className="text-[9px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">Obreros</span>
                             </div>
                         )}
-                    </div>
-                    <div className="hidden sm:flex h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-                        <PersonStanding className="h-6 w-6" />
+                        {typeof stats.directives === 'number' && (
+                            <div className="flex items-baseline gap-1 sm:gap-1.5 pb-0.5">
+                                <span className="text-xl sm:text-2xl font-black text-violet-600 dark:text-violet-400 leading-none">
+                                    {stats.directives}
+                                </span>
+                                <span className="text-[9px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wide">Directivos</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

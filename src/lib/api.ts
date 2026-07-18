@@ -1357,6 +1357,21 @@ export const broadcastNotification = async (payload: BroadcastPayload): Promise<
   return response;
 };
 
+export interface ProfileWithAssignments {
+  id: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  department_id?: string;
+  assigned_class?: string;
+  assignments: { role: string; department?: string; department_id?: string; assigned_class?: string }[];
+}
+
+export const getProfilesWithAssignments = async (): Promise<ProfileWithAssignments[]> => {
+  const response = await apiCall('/profiles/staff-assignments');
+  return response.data || [];
+};
+
 export interface BroadcastHistoryItem {
   id: string;
   channel: 'push' | 'whatsapp';

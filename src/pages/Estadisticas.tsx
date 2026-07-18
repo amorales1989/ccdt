@@ -428,9 +428,10 @@ export default function Estadisticas() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const chartIds = ["membership-chart", "distribution-chart", "gender-chart", "roles-chart"];
-      const companyName = deptInfo ? `Dpto. ${deptInfo.name}` : "Estadísticas";
-      await exportStatsReport(data as any, chartIds, companyName);
+      const scopeLabel = deptInfo
+        ? `Departamento ${deptInfo.name}${selectedClass !== "all" ? ` · ${selectedClass}` : ""}`
+        : "Vista general";
+      await exportStatsReport(data as any, scopeLabel);
       toast.success("Reporte PDF generado exitosamente");
     } catch {
       toast.error("Error al generar el reporte PDF");
