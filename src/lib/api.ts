@@ -95,6 +95,20 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
       window.location.href = '/auth'; // Redirigir a login
     }
 
+    // Cierre global de sesiones (cron diario 00:00): mismo logout limpio que por inactividad.
+    if (errorData.code === 'SESSION_REVOKED') {
+      console.warn('Sesión cerrada por el sistema. Redirigiendo...');
+      await supabase.auth.signOut({ scope: 'global' });
+      localStorage.removeItem('selectedDepartment');
+      localStorage.removeItem('selectedDepartmentId');
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      window.location.href = '/auth';
+    }
+
     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
   }
 
