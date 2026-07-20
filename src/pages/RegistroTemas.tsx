@@ -586,7 +586,7 @@ export default function RegistroTemas() {
                   <Input type="number" min={0} value={form.estadistica_presentes_regulares} onChange={e => set("estadistica_presentes_regulares", e.target.value)} placeholder="0" />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">P — Presentes nuevos</Label>
+                  <Label className="text-xs text-muted-foreground">N — Presentes nuevos</Label>
                   <Input type="number" min={0} value={form.estadistica_presentes_nuevos} onChange={e => set("estadistica_presentes_nuevos", e.target.value)} placeholder="0" />
                 </div>
               </div>
