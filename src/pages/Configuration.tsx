@@ -83,6 +83,7 @@ const NOTIFICATION_EVENTS = [
   { key: 'eventos_aprobados', label: 'Eventos aprobados', description: 'Notifica a los roles seleccionados cuando una solicitud es aprobada. Los rechazos solo se notifican al solicitante.' },
   { key: 'mantenimiento', label: 'Solicitudes de mantenimiento', description: 'Notifica cuando se registra un nuevo pedido de mantenimiento' },
   { key: 'ausencias', label: 'Ausencias de alumnos', description: 'Notifica a los responsables cuando un alumno lleva 4 semanas consecutivas sin asistir a su clase' },
+  { key: 'asistencia_no_tomada', label: 'Asistencia sin tomar', description: 'Notifica a los responsables cuando no se registró la asistencia de su clase el día que tuvo actividad' },
 ] as const;
 
 
@@ -92,6 +93,7 @@ const DEFAULT_NOTIFICATIONS: Record<string, string[]> = {
   eventos_aprobados: ['director', 'vicedirector'],
   mantenimiento: ['conserje', 'admin'],
   ausencias: ['lider', 'maestro'],
+  asistencia_no_tomada: ['lider', 'maestro', 'auxiliar_maestro'],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
