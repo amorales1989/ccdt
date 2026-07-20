@@ -26,7 +26,9 @@ import { StudentDetails } from "@/components/StudentDetails";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, addStudentDepartment, removeStudentDepartment } from "@/lib/api";
+import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, addStudentDepartment, removeStudentDepartment, getCompany } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
 import { LabeledSwitch } from "@/components/LabeledSwitch";
 import AgregarAlumno from "@/pages/AgregarAlumno";
@@ -105,6 +107,17 @@ const ListarAlumnos = () => {
   const profile = useAuth().profile;
   const canFilter = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector';
   const canManageStudents = profile?.role === 'secretaria' || profile?.role === 'admin' || profile?.role === 'lider' || (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector';
+
+  const { data: company } = useQuery({
+    queryKey: ["company", getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId()),
+    staleTime: 5 * 60 * 1000,
+  });
+  const role = profile?.role || '';
+  const savedPerms = (company as any)?.role_permissions?.[role];
+  const canAddStudent = savedPerms && 'puede_agregar_miembros' in savedPerms
+    ? savedPerms.puede_agregar_miembros !== false
+    : DEFAULT_PERMISSIONS[role]?.puede_agregar_miembros !== false;
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1481,10 +1494,10 @@ const ListarAlumnos = () => {
                 </DropdownMenu>
               );
             })()}
-            <Button data-tour="lista-nuevo" onClick={() => setIsAddModalOpen(true)} className="button-gradient rounded-xl font-black h-10 px-5 shadow-lg shadow-primary/20">
+            {canAddStudent && <Button data-tour="lista-nuevo" onClick={() => setIsAddModalOpen(true)} className="button-gradient rounded-xl font-black h-10 px-5 shadow-lg shadow-primary/20">
               <UserPlus className="h-4 w-4 mr-2" />
               Nuevo Miembro
-            </Button>
+            </Button>}
           </div>
         </div>
 

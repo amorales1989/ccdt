@@ -15,7 +15,9 @@ import { type Step } from "react-joyride";
 import { TourGuide } from "@/components/TourGuide";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { markAttendance, getAttendance, getStudents } from "@/lib/api";
+import { markAttendance, getAttendance, getStudents, getCompany } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +69,19 @@ const TomarAsistencia = () => {
   const isDirector = profile?.role === "director" || profile?.role === "director_general" || profile?.role === "vicedirector";
   const isDirectorGeneral = profile?.role === "director_general";
   const isAdminOrSecretaria = profile?.role === "admin" || profile?.role === "secretaria";
+
+  const { data: company } = useQuery({
+    queryKey: ["company", getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId()),
+    staleTime: 5 * 60 * 1000,
+  });
+  const role = profile?.role || '';
+  const savedPerms = (company as any)?.role_permissions?.[role];
+  // Misma clave que oculta "Tomar Asistencia" del menú (Configuración › Permisos):
+  // si está oculta, tampoco debe poder accederse por URL directa.
+  const canTakeAttendance = savedPerms && 'menu_asistencia' in savedPerms
+    ? savedPerms.menu_asistencia !== false
+    : DEFAULT_PERMISSIONS[role]?.menu_asistencia !== false;
   const [selectedDepartmentName, setSelectedDepartmentName] = useState<string | null>(null);
   const userClass = profile?.assigned_class;
 
@@ -315,6 +330,20 @@ const TomarAsistencia = () => {
       setIsLoading(false);
     }
   };
+
+  if (!canTakeAttendance) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+        <div className="glass-card p-8 text-center max-w-sm animate-fade-in">
+          <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-4">
+            <UserX className="h-8 w-8 text-primary" />
+          </div>
+          <h3 className="font-bold text-foreground mb-2">Acceso restringido</h3>
+          <p className="text-sm text-muted-foreground">No tenés permisos para tomar asistencia. Contactá al administrador.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAdminOrSecretaria && (!profile?.departments || profile.departments.length === 0)) {
     return (

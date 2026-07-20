@@ -19,6 +19,9 @@ import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { CustomTabs } from "@/components/CustomTabs";
 import { Badge } from "@/components/ui/badge";
+import { getCompany } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 
 const PromoverAlumnos = () => {
   const { profile } = useAuth();
@@ -44,6 +47,19 @@ const PromoverAlumnos = () => {
   const isDirectorOrVice = profile?.role === "director" || profile?.role === "vicedirector";
   const isDirectorGeneral = profile?.role === "director_general";
   const canFilterOrigin = isAdminOrSecretaria || isDirectorOrVice || isDirectorGeneral;
+
+  const { data: company } = useQuery({
+    queryKey: ["company", getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId()),
+    staleTime: 5 * 60 * 1000,
+  });
+  const role = profile?.role || '';
+  const savedPerms = (company as any)?.role_permissions?.[role];
+  // Misma clave que oculta "Promover Miembros" del menú (Configuración › Permisos):
+  // si está oculta, tampoco debe poder accederse por URL directa.
+  const canPromote = savedPerms && 'menu_promover' in savedPerms
+    ? savedPerms.menu_promover !== false
+    : DEFAULT_PERMISSIONS[role]?.menu_promover !== false;
 
   const userDepartment = profile?.departments?.[0] || null;
   const userClass = profile?.assigned_class || null;
@@ -553,6 +569,20 @@ const PromoverAlumnos = () => {
   const getStudentAuthorizedDepartments = (studentId: string) => {
     return authorizedStudents[studentId] || [];
   };
+
+  if (!canPromote) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+        <div className="glass-card p-8 text-center max-w-sm animate-fade-in">
+          <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-4">
+            <UserCheck className="h-8 w-8 text-primary" />
+          </div>
+          <h3 className="font-bold text-foreground mb-2">Acceso restringido</h3>
+          <p className="text-sm text-muted-foreground">No tenés permisos para promover miembros. Contactá al administrador.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">

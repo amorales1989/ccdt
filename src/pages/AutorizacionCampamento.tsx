@@ -15,10 +15,13 @@ import { TimePickerField } from "@/components/TimePickerField";
 import { isDemoMode, DEMO_PDF_HEADER } from "@/lib/demo";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
+import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 
 const AutorizacionCampamento = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [inicioOpen, setInicioOpen] = useState(false);
   const [finOpen, setFinOpen] = useState(false);
   const [limiteOpen, setLimiteOpen] = useState(false);
@@ -27,6 +30,22 @@ const AutorizacionCampamento = () => {
     queryKey: ['company', getPersistentCompanyId()],
     queryFn: () => getCompany(getPersistentCompanyId())
   });
+
+  // Misma restricción que el hub (AutorizacionesSalida.tsx): esta pantalla es accesible
+  // por URL directa sin pasar por el hub, así que necesita su propio chequeo.
+  React.useEffect(() => {
+    if (profile && company !== undefined) {
+      const role = profile.role || '';
+      const savedPerms = (company as any)?.role_permissions?.[role];
+      const authorized = savedPerms && 'menu_autorizaciones' in savedPerms
+        ? savedPerms.menu_autorizaciones !== false
+        : DEFAULT_PERMISSIONS[role]?.menu_autorizaciones !== false;
+      if (!authorized) {
+        toast.error("No tenés permisos para acceder a esta sección");
+        navigate("/");
+      }
+    }
+  }, [profile, company, navigate]);
 
   // Lista por defecto de elementos
   const elementosDefault = `• Sábanas, frazadas

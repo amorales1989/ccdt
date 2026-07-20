@@ -44,14 +44,14 @@ const ROLE_LABELS: Record<string, string> = {
   colaborador: 'Colaborador', auxiliar_maestro: 'Auxiliar de maestro',
 };
 
+// Solo queda acá "Agregar miembros": es la única acción sin equivalente en
+// Visibilidad de Menú. Tomar asistencia y Promover miembros ahora reusan
+// menu_asistencia/menu_promover como guard de página (ver TomarAsistencia.tsx y
+// PromoverAlumnos.tsx) para no tener dos switches del mismo concepto desincronizables.
+// Editar miembros, ver informes, gestionar eventos y autorizaciones ya tenían su
+// propio control de acceso hardcodeado/existente y funcionaba: no hacía falta otro switch.
 const PERMISSIONS = [
   { key: 'puede_agregar_miembros', label: 'Agregar miembros' },
-  { key: 'puede_editar_miembros', label: 'Editar miembros' },
-  { key: 'puede_tomar_asistencia', label: 'Tomar asistencia' },
-  { key: 'puede_ver_informes', label: 'Ver informes' },
-  { key: 'puede_gestionar_eventos', label: 'Gestionar eventos' },
-  { key: 'puede_promover_miembros', label: 'Promover miembros' },
-  { key: 'puede_autorizaciones', label: 'Autorizaciones salida' },
 ] as const;
 
 // ⚠️ REGLA: cada vez que se agrega un ítem al menú en AppSidebar.tsx,
@@ -1498,9 +1498,18 @@ export default function Configuration() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr>
-                        <th className="text-left py-3 px-2 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[130px]">Rol</th>
+                        <th rowSpan={2} className="sticky left-0 z-20 bg-white dark:bg-slate-900 text-left py-3 px-2 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[130px] align-bottom border-r border-slate-200 dark:border-slate-700">Rol</th>
+                        <th colSpan={PERMISSIONS.length} className="text-center py-2 px-1 font-black text-[11px] uppercase tracking-widest text-indigo-500 dark:text-indigo-400 border-b border-slate-100 dark:border-slate-800">Acciones</th>
+                        <th colSpan={MENU_PERMISSIONS.length} className="text-center py-2 px-1 font-black text-[11px] uppercase tracking-widest text-indigo-500 dark:text-indigo-400 border-b border-slate-100 dark:border-slate-800 border-l border-slate-200 dark:border-slate-700">Visibilidad de Menú</th>
+                      </tr>
+                      <tr>
                         {PERMISSIONS.map(p => (
                           <th key={p.key} className="text-center py-3 px-1 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[90px]">
+                            {p.label}
+                          </th>
+                        ))}
+                        {MENU_PERMISSIONS.map((p, i) => (
+                          <th key={p.key} className={`text-center py-3 px-1 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[80px] ${i === 0 ? 'border-l border-slate-200 dark:border-slate-700' : ''}`}>
                             {p.label}
                           </th>
                         ))}
@@ -1509,7 +1518,7 @@ export default function Configuration() {
                     <tbody>
                       {ALL_ROLES.map((role, i) => (
                         <tr key={role} className={`border-t border-slate-100 dark:border-slate-800 ${i % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-800/20' : ''}`}>
-                          <td className="py-3 px-2 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                          <td className={`sticky left-0 z-10 py-3 px-2 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap border-r border-slate-200 dark:border-slate-700 ${i % 2 === 0 ? 'bg-slate-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'}`}>
                             {ROLE_LABELS[role]}
                           </td>
                           {PERMISSIONS.map(p => (
@@ -1521,45 +1530,19 @@ export default function Configuration() {
                               />
                             </td>
                           ))}
+                          {MENU_PERMISSIONS.map((p, j) => (
+                            <td key={p.key} className={`py-3 px-1 text-center ${j === 0 ? 'border-l border-slate-200 dark:border-slate-700' : ''}`}>
+                              <Switch
+                                checked={!!rolePermissions[role]?.[p.key]}
+                                onCheckedChange={() => togglePermission(role, p.key)}
+                                className="data-[state=checked]:bg-indigo-500"
+                              />
+                            </td>
+                          ))}
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                </div>
-                <div className="mt-8 border-t border-slate-100 dark:border-slate-800 pt-6">
-                  <h3 className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-widest mb-4">Visibilidad de Menú</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr>
-                          <th className="text-left py-3 px-2 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[130px]">Rol</th>
-                          {MENU_PERMISSIONS.map(p => (
-                            <th key={p.key} className="text-center py-3 px-1 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[80px]">
-                              {p.label}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ALL_ROLES.map((role, i) => (
-                          <tr key={role} className={`border-t border-slate-100 dark:border-slate-800 ${i % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-800/20' : ''}`}>
-                            <td className="py-3 px-2 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                              {ROLE_LABELS[role]}
-                            </td>
-                            {MENU_PERMISSIONS.map(p => (
-                              <td key={p.key} className="py-3 px-1 text-center">
-                                <Switch
-                                  checked={!!rolePermissions[role]?.[p.key]}
-                                  onCheckedChange={() => togglePermission(role, p.key)}
-                                  className="data-[state=checked]:bg-indigo-500"
-                                />
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
                 </div>
                 <div className="flex justify-end mt-6">
                   <Button
