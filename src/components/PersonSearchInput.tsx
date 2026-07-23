@@ -37,6 +37,7 @@ export type PersonSearchResult = {
     document_number?: string
     phone?: string
     photo_url?: string
+    baptized?: boolean
 }
 
 interface PersonSearchInputProps {
@@ -112,14 +113,15 @@ export function PersonSearchInput({ onSelect, placeholder = "Buscar por nombre o
                     birthdate: s.birthdate || undefined,
                     address: s.address || undefined,
                     document_number: s.document_number || undefined,
-                    phone: s.phone || undefined
+                    phone: s.phone || undefined,
+                    baptized: s.baptized
                 })) || [])
             ]
 
             return flattened
         },
         enabled: searchValue.length >= 2,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 0, // datos de personas cambian seguido (alta/edición); no cachear entre búsquedas
     })
 
     const visibleResults = excludeIds?.length

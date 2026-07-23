@@ -103,12 +103,13 @@ export function NameSearchInput({
                     document_number: s.document_number || undefined,
                     phone: s.phone || undefined,
                     photo_url: s.photo_url || undefined,
+                    baptized: s.baptized,
                 })) || []),
             ]
             return flattened
         },
         enabled: debounced.trim().length >= 2 && !justSelected,
-        staleTime: 1000 * 60 * 5,
+        staleTime: 0, // datos de personas cambian seguido (alta/edición); no cachear entre búsquedas
     })
 
     const showDropdown = open && !justSelected && debounced.trim().length >= 2

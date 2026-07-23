@@ -560,7 +560,7 @@ export default function TodosMiembros() {
           isModal
           onSuccess={() => {
             setShowAddModal(false);
-            queryClient.invalidateQueries({ queryKey: ["students"] });
+            queryClient.invalidateQueries({ queryKey: ["all-students", companyId] });
           }}
         />
       </DialogContent>

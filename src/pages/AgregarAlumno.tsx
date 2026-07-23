@@ -9,7 +9,7 @@ import { createStudent, getDepartments, checkDniExists } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Student, Department, DepartmentType } from "@/types/database";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { UserPlus, Check } from "lucide-react";
@@ -30,6 +30,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [dniError, setDniError] = useState<string | null>(null);
   const [isValidatingDni, setIsValidatingDni] = useState(false);
@@ -155,7 +156,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
       ...prev,
       first_name: person.first_name || prev.first_name,
       last_name: person.last_name || prev.last_name,
-      phone: person.phone || prev.phone,
+      phone: person.phone ? extractLocalPhone(person.phone, prev.phoneCode) : prev.phone,
       address: person.address || prev.address,
       gender: person.gender || prev.gender,
       birthdate: person.birthdate || prev.birthdate,
@@ -163,6 +164,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
       profile_id: person.profile_id || (source === 'profile' ? person.id : (prev.profile_id)),
       person_source: source,
       existing_student_id: source === 'student' ? person.id : prev.existing_student_id,
+      baptized: source === 'student' ? !!person.baptized : prev.baptized,
     }));
 
     toast({
@@ -187,6 +189,20 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
     } else {
       setDniError(null);
     }
+  };
+
+  // Inverso de formatPhoneNumber: los teléfonos guardados ya vienen con código de país + "9"
+  // (ver formatPhoneNumber más abajo). Al autocompletar desde una persona existente hay que
+  // sacarle ese prefijo, porque el campo "Teléfono" solo debe mostrar el número local
+  // (el código de país se muestra aparte, en el input de al lado).
+  const extractLocalPhone = (fullPhone: string | null | undefined, phoneCode: string) => {
+    if (!fullPhone) return "";
+    let digits = fullPhone.replace(/\D/g, "");
+    if (digits.startsWith(phoneCode)) {
+      digits = digits.slice(phoneCode.length);
+      if (phoneCode === "54" && digits.startsWith("9")) digits = digits.slice(1);
+    }
+    return digits;
   };
 
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
@@ -263,6 +279,9 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
         variant: "success",
       });
 
+      // Contador de miembros (Configuración › Plan, PlanLimitBanner): nadie más lo invalida.
+      queryClient.invalidateQueries({ queryKey: ["member-count"] });
+
       if (onSuccess) {
         onSuccess();
       } else {
@@ -330,7 +349,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
                     ...prev,
                     first_name: person.first_name || prev.first_name,
                     last_name: person.last_name || prev.last_name,
-                    phone: person.phone || prev.phone,
+                    phone: person.phone ? extractLocalPhone(person.phone, prev.phoneCode) : prev.phone,
                     address: person.address || prev.address,
                     gender: person.gender || prev.gender,
                     birthdate: person.birthdate || prev.birthdate,
@@ -338,6 +357,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
                     profile_id: person.profile_id || (person.source === 'profile' ? person.id : prev.profile_id),
                     person_source: person.source,
                     existing_student_id: person.source === 'student' ? person.id : prev.existing_student_id,
+                    baptized: person.source === 'student' ? !!person.baptized : prev.baptized,
                   }));
                   setDniError(null);
                   toast({
