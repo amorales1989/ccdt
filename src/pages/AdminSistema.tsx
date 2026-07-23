@@ -65,7 +65,7 @@ export default function AdminSistema() {
   const [planValue, setPlanValue] = useState<string>("");
   const [packsValue, setPacksValue] = useState<number>(0);
   const [payTarget, setPayTarget] = useState<AdminCompany | null>(null);
-  const [payForm, setPayForm] = useState<{ amount: string; billing_cycle: "mensual" | "anual"; notes: string }>({ amount: "", billing_cycle: "mensual", notes: "" });
+  const [payForm, setPayForm] = useState<{ amount: string; billing_cycle: "mensual" | "anual"; notes: string; payment_date: string }>({ amount: "", billing_cycle: "mensual", notes: "", payment_date: new Date().toISOString().slice(0, 10) });
   const [pricesOpen, setPricesOpen] = useState(false);
 
   const { data: companies = [], isLoading } = useQuery({
@@ -122,19 +122,20 @@ export default function AdminSistema() {
       billing_cycle: payForm.billing_cycle,
       source: "manual",
       notes: payForm.notes || undefined,
+      payment_date: payForm.payment_date || undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
       queryClient.invalidateQueries({ queryKey: ["company-payments", payTarget?.id] });
       toast({ title: "Pago registrado" });
       setPayTarget(null);
-      setPayForm({ amount: "", billing_cycle: "mensual", notes: "" });
+      setPayForm({ amount: "", billing_cycle: "mensual", notes: "", payment_date: new Date().toISOString().slice(0, 10) });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const openPay = (c: AdminCompany) => {
-    setPayForm({ amount: "", billing_cycle: (c.billing_cycle as "mensual" | "anual") || "mensual", notes: "" });
+    setPayForm({ amount: "", billing_cycle: (c.billing_cycle as "mensual" | "anual") || "mensual", notes: "", payment_date: new Date().toISOString().slice(0, 10) });
     setPayTarget(c);
   };
 
@@ -714,8 +715,8 @@ function PayDialog({
   company, form, setForm, onSubmit, isPending, onClose,
 }: {
   company: AdminCompany | null;
-  form: { amount: string; billing_cycle: "mensual" | "anual"; notes: string };
-  setForm: (f: { amount: string; billing_cycle: "mensual" | "anual"; notes: string }) => void;
+  form: { amount: string; billing_cycle: "mensual" | "anual"; notes: string; payment_date: string };
+  setForm: (f: { amount: string; billing_cycle: "mensual" | "anual"; notes: string; payment_date: string }) => void;
   onSubmit: () => void;
   isPending: boolean;
   onClose: () => void;
@@ -742,6 +743,17 @@ function PayDialog({
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Fecha de pago</Label>
+            <Input
+              type="date"
+              max={new Date().toISOString().slice(0, 10)}
+              className="rounded-xl bg-slate-50 border-slate-200 h-11"
+              value={form.payment_date}
+              onChange={(e) => setForm({ ...form, payment_date: e.target.value })}
+            />
+            <p className="text-[11px] text-slate-400">Si pagó otro día, seleccionalo. El vencimiento se calcula desde esta fecha.</p>
           </div>
           <div className="space-y-2">
             <Label>Ciclo</Label>

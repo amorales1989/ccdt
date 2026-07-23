@@ -175,10 +175,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const today = new Date().toISOString().slice(0, 10);
           const expired = (companyData as any)?.due_date && (companyData as any).due_date < today;
           if (companyData && ((companyData as any).is_active === false || expired)) {
-            setSuspendedRole((data as any).role || 'unknown');
+            const role = (data as any).role || 'unknown';
+            setSuspendedRole(role);
             setProfile(null);
             setUser(null);
-            await supabase.auth.signOut();
+            // Admin/secretaria: conservar el token para poder pagar (regularizar) desde el
+            // cartel de suspensión. Otros roles: cerrar sesión (no pueden pagar).
+            if (role !== 'admin' && role !== 'secretaria') {
+              await supabase.auth.signOut();
+            }
             setLoading(false);
             return;
           }

@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { DepartmentType } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { getCompany } from "@/lib/api";
+import { getCompany, renewSubscription } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
@@ -29,6 +29,8 @@ export default function Index() {
   const [showCompanyName, setShowCompanyName] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuspended, setShowSuspended] = useState(false);
+  const [payCycle, setPayCycle] = useState<'mensual' | 'anual'>('mensual');
+  const [isPaying, setIsPaying] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [isSendingReset, setIsSendingReset] = useState(false);
@@ -50,6 +52,21 @@ export default function Index() {
       toast({
         title: "Sistema suspendido",
         description: "El acceso de tu congregación está suspendido. Comuníquese con el admin o secretaría de su congregación.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRegularizar = async () => {
+    setIsPaying(true);
+    try {
+      const { init_point } = await renewSubscription(payCycle);
+      window.location.href = init_point;
+    } catch (e: any) {
+      setIsPaying(false);
+      toast({
+        title: "No se pudo generar el pago",
+        description: e?.message || "Intentá nuevamente o contactá al administrador.",
         variant: "destructive",
       });
     }
@@ -388,15 +405,40 @@ navigate(isMaestroFirstLogin ? "/asistencia" : "/home");
               <AlertTriangle className="h-10 w-10 text-amber-600" />
             </div>
             <h2 className="text-xl font-bold mb-2">Sistema suspendido</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              El acceso a tu congregación está suspendido por falta de pago. Regularizá el pago para reactivar el sistema. Si creés que es un error, contactá al administrador.
+            <p className="text-sm text-muted-foreground mb-5">
+              El acceso a tu congregación está suspendido por falta de pago. Regularizá el pago para reactivar el sistema al instante.
             </p>
+
+            <div className="mb-4 text-left">
+              <Label className="text-xs font-semibold text-muted-foreground">Ciclo de pago</Label>
+              <Select value={payCycle} onValueChange={(v) => setPayCycle(v as 'mensual' | 'anual')} disabled={isPaying}>
+                <SelectTrigger className="mt-1 h-11 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="mensual">Mensual</SelectItem>
+                  <SelectItem value="anual">Anual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button
-              onClick={() => setShowSuspended(false)}
+              onClick={handleRegularizar}
+              disabled={isPaying}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold shadow-lg"
             >
-              Entendido
+              {isPaying ? <Loader2 className="h-5 w-5 animate-spin" /> : "Regularizar pago"}
             </Button>
+            <button
+              onClick={() => setShowSuspended(false)}
+              disabled={isPaying}
+              className="mt-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Ahora no
+            </button>
+            <p className="text-xs text-muted-foreground mt-4">
+              Si creés que es un error, contactá al administrador.
+            </p>
           </div>
         </div>
       )}

@@ -65,19 +65,17 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Network error' }));
 
-    // Empresa suspendida (ej. falta de pago): cerrar sesión y mostrar modal en el login.
+    // Empresa suspendida (ej. falta de pago): NO cerrar sesión (el admin conserva el token
+    // para poder regularizar el pago desde el cartel). Se desmonta la app redirigiendo al
+    // login, donde el modal ofrece pagar. El token se limpia recién si el usuario cierra sesión.
     if (errorData.code === 'COMPANY_INACTIVE') {
       sessionStorage.setItem('company_suspended', '1');
       if (errorData.role) sessionStorage.setItem('company_suspended_role', errorData.role);
-      await supabase.auth.signOut({ scope: 'global' });
       localStorage.removeItem('selectedDepartment');
       localStorage.removeItem('selectedDepartmentId');
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-          localStorage.removeItem(key);
-        }
-      });
-      window.location.href = '/';
+      if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
+        window.location.href = '/';
+      }
     }
 
     // Si el backend reporta tiempo de inactividad, forzar logout
@@ -295,7 +293,7 @@ export const setCompanyPacks = async (id: number, extra_member_packs: number): P
   return res.data;
 };
 
-export const recordPayment = async (id: number, data: { amount: number; billing_cycle: string; source?: string; notes?: string }): Promise<AdminCompany> => {
+export const recordPayment = async (id: number, data: { amount: number; billing_cycle: string; source?: string; notes?: string; payment_date?: string }): Promise<AdminCompany> => {
   const res = await apiCall(`/system/companies/${id}/payments`, { method: 'POST', body: JSON.stringify(data) });
   return res.data;
 };
