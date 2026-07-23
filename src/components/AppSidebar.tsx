@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useContext, createContext } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +20,16 @@ import {
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
   BarChart3, BookOpen, Wrench, Megaphone, HelpCircle, Wallet, Building, Users2
 } from "lucide-react";
+
+// Icono de anclar/colapsar sidebar (panel con flecha). Hereda color con currentColor.
+const HideSidebarIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
+    <path d="M20,24H4c-2.2,0-4-1.8-4-4V4c0-2.2,1.8-4,4-4h16c2.2,0,4,1.8,4,4v16C24,22.2,22.2,24,20,24z M4,2C2.9,2,2,2.9,2,4v16c0,1.1,0.9,2,2,2h16c1.1,0,2-0.9,2-2V4c0-1.1-0.9-2-2-2H4z"/>
+    <path d="M8,24c-0.6,0-1-0.4-1-1V1c0-0.6,0.4-1,1-1s1,0.4,1,1v22C9,23.6,8.6,24,8,24z"/>
+    <path d="M14,13c-0.3,0-0.5-0.1-0.7-0.3c-0.4-0.4-0.4-1,0-1.4l3-3c0.4-0.4,1-0.4,1.4,0s0.4,1,0,1.4l-3,3C14.5,12.9,14.3,13,14,13z"/>
+    <path d="M17,16c-0.3,0-0.5-0.1-0.7-0.3l-3-3c-0.4-0.4-0.4-1,0-1.4s1-0.4,1.4,0l3,3c0.4,0.4,0.4,1,0,1.4C17.5,15.9,17.3,16,17,16z"/>
+  </svg>
+);
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +46,21 @@ import { ProfileEditor } from "@/components/ProfileEditor";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { NotificationBell } from "./NotificationBell";
 import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+
+// Contexto para el modo rail (solo desktop). En mobile/sheet queda con los defaults
+// (collapsed=false, pinnable=false) y todo se renderiza como siempre.
+interface SidebarCollapseCtx {
+  collapsed: boolean;
+  pinnable: boolean;
+  pinned: boolean;
+  togglePin: () => void;
+}
+const SidebarCollapseContext = createContext<SidebarCollapseCtx>({
+  collapsed: false,
+  pinnable: false,
+  pinned: true,
+  togglePin: () => {},
+});
 
 const getItems = (role: string | undefined, profile: any, unreadReportsCount: number = 0) => {
   const selectedDepartment = localStorage.getItem('selectedDepartment');
@@ -148,9 +173,32 @@ const NavItem = ({
 }) => {
   const iconColor = iconBgMap[item.title] || "bg-gray-100 text-gray-500";
   const location = useLocation();
+  const { collapsed } = useContext(SidebarCollapseContext);
 
   // ¿Alguna página de este grupo está activa? (para marcar el header y auto-abrirlo)
   const childActive = !!item.subItems?.some(sub => location.pathname + location.search === sub.url);
+
+  // Modo rail: solo icono centrado. Al hacer hover el sidebar se expande y se ve el menú completo.
+  if (collapsed) {
+    const active = isActive || childActive;
+    const to = item.subItems ? (item.subItems[0]?.url || item.url) : item.url;
+    const badgeTotal = (item.badge || 0) + (item.subItems?.reduce((s, x) => s + (x.badge || 0), 0) || 0);
+    return (
+      <Link
+        to={to}
+        onClick={onClick}
+        title={item.title}
+        className={`relative flex items-center justify-center h-9 rounded-md transition-all duration-200 ${active ? "bg-primary/10" : "hover:bg-purple-50 dark:hover:bg-purple-900/20"}`}
+      >
+        <div className={`flex items-center justify-center w-7 h-7 rounded-md ${iconColor}`}>
+          <item.icon className="h-4 w-4" />
+        </div>
+        {badgeTotal > 0 && (
+          <span className="absolute top-0.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-background" />
+        )}
+      </Link>
+    );
+  }
 
   // Auto-abrir el grupo cuyo hijo está activo (acordeón: uno solo abierto a la vez).
   useEffect(() => {
@@ -253,6 +301,7 @@ const NavigationContent = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
+  const { collapsed, pinnable, pinned, togglePin } = useContext(SidebarCollapseContext);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   // Acordeón del menú: solo un grupo abierto a la vez.
   const [openGroup, setOpenGroup] = useState<string | null>(null);
@@ -407,29 +456,48 @@ const NavigationContent = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo / Congregation Header */}
-      {showCongregationName && congregationName && (
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-border">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden">
-            <Avatar className="h-9 w-9">
-              <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
-              <AvatarFallback className="bg-transparent">
-                <img src="/fire.png" alt="Logo" className="h-8 w-8 object-contain" />
-              </AvatarFallback>
-            </Avatar>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-black text-primary leading-tight break-words">{congregationName}</div>
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sistema de Gestión</div>
-          </div>
+      {/* Logo / Congregation Header + botón de anclaje (desktop) */}
+      {(showCongregationName && congregationName) || pinnable ? (
+        <div className={`flex items-center h-16 border-b border-border ${collapsed ? "justify-center px-2" : "gap-3 px-4"}`}>
+          {showCongregationName && congregationName && (
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={logoPath} alt="Logo" className="object-contain" />
+                <AvatarFallback className="bg-transparent">
+                  <img src="/fire.png" alt="Logo" className="h-8 w-8 object-contain" />
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          )}
+          {!collapsed && showCongregationName && congregationName && (
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-black text-primary leading-tight break-words">{congregationName}</div>
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sistema de Gestión</div>
+            </div>
+          )}
+          {pinnable && !collapsed && (
+            <button
+              onClick={togglePin}
+              title={pinned ? "Desanclar menú" : "Anclar menú abierto"}
+              className={`ml-auto shrink-0 flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${pinned ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-purple-50 dark:hover:bg-purple-900/20"}`}
+            >
+              <HideSidebarIcon className={`h-4 w-4 transition-transform ${pinned ? "" : "rotate-180"}`} />
+            </button>
+          )}
         </div>
-      )}
+      ) : null}
 
       {/* Profile Card */}
       <div
-        className="mx-3 mt-4 mb-2 p-3 rounded-2xl bg-gradient-to-br from-purple-50 to-white dark:from-slate-800 dark:to-slate-900 border border-purple-100 dark:border-slate-700 cursor-pointer hover:border-purple-200 dark:hover:border-purple-600 hover:shadow-sm transition-all duration-200"
+        className={`rounded-2xl bg-gradient-to-br from-purple-50 to-white dark:from-slate-800 dark:to-slate-900 border border-purple-100 dark:border-slate-700 cursor-pointer hover:border-purple-200 dark:hover:border-purple-600 hover:shadow-sm transition-all duration-200 ${collapsed ? "mx-2 mt-3 mb-2 p-2 flex justify-center" : "mx-3 mt-4 mb-2 p-3"}`}
         onClick={() => setProfileDialogOpen(true)}
+        title={collapsed ? `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim() : undefined}
       >
+        {collapsed ? (
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shadow-md">
+            {initials || <UserRound className="h-5 w-5" />}
+          </div>
+        ) : (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shadow-md">
             {initials || <UserRound className="h-5 w-5" />}
@@ -453,18 +521,23 @@ const NavigationContent = ({
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Role Switcher */}
-      <div className="px-3 mb-2 w-full">
-        <RoleSwitcher />
-      </div>
+      {!collapsed && (
+        <div className="px-3 mb-2 w-full">
+          <RoleSwitcher />
+        </div>
+      )}
 
       {/* Navigation section */}
       <div className="flex-1 overflow-y-auto px-2 py-1 space-y-0">
-        <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] mb-1 px-2">
-          Navegación
-        </div>
+        {!collapsed && (
+          <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] mb-1 px-2">
+            Navegación
+          </div>
+        )}
         {items.map(item => (
           <NavItem
             key={item.title}
@@ -501,12 +574,13 @@ const NavigationContent = ({
         <div className="flex items-center gap-1">
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 flex-1 px-2.5 py-1.5 rounded-lg transition-all duration-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 group text-left"
+            title="Cerrar Sesión"
+            className={`flex items-center flex-1 rounded-lg transition-all duration-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 group ${collapsed ? "justify-center h-9" : "gap-2 px-2.5 py-1.5 text-left"}`}
           >
             <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-100 group-hover:bg-red-200 transition-colors shrink-0">
               <LogOut className="h-3.5 w-3.5" />
             </div>
-            <span className="font-bold text-[13px]">Cerrar Sesión</span>
+            {!collapsed && <span className="font-bold text-[13px]">Cerrar Sesión</span>}
           </button>
         </div>
       </div>
@@ -523,6 +597,9 @@ const NavigationContent = ({
   );
 };
 
+const SIDEBAR_RAIL_WIDTH = "4.5rem";   // 72px, solo iconos
+const SIDEBAR_EXPANDED_WIDTH = "18rem"; // 288px, menú completo
+
 export function AppSidebar() {
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -530,6 +607,20 @@ export function AppSidebar() {
   const [congregationName, setCongregationName] = useState("");
   const [showCongregationName, setShowCongregationName] = useState(false);
   const [logoPath, setLogoPath] = useState("/fire.png");
+
+  // Anclaje del menú: por defecto anclado (abierto). Se persiste en localStorage.
+  const [pinned, setPinned] = useState(() =>
+    typeof window === "undefined" ? true : localStorage.getItem("sidebar_pinned") !== "false"
+  );
+  const [hovered, setHovered] = useState(false);
+  const togglePin = () => {
+    setPinned(prev => {
+      const next = !prev;
+      localStorage.setItem("sidebar_pinned", next ? "true" : "false");
+      return next;
+    });
+  };
+  const expanded = pinned || hovered;
 
   const { data: company } = useQuery({
     queryKey: ['company', getPersistentCompanyId()],
@@ -622,14 +713,26 @@ export function AppSidebar() {
 
   // ── DESKTOP ──
   return (
-    <Sidebar className="border-r border-border">
-      <SidebarContent className="bg-background h-full overflow-hidden">
+    <SidebarCollapseContext.Provider value={{ collapsed: !expanded, pinnable: true, pinned, togglePin }}>
+      {/* Spacer: acompaña SIEMPRE el ancho real del panel (expanded) para que el
+          contenido y el menú se muevan juntos. Anclar/desanclar con el menú abierto
+          no reacomoda la página; el contenido solo se ajusta cuando el menú se colapsa. */}
+      <div
+        className="shrink-0 transition-[width] duration-200 ease-in-out"
+        style={{ width: expanded ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_RAIL_WIDTH }}
+      />
+      <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="fixed inset-y-0 left-0 z-50 flex flex-col bg-background border-r border-border shadow-sm transition-[width] duration-200 ease-in-out overflow-hidden"
+        style={{ width: expanded ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_RAIL_WIDTH }}
+      >
         <NavigationContent
           congregationName={congregationName}
           showCongregationName={showCongregationName}
           logoPath={logoPath}
         />
-      </SidebarContent>
-    </Sidebar>
+      </aside>
+    </SidebarCollapseContext.Provider>
   );
 }
