@@ -164,7 +164,7 @@ export default function Configuration() {
   const renewMutation = useMutation({
     mutationFn: (billing_cycle: 'mensual' | 'anual') => renewSubscription(billing_cycle),
     onSuccess: (data) => {
-      window.location.href = data.init_point;
+      window.open(data.init_point, '_blank', 'noopener,noreferrer');
     },
     onError: (error: any) => {
       toast({
@@ -180,7 +180,7 @@ export default function Configuration() {
   const subscribeMutation = useMutation({
     mutationFn: (billing_cycle: 'mensual' | 'anual') => subscribe(billing_cycle),
     onSuccess: (data) => {
-      window.location.href = data.init_point;
+      window.open(data.init_point, '_blank', 'noopener,noreferrer');
     },
     onError: (error: any) => {
       toast({
@@ -190,6 +190,19 @@ export default function Configuration() {
       });
     },
   });
+
+  // Días que le quedan del ciclo actual, para explicar el prorrateo (mismo cálculo que
+  // prorateFactor en subscriptionController.js: capado a la duración del ciclo).
+  const cycleDaysRemaining = (() => {
+    if (!subscription?.due_date) return null;
+    const cycleDays = subscription.billing_cycle === 'anual' ? 365 : 30;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const days = Math.ceil((new Date(subscription.due_date).getTime() - new Date(todayStr).getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, Math.min(cycleDays, days));
+  })();
+  const prorateNote = cycleDaysRemaining != null
+    ? `Se cobra la diferencia de precio prorrateada por los ${cycleDaysRemaining} día${cycleDaysRemaining === 1 ? '' : 's'} que te quedan hasta el ${new Date(subscription!.due_date!).toLocaleDateString('es-AR')} (próximo vencimiento). El resto del ciclo ya lo pagaste con el plan anterior.`
+    : 'Se cobra la diferencia de precio prorrateada por los días que te quedan del ciclo actual.';
 
   // ─── Cambio de plan / packs (self-service, Paso 2) ───────────────────────
   const [selectedPlan, setSelectedPlan] = useState<string>('');
@@ -231,7 +244,7 @@ export default function Configuration() {
     mutationFn: (plan: string) => changePlan(plan),
     onSuccess: (data) => {
       if (data.mode === 'charge' && data.init_point) {
-        window.location.href = data.init_point;
+        window.open(data.init_point, '_blank', 'noopener,noreferrer');
         return;
       }
       toast({ title: "Cambio de plan programado", description: "Se aplicará al renovar el ciclo." });
@@ -247,7 +260,7 @@ export default function Configuration() {
     mutationFn: (delta: number) => changePacks(delta),
     onSuccess: (data) => {
       if (data.mode === 'charge' && data.init_point) {
-        window.location.href = data.init_point;
+        window.open(data.init_point, '_blank', 'noopener,noreferrer');
         return;
       }
       toast({ title: "Cambio de capacidad programado", description: "Se aplicará al renovar el ciclo." });
@@ -981,7 +994,7 @@ export default function Configuration() {
                                   <Button
                                     variant="outline"
                                     className="rounded-xl font-bold h-9 px-4"
-                                    onClick={() => renewMutation.mutate((subscription?.billing_cycle as 'mensual' | 'anual') || (billingCycle as 'mensual' | 'anual') || 'mensual')}
+                                    onClick={() => renewMutation.mutate(subscribeCycle)}
                                     disabled={renewMutation.isPending}
                                   >
                                     {renewMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -1032,6 +1045,9 @@ export default function Configuration() {
                                   ? `Cargo prorrateado: $${planQuote.amount}`
                                   : planQuote.effect || 'Se aplica al renovar el ciclo'}
                               </p>
+                              {planQuote.mode === 'charge' && (
+                                <p className="text-[11px] text-slate-400 leading-snug">{prorateNote}</p>
+                              )}
                               <Button
                                 className="button-gradient rounded-xl font-black h-10 px-5 w-full"
                                 onClick={() => changePlanMutation.mutate(selectedPlan)}
@@ -1074,6 +1090,9 @@ export default function Configuration() {
                                   ? `Cargo prorrateado: $${packsQuote.amount}`
                                   : packsQuote.effect || 'Se aplica al renovar el ciclo'}
                               </p>
+                              {packsQuote.mode === 'charge' && (
+                                <p className="text-[11px] text-slate-400 leading-snug">{prorateNote}</p>
+                              )}
                               <Button
                                 className="button-gradient rounded-xl font-black h-10 px-5 w-full"
                                 onClick={() => changePacksMutation.mutate(packsDelta)}
