@@ -20,6 +20,7 @@ import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CustomTabs } from "@/components/CustomTabs";
 import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
+import { LabeledSwitch } from "@/components/LabeledSwitch";
 
 const profileSchema = z.object({
   first_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
