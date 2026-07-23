@@ -358,15 +358,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log("Sign out completed, redirecting to login");
 
-      // Force a complete page refresh to ensure clean state
-      window.location.href = '/';
+      // Force a complete page refresh to ensure clean state.
+      // Vamos a /login (no a "/") para no caer en la landing del dominio de marketing.
+      window.location.href = `/login?companyId=${getPersistentCompanyId()}`;
     } catch (error) {
       console.error("Sign out process error:", error);
       // Even if there's an error, clear state and redirect
       setUser(null);
       setProfile(null);
       setSession(null);
-      window.location.href = '/';
+      window.location.href = `/login?companyId=${getPersistentCompanyId()}`;
     }
   }
 

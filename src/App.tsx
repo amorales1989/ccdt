@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Layout } from "@/components/Layout";
 import { InstallPWA } from "@/components/InstallPWA"; // 👈 Importar
@@ -54,6 +54,15 @@ const isMarketingDomain =
   typeof window !== "undefined" &&
   ["n-xus.com", "www.n-xus.com"].includes(window.location.hostname);
 
+// En el dominio de marketing, la landing es solo para visitantes anónimos.
+// Un usuario autenticado que entra a "/" debe ver la app (Index redirige a su home).
+function RootIndex() {
+  const { user, loading } = useAuth();
+  if (!isMarketingDomain) return <Index />;
+  if (loading) return null;
+  return user ? <Index /> : <Landing />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -69,7 +78,7 @@ function App() {
                 children: [
                   {
                     index: true,
-                    element: isMarketingDomain ? <Landing /> : <Index />,
+                    element: <RootIndex />,
                   },
                   {
                     path: "/login",
