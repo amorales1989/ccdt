@@ -52,6 +52,7 @@ const ROLE_LABELS: Record<string, string> = {
 // propio control de acceso hardcodeado/existente y funcionaba: no hacía falta otro switch.
 const PERMISSIONS = [
   { key: 'puede_agregar_miembros', label: 'Agregar miembros' },
+  { key: 'puede_gestionar_mantenimiento', label: 'Gestionar mantenimiento' },
 ] as const;
 
 // ⚠️ REGLA: cada vez que se agrega un ítem al menú en AppSidebar.tsx,

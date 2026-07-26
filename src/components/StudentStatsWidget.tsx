@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getProfilesWithAssignments } from "@/lib/api";
-import { useCompany } from "@/contexts/CompanyContext";
+import { getProfilesWithAssignments, getCompany } from "@/lib/api";
+import { useCompany, getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,19 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
     const { profile, isAdminOrSecretary, isTeacherOrLeader } = auth;
     const { students, departments, pendingRequests } = data;
     const { companyId } = useCompany();
+
+    // Mismo permiso que gobierna la pantalla de Mantenimiento (queryKey compartida: la
+    // company ya está en cache, no genera un request extra).
+    const { data: company } = useQuery({
+        queryKey: ["company", getPersistentCompanyId()],
+        queryFn: () => getCompany(getPersistentCompanyId()),
+        staleTime: 5 * 60 * 1000,
+    });
+    const canManageMaintenance = hasPermission(
+        profile,
+        "puede_gestionar_mantenimiento",
+        (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions,
+    );
 
     // Usuarios de la empresa con assignments reales (user_metadata, vía API back)
     // para sumar al conteo de obreros (unión con miembros-staff)
@@ -232,7 +246,7 @@ export function StudentStatsWidget({ auth, data, actions }: StudentStatsWidgetPr
                     </Button>
                 )}
 
-                {(profile?.role === 'conserje' || profile?.role === 'admin' || profile?.role === 'director_general' || (profile?.roles && profile.roles.includes('conserje'))) && data.maintenanceRequests && data.maintenanceRequests.length > 0 && (
+                {canManageMaintenance && data.maintenanceRequests && data.maintenanceRequests.length > 0 && (
                     <Button
                         onClick={actions.onMaintenanceClick}
                         className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6 py-5 shadow-lg shadow-orange-500/20 transition-all font-semibold"

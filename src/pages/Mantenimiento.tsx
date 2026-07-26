@@ -11,7 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     notifyMaintenanceRequest,
+    getCompany,
 } from "@/lib/api";
+import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { hasPermission, rolesOf, type SavedPermissions } from "@/lib/rolePermissions";
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -82,9 +85,21 @@ export default function Mantenimiento() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
-    const isConserje = profile?.role === "conserje" || (profile?.roles && Array.isArray(profile.roles) && profile.roles.includes("conserje"));
-    const isAdmin = profile?.role === "admin" || profile?.role === "director_general";
-    const canSeeAll = isConserje || isAdmin;
+    const { data: company } = useQuery({
+        queryKey: ["company", getPersistentCompanyId()],
+        queryFn: () => getCompany(getPersistentCompanyId()),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    // Quién gestiona mantenimiento sale de Configuración > Permisos por rol.
+    const savedPerms = (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions;
+    const canManage = hasPermission(profile, "puede_gestionar_mantenimiento", savedPerms);
+
+    // Borrar es destructivo e irreversible: queda solo para admin, no se delega por permiso.
+    const myRoles = rolesOf(profile);
+    const isConserje = myRoles.includes("conserje");
+    const isAdmin = myRoles.includes("admin");
+    const canSeeAll = canManage;
 
     const [filterStatus, setFilterStatus] = useState<"all" | Status>("all");
     const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
@@ -283,9 +298,9 @@ export default function Mantenimiento() {
                                         <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{req.description}</p>
                                     )}
                                 </div>
-                                {(isConserje || isAdmin) && (
+                                {(canManage || isAdmin) && (
                                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                        {isConserje && req.status !== "anulado" && req.status !== "terminado" && (
+                                        {canManage && req.status !== "anulado" && req.status !== "terminado" && (
                                             <Button
                                                 variant="ghost" size="icon"
                                                 className="h-7 w-7 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -311,7 +326,7 @@ export default function Mantenimiento() {
                                     {req.priority === "alta" && <AlertCircle className="h-3 w-3 mr-1" />}
                                     {PRIORITY_LABELS[req.priority]}
                                 </Badge>
-                                {req.status === "anulado" || !(isConserje || isAdmin) ? (
+                                {req.status === "anulado" || !(canManage || isAdmin) ? (
                                     <Badge variant="outline" className={`${STATUS_COLORS[req.status]} text-[10px] font-semibold flex items-center gap-1`}>
                                         <StatusIcon status={req.status} />
                                         {STATUS_LABELS[req.status]}
@@ -355,7 +370,7 @@ export default function Mantenimiento() {
                             <TableHead className="text-xs font-semibold text-slate-500">Estado</TableHead>
                             <TableHead className="text-xs font-semibold text-slate-500">Solicitado por</TableHead>
                             <TableHead className="hidden lg:table-cell text-xs font-semibold text-slate-500">Fecha</TableHead>
-                            {(isConserje || isAdmin) && (
+                            {(canManage || isAdmin) && (
                                 <TableHead className="text-xs font-semibold text-slate-500 text-right">Acciones</TableHead>
                             )}
                         </TableRow>
@@ -403,7 +418,7 @@ export default function Mantenimiento() {
                                                 <StatusIcon status={req.status} />
                                                 {STATUS_LABELS[req.status]}
                                             </Badge>
-                                        ) : (isConserje || isAdmin) ? (
+                                        ) : (canManage || isAdmin) ? (
                                             <Select
                                                 value={req.status}
                                                 onValueChange={(val) => updateStatusMutation.mutate({ id: req.id, status: val as Status })}
@@ -433,10 +448,10 @@ export default function Mantenimiento() {
                                     <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
                                         {formatDate(req.created_at)}
                                     </TableCell>
-                                    {(isConserje || isAdmin) && (
+                                    {(canManage || isAdmin) && (
                                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center justify-end gap-1">
-                                                {isConserje && req.status !== "anulado" && req.status !== "terminado" && (
+                                                {canManage && req.status !== "anulado" && req.status !== "terminado" && (
                                                     <Button
                                                         variant="ghost" size="icon"
                                                         className="h-7 w-7 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"

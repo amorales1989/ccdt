@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments } from "@/lib/api";
+import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments, getCompany } from "@/lib/api";
+import { hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { addYears, differenceInDays, format, isBefore, startOfToday } from "date-fns";
@@ -50,6 +51,15 @@ const Home = () => {
   const queryClient = useQueryClient();
   const { profile, user, loading } = useAuth();
 
+  // Permiso de mantenimiento (Configuración > Permisos por rol): decide si se traen
+  // las solicitudes para el badge del encabezado. Va antes del early return de abajo
+  // para no sumar otro hook condicional.
+  const { data: companyForPerms } = useQuery({
+    queryKey: ["company", getPersistentCompanyId()],
+    queryFn: () => getCompany(getPersistentCompanyId()),
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Redirigir si no hay sesión activa y terminó de cargar
   if (!loading && !user) {
     return <Navigate to="/" replace />;
@@ -58,6 +68,12 @@ const Home = () => {
   const navigate = useNavigate();
   const isConserje = profile?.role === 'conserje';
   const isDirectorRole = profile?.role === 'director' || profile?.role === 'vicedirector' || profile?.role === 'director_general';
+
+  const canManageMaintenance = hasPermission(
+    profile,
+    "puede_gestionar_mantenimiento",
+    (companyForPerms as { role_permissions?: SavedPermissions } | undefined)?.role_permissions,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -142,7 +158,7 @@ const Home = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId && (profile?.role === 'admin' || profile?.role === 'conserje' || profile?.role === 'director_general' || (profile?.roles && profile.roles.includes('conserje'))),
+    enabled: !!companyId && canManageMaintenance,
   });
 
   const studentsBasicInfo = useMemo(() => {
