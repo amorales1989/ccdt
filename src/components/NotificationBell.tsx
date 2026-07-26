@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 // @ts-expect-error — hook JS sin tipos
 import { useFcm } from "@/hooks/useFcm";
 
+type Inbox = { data: UserNotification[]; unread: number };
+
 export function NotificationBell() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -45,22 +47,34 @@ export function NotificationBell() {
   const notifications = data?.data || [];
   const unread = data?.unread || 0;
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['my-notifications'] });
+  // Marca leídas pintando el cache primero: la campana y el punto se apagan en el acto,
+  // sin esperar el POST ni el refetch. Si el POST falla, se revierte.
+  const markRead = async (ids?: string[]) => {
+    const key = ['my-notifications'];
+    const previous = queryClient.getQueryData<Inbox>(key);
+    const now = new Date().toISOString();
 
-  const handleMarkAllRead = async () => {
+    queryClient.setQueryData<Inbox>(key, (old) => {
+      if (!old) return old;
+      const data = old.data.map(n =>
+        !n.read_at && (!ids || ids.includes(n.id)) ? { ...n, read_at: now } : n
+      );
+      return { data, unread: data.filter(n => !n.read_at).length };
+    });
+
     try {
-      await markNotificationsRead();
-      refresh();
-    } catch { /* silencioso: se reintenta en el próximo refetch */ }
+      await markNotificationsRead(ids);
+    } catch {
+      queryClient.setQueryData<Inbox>(key, previous); // rollback
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: key });
   };
 
-  const handleClickItem = async (n: UserNotification) => {
-    if (!n.read_at) {
-      try {
-        await markNotificationsRead([n.id]);
-        refresh();
-      } catch { /* noop */ }
-    }
+  const handleMarkAllRead = () => { void markRead(); };
+
+  const handleClickItem = (n: UserNotification) => {
+    if (!n.read_at) void markRead([n.id]);
     if (n.link) {
       if (n.link.startsWith('http')) {
         window.open(n.link, '_blank');
