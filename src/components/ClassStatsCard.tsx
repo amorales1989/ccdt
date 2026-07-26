@@ -28,8 +28,8 @@ export function ClassStatsCard({ className, stats, onClick, isSingleCard }: Clas
         >
             <div className="mb-4 sm:mb-8 text-center text-slate-800 dark:text-slate-100">
                 <h3 className="text-base sm:text-xl font-bold mb-1 truncate">{className}</h3>
-                <div className="flex items-center justify-center sm:px-2">
-                    <div className="flex items-end justify-center gap-3 sm:gap-4">
+                <div className="flex items-center justify-center min-w-0 sm:px-2">
+                    <div className="flex flex-wrap items-end justify-center gap-x-3 gap-y-1 sm:gap-x-4">
                         <div className="flex items-baseline gap-1.5 sm:gap-2">
                             <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white leading-none">
                                 {stats.total}
