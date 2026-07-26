@@ -26,7 +26,7 @@ import { StudentDetails } from "@/components/StudentDetails";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, addStudentDepartment, removeStudentDepartment, getCompany } from "@/lib/api";
+import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, getAttendanceMatrix, addStudentDepartment, removeStudentDepartment, getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
@@ -438,16 +438,25 @@ const ListarAlumnos = () => {
       const attendanceClassFilter = (profile?.role === 'admin' || profile?.role === 'secretaria' || profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector')
         ? (filters.class || undefined)
         : (profile?.assigned_class || undefined);
-      const allYearAttendance = await getAttendance(
-        startDate, endDate, undefined,
-        profile?.role !== 'admin' && profile?.role !== 'secretaria' ? profile?.department_id : (filters.department ? null : undefined),
-        attendanceClassFilter,
-      );
-      let filtered = allYearAttendance;
-      if (filters.department) filtered = filtered.filter((a: any) => a.department === filters.department);
-      if (filters.class) filtered = filtered.filter((a: any) => a.assigned_class === filters.class);
+      // La agregación la hace el SP: llega una fila por alumno con un caracter por fecha.
+      const matrix = await getAttendanceMatrix({
+        start: startDate,
+        end: endDate,
+        departmentId: (profile?.role !== 'admin' && profile?.role !== 'secretaria' && !filters.department)
+          ? profile?.department_id
+          : undefined,
+        department: filters.department || undefined,
+        assignedClass: attendanceClassFilter,
+      });
       const ids = new Set(reportStudents.map(s => s.id));
-      const relevant = filtered.filter((a: any) => ids.has(a.student_id));
+      const relevantRows = matrix.rows.filter(r => ids.has(r.student_id));
+      // Descartar fechas donde ningún miembro visible tiene registro (columnas vacías)
+      const keep = matrix.dates.map((_, i) => relevantRows.some(r => r.marks[i] && r.marks[i] !== '-'));
+      const dates = matrix.dates.filter((_, i) => keep[i]);
+      const rows = relevantRows.map(r => ({
+        student_id: r.student_id,
+        marks: r.marks.split('').filter((_, i) => keep[i]).join(''),
+      }));
       const titleDept = filters.department || profile?.departments?.[0];
       const titleClass = attendanceClassFilter; // clase efectiva: filtro o la del perfil (maestro/líder)
       const titleParts = ['Asistencia'];
@@ -490,7 +499,7 @@ const ListarAlumnos = () => {
           profile_assigned_class: (s as any).profile_id ? profileClassMap.get((s as any).profile_id) || null : null,
           teacher_assignments: (s as any).profile_id ? teacherAssignmentsMap.get((s as any).profile_id) || null : null,
         })),
-        relevant.map((a: any) => ({ student_id: a.student_id, date: a.date, status: a.status })),
+        { dates, rows },
         titleParts.join(' - '),
         'CCDT',
         contextDept,

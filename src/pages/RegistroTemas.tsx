@@ -108,7 +108,7 @@ export default function RegistroTemas() {
 
   // Para directors: pasan su dept_id sin filtrar por clase (ven todas las clases del dept)
   // Para admin/secretaria: filtros opcionales desde la UI
-  // Para maestros: el backend filtra por created_by
+  // Para maestros: el backend filtra por su department_id + assigned_class (ven todos los de su clase)
   const queryDeptId = isAdminOrSecretary ? (filterDeptId || undefined)
     : isDirectorLevel ? (departmentId || undefined)
     : (departmentId || undefined);

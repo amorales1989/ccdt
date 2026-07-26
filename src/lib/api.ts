@@ -156,9 +156,19 @@ export const getAttendance = async (
       query = query.ilike('assigned_class', assignedClass);
     }
 
-    const { data: attendances, error } = await query;
-
-    if (error) throw error;
+    // Paginar: PostgREST corta en 1000 filas por defecto y se perdían las últimas fechas
+    const PAGE_SIZE = 1000;
+    const attendances: any[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await query
+        .order('date', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      if (!data?.length) break;
+      attendances.push(...data);
+      if (data.length < PAGE_SIZE) break;
+    }
 
     const formattedAttendances = attendances?.map((attendance: any) => {
       const student = attendance.students;
@@ -821,6 +831,24 @@ export const getAttendanceCoverage = async (
   const q = qs.toString();
   const response = await apiCall(`/attendance/coverage${q ? `?${q}` : ''}`);
   return { date: response?.date || date || '', departments: response?.departments || [] };
+};
+
+// Matriz de asistencia para el reporte en grilla. La agregación la hace el SP
+// api.asistencia_matriz en la DB: devuelve las fechas y, por alumno, un caracter
+// por fecha (P=presente, A=ausente, -=sin registro).
+export const getAttendanceMatrix = async (params: {
+  start: string;
+  end: string;
+  departmentId?: string | null;
+  department?: string | null;
+  assignedClass?: string | null;
+}): Promise<{ dates: string[]; rows: Array<{ student_id: string; marks: string; total: number }> }> => {
+  const qs = new URLSearchParams({ start: params.start, end: params.end });
+  if (params.departmentId) qs.set('department_id', params.departmentId);
+  if (params.department) qs.set('department', params.department);
+  if (params.assignedClass && params.assignedClass !== 'all') qs.set('assigned_class', params.assignedClass);
+  const response = await apiCall(`/attendance/matrix?${qs.toString()}`);
+  return { dates: response?.dates || [], rows: response?.rows || [] };
 };
 
 export const getEvents = async (): Promise<Event[]> => {

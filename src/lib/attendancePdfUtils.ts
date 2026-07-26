@@ -111,15 +111,15 @@ interface MatrixStudent {
     teacher_assignments?: Array<{ department?: string | null; assigned_class?: string | null; role?: string | null }> | null;
 }
 
-interface MatrixAttendance {
-    student_id: string;
-    date: string; // YYYY-MM-DD
-    status: boolean;
+// Matriz ya agregada por el SP api.asistencia_matriz: un caracter por fecha (P/A/-)
+interface MatrixData {
+    dates: string[]; // YYYY-MM-DD ordenadas ASC
+    rows: Array<{ student_id: string; marks: string }>;
 }
 
 export const exportAttendanceMatrix = async (
     students: MatrixStudent[],
-    attendance: MatrixAttendance[],
+    matrix: MatrixData,
     title: string = "Asistencia Anual",
     companyName: string = "CCDT",
     contextDepartment?: string | null,
@@ -158,19 +158,16 @@ export const exportAttendanceMatrix = async (
         // 5. Fallback
         return s.profile_assigned_class || s.assigned_class || '-';
     };
-    // 1. Unique dates with activity, ordered ASC
-    const uniqueDates = Array.from(new Set(attendance.map(a => a.date))).sort();
+    // 1. Fechas con actividad (ya vienen ordenadas ASC desde el SP)
+    const uniqueDates = matrix.dates;
 
     if (uniqueDates.length === 0) {
         throw new Error("No hay fechas con asistencia registrada.");
     }
 
-    // 2. Build attendance map: { student_id -> { date -> 'P'|'A' } }
-    const attMap = new Map<string, Map<string, 'P' | 'A'>>();
-    for (const a of attendance) {
-        if (!attMap.has(a.student_id)) attMap.set(a.student_id, new Map());
-        attMap.get(a.student_id)!.set(a.date, a.status ? 'P' : 'A');
-    }
+    // 2. Map student_id -> string de marcas alineada a uniqueDates
+    const marksMap = new Map<string, string>();
+    for (const r of matrix.rows) marksMap.set(r.student_id, r.marks);
 
     // 3. Sort students by class then name
     const sortedStudents = [...students].sort((a, b) => {
@@ -214,7 +211,8 @@ export const exportAttendanceMatrix = async (
             startY = margin + 4;
         }
 
-        const chunkDates = uniqueDates.slice(pageIdx * datesPerPage, (pageIdx + 1) * datesPerPage);
+        const chunkStart = pageIdx * datesPerPage;
+        const chunkDates = uniqueDates.slice(chunkStart, chunkStart + datesPerPage);
 
         // Build grouped header: month row + day row
         const monthRow: any[] = [
@@ -240,15 +238,15 @@ export const exportAttendanceMatrix = async (
         }));
 
         const body = sortedStudents.map(s => {
-            const studentAtt = attMap.get(s.id);
-            const totalP = chunkDates.filter(d => studentAtt?.get(d) === 'P').length;
+            const chunkMarks = (marksMap.get(s.id) || '').slice(chunkStart, chunkStart + chunkDates.length);
+            const totalP = chunkMarks.split('').filter(c => c === 'P').length;
             const row: any[] = [
                 ...(showClassColumn ? [{ content: classForStudent(s), styles: { halign: 'center', fontStyle: 'bold' } }] : []),
                 { content: `${s.first_name} ${s.last_name}`, styles: { fontStyle: 'bold' } },
                 { content: totalP.toString(), styles: { halign: 'center', fontSize: 7 } },
             ];
-            for (const d of chunkDates) {
-                const v = studentAtt?.get(d);
+            for (let i = 0; i < chunkDates.length; i++) {
+                const v = chunkMarks[i];
                 if (v === 'P') row.push({ content: 'P', styles: { halign: 'center', fontSize: 7, fillColor: [220, 240, 220] } });
                 else if (v === 'A') row.push({ content: 'A', styles: { halign: 'center', fontSize: 7, textColor: [200, 0, 0], fillColor: [255, 235, 235] } });
                 else row.push({ content: '', styles: { fillColor: [248, 248, 248] } });

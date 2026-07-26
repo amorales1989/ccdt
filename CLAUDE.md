@@ -64,6 +64,13 @@
 - `supabase.from()` directo desde el browser SOLO se permite para lecturas no sensibles ya existentes que dependen 100% de RLS. Toda escritura nueva = endpoint en el back.
 - Al tocar codigo que hace `supabase.from()` directo para mutaciones, migrarlo al API si es de bajo riesgo; si no, dejar comentario `// TODO: mover a API back`.
 
+## 14 bis. Reportes y listados pesados: agregar en la DB, no en el browser
+- Nada de traer miles de filas para filtrar/agrupar en JS. El endpoint del back resuelve la consulta
+  con un SP y devuelve el resultado ya agregado (ver `api.asistencia_matriz` para la grilla de asistencia).
+- Ademas de lento, PostgREST corta en 1000 filas por defecto: los reportes salian incompletos en silencio.
+- Si tocas una pantalla que hace `supabase.from()` con joins anidados para armar un reporte, migrala
+  al endpoint + SP correspondiente.
+
 ## 15. Auth y multi-tenant
 - Nunca confiar en `company_id` del cliente como fuente de verdad: el back lo deriva del perfil. El front solo lo manda como header `x-company-id` por conveniencia.
 - No exponer la `service_key` de Supabase en el front jamas. El front solo usa `VITE_SUPABASE_ANON_KEY`.
