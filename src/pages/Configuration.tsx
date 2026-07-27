@@ -787,7 +787,7 @@ export default function Configuration() {
           const plansList = subscription?.plans || [];
           const curPlanRow = plansList.find((p) => p.value === plan);
           const planPrice = curPlanRow?.price_monthly ?? 0;
-          const packPrice = curPlanRow?.pack_price_monthly ?? 3000;
+          const packPrice = curPlanRow?.pack_price_monthly ?? 4000;
           const currentMonthly = planPrice + packs * packPrice;
           const selPlanRow = plansList.find((p) => p.value === (selectedPlan || plan));
           const projectedPlanPrice = selPlanRow?.price_monthly ?? planPrice;
