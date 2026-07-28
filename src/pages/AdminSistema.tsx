@@ -829,7 +829,7 @@ function PayDialog({
   onGrantFree: (months: number) => void;
   freePending: boolean;
 }) {
-  const [freeMonths, setFreeMonths] = useState("6");
+  const [freeMonths, setFreeMonths] = useState("3");
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["company-payments", company?.id],
     queryFn: () => getCompanyPayments(company!.id),
