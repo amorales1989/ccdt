@@ -20,7 +20,7 @@ export const exportAccountingReport = (
   balance: AccountingBalance,
   departmentName: string,
   range: { from?: string; to?: string },
-  companyName: string = 'CCDT'
+  companyName: string = 'Nexus'
 ) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();

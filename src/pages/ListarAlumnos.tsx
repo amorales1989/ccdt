@@ -501,7 +501,7 @@ const ListarAlumnos = () => {
         })),
         { dates, rows },
         titleParts.join(' - '),
-        'CCDT',
+        company?.congregation_name || company?.name || 'Nexus',
         contextDept,
         showClassColumn,
       );
@@ -596,7 +596,7 @@ const ListarAlumnos = () => {
       await exportAttendanceReport(
         reportData,
         totalActivityDays,
-        "CCDT"
+        company?.congregation_name || company?.name || "Nexus"
       );
 
       toast({

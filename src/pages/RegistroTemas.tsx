@@ -262,7 +262,7 @@ export default function RegistroTemas() {
               className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
               onClick={() => exportTopicRecordsPdf(
                 displayed,
-                company?.congregation_name || company?.name || 'CCDT',
+                company?.congregation_name || company?.name || 'Nexus',
                 profile?.departments?.[0],
                 assignedClass || undefined,
                 showClassCol,

@@ -15,7 +15,7 @@ const fmtDate = (d: string) => {
 
 export const exportTopicRecordsPdf = (
   records: TopicRecord[],
-  companyName = 'CCDT',
+  companyName = 'Nexus',
   departmentName?: string,
   assignedClass?: string,
   showClassCol = false,

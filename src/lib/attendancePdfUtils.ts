@@ -16,7 +16,7 @@ interface AttendanceReportData {
 export const exportAttendanceReport = async (
     data: AttendanceReportData[],
     totalActivityDays: number,
-    companyName: string = "CCDT"
+    companyName: string = "Nexus"
 ) => {
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -121,7 +121,7 @@ export const exportAttendanceMatrix = async (
     students: MatrixStudent[],
     matrix: MatrixData,
     title: string = "Asistencia Anual",
-    companyName: string = "CCDT",
+    companyName: string = "Nexus",
     contextDepartment?: string | null,
     showClassColumn: boolean = true,
 ) => {

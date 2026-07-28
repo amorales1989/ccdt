@@ -217,7 +217,7 @@ export default function Contabilidad() {
 
   const handleExport = () => {
     if (!balance) return;
-    exportAccountingReport(ledger, balance, String(deptName), { from, to }, company?.name || "CCDT");
+    exportAccountingReport(ledger, balance, String(deptName), { from, to }, company?.name || "Nexus");
   };
 
   // Acceso configurable por rol desde Configuración (respeta company.role_permissions
