@@ -19,13 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, subMonths, differenceInYears } from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { exportStatsReport } from "@/lib/statsPdfUtils";
-import { getStudents } from "@/lib/api";
+import { getStatsResumen } from "@/lib/api";
 import { toast } from "sonner";
 import { useCompany } from "@/contexts/CompanyContext";
-import type { Student, Profile } from "@/types/database";
 
 const CHART_COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
 const GENDER_COLORS: Record<string, string> = {
@@ -36,20 +35,6 @@ const GENDER_COLORS: Record<string, string> = {
 
 const GLOBAL_ROLES = ["admin", "secretaria"];
 
-// Trae todas las filas paginando para evitar el límite default de 1000 de Supabase
-const fetchAllPaginated = async <T,>(buildQuery: () => any, pageSize = 1000): Promise<T[]> => {
-  const all: T[] = [];
-  let from = 0;
-  while (true) {
-    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...(data as T[]));
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
-};
 const LIDER_ROLES = ["lider"];
 const VICEDIR_ROLES = ["vicedirector"];
 const DIRECTOR_GENERAL_ROLES = ["director_general"];
@@ -186,54 +171,16 @@ export default function Estadisticas() {
 
   const effectiveDeptId = selectedDeptId === "all" ? null : selectedDeptId;
 
-  const { data: students = [], isLoading: loadingStudents } = useQuery({
-    queryKey: ['stats-students', selectedDeptId, companyId, currentProfile?.id],
+  // Todo el resumen lo agrega el SP api.estadisticas_resumen. El scope por rol lo
+  // reaplica el back a partir del perfil: si el depto es "all" y el usuario no es
+  // global, el endpoint limita a sus departamentos.
+  const { data: resumen, isLoading: loadingResumen } = useQuery({
+    queryKey: ['stats-resumen', selectedDeptId, selectedClass, companyId, currentProfile?.id],
     enabled: !loadingProfile,
-    queryFn: async () => {
-      // Usar getStudents (SP get_students, junction-aware) para contemplar multi-inscripción
-      // via student_departments. La query directa por columnas legacy omitia alumnos inscriptos.
-      if (selectedDeptId !== "all") {
-        return await getStudents({ department_id: selectedDeptId }) || [];
-      }
-      if (isGlobalView) {
-        return await getStudents({}) || [];
-      }
-      const deptIds = allowedDepts.map(d => d.id);
-      if (deptIds.length === 0) return [];
-      const results = await Promise.all(deptIds.map(id => getStudents({ department_id: id })));
-      const seen = new Set<string>();
-      return results.flat().filter((s: any) => {
-        if (!s || seen.has(s.id)) return false;
-        seen.add(s.id);
-        return true;
-      });
-    }
-  });
-
-  const { data: attendance = [], isLoading: loadingAttendance } = useQuery({
-    queryKey: ['stats-attendance', selectedDeptId, companyId, currentProfile?.id],
-    enabled: !loadingProfile,
-    queryFn: async () => fetchAllPaginated<any>(() => {
-      let q = (supabase.from('attendance') as any).select('*').eq('company_id', companyId);
-      if (selectedDeptId !== "all") {
-        q = q.eq('department_id', selectedDeptId);
-      } else if (!isGlobalView) {
-        const deptIds = allowedDepts.map(d => d.id);
-        if (deptIds.length > 0) q = q.in('department_id', deptIds);
-      }
-      return q;
-    })
-  });
-
-  const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
-    queryKey: ['stats-profiles', selectedDeptId, companyId, currentProfile?.id],
-    enabled: !loadingProfile,
-    queryFn: async () => fetchAllPaginated<Profile>(() => {
-      // Traemos todos los profiles de la empresa; el filtrado por depto/clase se hace
-      // en el useMemo considerando assignments[] (multi-rol/multi-depto), no solo las
-      // columnas legacy department_id/role.
-      return (supabase.from('profiles') as any).select('*').eq('company_id', companyId);
-    })
+    queryFn: async () => getStatsResumen({
+      departmentId: selectedDeptId !== "all" ? selectedDeptId : null,
+      assignedClass: selectedClass,
+    }),
   });
 
   const { data: deptInfo } = useQuery({
@@ -248,182 +195,30 @@ export default function Estadisticas() {
   });
 
   // ─── Data Processing ───────────────────────────────────────────────────────
+  // El SP ya devuelve todo agregado; acá solo se le pone el nombre corto del mes
+  // en español a las series (el back manda monthKey 'YYYY-MM' para no depender
+  // del locale del servidor).
   const data = useMemo(() => {
-    const STAFF_ROLES = ['lider', 'maestro', 'auxiliar_maestro', 'colaborador', 'director', 'vicedirector'];
-
-    // ¿El alumno pertenece a la clase indicada? (usa dept_assignments, no el assigned_class resuelto)
-    const studentInClass = (s: any, cls: string) => {
-      const assigns = Array.isArray(s.dept_assignments) ? s.dept_assignments : [];
-      if (assigns.length === 0) return s.assigned_class === cls;
-      return assigns.some((d: any) => d.assigned_class === cls && (!effectiveDeptId || d.department_id === effectiveDeptId));
-    };
-
-    // ¿El profile tiene presencia en el depto (y clase si está seleccionada)? (usa assignments[])
-    const profileInScope = (p: any) => {
-      const assigns = Array.isArray(p.assignments) ? p.assignments : [];
-      if (!effectiveDeptId) return true; // vista global / mis deptos (ya filtrados aguas arriba)
-      if (assigns.length === 0) {
-        const deptOk = p.department_id === effectiveDeptId;
-        const classOk = selectedClass === "all" || p.assigned_class === selectedClass;
-        return deptOk && classOk;
-      }
-      return assigns.some((a: any) =>
-        a.department_id === effectiveDeptId &&
-        (selectedClass === "all" || a.assigned_class === selectedClass)
-      );
-    };
-
-    const filteredStudents = selectedClass === "all"
-      ? students
-      : students.filter(s => studentInClass(s, selectedClass));
-
-    const filteredAttendance = selectedClass === "all"
-      ? attendance
-      : attendance.filter(a => a.assigned_class === selectedClass);
-
-    // Profiles del depto/clase en foco (solo aplica cuando hay depto; en global se toman todos)
-    const filteredProfiles = (!effectiveDeptId && isGlobalView)
-      ? profiles
-      : profiles.filter(profileInScope);
-
-    const totalStudents = filteredStudents.length;
-
-    // Attendance rate
-    const presentRecords = filteredAttendance.filter(a => a.status === true).length;
-    const attendanceRate = filteredAttendance.length > 0
-      ? parseFloat(((presentRecords / filteredAttendance.length) * 100).toFixed(1))
-      : 0;
-
-    // Gender
-    const genderCount = filteredStudents.reduce((acc: Record<string, number>, s) => {
-      const g = s.gender?.toLowerCase() || 'desconocido';
-      acc[g] = (acc[g] || 0) + 1;
-      return acc;
-    }, {});
-    const genderData = Object.entries(genderCount).map(([name, value]) => ({
-      name: name === 'masculino' ? 'Masculino' : name === 'femenino' ? 'Femenino' : 'Sin dato',
-      key: name,
-      value: value as number,
-    }));
-
-    // Age groups (bucket bars)
-    const ageBuckets: { name: string; value: number }[] = [
-      { name: "0–11", value: 0 }, { name: "12–17", value: 0 },
-      { name: "18–29", value: 0 }, { name: "30–44", value: 0 },
-      { name: "45–59", value: 0 }, { name: "60–79", value: 0 },
-      { name: "80+", value: 0 },
-    ];
-    let totalWithAge = 0;
-    let ageSum = 0;
-    filteredStudents.forEach(s => {
-      if (!s.birthdate) return;
-      try {
-        const age = differenceInYears(new Date(), new Date(s.birthdate));
-        if (age <= 0) return;
-        ageSum += age;
-        totalWithAge++;
-        if (age <= 11) ageBuckets[0].value++;
-        else if (age <= 17) ageBuckets[1].value++;
-        else if (age <= 29) ageBuckets[2].value++;
-        else if (age <= 44) ageBuckets[3].value++;
-        else if (age <= 59) ageBuckets[4].value++;
-        else if (age <= 79) ageBuckets[5].value++;
-        else ageBuckets[6].value++;
-      } catch { /* skip */ }
-    });
-    const avgAge = totalWithAge > 0 ? Math.round(ageSum / totalWithAge) : 0;
-
-    // Exact age for detailed view
-    const ages = filteredStudents.filter(s => s.birthdate)
-      .map(s => differenceInYears(new Date(), new Date(s.birthdate)))
-      .filter(a => a > 0);
-    const maxAge = ages.length > 0 ? Math.max(...ages) : 0;
-    const exactAgeData = Array.from({ length: maxAge + 1 }, (_, i) => ({
-      name: `${i}`, value: ages.filter(a => a === i).length
-    }));
-
-    // Growth — last 12 months
-    const last12Months = Array.from({ length: 12 }, (_, i) => {
-      const d = subMonths(new Date(), 11 - i);
-      return { monthKey: format(d, 'yyyy-MM'), name: format(d, 'MMM', { locale: es }), count: 0, total: 0 };
-    });
-    filteredStudents.forEach(s => {
-      if (!s.created_at) return;
-      const m = format(new Date(s.created_at), 'yyyy-MM');
-      const idx = last12Months.findIndex(lm => lm.monthKey === m);
-      if (idx !== -1) last12Months[idx].count++;
-    });
-    const firstKey = last12Months[0].monthKey;
-    let running = filteredStudents.filter(s => s.created_at && format(new Date(s.created_at), 'yyyy-MM') < firstKey).length;
-    last12Months.forEach(m => { running += m.count; m.total = running; });
-
-    // Monthly attendance rate — last 6 months
-    const last6Months = Array.from({ length: 6 }, (_, i) => {
-      const d = subMonths(new Date(), 5 - i);
-      return { monthKey: format(d, 'yyyy-MM'), name: format(d, 'MMM', { locale: es }), present: 0, absent: 0, rate: 0 };
-    });
-    filteredAttendance.forEach((a: any) => {
-      const dateStr = a.date || a.created_at;
-      if (!dateStr) return;
-      try {
-        const m = /^\d{4}-\d{2}/.test(dateStr) ? dateStr.slice(0, 7) : format(new Date(dateStr), 'yyyy-MM');
-        const idx = last6Months.findIndex(lm => lm.monthKey === m);
-        if (idx === -1) return;
-        if (a.status === true) last6Months[idx].present++;
-        else last6Months[idx].absent++;
-      } catch { /* skip */ }
-    });
-    last6Months.forEach(m => {
-      const total = m.present + m.absent;
-      m.rate = total > 0 ? Math.round((m.present / total) * 100) : 0;
-    });
-
-    // Rol efectivo de un profile dentro del depto (y clase si está seleccionada)
-    const rolesOfProfileInScope = (p: any): string[] => {
-      const assigns = Array.isArray(p.assignments) ? p.assignments : [];
-      if (effectiveDeptId && assigns.length > 0) {
-        return assigns
-          .filter((a: any) => a.department_id === effectiveDeptId && (selectedClass === "all" || a.assigned_class === selectedClass))
-          .map((a: any) => a.role)
-          .filter(Boolean);
-      }
-      const set = new Set<string>();
-      if (p.role) set.add(p.role);
-      if (Array.isArray(p.roles)) p.roles.forEach((r: string) => r && set.add(r));
-      return Array.from(set);
-    };
-
-    // Roles (distribución) — contamos por rol efectivo en el depto
-    const rolesCount = filteredProfiles.reduce((acc: Record<string, number>, p) => {
-      const roles = rolesOfProfileInScope(p);
-      const primary = roles[0] || p.role || 'otro';
-      acc[primary] = (acc[primary] || 0) + 1;
-      return acc;
-    }, {});
-    const roleData = Object.entries(rolesCount)
-      .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value: value as number }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 7);
-
-    // Class distribution (junction-aware)
-    const classDistributionData = (deptInfo?.classes || []).map((c: string) => ({
-      name: c,
-      value: students.filter(s => studentInClass(s, c)).length
-    }));
-
-    // Equipo de servicio: profiles con algún rol de staff en el depto en foco
-    const totalVolunteers = filteredProfiles.filter(p =>
-      rolesOfProfileInScope(p).some(r => STAFF_ROLES.includes(r))
-    ).length;
-    const newStudents = filteredStudents.filter((s: any) => s.nuevo).length;
+    const nombreMes = (monthKey: string) =>
+      format(new Date(`${monthKey}-01T12:00:00`), 'MMM', { locale: es });
 
     return {
-      totalStudents, attendanceRate, avgAge, totalVolunteers, newStudents,
-      genderData, ageBuckets, exactAgeData, last12Months, last6Months,
-      roleData, classDistributionData, totalAttendanceRecords: filteredAttendance.length,
-      totalProfiles: filteredProfiles.length,
+      totalStudents: resumen?.totalStudents ?? 0,
+      totalProfiles: resumen?.totalProfiles ?? 0,
+      totalAttendanceRecords: resumen?.totalAttendanceRecords ?? 0,
+      attendanceRate: resumen?.attendanceRate ?? 0,
+      avgAge: resumen?.avgAge ?? 0,
+      newStudents: resumen?.newStudents ?? 0,
+      totalVolunteers: resumen?.totalVolunteers ?? 0,
+      genderData: resumen?.genderData ?? [],
+      ageBuckets: resumen?.ageBuckets ?? [],
+      exactAgeData: resumen?.exactAgeData ?? [],
+      roleData: resumen?.roleData ?? [],
+      classDistributionData: resumen?.classDistributionData ?? [],
+      last12Months: (resumen?.last12Months ?? []).map(m => ({ ...m, name: nombreMes(m.monthKey) })),
+      last6Months: (resumen?.last6Months ?? []).map(m => ({ ...m, name: nombreMes(m.monthKey) })),
     };
-  }, [students, attendance, profiles, selectedClass, deptInfo, effectiveDeptId, isGlobalView]);
+  }, [resumen]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -440,7 +235,7 @@ export default function Estadisticas() {
     }
   };
 
-  if (loadingProfile || loadingStudents || loadingAttendance || loadingProfiles) {
+  if (loadingProfile || loadingResumen) {
     return <LoadingOverlay message="Cargando estadísticas..." />;
   }
 

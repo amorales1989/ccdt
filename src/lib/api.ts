@@ -851,6 +851,38 @@ export const getAttendanceMatrix = async (params: {
   return { dates: response?.dates || [], rows: response?.rows || [] };
 };
 
+// Resumen de la pantalla Estadísticas. Todo lo agrega el SP api.estadisticas_resumen:
+// antes el front se traía la tabla `attendance` entera de la empresa, todos los profiles
+// y todos los students para calcular estos mismos números en JS.
+export interface StatsResumen {
+  totalStudents: number;
+  totalProfiles: number;
+  totalAttendanceRecords: number;
+  attendanceRate: number;
+  avgAge: number;
+  newStudents: number;
+  totalVolunteers: number;
+  genderData: Array<{ key: string; name: string; value: number }>;
+  ageBuckets: Array<{ name: string; value: number }>;
+  exactAgeData: Array<{ name: string; value: number }>;
+  last12Months: Array<{ monthKey: string; count: number; total: number }>;
+  last6Months: Array<{ monthKey: string; present: number; absent: number; rate: number }>;
+  roleData: Array<{ name: string; value: number }>;
+  classDistributionData: Array<{ name: string; value: number }>;
+}
+
+export const getStatsResumen = async (params: {
+  departmentId?: string | null;
+  assignedClass?: string | null;
+}): Promise<StatsResumen | null> => {
+  const qs = new URLSearchParams();
+  if (params.departmentId) qs.set('department_id', params.departmentId);
+  if (params.assignedClass && params.assignedClass !== 'all') qs.set('assigned_class', params.assignedClass);
+  const query = qs.toString();
+  const response = await apiCall(`/stats/resumen${query ? `?${query}` : ''}`);
+  return response?.data ?? null;
+};
+
 export const getEvents = async (): Promise<Event[]> => {
   try {
     const { data, error } = await supabase
