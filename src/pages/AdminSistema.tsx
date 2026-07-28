@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Building2, Plus, KeyRound, Loader2, Users, UserRound, CheckCircle2, Eye, EyeOff, Pencil, Trash2, Layers, Wallet, DollarSign, Gift, Award } from "lucide-react";
 import { BadgeChip } from "@/components/CompanyBadges";
+import { CustomTooltip } from "@/components/CustomTooltip";
 import { PLANS, planLabel, effectiveLimit } from "@/lib/plans";
 
 const formatDate = (d?: string | null) => {
@@ -335,60 +336,66 @@ export default function AdminSistema() {
                     </TableCell>
                     <TableCell className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
-                          title="Gestionar admin"
-                          onClick={() => setAdminCompany(c)}
-                        >
-                          <KeyRound className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
-                          title="Cambiar plan"
-                          onClick={() => openPlan(c)}
-                        >
-                          <Layers className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
-                          title="Registrar pago"
-                          onClick={() => openPay(c)}
-                        >
-                          <Wallet className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
-                          title="Insignias"
-                          onClick={() => setBadgesTarget(c)}
-                        >
-                          <Award className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
-                          title="Editar empresa"
-                          onClick={() => openEdit(c)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-xl text-red-500 hover:text-red-600 hover:bg-red-50"
-                          title="Eliminar empresa"
-                          onClick={() => setDeleteTarget(c)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <CustomTooltip title="Gestionar admin">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
+                            onClick={() => setAdminCompany(c)}
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                        </CustomTooltip>
+                        <CustomTooltip title="Cambiar plan">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
+                            onClick={() => openPlan(c)}
+                          >
+                            <Layers className="h-4 w-4" />
+                          </Button>
+                        </CustomTooltip>
+                        <CustomTooltip title="Registrar pago">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
+                            onClick={() => openPay(c)}
+                          >
+                            <Wallet className="h-4 w-4" />
+                          </Button>
+                        </CustomTooltip>
+                        <CustomTooltip title="Insignias">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
+                            onClick={() => setBadgesTarget(c)}
+                          >
+                            <Award className="h-4 w-4" />
+                          </Button>
+                        </CustomTooltip>
+                        <CustomTooltip title="Editar empresa">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
+                            onClick={() => openEdit(c)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </CustomTooltip>
+                        <CustomTooltip title="Eliminar empresa">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => setDeleteTarget(c)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </CustomTooltip>
                       </div>
                     </TableCell>
                   </TableRow>

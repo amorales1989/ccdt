@@ -8,6 +8,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
 import { getStudents } from "@/lib/api";
 import { CompanyBadges } from "./CompanyBadges";
+import { SupportButton } from "./SupportButton";
+import { CustomTooltip } from "@/components/CustomTooltip";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Inicio",
@@ -70,11 +72,14 @@ export function AppNavbar() {
 
       <div className="flex items-center gap-1 shrink-0">
         <NotificationBell />
-        <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-purple-50 dark:hover:bg-purple-900/20">
-          <Link to="/guia" aria-label="Guía de uso">
-            <HelpCircle className="h-5 w-5" />
-          </Link>
-        </Button>
+        <SupportButton />
+        <CustomTooltip title="Guía de uso">
+          <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-purple-50 dark:hover:bg-purple-900/20">
+            <Link to="/guia" aria-label="Guía de uso">
+              <HelpCircle className="h-5 w-5" />
+            </Link>
+          </Button>
+        </CustomTooltip>
         <CompanyBadges size="sm" className="ml-1" />
       </div>
     </header>

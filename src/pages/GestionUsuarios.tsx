@@ -31,6 +31,7 @@ import { RegisterUserModal } from "@/components/RegisterUserModal";
 import { FileUp } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
 import { convertUserToMember } from "@/lib/api";
+import { CustomTooltip } from "@/components/CustomTooltip";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -547,15 +548,20 @@ const GestionUsuarios = () => {
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                 </RegisterUserModal>
-                                <Button variant="ghost" size="icon" title="Convertir en miembro (borra la cuenta, conserva a la persona)"
-                                  className="h-8 w-8 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 rounded-full transition-colors"
-                                  disabled={convertToMemberMutation.isPending}
-                                  onClick={() => {
-                                    setUserToConvert(user.id);
-                                    setIsConvertDialogOpen(true);
-                                  }}>
-                                  <UserMinus className="h-4 w-4" />
-                                </Button>
+                                {/* span intermedio: MUI Tooltip no recibe eventos de un botón deshabilitado */}
+                                <CustomTooltip title="Convertir en miembro (borra la cuenta, conserva a la persona)">
+                                  <span className="inline-flex">
+                                    <Button variant="ghost" size="icon"
+                                      className="h-8 w-8 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 rounded-full transition-colors"
+                                      disabled={convertToMemberMutation.isPending}
+                                      onClick={() => {
+                                        setUserToConvert(user.id);
+                                        setIsConvertDialogOpen(true);
+                                      }}>
+                                      <UserMinus className="h-4 w-4" />
+                                    </Button>
+                                  </span>
+                                </CustomTooltip>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-full transition-colors"
                                   disabled={deleteUserMutation.isPending}
                                   onClick={() => {
@@ -800,7 +806,7 @@ const GestionUsuarios = () => {
                               <TableCell className="py-3"><Badge variant="outline" className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-[9px]">{user.role}</Badge></TableCell>
                               <TableCell className="text-right py-3">
                                 {user.id in pendingAssignments
-                                  ? <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" title="Cambio pendiente" />
+                                  ? <CustomTooltip title="Cambio pendiente"><div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" /></CustomTooltip>
                                   : <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />}
                               </TableCell>
                             </TableRow>

@@ -32,6 +32,7 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { TourGuide } from "@/components/TourGuide";
 import { HelpCircle } from "lucide-react";
 import type { Step } from "react-joyride";
+import { CustomTooltip } from "@/components/CustomTooltip";
 
 const dateRangeOptions = [
   { label: "Hoy", value: "today" },
@@ -588,14 +589,15 @@ const HistorialAsistencia = () => {
                   </Select>
                 </div>
               )}
-              <button
-                onClick={() => setDeleteDialogOpen(true)}
-                className="flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-[11px] font-black uppercase tracking-widest border border-rose-200 transition-all w-full sm:w-auto sm:ml-auto"
-                title="Eliminar toda la asistencia de esta fecha"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Borrar fecha
-              </button>
+              <CustomTooltip title="Eliminar toda la asistencia de esta fecha">
+                <button
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-[11px] font-black uppercase tracking-widest border border-rose-200 transition-all w-full sm:w-auto sm:ml-auto"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Borrar fecha
+                </button>
+              </CustomTooltip>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-3">

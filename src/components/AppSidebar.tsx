@@ -46,6 +46,8 @@ import { ProfileEditor } from "@/components/ProfileEditor";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { NotificationBell } from "./NotificationBell";
 import { CompanyBadges } from "./CompanyBadges";
+import { SupportButton } from "./SupportButton";
+import { CustomTooltip } from "@/components/CustomTooltip";
 import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 
 // Contexto para el modo rail (solo desktop). En mobile/sheet queda con los defaults
@@ -477,13 +479,14 @@ const NavigationContent = ({
             </div>
           )}
           {pinnable && !collapsed && (
-            <button
-              onClick={togglePin}
-              title={pinned ? "Desanclar menú" : "Anclar menú abierto"}
-              className={`ml-auto shrink-0 flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${pinned ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-purple-50 dark:hover:bg-purple-900/20"}`}
-            >
-              <HideSidebarIcon className={`h-4 w-4 transition-transform ${pinned ? "" : "rotate-180"}`} />
-            </button>
+            <CustomTooltip title={pinned ? "Desanclar menú" : "Anclar menú abierto"}>
+              <button
+                onClick={togglePin}
+                className={`ml-auto shrink-0 flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${pinned ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-purple-50 dark:hover:bg-purple-900/20"}`}
+              >
+                <HideSidebarIcon className={`h-4 w-4 transition-transform ${pinned ? "" : "rotate-180"}`} />
+              </button>
+            </CustomTooltip>
           )}
         </div>
       ) : null}
@@ -573,16 +576,17 @@ const NavigationContent = ({
           />
         )}
         <div className="flex items-center gap-1">
-          <button
-            onClick={handleSignOut}
-            title="Cerrar Sesión"
-            className={`flex items-center flex-1 rounded-lg transition-all duration-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 group ${collapsed ? "justify-center h-9" : "gap-2 px-2.5 py-1.5 text-left"}`}
-          >
-            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-100 group-hover:bg-red-200 transition-colors shrink-0">
-              <LogOut className="h-3.5 w-3.5" />
-            </div>
-            {!collapsed && <span className="font-bold text-[13px]">Cerrar Sesión</span>}
-          </button>
+          <CustomTooltip title="Cerrar Sesión">
+            <button
+              onClick={handleSignOut}
+              className={`flex items-center flex-1 rounded-lg transition-all duration-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 group ${collapsed ? "justify-center h-9" : "gap-2 px-2.5 py-1.5 text-left"}`}
+            >
+              <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-100 group-hover:bg-red-200 transition-colors shrink-0">
+                <LogOut className="h-3.5 w-3.5" />
+              </div>
+              {!collapsed && <span className="font-bold text-[13px]">Cerrar Sesión</span>}
+            </button>
+          </CustomTooltip>
         </div>
       </div>
 
@@ -697,6 +701,7 @@ export function AppSidebar() {
             <span className="text-[10px] font-bold text-muted-foreground text-right leading-tight max-w-[110px] mr-1">{congregationName}</span>
           )}
           <NotificationBell />
+          <SupportButton />
           <Button
             asChild
             variant="ghost"

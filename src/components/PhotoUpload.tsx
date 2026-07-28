@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Camera, Loader2, Pencil, RotateCcw, RotateCw, Upload, User, X, ZoomIn } from "lucide-react";
 import { uploadStudentPhoto, deleteStudentPhoto } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import { CustomTooltip } from "@/components/CustomTooltip";
 
 interface PhotoUploadProps {
     studentId: string;
@@ -199,20 +200,22 @@ export const PhotoUpload = ({
 
                 {currentPhotoUrl && !isUploading && (
                     <>
-                        <button
-                            onClick={handleDeletePhoto}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white p-1.5 rounded-full shadow-lg hover:bg-red-600 transition-all scale-100 sm:scale-0 sm:group-hover:scale-100 z-10"
-                            title="Eliminar foto"
-                        >
-                            <X className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                            onClick={handleEditCurrent}
-                            className="absolute -bottom-1 -right-1 bg-indigo-500 text-white p-1.5 rounded-full shadow-lg hover:bg-indigo-600 transition-all scale-100 sm:scale-0 sm:group-hover:scale-100 z-10"
-                            title="Editar foto (recortar / girar)"
-                        >
-                            <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                        <CustomTooltip title="Eliminar foto">
+                            <button
+                                onClick={handleDeletePhoto}
+                                className="absolute -top-1 -right-1 bg-red-500 text-white p-1.5 rounded-full shadow-lg hover:bg-red-600 transition-all scale-100 sm:scale-0 sm:group-hover:scale-100 z-10"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        </CustomTooltip>
+                        <CustomTooltip title="Editar foto (recortar / girar)">
+                            <button
+                                onClick={handleEditCurrent}
+                                className="absolute -bottom-1 -right-1 bg-indigo-500 text-white p-1.5 rounded-full shadow-lg hover:bg-indigo-600 transition-all scale-100 sm:scale-0 sm:group-hover:scale-100 z-10"
+                            >
+                                <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                        </CustomTooltip>
                     </>
                 )}
 

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Copy, RefreshCw, Bell } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { CustomTooltip } from '@/components/CustomTooltip';
 
 export function FcmDebug() {
     const {
@@ -147,12 +148,19 @@ export function FcmDebug() {
                             value={fcmToken || "No generado aún..."}
                             className="font-mono text-xs bg-muted/50"
                         />
-                        <Button size="icon" variant="outline" onClick={handleCopyToken} disabled={!fcmToken} title="Copiar Token">
-                            <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="outline" onClick={handleRefreshToken} title="Refrescar Token">
-                            <RefreshCw className="h-4 w-4" />
-                        </Button>
+                        {/* span intermedio: MUI Tooltip no recibe eventos de un botón deshabilitado */}
+                        <CustomTooltip title="Copiar Token">
+                            <span className="inline-flex">
+                                <Button size="icon" variant="outline" onClick={handleCopyToken} disabled={!fcmToken}>
+                                    <Copy className="h-4 w-4" />
+                                </Button>
+                            </span>
+                        </CustomTooltip>
+                        <CustomTooltip title="Refrescar Token">
+                            <Button size="icon" variant="outline" onClick={handleRefreshToken}>
+                                <RefreshCw className="h-4 w-4" />
+                            </Button>
+                        </CustomTooltip>
                     </div>
                     {!fcmToken && permissionState === 'granted' && (
                         <p className="text-xs text-yellow-600">

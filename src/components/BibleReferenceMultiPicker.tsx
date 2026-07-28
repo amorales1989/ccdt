@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
 import { BibleReferencePicker } from "./BibleReferencePicker";
+import { CustomTooltip } from "@/components/CustomTooltip";
 
 interface BibleReferenceMultiPickerProps {
   value?: string;
@@ -38,17 +39,21 @@ export function BibleReferenceMultiPicker({ value, onChange, onPendingChange }: 
         <div className="flex-1">
           <BibleReferencePicker value={draft} onChange={setDraft} />
         </div>
-        <Button
-          type="button"
-          size="icon"
-          variant={pending ? "default" : "outline"}
-          className={`h-9 w-9 shrink-0 ${pending ? "animate-pulse" : ""}`}
-          onClick={add}
-          disabled={!pending}
-          title="Agregar referencia"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+        {/* span intermedio: MUI Tooltip no recibe eventos de un botón deshabilitado */}
+        <CustomTooltip title="Agregar referencia">
+          <span className="shrink-0 inline-flex">
+          <Button
+            type="button"
+            size="icon"
+            variant={pending ? "default" : "outline"}
+            className={`h-9 w-9 shrink-0 ${pending ? "animate-pulse" : ""}`}
+            onClick={add}
+            disabled={!pending}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          </span>
+        </CustomTooltip>
       </div>
       {pending && (
         <p className="text-xs font-medium text-amber-600">

@@ -459,13 +459,14 @@ export default function RegistroTemas() {
                     </TableCell>
                     <TableCell className="text-center">
                       {record.firma ? (
-                        <button
-                          onClick={() => setPreviewFirma(record.firma!)}
-                          className="text-green-600 hover:opacity-70 transition-opacity"
-                          title="Ver firma"
-                        >
-                          <PenLine className="h-4 w-4 mx-auto" />
-                        </button>
+                        <CustomTooltip title="Ver firma">
+                          <button
+                            onClick={() => setPreviewFirma(record.firma!)}
+                            className="text-green-600 hover:opacity-70 transition-opacity"
+                          >
+                            <PenLine className="h-4 w-4 mx-auto" />
+                          </button>
+                        </CustomTooltip>
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}

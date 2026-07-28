@@ -27,6 +27,7 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { PersonSearchInput } from "@/components/PersonSearchInput";
 import { DatePickerField } from "@/components/DatePickerField";
 import { format } from "date-fns";
+import { CustomTooltip } from "@/components/CustomTooltip";
 
 const GROUP_ADMIN_ROLES = ["admin", "secretaria", "director", "vicedirector", "director_general"];
 const DEPT_DIRECTOR_ROLES = ["director", "vicedirector", "director_general"];
@@ -405,14 +406,15 @@ const GruposPequenos = () => {
                   {(isAdmin || group.created_by === user?.id) && (
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                       {group.status === "archived" ? (
-                        <Button
-                          variant="ghost" size="icon"
-                          className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600"
-                          onClick={() => reactivateMutation.mutate(group.id)}
-                          title="Reactivar grupo"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                        </Button>
+                        <CustomTooltip title="Reactivar grupo">
+                          <Button
+                            variant="ghost" size="icon"
+                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600"
+                            onClick={() => reactivateMutation.mutate(group.id)}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </Button>
+                        </CustomTooltip>
                       ) : (
                         <>
                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600" onClick={() => openEdit(group)}>
@@ -536,17 +538,21 @@ const GruposPequenos = () => {
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-1">
                                   {m.student && (
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600" onClick={() => openEditMember(m)} title="Editar datos">
-                                      <Pencil className="h-3.5 w-3.5" />
-                                    </Button>
+                                    <CustomTooltip title="Editar datos">
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600" onClick={() => openEditMember(m)}>
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </CustomTooltip>
                                   )}
                                   {!isSelf && (
                                     <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-500" title="Sacar del grupo">
-                                          <UserX className="h-3.5 w-3.5" />
-                                        </Button>
-                                      </AlertDialogTrigger>
+                                      <CustomTooltip title="Sacar del grupo">
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-500">
+                                            <UserX className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                      </CustomTooltip>
                                       <AlertDialogContent className="rounded-2xl">
                                         <AlertDialogHeader>
                                           <AlertDialogTitle>¿Sacar del grupo?</AlertDialogTitle>
@@ -818,11 +824,13 @@ const GruposPequenos = () => {
                         )}
                         {!isArchived && !isSelf && (
                           <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-500" title="Sacar del grupo">
-                                <UserX className="h-3.5 w-3.5" />
-                              </Button>
-                            </AlertDialogTrigger>
+                            <CustomTooltip title="Sacar del grupo">
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-500">
+                                  <UserX className="h-3.5 w-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
+                            </CustomTooltip>
                             <AlertDialogContent className="rounded-2xl">
                               <AlertDialogHeader>
                                 <AlertDialogTitle>¿Sacar del grupo?</AlertDialogTitle>

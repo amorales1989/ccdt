@@ -1225,9 +1225,11 @@ const ListarAlumnos = () => {
                 {student.isAuthorized && <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100/50 text-[10px] font-bold h-4.5 px-2">Autorizado</Badge>}
                 {student.nuevo && <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100/50 text-[10px] font-bold h-4.5 px-2">Nuevo</Badge>}
                 {((student as any).active_enrollments_count > 1) && (
-                  <div title="Miembro en múltiples departamentos" className="bg-purple-50 p-0.5 rounded-full border border-purple-100/50">
-                    <User className="h-2.5 w-2.5 text-purple-500" />
-                  </div>
+                  <CustomTooltip title="Miembro en múltiples departamentos">
+                    <div className="bg-purple-50 p-0.5 rounded-full border border-purple-100/50">
+                      <User className="h-2.5 w-2.5 text-purple-500" />
+                    </div>
+                  </CustomTooltip>
                 )}
               </div>
             </div>
@@ -1422,13 +1424,14 @@ const ListarAlumnos = () => {
               <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Directorio de Miembros</h1>
               <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Gestión general e información detallada</p>
             </div>
-            <button
-              onClick={() => setRunTour(true)}
-              className="inline-flex items-center gap-1 text-xs font-bold text-primary bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-xl transition-colors"
-              title="Ver guía"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </button>
+            <CustomTooltip title="Ver guía">
+              <button
+                onClick={() => setRunTour(true)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-primary bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-xl transition-colors"
+              >
+                <HelpCircle className="h-4 w-4" />
+              </button>
+            </CustomTooltip>
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
