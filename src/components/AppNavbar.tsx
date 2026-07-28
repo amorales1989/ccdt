@@ -7,6 +7,7 @@ import { StudentSearch } from "./StudentSearch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
 import { getStudents } from "@/lib/api";
+import { CompanyBadges } from "./CompanyBadges";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Inicio",
@@ -58,6 +59,7 @@ export function AppNavbar() {
         {title}
       </h1>
 
+
       <div className="flex-1 flex justify-center">
         {isAdminOrSecretary && (
           <div className="w-full max-w-md">
@@ -73,6 +75,7 @@ export function AppNavbar() {
             <HelpCircle className="h-5 w-5" />
           </Link>
         </Button>
+        <CompanyBadges size="sm" className="ml-1" />
       </div>
     </header>
   );

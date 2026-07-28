@@ -16,9 +16,14 @@ import {
   updateAdminPassword,
   recordPayment,
   getCompanyPayments,
+  grantFreeMonths,
+  getBadgeCatalog,
+  grantCompanyBadge,
+  revokeCompanyBadge,
   getPlans,
   updatePlanPricing,
   type AdminCompany,
+  type CompanyBadge,
   type Payment,
   type PlanRow,
 } from "@/lib/api";
@@ -38,7 +43,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, Plus, KeyRound, Loader2, Users, UserRound, CheckCircle2, Eye, EyeOff, Pencil, Trash2, Layers, Wallet, DollarSign } from "lucide-react";
+import { Building2, Plus, KeyRound, Loader2, Users, UserRound, CheckCircle2, Eye, EyeOff, Pencil, Trash2, Layers, Wallet, DollarSign, Gift, Award } from "lucide-react";
+import { BadgeChip } from "@/components/CompanyBadges";
 import { PLANS, planLabel, effectiveLimit } from "@/lib/plans";
 
 const formatDate = (d?: string | null) => {
@@ -67,6 +73,7 @@ export default function AdminSistema() {
   const [payTarget, setPayTarget] = useState<AdminCompany | null>(null);
   const [payForm, setPayForm] = useState<{ amount: string; billing_cycle: "mensual" | "anual"; notes: string; payment_date: string }>({ amount: "", billing_cycle: "mensual", notes: "", payment_date: new Date().toISOString().slice(0, 10) });
   const [pricesOpen, setPricesOpen] = useState(false);
+  const [badgesTarget, setBadgesTarget] = useState<AdminCompany | null>(null);
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["admin-companies"],
@@ -130,6 +137,17 @@ export default function AdminSistema() {
       toast({ title: "Pago registrado" });
       setPayTarget(null);
       setPayForm({ amount: "", billing_cycle: "mensual", notes: "", payment_date: new Date().toISOString().slice(0, 10) });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const freeMonthsMutation = useMutation({
+    mutationFn: (months: number) => grantFreeMonths(payTarget!.id, months),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["company-payments", payTarget?.id] });
+      toast({ title: "Meses de cortesía otorgados", description: `Nuevo vencimiento: ${formatDate(data.due_date)}` });
+      setPayTarget(null);
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -261,6 +279,13 @@ export default function AdminSistema() {
                           {c.congregation_name && (
                             <span className="text-xs text-slate-400 dark:text-slate-500">{c.congregation_name}</span>
                           )}
+                          {!!c.badges?.length && (
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {c.badges.map((b) => (
+                                <BadgeChip key={b.id} badge={b} />
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </TableCell>
@@ -336,6 +361,15 @@ export default function AdminSistema() {
                           onClick={() => openPay(c)}
                         >
                           <Wallet className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-primary hover:bg-primary/10"
+                          title="Insignias"
+                          onClick={() => setBadgesTarget(c)}
+                        >
+                          <Award className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -517,7 +551,12 @@ export default function AdminSistema() {
         onSubmit={() => payMutation.mutate()}
         isPending={payMutation.isPending}
         onClose={() => setPayTarget(null)}
+        onGrantFree={(months) => freeMonthsMutation.mutate(months)}
+        freePending={freeMonthsMutation.isPending}
       />
+
+      {/* Insignias de la empresa */}
+      <BadgesDialog company={badgesTarget} onClose={() => setBadgesTarget(null)} />
 
       {/* Gestionar admin de empresa */}
       <AdminDialog company={adminCompany} onClose={() => setAdminCompany(null)} />
@@ -711,8 +750,75 @@ function AdminDialog({ company, onClose }: { company: AdminCompany | null; onClo
   );
 }
 
+function BadgesDialog({ company, onClose }: { company: AdminCompany | null; onClose: () => void }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: catalog = [], isLoading } = useQuery({
+    queryKey: ["badge-catalog"],
+    queryFn: getBadgeCatalog,
+    enabled: !!company,
+  });
+
+  // El prop `company` es un snapshot del momento en que se abrió el modal: leemos la empresa
+  // del cache para que el switch refleje el alta/baja apenas se invalida la query.
+  const { data: companies = [] } = useQuery({
+    queryKey: ["admin-companies"],
+    queryFn: getAllCompanies,
+    enabled: !!company,
+  });
+  const fresh = companies.find((c) => c.id === company?.id) || company;
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ badgeId, has }: { badgeId: number; has: boolean }) =>
+      has ? revokeCompanyBadge(company!.id, badgeId) : grantCompanyBadge(company!.id, badgeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["company-badges"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const granted = new Set((fresh?.badges || []).map((b) => b.id));
+
+  return (
+    <Dialog open={!!company} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="rounded-2xl border-slate-200">
+        <DialogHeader>
+          <DialogTitle>Insignias — {company?.name}</DialogTitle>
+          <DialogDescription>Se muestran dentro de la app a todos los usuarios de la congregación.</DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : catalog.length === 0 ? (
+          <p className="text-sm text-slate-400 font-medium py-2">No hay insignias en el catálogo.</p>
+        ) : (
+          <div className="space-y-2">
+            {catalog.map((b) => (
+              <div key={b.id} className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3">
+                <div className="flex flex-col gap-1 min-w-0">
+                  <BadgeChip badge={b} size="md" />
+                  {b.description && <span className="text-xs text-slate-400">{b.description}</span>}
+                </div>
+                <Switch
+                  checked={granted.has(b.id)}
+                  disabled={toggleMutation.isPending}
+                  onCheckedChange={() => toggleMutation.mutate({ badgeId: b.id, has: granted.has(b.id) })}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" className="rounded-xl border-slate-200 font-bold" onClick={onClose}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PayDialog({
-  company, form, setForm, onSubmit, isPending, onClose,
+  company, form, setForm, onSubmit, isPending, onClose, onGrantFree, freePending,
 }: {
   company: AdminCompany | null;
   form: { amount: string; billing_cycle: "mensual" | "anual"; notes: string; payment_date: string };
@@ -720,7 +826,10 @@ function PayDialog({
   onSubmit: () => void;
   isPending: boolean;
   onClose: () => void;
+  onGrantFree: (months: number) => void;
+  freePending: boolean;
 }) {
+  const [freeMonths, setFreeMonths] = useState("6");
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["company-payments", company?.id],
     queryFn: () => getCompanyPayments(company!.id),
@@ -775,6 +884,28 @@ function PayDialog({
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
+          </div>
+        </div>
+
+        <div className="border-t pt-4 space-y-2">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Meses de cortesía</p>
+          <p className="text-[11px] text-slate-400">Extiende el vencimiento sin cobrar (ej: promo congregaciones fundadoras). Queda registrado con monto 0.</p>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number" min={1} max={36}
+              className="rounded-xl bg-slate-50 border-slate-200 h-11 w-24"
+              value={freeMonths}
+              onChange={(e) => setFreeMonths(e.target.value)}
+            />
+            <Button
+              variant="outline"
+              className="rounded-xl border-slate-200 font-bold h-11"
+              onClick={() => onGrantFree(Number(freeMonths))}
+              disabled={freePending || !(Number(freeMonths) >= 1 && Number(freeMonths) <= 36)}
+            >
+              {freePending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Gift className="h-4 w-4 mr-2" />}
+              Otorgar meses gratis
+            </Button>
           </div>
         </div>
 

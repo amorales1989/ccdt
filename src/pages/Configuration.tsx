@@ -21,6 +21,7 @@ import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { isDemoMode } from "@/lib/demo";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { CompanyBadges } from "@/components/CompanyBadges";
 
 // ─── Permisos y Notificaciones ───────────────────────────────────────────────
 
@@ -1182,6 +1183,7 @@ export default function Configuration() {
                           className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-700 dark:text-slate-200"
                           placeholder="Ej: Congregación Los Pinos"
                         />
+                        <CompanyBadges className="pt-1" />
                       </div>
 
                       <div className="space-y-4">

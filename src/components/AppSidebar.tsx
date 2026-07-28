@@ -45,6 +45,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { NotificationBell } from "./NotificationBell";
+import { CompanyBadges } from "./CompanyBadges";
 import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 
 // Contexto para el modo rail (solo desktop). En mobile/sheet queda con los defaults
@@ -706,6 +707,7 @@ export function AppSidebar() {
               <HelpCircle className="h-5 w-5" />
             </Link>
           </Button>
+          <CompanyBadges iconOnly className="ml-0.5" />
         </div>
       </div>
     );

@@ -247,6 +247,18 @@ export type AdminCompany = {
   last_payment_date?: string | null;
   due_date?: string | null;
   extra_member_packs: number;
+  badges?: CompanyBadge[];
+};
+
+export type CompanyBadge = {
+  id: number;
+  code: string;
+  label: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  tier?: string | null;
+  granted_at?: string;
 };
 
 export type Payment = {
@@ -310,6 +322,34 @@ export const recordPayment = async (id: number, data: { amount: number; billing_
 
 export const getCompanyPayments = async (id: number): Promise<Payment[]> => {
   const res = await apiCall(`/system/companies/${id}/payments`);
+  return res.data;
+};
+
+// Meses de cortesía: extiende el vencimiento sin cobrar (ej: promo congregaciones fundadoras).
+export const grantFreeMonths = async (id: number, months: number, notes?: string): Promise<AdminCompany> => {
+  const res = await apiCall(`/system/companies/${id}/free-months`, {
+    method: 'POST',
+    body: JSON.stringify({ months, notes }),
+  });
+  return res.data;
+};
+
+export const getBadgeCatalog = async (): Promise<CompanyBadge[]> => {
+  const res = await apiCall('/system/badges');
+  return res.data;
+};
+
+export const grantCompanyBadge = async (id: number, badge_id: number) => {
+  return apiCall(`/system/companies/${id}/badges`, { method: 'POST', body: JSON.stringify({ badge_id }) });
+};
+
+export const revokeCompanyBadge = async (id: number, badgeId: number) => {
+  return apiCall(`/system/companies/${id}/badges/${badgeId}`, { method: 'DELETE' });
+};
+
+// Insignias de la empresa del usuario logueado (cualquier rol).
+export const getMyCompanyBadges = async (): Promise<CompanyBadge[]> => {
+  const res = await apiCall('/company/badges');
   return res.data;
 };
 
