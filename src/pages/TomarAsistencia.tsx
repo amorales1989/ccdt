@@ -1,12 +1,5 @@
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCheck, UserX, Calendar, Users, CheckCircle2, Save, HelpCircle } from "lucide-react";
@@ -23,6 +16,9 @@ import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { DatePickerField } from "@/components/DatePickerField";
+import { DepartmentSelect } from "@/components/DepartmentSelect";
+import { ClassSelect } from "@/components/ClassSelect";
+import { useDepartments } from "@/hooks/useDepartments";
 
 const TomarAsistencia = () => {
   const { toast } = useToast();
@@ -91,26 +87,15 @@ const TomarAsistencia = () => {
     }
   }, [profile, selectedDepartmentName]);
 
+  const { getByName } = useDepartments({ scoped: true });
+  const selectedDepartmentData = getByName(selectedDepartmentName);
+
   useEffect(() => {
-    const fetchDepartmentDetails = async () => {
-      if (selectedDepartmentName) {
-        try {
-          const { data, error } = await supabase
-            .from("departments")
-            .select("id, classes")
-            .eq("name", selectedDepartmentName)
-            .single();
-          if (!error && data) {
-            setDepartmentId(data.id);
-            setDeptClasses(data.classes || []);
-          }
-        } catch (error) {
-          console.error("Error in fetchDepartmentDetails:", error);
-        }
-      }
-    };
-    fetchDepartmentDetails();
-  }, [selectedDepartmentName]);
+    if (selectedDepartmentData) {
+      setDepartmentId(selectedDepartmentData.id);
+      setDeptClasses(selectedDepartmentData.classes || []);
+    }
+  }, [selectedDepartmentData]);
 
   useEffect(() => {
     const fetchAuthorizedStudents = async () => {
@@ -506,25 +491,18 @@ const TomarAsistencia = () => {
               <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
                 <Users className="h-4 w-4 text-emerald-600" />
               </div>
-              <Select
-                value={selectedDepartmentName || ""}
-                onValueChange={(val) => {
+              <DepartmentSelect
+                value={selectedDepartmentName}
+                onChange={(val) => {
                   setSelectedDepartmentName(val);
                   setSelectedClass("");
                   setAsistencias({});
                 }}
-              >
-                <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-sm font-semibold text-gray-700 w-full">
-                  <SelectValue placeholder="Seleccionar Depto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profile.departments.map(dept => (
-                    <SelectItem key={dept} value={dept} className="text-xs font-medium">
-                      {dept}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                scoped
+                placeholder="Seleccionar Depto"
+                className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-sm font-semibold text-gray-700 w-full"
+                itemClassName="text-xs font-medium"
+              />
             </div>
           )}
 
@@ -534,27 +512,17 @@ const TomarAsistencia = () => {
               <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
                 <Users className="h-4 w-4 text-indigo-600" />
               </div>
-              <Select
+              <ClassSelect
+                classes={deptClasses}
                 value={selectedClass}
-                onValueChange={(val) => {
+                onChange={(val) => {
                   setSelectedClass(val);
                   setAsistencias({});
                 }}
-              >
-                <SelectTrigger className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-sm font-semibold text-gray-700 w-full">
-                  <SelectValue placeholder="Seleccionar Clase" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_placeholder_" disabled className="text-xs font-medium text-muted-foreground">
-                    Seleccionar Clase
-                  </SelectItem>
-                  {deptClasses.map(c => (
-                    <SelectItem key={c} value={c} className="text-xs font-medium">
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Seleccionar Clase"
+                className="bg-transparent border-none shadow-none focus:ring-0 h-8 px-0 text-sm font-semibold text-gray-700 w-full"
+                itemClassName="text-xs font-medium"
+              />
             </div>
           )}
         </div>

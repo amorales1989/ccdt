@@ -5,7 +5,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FolderUp, ListChecks, UserCheck, HelpCircle } from "lucide-react";
 import { TourGuide } from "@/components/TourGuide";
@@ -19,8 +18,12 @@ import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { CustomTabs } from "@/components/CustomTabs";
 import { Badge } from "@/components/ui/badge";
-import { getCompany } from "@/lib/api";
+import { getCompany, getStudents } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
+import { useDepartments } from "@/hooks/useDepartments";
+import { DepartmentSelect } from "@/components/DepartmentSelect";
+import { ALL_VALUE } from "@/lib/departments";
+import { ClassSelect } from "@/components/ClassSelect";
 import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 
 const PromoverAlumnos = () => {
@@ -64,40 +67,21 @@ const PromoverAlumnos = () => {
   const userDepartment = profile?.departments?.[0] || null;
   const userClass = profile?.assigned_class || null;
 
+  const { getByName } = useDepartments({ scoped: true });
+  const userDepartmentId = getByName(userDepartment)?.id ?? null;
+
   useEffect(() => {
     if (!isAdminOrSecretaria && userDepartment) {
       setSelectedDepartment(userDepartment);
-
-      const fetchDepartmentId = async () => {
-        try {
-          const { data, error } = await supabase
-            .from("departments")
-            .select("id")
-            .eq("name", userDepartment)
-            .single();
-
-          if (error) {
-            console.error("Error fetching department ID:", error);
-            return;
-          }
-
-          if (data) {
-            setSelectedDepartmentId(data.id);
-          }
-        } catch (error) {
-          console.error("Error in fetchDepartmentId:", error);
-        }
-      };
-
-      fetchDepartmentId();
+      setSelectedDepartmentId(userDepartmentId);
 
       if (userClass) {
         setSelectedClass(userClass);
       } else if (isDirectorOrVice) {
-        setSelectedClass("all");
+        setSelectedClass(ALL_VALUE);
       }
     }
-  }, [isAdminOrSecretaria, userDepartment, userClass, isDirectorOrVice]);
+  }, [isAdminOrSecretaria, userDepartment, userDepartmentId, userClass, isDirectorOrVice]);
 
   const { data: studentAuthorizations = [], refetch: refetchAuthorizations } = useQuery({
     queryKey: ["student-authorizations"],
@@ -125,26 +109,9 @@ const PromoverAlumnos = () => {
     }
   });
 
-  const { data: departments = [] } = useQuery({
-    queryKey: ["departments"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("departments")
-        .select("*")
-        .order('name');
+  const availableClasses = selectedDepartment ? getByName(selectedDepartment)?.classes || [] : [];
 
-      if (error) throw error;
-      return data as Department[];
-    },
-  });
-
-  const availableClasses = selectedDepartment
-    ? departments.find(d => d.name === selectedDepartment)?.classes || []
-    : [];
-
-  const targetAvailableClasses = targetDepartment
-    ? departments.find(d => d.name === targetDepartment)?.classes || []
-    : [];
+  const targetAvailableClasses = targetDepartment ? getByName(targetDepartment)?.classes || [] : [];
 
   const targetDepartmentHasClasses = targetAvailableClasses.length > 0;
 
@@ -155,32 +122,17 @@ const PromoverAlumnos = () => {
         return [];
       }
 
-      let query = supabase
-        .from("students")
-        .select("*, departments:department_id(name, id)")
-        .eq("department_id", selectedDepartmentId)
-        .is("deleted_at", null);
+      // GET /api/students -> SP get_students (filtra y arma el listado en la DB)
+      const data = await getStudents({
+        department_id: selectedDepartmentId,
+        assigned_class: selectedClass || ALL_VALUE,
+      });
 
-      if (selectedClass !== "all") {
-        query = query.eq("assigned_class", selectedClass || "");
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-
-      const processedData = (data || [])
-        .map(student => ({
-          ...student,
-          department: student.departments?.name
-        }))
-        .sort((a, b) => {
-          const nameA = `${a.first_name} ${a.last_name || ''}`;
-          const nameB = `${b.first_name} ${b.last_name || ''}`;
-          return nameA.localeCompare(nameB);
-        }) as Student[];
-
-      return processedData;
+      return ([...(data || [])] as Student[]).sort((a, b) => {
+        const nameA = `${a.first_name} ${a.last_name || ''}`;
+        const nameB = `${b.first_name} ${b.last_name || ''}`;
+        return nameA.localeCompare(nameB);
+      });
     },
     enabled: Boolean(profile) && (!isAdminOrSecretaria || Boolean(selectedDepartmentId)),
   });
@@ -247,32 +199,12 @@ const PromoverAlumnos = () => {
       : student.first_name;
   };
 
-  const handleDepartmentChange = async (value: string) => {
-    const departmentName = value as DepartmentType;
-    setSelectedDepartment(departmentName);
+  const handleDepartmentChange = (value: string, department?: Department) => {
+    setSelectedDepartment(value as DepartmentType);
+    setSelectedDepartmentId(department?.id ?? null);
     setSelectAll(false);
     setSelectedStudents([]);
-
-    try {
-      const { data, error } = await supabase
-        .from("departments")
-        .select("id")
-        .eq("name", departmentName)
-        .single();
-
-      if (error) {
-        console.error("Error fetching department ID:", error);
-        return;
-      }
-
-      if (data) {
-        setSelectedDepartmentId(data.id);
-      }
-    } catch (error) {
-      console.error("Error in handleDepartmentChange:", error);
-    }
-
-    setSelectedClass(null);
+    setSelectedClass(ALL_VALUE);
   };
 
   const handleClassChange = (value: string) => {
@@ -281,29 +213,9 @@ const PromoverAlumnos = () => {
     setSelectedStudents([]);
   };
 
-  const handleTargetDepartmentChange = async (value: string) => {
-    const departmentName = value as DepartmentType;
-    setTargetDepartment(departmentName);
-
-    try {
-      const { data, error } = await supabase
-        .from("departments")
-        .select("id")
-        .eq("name", departmentName)
-        .single();
-
-      if (error) {
-        console.error("Error fetching target department ID:", error);
-        return;
-      }
-
-      if (data) {
-        setTargetDepartmentId(data.id);
-      }
-    } catch (error) {
-      console.error("Error in handleTargetDepartmentChange:", error);
-    }
-
+  const handleTargetDepartmentChange = (value: string, department?: Department) => {
+    setTargetDepartment(value as DepartmentType);
+    setTargetDepartmentId(department?.id ?? null);
     setTargetClass(null);
   };
 
@@ -514,57 +426,6 @@ const PromoverAlumnos = () => {
     }
   };
 
-  const renderFilters = () => {
-    if (!isAdminOrSecretaria) return null;
-
-    return (
-      <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md rounded-3xl p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="department-filter">Departamento</Label>
-            <Select
-              value={selectedDepartment}
-              onValueChange={handleDepartmentChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.name}>
-                    {formatDepartment(dept.name)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedDepartment && availableClasses.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="class-filter">Clase</Label>
-              <Select
-                value={selectedClass || undefined}
-                onValueChange={handleClassChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas las clases" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las clases</SelectItem>
-                  {availableClasses.map((className) => (
-                    <SelectItem key={className} value={className}>
-                      {className}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-      </Card>
-    );
-  };
-
 
   const getStudentAuthorizedDepartments = (studentId: string) => {
     return authorizedStudents[studentId] || [];
@@ -624,37 +485,27 @@ const PromoverAlumnos = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
-                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange} disabled={!isAdminOrSecretaria && !isDirectorGeneral}>
-                        <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
-                          <SelectValue placeholder="Selecciona un departamento" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                          {departments.filter(dept => {
-                            if (isAdminOrSecretaria) return true;
-                            if (isDirectorGeneral || isDirectorOrVice) {
-                              return profile?.departments?.includes(dept.name as DepartmentType);
-                            }
-                            return false;
-                          }).map((dept) => (
-                            <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <DepartmentSelect
+                        value={selectedDepartment}
+                        onChange={handleDepartmentChange}
+                        scoped
+                        disabled={!isAdminOrSecretaria && !isDirectorGeneral}
+                        className="rounded-xl bg-slate-50 border-slate-200 h-11"
+                        contentClassName="rounded-xl border-slate-200 dark:border-slate-800"
+                      />
                     </div>
                     {selectedDepartment && availableClasses.length > 0 && (
                       <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clase</label>
-                        <Select value={selectedClass || undefined} onValueChange={handleClassChange}>
-                          <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
-                            <SelectValue placeholder="Todas las clases" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                            <SelectItem value="all">Todas las clases</SelectItem>
-                            {availableClasses.map((className) => (
-                              <SelectItem key={className} value={className}>{className}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <ClassSelect
+                          classes={availableClasses}
+                          value={selectedClass}
+                          onChange={handleClassChange}
+                          includeAll
+                          placeholder="Todas las clases"
+                          className="rounded-xl bg-slate-50 border-slate-200 h-11"
+                          contentClassName="rounded-xl border-slate-200 dark:border-slate-800"
+                        />
                       </div>
                     )}
                   </div>
@@ -680,7 +531,7 @@ const PromoverAlumnos = () => {
                       </span>
                       {(canFilterOrigin ? selectedClass : userClass) && (
                         <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
-                          Clase: {(canFilterOrigin ? selectedClass : userClass) === "all" ? "Todas las clases" : (canFilterOrigin ? selectedClass : userClass)}
+                          Clase: {(canFilterOrigin ? selectedClass : userClass) === ALL_VALUE ? "Todas las clases" : (canFilterOrigin ? selectedClass : userClass)}
                         </span>
                       )}
                     </div>
@@ -802,36 +653,26 @@ const PromoverAlumnos = () => {
                       <div className="space-y-3">
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Promover a departamento</label>
-                          <Select value={targetDepartment} onValueChange={handleTargetDepartmentChange}>
-                            <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
-                              <SelectValue placeholder="Selecciona departamento destino" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                              {departments.filter(dept => {
-                                if (isAdminOrSecretaria) return true;
-                                if (isDirectorGeneral || isDirectorOrVice) {
-                                  return profile?.departments?.includes(dept.name as DepartmentType);
-                                }
-                                return false;
-                              }).map((dept) => (
-                                <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <DepartmentSelect
+                            value={targetDepartment}
+                            onChange={handleTargetDepartmentChange}
+                            scoped
+                            placeholder="Selecciona departamento destino"
+                            className="rounded-xl bg-slate-50 border-slate-200 h-11"
+                            contentClassName="rounded-xl border-slate-200 dark:border-slate-800"
+                          />
                         </div>
                         {targetDepartmentHasClasses && (
                           <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Promover a clase</label>
-                            <Select value={targetClass || undefined} onValueChange={handleTargetClassChange}>
-                              <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
-                                <SelectValue placeholder="Selecciona clase destino" />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                                {targetAvailableClasses.map((className) => (
-                                  <SelectItem key={className} value={className}>{className}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <ClassSelect
+                              classes={targetAvailableClasses}
+                              value={targetClass}
+                              onChange={handleTargetClassChange}
+                              placeholder="Selecciona clase destino"
+                              className="rounded-xl bg-slate-50 border-slate-200 h-11"
+                              contentClassName="rounded-xl border-slate-200 dark:border-slate-800"
+                            />
                           </div>
                         )}
                       </div>
@@ -866,37 +707,27 @@ const PromoverAlumnos = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
-                      <Select value={selectedDepartment} onValueChange={handleDepartmentChange} disabled={!isAdminOrSecretaria && !isDirectorGeneral}>
-                        <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
-                          <SelectValue placeholder="Selecciona un departamento" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                          {departments.filter(dept => {
-                            if (isAdminOrSecretaria) return true;
-                            if (isDirectorGeneral || isDirectorOrVice) {
-                              return profile?.departments?.includes(dept.name as DepartmentType);
-                            }
-                            return false;
-                          }).map((dept) => (
-                            <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <DepartmentSelect
+                        value={selectedDepartment}
+                        onChange={handleDepartmentChange}
+                        scoped
+                        disabled={!isAdminOrSecretaria && !isDirectorGeneral}
+                        className="rounded-xl bg-slate-50 border-slate-200 h-11"
+                        contentClassName="rounded-xl border-slate-200 dark:border-slate-800"
+                      />
                     </div>
                     {selectedDepartment && availableClasses.length > 0 && (
                       <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clase</label>
-                        <Select value={selectedClass || undefined} onValueChange={handleClassChange}>
-                          <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
-                            <SelectValue placeholder="Todas las clases" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                            <SelectItem value="all">Todas las clases</SelectItem>
-                            {availableClasses.map((className) => (
-                              <SelectItem key={className} value={className}>{className}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <ClassSelect
+                          classes={availableClasses}
+                          value={selectedClass}
+                          onChange={handleClassChange}
+                          includeAll
+                          placeholder="Todas las clases"
+                          className="rounded-xl bg-slate-50 border-slate-200 h-11"
+                          contentClassName="rounded-xl border-slate-200 dark:border-slate-800"
+                        />
                       </div>
                     )}
                   </div>
@@ -1020,36 +851,26 @@ const PromoverAlumnos = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Autorizar para departamento</label>
-                        <Select value={targetDepartment} onValueChange={handleTargetDepartmentChange}>
-                          <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
-                            <SelectValue placeholder="Selecciona departamento destino" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                            {departments.filter(dept => {
-                              if (isAdminOrSecretaria) return true;
-                              if (isDirectorGeneral || isDirectorOrVice) {
-                                return profile?.departments?.includes(dept.name as DepartmentType);
-                              }
-                              return false;
-                            }).map((dept) => (
-                              <SelectItem key={dept.id} value={dept.name}>{formatDepartment(dept.name)}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <DepartmentSelect
+                          value={targetDepartment}
+                          onChange={handleTargetDepartmentChange}
+                          scoped
+                          placeholder="Selecciona departamento destino"
+                          className="rounded-xl bg-slate-50 border-slate-200 h-11"
+                          contentClassName="rounded-xl border-slate-200 dark:border-slate-800"
+                        />
                       </div>
                       {targetDepartmentHasClasses && (
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clase específica (opcional)</label>
-                          <Select value={targetClass || undefined} onValueChange={handleTargetClassChange}>
-                            <SelectTrigger className="rounded-xl bg-slate-50 border-slate-200 h-11">
-                              <SelectValue placeholder="Todas las clases" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                              {targetAvailableClasses.map((className) => (
-                                <SelectItem key={className} value={className}>{className}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <ClassSelect
+                            classes={targetAvailableClasses}
+                            value={targetClass}
+                            onChange={handleTargetClassChange}
+                            placeholder="Todas las clases"
+                            className="rounded-xl bg-slate-50 border-slate-200 h-11"
+                            contentClassName="rounded-xl border-slate-200 dark:border-slate-800"
+                          />
                         </div>
                       )}
                     </div>
