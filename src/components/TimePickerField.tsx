@@ -18,6 +18,9 @@ interface TimePickerFieldProps {
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 
+const ITEM_H = 40; // h-10
+const VIEWPORT_H = 200; // h-[200px]
+
 function ScrollColumn({
   items,
   selected,
@@ -28,28 +31,68 @@ function ScrollColumn({
   onSelect: (val: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const initial = useRef(selected);
 
+  // Centrar el valor inicial solo al montar (el Popover desmonta el contenido al cerrar).
+  // Se difiere con rAF porque Radix mueve el foco al abrir y eso resetea el scroll.
   useEffect(() => {
-    const idx = items.indexOf(selected);
-    if (ref.current && idx !== -1) {
-      ref.current.scrollTop = idx * 40 - 80;
-    }
-  }, [selected, items]);
+    const idx = items.indexOf(initial.current);
+    if (idx === -1) return;
+    const raf = requestAnimationFrame(() => {
+      // el navegador clampea solo en los extremos, sin relleno vacio
+      if (ref.current) ref.current.scrollTop = idx * ITEM_H - (VIEWPORT_H - ITEM_H) / 2;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [items]);
+
+  // Cuando el picker se abre dentro de un Dialog, react-remove-scroll (scroll lock de Radix)
+  // cancela wheel/touchmove sobre cualquier nodo fuera del DialogContent, y el Popover va en
+  // un portal. Movemos el scroll a mano para que funcione con trackpad, rueda y touch.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      const factor = e.deltaMode === 1 ? ITEM_H : e.deltaMode === 2 ? el.clientHeight : 1;
+      e.preventDefault();
+      el.scrollTop += e.deltaY * factor;
+    };
+
+    let lastY = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      lastY = e.touches[0].clientY;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0].clientY;
+      e.preventDefault();
+      el.scrollTop -= y - lastY;
+      lastY = y;
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
 
   return (
     <div
       ref={ref}
-      className="h-[200px] overflow-y-auto scroll-smooth no-scrollbar"
+      className="h-[200px] overflow-y-auto overscroll-contain touch-none [&::-webkit-scrollbar]:hidden"
       style={{ scrollbarWidth: "none" }}
     >
-      <div className="py-20">
+      <div>
         {items.map((item) => (
           <button
             key={item}
             type="button"
             onClick={() => onSelect(item)}
             className={cn(
-              "w-full h-10 text-center text-sm font-semibold rounded-lg transition-all",
+              "block w-full h-10 text-center text-sm font-semibold rounded-lg transition-colors",
               item === selected
                 ? "bg-primary text-white shadow-sm"
                 : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -113,7 +156,11 @@ export function TimePickerField({
             )}
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-[160px] p-3" align="start">
+        <PopoverContent
+          className="w-[160px] p-3"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <div className="flex items-center gap-1">
             <div className="flex-1">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Hora</p>
