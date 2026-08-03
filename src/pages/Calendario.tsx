@@ -31,7 +31,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { CustomTabs } from "@/components/CustomTabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ClipboardCheck, CheckCircle, XCircle, AlertCircle, Clock4, Building, User, FileText as FileTextIcon, Clock, CalendarPlus, Trash2, Calendar as CalendarIcon, Check, X } from "lucide-react";
+import { ClipboardCheck, CheckCircle, XCircle, AlertCircle, Clock4, Building, User, FileText as FileTextIcon, Clock, CalendarPlus, Trash2, Calendar as CalendarIcon, Check, X, Pencil } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 
 export default function Calendario() {
@@ -156,11 +156,16 @@ export default function Calendario() {
     return acc;
   }, {});
 
+  // El solicitante puede editar/eliminar su solicitud solo mientras siga pendiente
+  const isOwnPendingRequest = (event: any) =>
+    event?.solicitante === profile?.id &&
+    event?.solicitud === true &&
+    event?.estado === 'solicitud';
+
   // Verificar si el usuario puede editar un evento específico
   const canEditEvent = (event: Event) => {
     if (canCreateEvents) return true;
-    // Si es una solicitud propia, puede editarla (verificar por solicitante)
-    return (event as any).solicitante === profile?.id;
+    return isOwnPendingRequest(event);
   };
 
   const handleCreateEvent = async (eventData: any) => {
@@ -259,7 +264,7 @@ export default function Calendario() {
     if (isPendingRequest && canCreateEvents) {
       setSelectedRequest(event);
       setRequestDetailOpen(true);
-    } else if (canCreateEvents) {
+    } else if (canCreateEvents || isOwnPendingRequest(event)) {
       setSelectedEvent(event);
       setDialogOpen(true);
     }
@@ -411,7 +416,7 @@ export default function Calendario() {
 
     if (isSolicitud) {
       return (
-        <Badge className="ml-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 flex items-center gap-1">
+        <Badge className="ml-2 bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-900 flex items-center gap-1">
           <Clock4 className="h-3 w-3" />
           Pendiente
         </Badge>
@@ -419,9 +424,9 @@ export default function Calendario() {
     }
 
     const variants: { [key: string]: string } = {
-      'pendiente': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      'aprobada': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      'rechazada': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      'pendiente': 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-900',
+      'aprobada': 'bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-900',
+      'rechazada': 'bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-900'
     };
 
     return (
@@ -771,9 +776,35 @@ export default function Calendario() {
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
                         Creado: {format(new Date(request.created_at || request.date), 'dd MMM', { locale: es })}
                       </span>
-                      <Button variant="ghost" size="sm" className="h-7 px-3 text-[10px] font-black uppercase text-primary hover:bg-primary/5 rounded-lg">
-                        Ver Detalles
-                      </Button>
+                      {!canCreateEvents && isOwnPendingRequest(request) ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-3 text-[10px] font-black uppercase text-primary bg-primary/10 hover:bg-primary/20 hover:text-primary rounded-lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedEvent(request);
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-slate-400 bg-slate-100 hover:bg-rose-100 hover:text-rose-600 rounded-lg"
+                            onClick={(e) => handleDeleteClick(request, e)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button variant="ghost" size="sm" className="h-7 px-3 text-[10px] font-black uppercase text-primary bg-primary/10 hover:bg-primary/20 hover:text-primary rounded-lg">
+                          Ver Detalles
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))
