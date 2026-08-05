@@ -53,6 +53,7 @@ const ROLE_LABELS: Record<string, string> = {
 // propio control de acceso hardcodeado/existente y funcionaba: no hacía falta otro switch.
 const PERMISSIONS = [
   { key: 'puede_agregar_miembros', label: 'Agregar miembros' },
+  { key: 'puede_agregar_miembros_sin_depto', label: 'Agregar miembros sin departamento' },
   { key: 'puede_gestionar_mantenimiento', label: 'Gestionar mantenimiento' },
 ] as const;
 

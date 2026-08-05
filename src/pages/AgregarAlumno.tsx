@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { createStudent, getDepartments, checkDniExists } from "@/lib/api";
+import { createStudent, getDepartments, checkDniExists, getCompany } from "@/lib/api";
+import { hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
+import { SIN_DEPARTAMENTO } from "@/lib/departments";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Student, Department, DepartmentType } from "@/types/database";
@@ -62,9 +64,22 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
     queryFn: getDepartments,
   });
 
+  const { data: company } = useQuery({
+    queryKey: ["company", companyId],
+    queryFn: () => getCompany(companyId),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
   const isMaestro = profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro';
   const isDirector = profile?.role === 'director';
+
+  // Quien puede registrar miembros de la congregacion sin asignarlos a un departamento.
+  const puedeSinDepto = hasPermission(
+    profile,
+    'puede_agregar_miembros_sin_depto',
+    (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions,
+  );
 
   const availableDepartments = isAdminOrSecretaria
     ? departments
@@ -299,7 +314,8 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
     }
   };
 
-  if (!isAdminOrSecretaria && (!profile?.departments?.length)) {
+  // Con permiso para dar de alta sin departamento no hace falta tener uno asignado.
+  if (!isAdminOrSecretaria && !puedeSinDepto && (!profile?.departments?.length)) {
     return (
       <div className="p-6">
         <Card>
@@ -438,12 +454,12 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
           </div>
           <div className="space-y-2">
             <Label htmlFor="department">
-              Departamento{isAdminOrSecretaria && <span className="text-muted-foreground font-normal"> (opcional)</span>}
+              Departamento{puedeSinDepto && <span className="text-muted-foreground font-normal"> (opcional)</span>}
             </Label>
             <Select
-              value={formData.department || "__none__"}
+              value={formData.department || SIN_DEPARTAMENTO}
               onValueChange={(value) => {
-                if (value === "__none__") {
+                if (value === SIN_DEPARTAMENTO) {
                   setFormData({ ...formData, department: null, department_id: "", assigned_class: "" });
                   return;
                 }
@@ -455,14 +471,14 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
                   assigned_class: ""
                 });
               }}
-              disabled={isMaestro || isDirector}
+              disabled={(isMaestro || isDirector) && !puedeSinDepto}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar departamento" />
               </SelectTrigger>
               <SelectContent>
-                {isAdminOrSecretaria && (
-                  <SelectItem value="__none__">
+                {puedeSinDepto && (
+                  <SelectItem value={SIN_DEPARTAMENTO}>
                     <span className="text-muted-foreground italic">Sin departamento</span>
                   </SelectItem>
                 )}
@@ -473,7 +489,7 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
                 ))}
               </SelectContent>
             </Select>
-            {isAdminOrSecretaria && !formData.department && (
+            {puedeSinDepto && !formData.department && (
               <p className="text-[11px] text-muted-foreground">
                 Podés registrar miembros de la congregación sin asignarlos a ningún departamento.
               </p>

@@ -571,6 +571,46 @@ export const checkDniExists = async (dni: string) => {
   }
 };
 
+/** Devuelve la ficha que ya tiene ese DNI, o null. Se usa para ofrecer la fusión
+ *  cuando al editar un miembro se descubre que esa persona ya estaba cargada. */
+export const findStudentByDni = async (dni: string): Promise<Student | null> => {
+  try {
+    const response = await apiCall(`/students/search?document_number=${encodeURIComponent(dni)}`);
+    const students = response.data || response;
+    return students?.[0] || null;
+  } catch (error) {
+    console.error('Error buscando miembro por DNI:', error);
+    return null;
+  }
+};
+
+export interface MergeResult {
+  dry_run: boolean;
+  asistencias: number;
+  asistencias_duplicadas: number;
+  departamentos: number;
+  observaciones: number;
+  autorizaciones: number;
+  ausencias: number;
+  grupos_pequenos: number;
+  mueve_cuenta_usuario: boolean;
+}
+
+/** Fusiona dos fichas de la misma persona: `sourceId` se absorbe y queda eliminada,
+ *  `targetId` sobrevive con el historial de ambas (asistencias de cada departamento
+ *  incluidas). Con dryRun solo devuelve el conteo de lo que se movería. */
+export const mergeStudents = async (
+  sourceId: string,
+  targetId: string,
+  dryRun = false,
+): Promise<MergeResult> => {
+  const response = await apiCall(`/students/${sourceId}/merge`, {
+    method: 'POST',
+    body: JSON.stringify({ target_id: targetId, dry_run: dryRun }),
+  });
+  return response.data || response;
+};
+
 export const lookupPersonByDni = async (dni: string) => {
   try {
     const response = await apiCall(`/students/lookup/${encodeURIComponent(dni)}`);

@@ -15,9 +15,14 @@ interface DniIdentityInputProps {
     className?: string;
     id?: string;
     placeholder?: string;
+    /** Texto del badge cuando el DNI ya existe. En el alta significa "se vinculó a esa
+     *  persona"; al editar significa "esta ficha está duplicada". */
+    foundLabel?: string;
+    foundHint?: React.ReactNode;
+    foundTone?: 'blue' | 'amber';
 }
 
-export function DniIdentityInput({ value, onChange, onFound, onBlur, disabled, error, className, id, placeholder }: DniIdentityInputProps) {
+export function DniIdentityInput({ value, onChange, onFound, onBlur, disabled, error, className, id, placeholder, foundLabel, foundHint, foundTone = 'blue' }: DniIdentityInputProps) {
     const [isSearching, setIsSearching] = useState(false);
     const [foundSource, setFoundSource] = useState<'student' | 'profile' | null>(null);
 
@@ -69,7 +74,9 @@ export function DniIdentityInput({ value, onChange, onFound, onBlur, disabled, e
                     disabled={disabled}
                     className={cn(
                         "pr-10 transition-all duration-300 h-10",
-                        foundSource && "border-blue-400 bg-blue-50/30 dark:bg-blue-900/10 focus:ring-blue-500",
+                        foundSource && (foundTone === 'amber'
+                            ? "border-amber-400 bg-amber-50/30 dark:bg-amber-900/10 focus:ring-amber-500"
+                            : "border-blue-400 bg-blue-50/30 dark:bg-blue-900/10 focus:ring-blue-500"),
                         className
                     )}
                 />
@@ -77,9 +84,12 @@ export function DniIdentityInput({ value, onChange, onFound, onBlur, disabled, e
                     {isSearching ? (
                         <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
                     ) : foundSource ? (
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-500 text-white rounded-md animate-in fade-in zoom-in duration-300">
+                        <div className={cn(
+                            "flex items-center gap-1 px-1.5 py-0.5 text-white rounded-md animate-in fade-in zoom-in duration-300",
+                            foundTone === 'amber' ? "bg-amber-500" : "bg-blue-500"
+                        )}>
                             <UserCheck className="h-3 w-3" />
-                            <span className="text-[9px] font-bold uppercase tracking-tighter">Vinculado</span>
+                            <span className="text-[9px] font-bold uppercase tracking-tighter">{foundLabel || "Vinculado"}</span>
                         </div>
                     ) : (
                         <Search className="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground/50 transition-colors" />
@@ -88,9 +98,12 @@ export function DniIdentityInput({ value, onChange, onFound, onBlur, disabled, e
             </div>
 
             {foundSource && (
-                <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1 italic flex items-center gap-1 animate-in slide-in-from-top-1 duration-300">
-                    <Info className="h-3 w-3" />
-                    Se cargaron datos automáticos de un {foundSource === 'profile' ? 'líder' : 'miembro'} existente.
+                <p className={cn(
+                    "text-[10px] mt-1 italic flex items-center gap-1 animate-in slide-in-from-top-1 duration-300",
+                    foundTone === 'amber' ? "text-amber-700 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"
+                )}>
+                    <Info className="h-3 w-3 shrink-0" />
+                    {foundHint || `Se cargaron datos automáticos de un ${foundSource === 'profile' ? 'líder' : 'miembro'} existente.`}
                 </p>
             )}
         </div>

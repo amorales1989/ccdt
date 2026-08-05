@@ -1,17 +1,15 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getStudents, deleteStudent, updateStudent } from "@/lib/api";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { getStudents, deleteStudent } from "@/lib/api";
 import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
 import { LabeledSwitch } from "@/components/LabeledSwitch";
 import { formatDni } from "@/lib/utils";
+import { SIN_DEPARTAMENTO, esSoloCongregacion } from "@/lib/departments";
+import { EditStudentModal } from "@/components/EditStudentModal";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -66,56 +64,6 @@ export default function TodosMiembros() {
   const [page, setPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
-  const [editForm, setEditForm] = useState({
-    first_name: "", last_name: "", gender: "masculino", birthdate: "",
-    document_number: "", phone: "", address: "", baptized: false,
-  });
-  const [editBirthdateOpen, setEditBirthdateOpen] = useState(false);
-  const [savingEdit, setSavingEdit] = useState(false);
-
-  const openEdit = (student: Student) => {
-    setEditForm({
-      first_name: student.first_name || "",
-      last_name: student.last_name || "",
-      gender: student.gender || "masculino",
-      birthdate: student.birthdate || "",
-      document_number: student.document_number || "",
-      phone: (student.phone || "").replace(/^549/, ""),
-      address: student.address || "",
-      baptized: (student as any).baptized || false,
-    });
-    setEditStudent(student);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editStudent) return;
-    if (!editForm.first_name.trim()) {
-      toast.error("El nombre es requerido");
-      return;
-    }
-    setSavingEdit(true);
-    try {
-      const rawPhone = editForm.phone.replace(/\D/g, "");
-      await updateStudent(editStudent.id, {
-        first_name: editForm.first_name.trim(),
-        last_name: editForm.last_name.trim(),
-        gender: editForm.gender,
-        birthdate: editForm.birthdate || null,
-        document_number: editForm.document_number || null,
-        phone: rawPhone ? (rawPhone.startsWith("54") ? rawPhone : "549" + rawPhone) : null,
-        address: editForm.address || null,
-        baptized: editForm.baptized,
-      } as any);
-      toast.success("Miembro actualizado");
-      setEditStudent(null);
-      queryClient.invalidateQueries({ queryKey: ["all-students", companyId] });
-    } catch (err: any) {
-      toast.error(err?.message || "Error al actualizar el miembro");
-    } finally {
-      setSavingEdit(false);
-    }
-  };
-
   const canEdit = profile?.role === "admin" || profile?.role === "secretaria";
   const baptizedEnabled = useBaptizedEnabled();
 
@@ -143,11 +91,10 @@ export default function TodosMiembros() {
       const doc = (s.document_number || "").toLowerCase();
       const matchSearch = !search || fullName.includes(search.toLowerCase()) || doc.includes(search.toLowerCase());
       const depts = s.dept_assignments?.map(d => d.departments?.name) ?? [s.departments?.name];
-      const sinDept = (s.dept_assignments?.length ?? 0) === 0 && !s.department_id;
       const matchDept = filterDept === "all"
         ? true
-        : filterDept === "__none__"
-          ? sinDept
+        : filterDept === SIN_DEPARTAMENTO
+          ? esSoloCongregacion(s)
           : depts.some(d => d === filterDept);
       const matchGender = filterGender === "all" || s.gender === filterGender;
       const matchBaptized = !filterBaptized || (s as any).baptized === true;
@@ -174,7 +121,9 @@ export default function TodosMiembros() {
   if (isLoading) return <LoadingOverlay message="Cargando miembros..." />;
 
   const withDept = students.filter(s => (s.dept_assignments?.length ?? 0) > 0 || s.department_id).length;
-  const withoutDept = students.length - withDept;
+  // Solo congregación = ni departamento ni grupo pequeño. Los que solo están en un grupo
+  // pequeño también tienen department_id NULL, por eso no alcanza con students.length - withDept.
+  const soloCongregacion = students.filter(esSoloCongregacion).length;
 
   return (
     <>
@@ -198,7 +147,15 @@ export default function TodosMiembros() {
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400 font-bold text-sm tracking-tight flex items-center gap-1.5 mt-0.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 inline-block" />
-                  {students.length} registros · {withDept} en departamentos · {withoutDept} sin asignar
+                  {students.length} registros · {withDept} en departamentos ·{" "}
+                  <button
+                    type="button"
+                    onClick={() => { setShowFilters(true); setFilterDept(SIN_DEPARTAMENTO); }}
+                    className="underline underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-400"
+                    title="Miembros que no están en ningún departamento ni grupo pequeño"
+                  >
+                    {soloCongregacion} solo congregación
+                  </button>
                 </p>
               </div>
             </div>
@@ -255,7 +212,7 @@ export default function TodosMiembros() {
               className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               <option value="all">Todos los departamentos</option>
-              <option value="__none__">Sin departamento</option>
+              <option value={SIN_DEPARTAMENTO}>Solo congregación (sin depto ni grupo)</option>
               {allDepts.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
 
@@ -379,8 +336,14 @@ export default function TodosMiembros() {
                         </span>
                       ))}
                     </div>
+                  ) : esSoloCongregacion(student) ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                      Solo congregación
+                    </span>
                   ) : (
-                    <span className="text-[10px] text-slate-400 font-medium italic">Sin departamento asignado</span>
+                    <span className="text-[10px] text-slate-400 font-medium italic">
+                      Sin departamento · {student.small_groups_count ?? 0} grupo{student.small_groups_count === 1 ? "" : "s"}
+                    </span>
                   )}
                 </div>
 
@@ -390,7 +353,7 @@ export default function TodosMiembros() {
                       size="sm"
                       variant="ghost"
                       className="flex-1 h-8 text-xs font-bold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg gap-1.5"
-                      onClick={() => openEdit(student)}
+                      onClick={() => setEditStudent(student)}
                     >
                       <Edit2 className="h-3.5 w-3.5" /> Editar
                     </Button>
@@ -481,75 +444,15 @@ export default function TodosMiembros() {
       )}
     </div>
 
-    <Dialog open={!!editStudent} onOpenChange={(open) => { if (!open) setEditStudent(null); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Editar Miembro</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-4 py-2">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Nombre</Label>
-              <Input value={editForm.first_name} onChange={e => setEditForm({ ...editForm, first_name: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Apellido</Label>
-              <Input value={editForm.last_name} onChange={e => setEditForm({ ...editForm, last_name: e.target.value })} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Género</Label>
-              <Select value={editForm.gender} onValueChange={v => setEditForm({ ...editForm, gender: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="masculino">Masculino</SelectItem>
-                  <SelectItem value="femenino">Femenino</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Fecha de Nacimiento</Label>
-              <MuiDatePickerField
-                value={editForm.birthdate ? new Date(editForm.birthdate + 'T00:00:00') : undefined}
-                onChange={(date: Date | null) => setEditForm({ ...editForm, birthdate: date ? format(date, 'yyyy-MM-dd') : '' })}
-                open={editBirthdateOpen}
-                onOpenChange={setEditBirthdateOpen}
-                placeholder="Seleccionar fecha"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>DNI</Label>
-              <Input value={editForm.document_number} onChange={e => setEditForm({ ...editForm, document_number: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Teléfono</Label>
-              <Input value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Dirección</Label>
-            <Input value={editForm.address} onChange={e => setEditForm({ ...editForm, address: e.target.value })} />
-          </div>
-          {baptizedEnabled && (
-            <LabeledSwitch
-              boxed
-              label="Bautizado"
-              checked={editForm.baptized}
-              onCheckedChange={v => setEditForm({ ...editForm, baptized: v })}
-            />
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setEditStudent(null)} disabled={savingEdit}>Cancelar</Button>
-            <Button onClick={handleSaveEdit} disabled={savingEdit}>
-              {savingEdit ? "Guardando..." : "Guardar"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <EditStudentModal
+      student={editStudent}
+      open={!!editStudent}
+      onOpenChange={(o) => { if (!o) setEditStudent(null); }}
+      onSaved={() => {
+        queryClient.invalidateQueries({ queryKey: ["all-students", companyId] });
+        queryClient.invalidateQueries({ queryKey: ["member-count"] });
+      }}
+    />
 
     <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

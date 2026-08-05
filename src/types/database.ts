@@ -53,6 +53,8 @@ export interface Student {
   dept_assignments?: StudentDepartment[];
 
   // Campos computados (solo para el frontend)
+  active_enrollments_count?: number;
+  small_groups_count?: number;
   is_authorized?: boolean;
   isAuthorized?: boolean;
   is_deleted?: boolean;

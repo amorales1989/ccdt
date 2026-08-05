@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments, getCompany } from "@/lib/api";
 import { hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
+import { sinDepartamento } from "@/lib/departments";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { addYears, differenceInDays, format, isBefore, startOfToday } from "date-fns";
@@ -223,14 +224,12 @@ const Home = () => {
       .filter(student => {
         // Los miembros sin departamento no tienen líder que los vea: los muestra admin/secretaría,
         // que es quien los administra. No se envía push ni WhatsApp por ellos.
-        const sinDepartamento = (student.dept_assignments?.length ?? 0) === 0
-          && !student.department_id
-          && !student.department;
+        const sinDepto = sinDepartamento(student);
 
         if (isAdminOrSecretary) {
-          return sinDepartamento;
+          return sinDepto;
         }
-        if (sinDepartamento) return false;
+        if (sinDepto) return false;
 
         // Considerar TODAS las asignaciones del miembro (alumno o colaborador en
         // otros departamentos), no solo su departamento primario. Fallback al

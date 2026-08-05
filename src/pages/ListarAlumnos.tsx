@@ -2,7 +2,6 @@ import React from "react";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDni } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -15,36 +14,27 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears, parse, isValid, parseISO } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
-import { Department, Student } from "@/types/database";
+import { Student } from "@/types/database";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
 import { toast } from "@/hooks/use-toast";
 import { StudentDetails } from "@/components/StudentDetails";
-import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, getAttendanceMatrix, addStudentDepartment, removeStudentDepartment, getCompany } from "@/lib/api";
+import { importStudentsFromExcel, updateStudent, getStudents, deleteStudent, getDepartments, getObservations, getAttendance, getAttendanceMatrix, getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
-import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
+import { SIN_DEPARTAMENTO, esSoloCongregacion } from "@/lib/departments";
+import { EditStudentModal } from "@/components/EditStudentModal";
 import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
-import { LabeledSwitch } from "@/components/LabeledSwitch";
 import AgregarAlumno from "@/pages/AgregarAlumno";
 import { CustomTabs } from "@/components/CustomTabs";
 import { BirthdayList } from "@/components/BirthdayList";
 import { exportAttendanceReport, exportAttendanceMatrix } from "@/lib/attendancePdfUtils";
 import { Calendar } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -53,12 +43,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { CustomTooltip } from "@/components/CustomTooltip";
 import * as z from "zod";
 import { TourGuide } from "@/components/TourGuide";
 import { HelpCircle } from "lucide-react";
-import type { Step } from "react-joyride";
 
 const ListarAlumnos = () => {
   const baptizedEnabled = useBaptizedEnabled();
@@ -78,10 +66,7 @@ const ListarAlumnos = () => {
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
-  const [editBirthdateOpen, setEditBirthdateOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [removingDept, setRemovingDept] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [excelError, setExcelError] = useState<string | null>(null);
@@ -118,6 +103,12 @@ const ListarAlumnos = () => {
   const canAddStudent = savedPerms && 'puede_agregar_miembros' in savedPerms
     ? savedPerms.puede_agregar_miembros !== false
     : DEFAULT_PERMISSIONS[role]?.puede_agregar_miembros !== false;
+  // Quien puede dejar a un miembro sin ningun departamento (solo congregación).
+  const puedeSinDepto = hasPermission(
+    profile,
+    'puede_agregar_miembros_sin_depto',
+    (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions,
+  );
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -226,11 +217,11 @@ const ListarAlumnos = () => {
       const classFilter = filters.class;
 
       const nameMatch = fullName.includes(nameFilter);
-      const departmentMatch = departmentFilter ?
-        (student.departments?.name === departmentFilter ||
-         student.department === departmentFilter ||
-         (student as any).dept_assignments?.some((a: any) => a.departments?.name === departmentFilter))
-        : true;
+      const departmentMatch = !departmentFilter ? true
+        : departmentFilter === SIN_DEPARTAMENTO ? esSoloCongregacion(student)
+        : (student.departments?.name === departmentFilter ||
+           student.department === departmentFilter ||
+           (student as any).dept_assignments?.some((a: any) => a.departments?.name === departmentFilter));
       const classMatch = classFilter ?
         (student.assigned_class === classFilter ||
          (departmentFilter && (student as any).dept_assignments?.some(
@@ -308,6 +299,9 @@ const ListarAlumnos = () => {
   const { data: classes } = useQuery({
     queryKey: ["classes", filters.department, companyId],
     queryFn: async () => {
+      // Los miembros solo congregación no tienen clase: no hay nada que ofrecer.
+      if (filters.department === SIN_DEPARTAMENTO) return [];
+
       // 1. Obtener clases del departamento si está seleccionado
       const selectedDeptObj = departments?.find(d =>
         d.name === filters.department || (d.id === profile?.department_id && (profile?.role === 'director' || profile?.role === 'vicedirector'))
@@ -343,54 +337,6 @@ const ListarAlumnos = () => {
 
 
 
-  const formSchema = z.object({
-    first_name: z.string().min(1, "El nombre es requerido"),
-    last_name: z.string().optional(),
-    gender: z.string(),
-    birthdate: z.any().optional(),
-    address: z.string().optional(),
-    phone: z.string().optional(),
-    document_number: z.string().optional(),
-    department_id: z.string().optional(),
-
-    assigned_class: z.string().optional(),
-    baptized: z.boolean().optional(),
-  });
-
-  // ========== ACTUALIZAR DEFAULT VALUES (línea ~124) ==========
-  const form = useForm({
-    defaultValues: {
-      first_name: "",
-      last_name: "",
-      gender: "masculino",
-      birthdate: "",
-      address: "",
-      phone: "",
-      document_number: "",
-      department_id: "",
-      assigned_class: "",
-      baptized: false
-    },
-    resolver: zodResolver(formSchema),
-  });
-
-  const watchedDepartmentId = form.watch("department_id");
-  const editModalClasses = React.useMemo(() => {
-    if (!watchedDepartmentId || !departments) return [];
-    const dept = departments.find(d => d.id === watchedDepartmentId);
-    return dept?.classes || [];
-  }, [watchedDepartmentId, departments]);
-
-  // Limpiar la clase asignada si cambia el departamento
-  useEffect(() => {
-    if (isEditModalOpen && watchedDepartmentId) {
-      const currentClass = form.getValues("assigned_class");
-      if (currentClass && !editModalClasses.includes(currentClass)) {
-        form.setValue("assigned_class", "");
-      }
-    }
-  }, [watchedDepartmentId, editModalClasses, form, isEditModalOpen]);
-
   useEffect(() => {
     refetch();
   }, [refetch]);
@@ -425,6 +371,10 @@ const ListarAlumnos = () => {
 
 
   const handleDownloadAttendanceMatrix = async () => {
+    if (filters.department === SIN_DEPARTAMENTO) {
+      toast({ title: "Sin datos", description: "Los miembros sin departamento no tienen asistencia registrada.", variant: "destructive" });
+      return;
+    }
     const reportStudents = filteredStudents || [];
     if (reportStudents.length === 0) {
       toast({ title: "Sin datos", description: "No hay miembros en la lista actual.", variant: "destructive" });
@@ -515,6 +465,10 @@ const ListarAlumnos = () => {
   };
 
   const handleDownloadAttendanceReport = async () => {
+    if (filters.department === SIN_DEPARTAMENTO) {
+      toast({ title: "Sin datos", description: "Los miembros sin departamento no tienen asistencia registrada.", variant: "destructive" });
+      return;
+    }
     const reportStudents = filteredStudents || [];
     if (reportStudents.length === 0) {
       toast({
@@ -689,38 +643,10 @@ const ListarAlumnos = () => {
     }
   };
 
+  // El precargado del formulario lo hace EditStudentModal (incluida la asignación
+  // propia cuando el rol tiene alcance de un solo departamento).
   const handleEdit = (student: Student) => {
     setStudentToEdit(student);
-    const birthDate = student.birthdate || "";
-
-    // For restricted roles (maestro/director/vicedirector), show the student's
-    // assignment in the editor's department instead of the student's primary one.
-    const restrictedRole = (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'lider' || profile?.role === 'director' || profile?.role === 'vicedirector';
-    let editDeptId = student.department_id || "";
-    let editClass = student.assigned_class || "";
-
-    if (restrictedRole && profile?.department_id) {
-      const ownAssignment = (student as any).dept_assignments?.find(
-        (a: any) => a.department_id === profile.department_id
-      );
-      if (ownAssignment) {
-        editDeptId = profile.department_id;
-        editClass = ownAssignment.assigned_class || "";
-      }
-    }
-
-    form.reset({
-      first_name: student.first_name || "",
-      last_name: student.last_name || "",
-      gender: student.gender || "masculino",
-      birthdate: birthDate,
-      address: student.address || "",
-      phone: (student.phone || "").replace(/^549/, ""),
-      document_number: student.document_number || "",
-      department_id: editDeptId,
-      assigned_class: editClass,
-      baptized: (student as any).baptized || false,
-    });
     setIsEditModalOpen(true);
   };
 
@@ -865,84 +791,6 @@ const ListarAlumnos = () => {
         description: "Hubo un problema al generar el PDF: " + error.message,
         variant: "destructive"
       });
-    }
-  };
-
-  // ============ FUNCIÓN PARA ACTUALIZAR USANDO BACKEND API ============
-  const handleUpdate = async (values: any) => {
-    if (!studentToEdit) return;
-    setIsUpdating(true);
-    try {
-      const restrictedRole = (profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'lider' || profile?.role === 'director' || profile?.role === 'vicedirector';
-      const editingOwnAssignment = restrictedRole
-        && profile?.department_id
-        && values.department_id === profile.department_id
-        && studentToEdit.department_id !== profile.department_id;
-
-      const rawPhone = (values.phone || '').replace(/\D/g, '');
-      const payload: any = {
-        ...values,
-        birthdate: values.birthdate || null,
-        document_number: values.document_number || null,
-        phone: rawPhone ? (rawPhone.startsWith('54') ? rawPhone : '549' + rawPhone) : null,
-        address: values.address || null,
-        assigned_class: values.assigned_class || null,
-      };
-
-      if (editingOwnAssignment) {
-        // Editar solo la asignación propia, sin pisar el departamento primario
-        // ni las demás asignaciones del miembro. Preservar el rol (alumno/colaborador).
-        delete payload.department_id;
-        delete payload.assigned_class;
-        const ownAssignment = (studentToEdit as any).dept_assignments?.find(
-          (a: any) => a.department_id === profile.department_id
-        );
-        await addStudentDepartment(studentToEdit.id, {
-          department_id: profile.department_id!,
-          assigned_class: values.assigned_class || null,
-          role_in_dept: ownAssignment?.role_in_dept || 'alumno',
-        });
-      }
-
-      console.log("Raw form values:", payload);
-
-      await updateStudent(studentToEdit.id, payload);
-      toast({
-        title: "Miembro actualizado",
-        description: "El miembro ha sido actualizado correctamente.",
-        variant: "success",
-      });
-      setIsEditModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["students", companyId] });
-    } catch (error: any) {
-      toast({
-        title: "Error al actualizar",
-        description: error.message || "Hubo un error al actualizar el miembro.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Quitar un departamento del miembro. Si era el único, queda sin departamento: sigue contando
-  // como miembro de la congregación pero sale de asistencia, ausencias y cobertura.
-  const handleRemoveDepartment = async (departmentId: string) => {
-    if (!studentToEdit) return;
-    setRemovingDept(departmentId);
-    try {
-      await removeStudentDepartment(studentToEdit.id, departmentId);
-      toast({ title: "Departamento quitado", variant: "success" });
-      setIsEditModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["students", companyId] });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo quitar el departamento.",
-        variant: "destructive",
-      });
-    } finally {
-      setRemovingDept(null);
     }
   };
 
@@ -1564,6 +1412,11 @@ const ListarAlumnos = () => {
                           </SelectTrigger>
                           <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                             {profile?.role !== 'director' && profile?.role !== 'vicedirector' && <SelectItem value="all">Todos</SelectItem>}
+                            {(profile?.role === 'admin' || profile?.role === 'secretaria') && (
+                              <SelectItem value={SIN_DEPARTAMENTO}>
+                                <span className="italic">Sin departamento</span>
+                              </SelectItem>
+                            )}
                             {departments?.filter(dept => {
                               if (profile?.role === 'admin' || profile?.role === 'secretaria') return true;
                               if (profile?.role === 'director' || profile?.role === 'vicedirector') return profile.department_id === dept.id;
@@ -1584,6 +1437,7 @@ const ListarAlumnos = () => {
                           onValueChange={(value) => setFilters(prev => ({ ...prev, class: value === "all" ? "" : value }))}
                           value={filters.class || "all"}
                           key={filters.department}
+                          disabled={filters.department === SIN_DEPARTAMENTO}
                         >
                           <SelectTrigger className="w-full rounded-xl bg-slate-50 border-slate-200">
                             <SelectValue placeholder="Seleccione una clase" />
@@ -1909,305 +1763,15 @@ const ListarAlumnos = () => {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
-            <DialogHeader>
-              <DialogTitle>Editar Miembro</DialogTitle>
-              <DialogDescription>
-                Realice los cambios necesarios en la información del miembro.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleUpdate)} className="grid gap-4 py-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="first_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nombre*</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nombre" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="last_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Apellido</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Apellido" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                  <FormField
-                    control={form.control}
-                    name="document_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número de Documento</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Número de documento"
-                            {...field}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              field.onChange(value);
-                            }}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="birthdate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de Nacimiento</FormLabel>
-                        <FormControl>
-                          <MuiDatePickerField
-                            value={field.value ? parseISO(field.value) : undefined}
-                            onChange={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
-                            open={editBirthdateOpen}
-                            onOpenChange={setEditBirthdateOpen}
-                            placeholder="Seleccionar fecha de nacimiento"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Género</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccione el género" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="masculino">Masculino</SelectItem>
-                            <SelectItem value="femenino">Femenino</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="department_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Departamento</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          disabled={(profile?.role === 'maestro' || profile?.role === 'auxiliar_maestro') || profile?.role === 'lider' || profile?.role === 'director' || profile?.role === 'vicedirector'}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccione un departamento" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {departments?.map((department) => (
-                              <SelectItem key={department.id} value={department.id}>
-                                {department.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="assigned_class"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Clase</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccione una clase" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value=" ">Ninguna</SelectItem>
-                            {editModalClasses?.map((className) => (
-                              <SelectItem key={String(className)} value={String(className)}>
-                                {String(className)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Teléfono</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Teléfono"
-                            {...field}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              field.onChange(value);
-                            }}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-
-
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Dirección</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Dirección" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {baptizedEnabled && (
-                    <FormField
-                      control={form.control}
-                      name="baptized"
-                      render={({ field }) => (
-                        <FormItem className="space-y-0">
-                          <FormControl>
-                            <LabeledSwitch
-                              label="Bautizado"
-                              checked={!!field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                {(() => {
-                  const isAdminOrSecretaria = profile?.role === 'admin' || profile?.role === 'secretaria';
-                  const raw = (studentToEdit as any)?.dept_assignments || [];
-                  // Fallback al departamento primario cuando el miembro no tiene filas en la junction.
-                  const assignments = raw.length > 0
-                    ? raw
-                    : (studentToEdit as any)?.department_id
-                      ? [{
-                          department_id: (studentToEdit as any).department_id,
-                          departments: { name: (studentToEdit as any).departments?.name || (studentToEdit as any).department },
-                          assigned_class: (studentToEdit as any).assigned_class,
-                        }]
-                      : [];
-
-                  // Admin/secretaría pueden quitar departamentos (y dejar al miembro sin ninguno).
-                  // Para el resto se mantiene el listado informativo solo cuando hay más de uno.
-                  if (!isAdminOrSecretaria && assignments.length <= 1) return null;
-
-                  if (isAdminOrSecretaria && assignments.length === 0) {
-                    return (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Departamentos del miembro</p>
-                        <p className="text-sm italic text-slate-500">
-                          Sin departamento. Cuenta como miembro de la congregación pero no aparece en asistencia.
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1.5">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Departamentos del miembro</p>
-                      {assignments.map((a: any, idx: number) => {
-                        const isEditable = a.department_id === profile?.department_id;
-                        return (
-                          <div key={a.id || idx} className="flex items-center justify-between text-sm gap-2">
-                            <span className={isEditable ? 'font-semibold text-primary' : 'text-slate-600'}>
-                              {a.departments?.name || '—'}{a.assigned_class ? ` · ${a.assigned_class}` : ''}
-                            </span>
-                            {isAdminOrSecretaria ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50"
-                                disabled={removingDept === a.department_id}
-                                onClick={() => handleRemoveDepartment(a.department_id)}
-                              >
-                                {removingDept === a.department_id ? 'Quitando…' : 'Quitar'}
-                              </Button>
-                            ) : isEditable ? (
-                              <span className="text-[10px] font-bold text-primary uppercase">Editable</span>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 uppercase">Solo lectura</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={isUpdating}>
-                    {isUpdating ? (
-                      <>
-                        <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        Guardando...
-                      </>
-                    ) : (
-                      "Guardar"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <EditStudentModal
+          student={studentToEdit}
+          open={isEditModalOpen}
+          onOpenChange={(o) => { setIsEditModalOpen(o); if (!o) setStudentToEdit(null); }}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["students", companyId] });
+            queryClient.invalidateQueries({ queryKey: ["member-count"] });
+          }}
+        />
 
         <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
           <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -2241,6 +1805,7 @@ const ListarAlumnos = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
       </div>
     </div>
   );
