@@ -160,6 +160,7 @@ export interface Profile {
   baptized?: boolean;
   company_id?: number;
   assignments?: UserAssignment[];
+  suspended?: boolean;
 }
 
 export type AppRole = "admin" | "lider" | "director" | "director_general" | "maestro" | "secretaria" | "secr.-calendario" | "colaborador" | "auxiliar_maestro" | "vicedirector" | "conserje" | "system_admin";

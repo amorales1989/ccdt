@@ -78,6 +78,15 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
       }
     }
 
+    // Cuenta suspendida por un director/admin: NO cerrar sesión (el usuario conserva acceso al
+    // calendario y a su perfil). Lo sacamos del área bloqueada; el AuthContext refresca el flag
+    // al volver a montar y el sidebar queda reducido.
+    if (errorData.code === 'USER_SUSPENDED') {
+      if (window.location.pathname !== '/calendario') {
+        window.location.href = '/calendario';
+      }
+    }
+
     // Si el backend reporta tiempo de inactividad, forzar logout
     if (errorData.code === 'INACTIVITY_TIMEOUT') {
       console.warn('Sesión expirada por inactividad. Redirigiendo...');
@@ -557,6 +566,25 @@ export const convertUserToMember = async (userId: string) => {
 // Saca la ficha de miembro del usuario de todos sus departamentos (rol "miembro").
 export const clearMemberDepartments = async (userId: string) => {
   return apiCall(`/profiles/${userId}/clear-member-departments`, { method: 'POST' });
+};
+
+// Suspende o reactiva una cuenta. El backend valida rol y departamento del que suspende.
+export const setUserSuspension = async (userId: string, suspended: boolean) => {
+  return apiCall(`/profiles/${userId}/suspension`, {
+    method: 'PATCH',
+    body: JSON.stringify({ suspended }),
+  });
+};
+
+// Suspensión masiva: por lista de ids (checkboxes) o por departamento completo.
+// Devuelve { updated, skipped: [{ id, reason }] }.
+export const bulkSetUserSuspension = async (
+  params: { suspended: boolean; user_ids?: string[]; department_id?: string }
+): Promise<{ success: boolean; updated: number; skipped: { id: string; reason: string }[] }> => {
+  return apiCall('/profiles/suspension/bulk', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
 };
 
 export const checkDniExists = async (dni: string) => {

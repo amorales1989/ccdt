@@ -66,6 +66,14 @@ const SidebarCollapseContext = createContext<SidebarCollapseCtx>({
 });
 
 const getItems = (role: string | undefined, profile: any, unreadReportsCount: number = 0) => {
+  // Cuenta suspendida: solo el calendario (actividades generales de la iglesia). El perfil
+  // propio sigue accesible desde el diálogo "Editar Perfil" del pie del sidebar.
+  if (profile?.suspended) {
+    return [
+      { title: "Calendario", url: "/calendario", icon: FileText }
+    ] as { title: string; url: string; icon: any; subItems?: { title: string; url: string }[]; badge?: number }[];
+  }
+
   const selectedDepartment = localStorage.getItem('selectedDepartment');
   if (selectedDepartment === 'calendario' || profile?.departments?.[0] === 'calendario') {
     return [

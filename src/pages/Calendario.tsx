@@ -56,7 +56,9 @@ export default function Calendario() {
   const isSecretaria = profile?.role === 'secretaria';
   const isAdmin = profile?.role === 'admin';
   const isSecrCalendario = profile?.role === 'secr.-calendario';
-  const canCreateEvents = isSecretaria || isAdmin || isSecrCalendario;
+  // Cuenta suspendida: calendario en solo lectura (ni eventos ni solicitudes de fecha).
+  const isSuspended = profile?.suspended === true;
+  const canCreateEvents = !isSuspended && (isSecretaria || isAdmin || isSecrCalendario);
 
   const queryClient = useQueryClient();
 
@@ -457,11 +459,13 @@ export default function Calendario() {
           <div>
             <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Calendario de Eventos</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
-              {(isSecretaria || isAdmin || isSecrCalendario) ? "Gestioná los eventos y solicitudes de la congregación." : "Consultá y solicitá nuevas fechas para tus actividades."}
+              {isSuspended
+                ? "Consultá las actividades de la congregación."
+                : (isSecretaria || isAdmin || isSecrCalendario) ? "Gestioná los eventos y solicitudes de la congregación." : "Consultá y solicitá nuevas fechas para tus actividades."}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {canCreateEvents ? (
+            {isSuspended ? null : canCreateEvents ? (
               <Dialog
                 open={dialogOpen}
                 onOpenChange={(open) => {

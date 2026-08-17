@@ -35,6 +35,7 @@ type Profile = {
   company_id: number | null;
   assignments: UserAssignment[] | null;
   completed_tours: string[] | null;
+  suspended: boolean;
 };
 
 type AuthContextType = {
@@ -221,6 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           document_number: data.document_number || null,
           address: data.address || null,
           assignments: assignmentsForProfile,
+          suspended: (data as any).suspended === true,
         };
         setSuspendedRole(null);
         setProfile(typedProfile);

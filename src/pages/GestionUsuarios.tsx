@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import { Department, DepartmentType } from "@/types/database";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Pencil, Trash2, Eye, EyeOff, Search, ChevronLeft, ChevronRight, Filter, ArrowRight, ArrowLeft, ArrowUpRight, GraduationCap, Plus, UserMinus } from "lucide-react";
+import { Users, Pencil, Trash2, Eye, EyeOff, Search, ChevronLeft, ChevronRight, Filter, ArrowRight, ArrowLeft, ArrowUpRight, GraduationCap, Plus, UserMinus, Lock, Unlock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -30,8 +30,20 @@ import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog"
 import { RegisterUserModal } from "@/components/RegisterUserModal";
 import { FileUp } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
-import { convertUserToMember } from "@/lib/api";
+import { convertUserToMember, setUserSuspension, bulkSetUserSuspension } from "@/lib/api";
 import { CustomTooltip } from "@/components/CustomTooltip";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { canSuspendTarget } from "@/lib/suspension";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -50,6 +62,7 @@ type Profile = {
   document_number?: string;
   gender?: string;
   assignments?: any[];
+  suspended?: boolean;
 };
 
 const GestionUsuarios = () => {
@@ -81,6 +94,14 @@ const GestionUsuarios = () => {
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [userToConvert, setUserToConvert] = useState<string | null>(null);
   const [isCleanupDialogOpen, setIsCleanupDialogOpen] = useState(false);
+
+  // Suspensión de cuentas
+  const [statusFilter, setStatusFilter] = useState<"all" | "activos" | "suspendidos">("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // Acción pendiente de confirmar: por lista de ids o por departamento completo
+  const [pendingSuspension, setPendingSuspension] = useState<
+    { suspended: boolean; ids?: string[]; departmentId?: string; count: number } | null
+  >(null);
 
   const isDirector = profile?.role === 'director';
   const isDirectorGeneral = profile?.role === 'director_general';
@@ -175,7 +196,8 @@ const GestionUsuarios = () => {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, listDepartmentFilter]);
+    setSelectedIds([]);
+  }, [searchTerm, listDepartmentFilter, statusFilter]);
 
   const prevAssignmentDeptRef = useRef<string | null>(null);
 
@@ -284,6 +306,53 @@ const GestionUsuarios = () => {
     }
   });
 
+  // Suspender/reactivar una cuenta. El backend revalida rol y departamento del que suspende.
+  const suspensionMutation = useMutation({
+    mutationFn: ({ userId, suspended }: { userId: string; suspended: boolean }) =>
+      setUserSuspension(userId, suspended),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: variables.suspended ? "Cuenta suspendida" : "Cuenta reactivada",
+        description: variables.suspended
+          ? "El usuario solo podrá ver el calendario y editar su perfil."
+          : "El usuario recuperó el acceso completo.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo cambiar el estado de la cuenta",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkSuspensionMutation = useMutation({
+    mutationFn: (params: { suspended: boolean; user_ids?: string[]; department_id?: string }) =>
+      bulkSetUserSuspension(params),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setSelectedIds([]);
+      setPendingSuspension(null);
+      const omitidos = result.skipped?.length
+        ? ` ${result.skipped.length} omitido(s) por permisos.`
+        : "";
+      toast({
+        title: variables.suspended ? "Cuentas suspendidas" : "Cuentas reactivadas",
+        description: `${result.updated} cuenta(s) actualizada(s).${omitidos}`,
+      });
+    },
+    onError: (error: any) => {
+      setPendingSuspension(null);
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo completar la operación",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase.functions.invoke('manage-users', {
@@ -331,6 +400,9 @@ const GestionUsuarios = () => {
       }
     }
 
+    if (statusFilter === "activos" && user.suspended) return false;
+    if (statusFilter === "suspendidos" && !user.suspended) return false;
+
     if (!searchTerm.trim()) return true;
 
     const searchTermLower = searchTerm.toLowerCase();
@@ -350,6 +422,17 @@ const GestionUsuarios = () => {
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+
+  // --- Suspensión: selección y permisos de la UI (el backend revalida todo) ---
+  const canSuspend = (user: Profile) => canSuspendTarget(profile, user);
+  const suspendableVisible = filteredUsers.filter(canSuspend);
+  const selectedUsers = users.filter(u => selectedIds.includes(u.id));
+  const allVisibleSelected =
+    suspendableVisible.length > 0 && suspendableVisible.every(u => selectedIds.includes(u.id));
+  // Si en la selección hay al menos uno activo, el botón principal suspende; si están todos
+  // suspendidos, reactiva.
+  const bulkActionSuspends = selectedUsers.some(u => !u.suspended);
+  const filteredDepartmentId = departments.find(d => d.name === listDepartmentFilter)?.id;
 
   // Assignment logic filtering (accounts for pending local changes)
   const assignmentFilteredUsers = users.filter(user =>
@@ -469,6 +552,22 @@ const GestionUsuarios = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="w-full sm:w-44">
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+                  <SelectTrigger className="h-11 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-purple-100 dark:border-slate-700">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-purple-500" />
+                      <SelectValue placeholder="Estado" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los estados</SelectItem>
+                    <SelectItem value="activos">Activos</SelectItem>
+                    <SelectItem value="suspendidos">Suspendidos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
         </div>
@@ -482,11 +581,69 @@ const GestionUsuarios = () => {
               </div>
             ) : (
               <div className="space-y-4">
+                {(selectedIds.length > 0 || (listDepartmentFilter !== "all" && suspendableVisible.length > 0)) && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/60 dark:bg-purple-950/20 px-4 py-3">
+                    <span className="text-sm font-medium text-purple-800 dark:text-purple-300">
+                      {selectedIds.length > 0
+                        ? `${selectedIds.length} usuario(s) seleccionado(s)`
+                        : `Departamento: ${listDepartmentFilter}`}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selectedIds.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 rounded-lg"
+                          disabled={bulkSuspensionMutation.isPending}
+                          onClick={() =>
+                            setPendingSuspension({
+                              suspended: bulkActionSuspends,
+                              ids: selectedIds,
+                              count: selectedIds.length,
+                            })
+                          }
+                        >
+                          {bulkActionSuspends ? <Lock className="h-4 w-4 mr-1.5" /> : <Unlock className="h-4 w-4 mr-1.5" />}
+                          {bulkActionSuspends ? "Suspender seleccionados" : "Reactivar seleccionados"}
+                        </Button>
+                      )}
+                      {listDepartmentFilter !== "all" && filteredDepartmentId && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 rounded-lg text-destructive border-red-200 hover:bg-red-50"
+                          disabled={bulkSuspensionMutation.isPending}
+                          onClick={() =>
+                            setPendingSuspension({
+                              suspended: true,
+                              departmentId: filteredDepartmentId,
+                              count: suspendableVisible.filter(u => !u.suspended).length,
+                            })
+                          }
+                        >
+                          <Lock className="h-4 w-4 mr-1.5" />
+                          Suspender todo el departamento
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
                         <TableRow>
+                          <TableHead className="w-10 py-4">
+                            <Checkbox
+                              checked={allVisibleSelected}
+                              disabled={suspendableVisible.length === 0}
+                              aria-label="Seleccionar todos los visibles"
+                              onCheckedChange={(checked) =>
+                                setSelectedIds(checked ? suspendableVisible.map(u => u.id) : [])
+                              }
+                            />
+                          </TableHead>
                           <TableHead className="font-bold py-4">Usuario</TableHead>
                           <TableHead className="font-bold py-4 hidden md:table-cell">Asignaciones</TableHead>
                           <TableHead className="text-right font-bold py-4">Acciones</TableHead>
@@ -494,10 +651,30 @@ const GestionUsuarios = () => {
                       </TableHeader>
                       <TableBody>
                         {paginatedUsers.map((user) => (
-                          <TableRow key={user.id} className="group hover:bg-purple-50/30 dark:hover:bg-purple-900/10 transition-colors">
+                          <TableRow key={user.id} className={`group transition-colors ${user.suspended ? 'bg-amber-50/70 hover:bg-amber-100/70 dark:bg-amber-950/20 dark:hover:bg-amber-950/30' : 'hover:bg-purple-50/30 dark:hover:bg-purple-900/10'}`}>
+                            <TableCell>
+                              {canSuspend(user) && (
+                                <Checkbox
+                                  checked={selectedIds.includes(user.id)}
+                                  aria-label={`Seleccionar ${user.first_name}`}
+                                  onCheckedChange={(checked) =>
+                                    setSelectedIds(prev =>
+                                      checked ? [...prev, user.id] : prev.filter(id => id !== user.id)
+                                    )
+                                  }
+                                />
+                              )}
+                            </TableCell>
                             <TableCell>
                               <div className="flex flex-col">
-                                <span className="font-bold text-slate-800 dark:text-slate-200">{user.first_name} {user.last_name}</span>
+                                <span className="font-bold text-slate-800 dark:text-slate-200">
+                                  {user.first_name} {user.last_name}
+                                  {user.suspended && (
+                                    <Badge className="ml-2 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 text-[9px] h-4 align-middle">
+                                      Suspendido
+                                    </Badge>
+                                  )}
+                                </span>
                                 <span className="text-xs text-muted-foreground">{user.email || "Sin email"}</span>
                               </div>
                             </TableCell>
@@ -548,6 +725,18 @@ const GestionUsuarios = () => {
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                 </RegisterUserModal>
+                                {canSuspend(user) && (
+                                  <CustomTooltip title={user.suspended ? "Reactivar cuenta" : "Suspender cuenta (solo verá el calendario)"}>
+                                    <span className="inline-flex">
+                                      <Button variant="ghost" size="icon"
+                                        className="h-8 w-8 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 rounded-full transition-colors"
+                                        disabled={suspensionMutation.isPending}
+                                        onClick={() => suspensionMutation.mutate({ userId: user.id, suspended: !user.suspended })}>
+                                        {user.suspended ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                                      </Button>
+                                    </span>
+                                  </CustomTooltip>
+                                )}
                                 {/* span intermedio: MUI Tooltip no recibe eventos de un botón deshabilitado */}
                                 <CustomTooltip title="Convertir en miembro (borra la cuenta, conserva a la persona)">
                                   <span className="inline-flex">
@@ -846,6 +1035,40 @@ const GestionUsuarios = () => {
         description="Se elimina la cuenta de usuario y sus roles, pero la persona sigue registrada como miembro de la congregación (sin departamento). No podrá volver a iniciar sesión."
         isLoading={convertToMemberMutation.isPending}
       />
+      <AlertDialog open={!!pendingSuspension} onOpenChange={(open) => { if (!open) setPendingSuspension(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingSuspension?.suspended ? "¿Suspender cuentas?" : "¿Reactivar cuentas?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingSuspension?.departmentId
+                ? `Se suspenderán todas las cuentas activas del departamento "${listDepartmentFilter}" sobre las que tenés permiso (${pendingSuspension?.count}). `
+                : `Se actualizarán ${pendingSuspension?.count} cuenta(s). `}
+              {pendingSuspension?.suspended
+                ? "Los usuarios suspendidos solo podrán ver el calendario y editar su perfil. Conservan su rol, departamento y clase asignada."
+                : "Los usuarios recuperarán el acceso completo a la aplicación."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkSuspensionMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkSuspensionMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!pendingSuspension) return;
+                bulkSuspensionMutation.mutate({
+                  suspended: pendingSuspension.suspended,
+                  user_ids: pendingSuspension.ids,
+                  department_id: pendingSuspension.departmentId,
+                });
+              }}
+            >
+              {bulkSuspensionMutation.isPending ? "Aplicando..." : "Confirmar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div >
   );
 };

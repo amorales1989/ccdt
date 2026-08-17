@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 
 interface LoadingOverlayProps {
@@ -6,7 +7,11 @@ interface LoadingOverlayProps {
 }
 
 export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message = "Cargando datos..." }) => {
-    return (
+    // Portal al body: las páginas usan `animate-fade-in`, que deja un transform aplicado
+    // (animation-fill-mode: forwards). Un ancestro con transform pasa a ser el bloque de
+    // referencia de `position: fixed`, así que el overlay tapaba solo su contenedor y se
+    // podía clickear el resto de la pantalla a través del blur.
+    return createPortal(
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/30 backdrop-blur-md animate-in fade-in duration-300">
             <div className="relative">
                 {/* Decorative background glow */}
@@ -30,6 +35,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message = "Carga
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };

@@ -116,6 +116,12 @@ export default function Index() {
         return;
       }
 
+      // Cuenta suspendida: directo al calendario, sin selección de departamento.
+      if (profile.suspended) {
+        navigate('/calendario');
+        return;
+      }
+
       if (profile.role === 'colaborador') {
         toast({
           title: "Acceso denegado",
