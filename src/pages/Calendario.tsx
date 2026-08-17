@@ -64,7 +64,7 @@ export default function Calendario() {
 
   const { data: allEvents = [], isLoading, refetch } = useQuery({
     queryKey: ['events'],
-    queryFn: getEvents,
+    queryFn: () => getEvents(),
   });
 
   useEffect(() => {

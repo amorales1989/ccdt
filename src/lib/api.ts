@@ -206,6 +206,8 @@ export const getAttendance = async (
   }
 };
 
+// Lectura pre-login: la pantalla de acceso necesita nombre y logo de la congregación antes
+// de que exista sesión, así que va por Supabase/RLS. Con sesión activa usar getCompanySettings.
 export const getCompany = async (id: number) => {
   try {
     const { data, error } = await supabase
@@ -219,6 +221,28 @@ export const getCompany = async (id: number) => {
     return data;
   } catch (error) {
     console.error('Error fetching company:', error);
+    throw error;
+  }
+};
+
+// Datos de la empresa del usuario logueado (el back la deriva del perfil).
+export const getCompanySettings = async () => {
+  try {
+    const response = await apiCall('/company');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching company settings:', error);
+    throw error;
+  }
+};
+
+// Solicitudes de mantenimiento; `status` acepta varios separados por coma.
+export const getMaintenanceRequests = async (status?: string) => {
+  try {
+    const response = await apiCall(`/maintenance/requests${status ? `?status=${status}` : ''}`);
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching maintenance requests:', error);
     throw error;
   }
 };
@@ -752,14 +776,8 @@ export const importStudentsFromExcel = async (students: { first_name: string; ge
 
 export const getDepartments = async (): Promise<Department[]> => {
   try {
-    const { data, error } = await supabase
-      .from('departments')
-      .select('*')
-      .eq('company_id', getPersistentCompanyId())
-      .order('name');
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiCall('/departments');
+    return response.data || [];
   } catch (error) {
     console.error('Error fetching departments:', error);
     throw error;
@@ -991,15 +1009,12 @@ export const getStatsResumen = async (params: {
   return response?.data ?? null;
 };
 
-export const getEvents = async (): Promise<Event[]> => {
+// `from` (YYYY-MM-DD) acota a los eventos vigentes; sin él trae el historial completo,
+// que es lo que necesita la pantalla de Calendario.
+export const getEvents = async (from?: string): Promise<Event[]> => {
   try {
-    const { data, error } = await supabase
-      .from('events')
-      .select('*')
-      .eq('company_id', getPersistentCompanyId())
-      .order('date');
-    if (error) throw error;
-    return data || [];
+    const response = await apiCall(`/events${from ? `?from=${from}` : ''}`);
+    return response.data || [];
   } catch (error) {
     console.error('Error fetching events:', error);
     throw error;

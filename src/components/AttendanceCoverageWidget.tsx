@@ -115,19 +115,30 @@ function DeptBlock({ dept, showHeader }: { dept: CoverageDept; showHeader: boole
 }
 
 // Para directores/vicedirectores: qué clases ya tomaron asistencia un día y cuáles faltan.
+// El Home usa este mismo hook (misma queryKey ⇒ una sola request) para que su overlay de
+// carga espere también a la cobertura, en vez de destaparse antes y que el widget aparezca
+// después. Allá se llama con `poll: false`: el refresco periódico lo maneja el widget.
+export function useAttendanceCoverage(
+  date: string | null,
+  options?: { enabled?: boolean; poll?: boolean }
+) {
+  // Refresco automático (solo React Query, sin tocar Supabase): reconsulta cada 15s
+  // y al volver a enfocar la ventana, así se actualiza sin recargar la pantalla.
+  return useQuery({
+    queryKey: ["attendance-coverage", date],
+    queryFn: () => getAttendanceCoverage(date ?? undefined),
+    refetchOnWindowFocus: true,
+    refetchInterval: options?.poll === false ? false : 15000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
 export function AttendanceCoverageWidget() {
   // null = usar la fecha por defecto que resuelve el back (último día de actividad del depto).
   const [date, setDate] = useState<string | null>(null);
   const [dateOpen, setDateOpen] = useState(false);
 
-  // Refresco automático (solo React Query, sin tocar Supabase): reconsulta cada 15s
-  // y al volver a enfocar la ventana, así se actualiza sin recargar la pantalla.
-  const { data, isLoading } = useQuery({
-    queryKey: ["attendance-coverage", date],
-    queryFn: () => getAttendanceCoverage(date ?? undefined),
-    refetchOnWindowFocus: true,
-    refetchInterval: 15000,
-  });
+  const { data, isLoading } = useAttendanceCoverage(date);
 
   const departments = data?.departments ?? [];
   const shownDate = date ?? data?.date ?? format(new Date(), "yyyy-MM-dd");

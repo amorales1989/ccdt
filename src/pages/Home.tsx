@@ -6,12 +6,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { EventForm } from "@/components/EventForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments, getCompany } from "@/lib/api";
+import { getEvents, createEvent, updateEvent, deleteEvent, getStudents, getDepartments, getCompanySettings, getMaintenanceRequests } from "@/lib/api";
 import { hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 import { sinDepartamento } from "@/lib/departments";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { addYears, differenceInDays, format, isBefore, startOfToday } from "date-fns";
+import { addYears, differenceInDays, format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { es } from "date-fns/locale";
 import type { Event, DepartmentType, Student, Department, EventWithBirthday } from "@/types/database";
 import { CalendarWidget } from "@/components/CalendarWidget";
@@ -21,7 +22,7 @@ import { StudentSearch } from "@/components/StudentSearch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MaintenanceSummaryWidget } from "@/components/MaintenanceSummaryWidget";
-import { AttendanceCoverageWidget } from "@/components/AttendanceCoverageWidget";
+import { AttendanceCoverageWidget, useAttendanceCoverage } from "@/components/AttendanceCoverageWidget";
 import { MissingDniAlertModal } from "@/components/MissingDniAlertModal";
 import {
   DropdownMenu,
@@ -32,7 +33,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { TourGuide } from "@/components/TourGuide";
@@ -55,9 +55,9 @@ const Home = () => {
   // Permiso de mantenimiento (Configuración > Permisos por rol): decide si se traen
   // las solicitudes para el badge del encabezado. Va antes del early return de abajo
   // para no sumar otro hook condicional.
-  const { data: companyForPerms } = useQuery({
+  const { data: companyForPerms, isLoading: companyLoading } = useQuery({
     queryKey: ["company", getPersistentCompanyId()],
-    queryFn: () => getCompany(getPersistentCompanyId()),
+    queryFn: getCompanySettings,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -84,9 +84,11 @@ const Home = () => {
   const isCalendarDepartment = selectedDepartmentStorage === 'calendario' || profile?.departments?.[0] === 'calendario';
 
   const companyId = getPersistentCompanyId();
+  // Hoy en Buenos Aires: el back descarta lo ya pasado, así el Home no se trae el historial.
+  const todayStr = format(toZonedTime(new Date(), 'America/Argentina/Buenos_Aires'), 'yyyy-MM-dd');
   const { data: events = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['events', companyId],
-    queryFn: getEvents,
+    queryKey: ['events', companyId, todayStr],
+    queryFn: () => getEvents(todayStr),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -148,17 +150,15 @@ const Home = () => {
     staleTime: 1000 * 60 * 15, // 15 minutos (datos estáticos)
   });
 
-  const { data: maintenanceRequests = [] } = useQuery({
+  // Solo para que el overlay espere a la cobertura; el widget comparte esta misma query.
+  const { isLoading: coverageLoading } = useAttendanceCoverage(null, {
+    enabled: isDirectorRole,
+    poll: false,
+  });
+
+  const { data: maintenanceRequests = [], isLoading: maintenanceLoading } = useQuery({
     queryKey: ['maintenance_requests', companyId],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("maintenance_requests")
-        .select("*")
-        .eq("company_id", companyId)
-        .in("status", ["pendiente", "en_proceso"]);
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getMaintenanceRequests("pendiente,en_proceso"),
     enabled: !!companyId && canManageMaintenance,
   });
 
@@ -312,12 +312,17 @@ const Home = () => {
   const futureEvents = useMemo(() => {
     if (!events) return [];
 
+    // El back ya descarta lo pasado (?from=), pero se revalida acá por si la pestaña quedó
+    // abierta de un día para el otro. Se compara por string: con `new Date('2026-08-17')` la
+    // fecha se parsea como medianoche UTC, que en Argentina cae el día anterior, y el evento
+    // desaparecía de la lista el mismo día que ocurría.
     const regularEvents = events.filter(event => {
       const esSolicitud = (event as any).solicitud === true || (event as any).solicitud === 'true';
       const estado = (event as any).estado;
       const isAproved = !esSolicitud || estado === 'aprobada';
-      const eventDate = new Date(event.date);
-      const isPast = isBefore(eventDate, startOfToday());
+      // Para eventos de varios días vale la fecha de fin: siguen vigentes mientras duran.
+      const lastDay = (event.end_date || event.date).split('T')[0];
+      const isPast = lastDay < todayStr;
       return isAproved && !isPast;
     }).map(event => ({
       ...event,
@@ -338,7 +343,7 @@ const Home = () => {
       const dateB = new Date(b.date);
       return dateA.getTime() - dateB.getTime();
     });
-  }, [events, upcomingBirthdays]);
+  }, [events, upcomingBirthdays, todayStr]);
 
   const isAdminOrSecretary = profile?.role === "admin" || profile?.role === "secretaria" || profile?.role === "secr.-calendario";
   const isTeacherOrLeader = profile?.role === "maestro" || profile?.role === "lider" || profile?.role === "auxiliar_maestro";
@@ -372,7 +377,19 @@ const Home = () => {
     navigate("/calendario", { state: { activeTab: "solicitudes" } });
   };
 
-  if (loading || (studentsLoading && !isCalendarDepartment) || (departmentsLoading && !isCalendarDepartment)) {
+  // El overlay se mantiene hasta que terminan TODAS las cargas del panel. Las queries
+  // deshabilitadas (`enabled: false`) reportan isLoading=false en React Query v5, así que
+  // no bloquean a quien no ve ese widget.
+  const panelLoading =
+    loading ||
+    companyLoading ||
+    eventsLoading ||
+    maintenanceLoading ||
+    coverageLoading ||
+    (studentsLoading && !isCalendarDepartment) ||
+    (departmentsLoading && !isCalendarDepartment);
+
+  if (panelLoading) {
     return <LoadingOverlay message="Cargando panel..." />;
   }
 
