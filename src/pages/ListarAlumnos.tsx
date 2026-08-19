@@ -16,7 +16,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
 import { Student } from "@/types/database";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { BajaMiembroDialog } from "@/components/BajaMiembroDialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -65,6 +65,7 @@ const ListarAlumnos = () => {
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -800,8 +801,11 @@ const ListarAlumnos = () => {
   };
 
   // ============ FUNCIÓN PARA ELIMINAR USANDO BACKEND API ============
-  const confirmDelete = async () => {
-    if (!studentToDelete) return;
+  const confirmDelete = async (motivo: string, nota: string | null) => {
+    // El guard por isDeleting evita el doble click: dos DELETE en paralelo pasaban los dos
+    // la verificación de "existe y está activo" y dejaban la baja registrada dos veces.
+    if (!studentToDelete || isDeleting) return;
+    setIsDeleting(true);
     try {
       // Determinar el departamento desde el cual se está eliminando:
       // - admin/secretaria: el del filtro activo (si lo hay)
@@ -816,7 +820,7 @@ const ListarAlumnos = () => {
         fromDeptId = profile?.department_id || null;
       }
 
-      const result: any = await deleteStudent(studentToDelete, fromDeptId);
+      const result: any = await deleteStudent(studentToDelete, fromDeptId, { motivo, nota });
       toast({
         title: result?.unlinked ? "Desvinculado del departamento" : "Miembro eliminado",
         description: result?.unlinked
@@ -827,12 +831,17 @@ const ListarAlumnos = () => {
       setDeleteAlertOpen(false);
       setStudentToDelete(null);
       queryClient.invalidateQueries({ queryKey: ["students", companyId] });
+      // La baja acaba de sumar una ficha al archivo: sin esto el listado de /archivo
+      // sigue mostrando la versión cacheada (staleTime global de 5 minutos).
+      queryClient.invalidateQueries({ queryKey: ["archived-students"] });
     } catch (error: any) {
       toast({
         title: "Error al eliminar",
         description: error.message || "Hubo un error al eliminar el miembro.",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1791,20 +1800,16 @@ const ListarAlumnos = () => {
           </DialogContent>
         </Dialog>
 
-        <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
-          <AlertDialogContent className="w-[95vw] max-w-md sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción eliminará al miembro de forma permanente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete}>Eliminar</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <BajaMiembroDialog
+          open={deleteAlertOpen}
+          onOpenChange={setDeleteAlertOpen}
+          onConfirm={confirmDelete}
+          isLoading={isDeleting}
+          memberName={(() => {
+            const s = students?.find((st) => st.id === studentToDelete);
+            return s ? `${s.first_name} ${s.last_name || ""}`.trim() : undefined;
+          })()}
+        />
 
       </div>
     </div>

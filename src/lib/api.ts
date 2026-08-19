@@ -116,7 +116,17 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
       window.location.href = '/auth';
     }
 
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    // El cuerpo del error viaja pegado al Error: hay respuestas (ej. ARCHIVED_DNI) que traen
+    // datos que la pantalla necesita para ofrecer una salida, no solo un texto.
+    const apiError = new Error(errorData.message || `HTTP error! status: ${response.status}`) as Error & {
+      code?: string;
+      status?: number;
+      body?: Record<string, unknown>;
+    };
+    apiError.code = errorData.code;
+    apiError.status = response.status;
+    apiError.body = errorData;
+    throw apiError;
   }
 
   return response.json();
@@ -557,9 +567,17 @@ export const deleteStudentPhoto = async (id: string) => {
   }
 };
 
-export const deleteStudent = async (id: string, departmentId?: string | null) => {
+export const deleteStudent = async (
+  id: string,
+  departmentId?: string | null,
+  reason?: { motivo?: string | null; nota?: string | null }
+) => {
   try {
-    const qs = departmentId ? `?department_id=${encodeURIComponent(departmentId)}` : '';
+    const params = new URLSearchParams();
+    if (departmentId) params.set('department_id', departmentId);
+    if (reason?.motivo) params.set('reason', reason.motivo);
+    if (reason?.nota) params.set('reason_note', reason.nota);
+    const qs = params.toString() ? `?${params.toString()}` : '';
     const response = await apiCall(`/students/${id}${qs}`, {
       method: 'DELETE',
     });
@@ -568,6 +586,20 @@ export const deleteStudent = async (id: string, departmentId?: string | null) =>
     console.error('Error deleting student:', error);
     throw error;
   }
+};
+
+// Pase masivo de departamento/clase. Va por el API para que quede registrado quién promovió
+// a quién (student_events) y para que se actualice también student_departments.
+export const promoteStudents = async (payload: {
+  student_ids: string[];
+  department_id: string;
+  assigned_class?: string | null;
+}) => {
+  const response = await apiCall('/students/promote', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return response.data || response;
 };
 
 export const addStudentDepartment = async (studentId: string, assignment: { department_id: string; assigned_class?: string | null; role_in_dept?: string }) => {
@@ -659,6 +691,103 @@ export const mergeStudents = async (
   const response = await apiCall(`/students/${sourceId}/merge`, {
     method: 'POST',
     body: JSON.stringify({ target_id: targetId, dry_run: dryRun }),
+  });
+  return response.data || response;
+};
+
+export interface ArchivedStudent {
+  id: string;
+  first_name: string;
+  last_name?: string | null;
+  deleted_at: string;
+  deleted_reason?: string | null;
+  department?: string | null;
+  document_number?: string | null;
+  birthdate?: string | null;
+  gender?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  photo_url?: string | null;
+  created_at?: string;
+  deleted_by_name?: string | null;
+  department_id?: string | null;
+  assigned_class?: string | null;
+  /** Clases a las que asistió (registros presentes) mientras estuvo. */
+  asistencias?: number;
+  ultima_asistencia?: string | null;
+  /** Fichas archivadas que corresponden a esta persona. >1 = duplicados viejos;
+   *  se lista la más reciente. */
+  fichas?: number;
+}
+
+/** Archivo de ex miembros: fichas dadas de baja, con motivo y su historial intacto.
+ *  Solo lo puede consultar admin, secretaria o director general. */
+export const getArchivedStudents = async (params?: {
+  search?: string;
+  department_id?: string | null;
+  desde?: string | null;
+  hasta?: string | null;
+  limit?: number;
+  offset?: number;
+}): Promise<{ total: number; items: ArchivedStudent[] }> => {
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set('search', params.search);
+  if (params?.department_id) qs.set('department_id', params.department_id);
+  if (params?.desde) qs.set('desde', params.desde);
+  if (params?.hasta) qs.set('hasta', params.hasta);
+  if (params?.limit != null) qs.set('limit', String(params.limit));
+  if (params?.offset != null) qs.set('offset', String(params.offset));
+
+  const response = await apiCall(`/students/archived${qs.toString() ? `?${qs}` : ''}`);
+  const data = response.data || response;
+  return { total: data?.total || 0, items: data?.items || [] };
+};
+
+/** Un movimiento de la línea de tiempo. `tipo` define cómo se lee `detalle`:
+ *  los eventos de la bitácora traen { de, a, cambios, motivo... } y los derivados
+ *  { texto } (observación), { clase } (autorización), { presentes, total } (asistencia). */
+export interface TimelineItem {
+  tipo: 'alta' | 'baja' | 'reactivacion' | 'vinculacion' | 'cambio_departamento'
+  | 'desvinculacion' | 'promocion' | 'fusion' | 'edicion' | 'bautismo'
+  | 'observacion' | 'autorizacion' | 'grupo_pequeno' | 'asistencia_mes';
+  fecha: string;
+  departamento?: string | null;
+  actor?: string | null;
+  detalle?: Record<string, any> | null;
+}
+
+export interface StudentTimeline {
+  miembro: {
+    id: string;
+    first_name: string;
+    last_name?: string | null;
+    document_number?: string | null;
+    photo_url?: string | null;
+    department?: string | null;
+    assigned_class?: string | null;
+    created_at?: string;
+    deleted_at?: string | null;
+    deleted_reason?: string | null;
+    activo: boolean;
+  };
+  items: TimelineItem[];
+}
+
+/** Historia completa de una persona (sirve igual para fichas activas y archivadas). */
+export const getStudentTimeline = async (studentId: string): Promise<StudentTimeline> => {
+  const response = await apiCall(`/students/${studentId}/timeline`);
+  return response.data || response;
+};
+
+/** Vuelve a activar una ficha archivada conservando su historial. Si se pasa departamento,
+ *  entra ahí; si no, vuelve con el que tenía cuando se dio de baja. */
+export const restoreStudent = async (
+  id: string,
+  payload?: { department_id?: string | null; assigned_class?: string | null }
+) => {
+  const response = await apiCall(`/students/${id}/restore`, {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
   });
   return response.data || response;
 };

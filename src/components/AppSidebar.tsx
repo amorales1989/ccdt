@@ -18,7 +18,7 @@ import {
   Users, UserPlus, ClipboardList, History, Home, Menu,
   FileText, LogOut, UserPlus2, UserRound, FolderIcon,
   FolderUp, Settings, FileOutput, ClipboardCheck, ChevronRight, Sun, Moon,
-  BarChart3, BookOpen, Wrench, Megaphone, HelpCircle, Wallet, Building, Users2
+  BarChart3, BookOpen, Wrench, Megaphone, HelpCircle, Wallet, Building, Users2, Archive
 } from "lucide-react";
 
 // Icono de anclar/colapsar sidebar (panel con flecha). Hereda color con currentColor.
@@ -103,6 +103,7 @@ const getItems = (role: string | undefined, profile: any, unreadReportsCount: nu
     { title: "Inicio", url: "/", icon: Home },
     { title: "Todos los Miembros", url: "/todos-los-miembros", icon: Users },
     { title: "Lista de Miembros", url: "/listar", icon: Users },
+    { title: "Archivo de Miembros", url: "/archivo", icon: Archive },
     { title: "Calendario", url: "/calendario", icon: FileText },
     { title: "Material Didáctico", url: "/material", icon: BookOpen },
     { title: "Informes de Personal", url: "/informes", icon: Users, badge: unreadReportsCount > 0 ? unreadReportsCount : undefined },
@@ -130,7 +131,7 @@ const getItems = (role: string | undefined, profile: any, unreadReportsCount: nu
 // si no le queda ningún hijo visible según los permisos del rol.
 const TOP_LEVEL_ORDER = ["Inicio", "Calendario"];
 const MENU_GROUPS: { title: string; icon: any; children: string[] }[] = [
-  { title: "Miembros", icon: Users, children: ["Todos los Miembros", "Lista de Miembros", "Promover Miembros"] },
+  { title: "Miembros", icon: Users, children: ["Todos los Miembros", "Lista de Miembros", "Promover Miembros", "Archivo de Miembros"] },
   { title: "Clases", icon: BookOpen, children: ["Tomar Asistencia", "Historial", "Registro de Temas", "Material Didáctico"] },
   { title: "Comunidad", icon: Users2, children: ["Grupos Pequeños", "Autorizaciones"] },
   { title: "Reportes", icon: BarChart3, children: ["Estadísticas", "Informes de Personal"] },
@@ -149,6 +150,7 @@ const iconBgMap: Record<string, string> = {
   "Autorizaciones": "bg-red-100 text-red-600",
   "Registrar Usuario": "bg-cyan-100 text-cyan-600",
   "Todos los Miembros": "bg-slate-100 text-slate-700",
+  "Archivo de Miembros": "bg-slate-100 text-slate-500",
   "Gestión de Usuarios": "bg-violet-100 text-violet-600",
   "Departamentos": "bg-amber-100 text-amber-600",
   "Grupos Pequeños": "bg-teal-100 text-teal-600",
@@ -348,6 +350,7 @@ const NavigationContent = ({
   const MENU_KEY_MAP: Record<string, string> = {
     "Todos los Miembros": "menu_todos_miembros",
     "Lista de Miembros": "menu_lista_miembros",
+    "Archivo de Miembros": "menu_archivo",
     "Tomar Asistencia": "menu_asistencia",
     "Historial": "menu_historial",
     "Promover Miembros": "menu_promover",

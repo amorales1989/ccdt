@@ -1,11 +1,13 @@
 
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Student } from "@/types/database";
 import { StudentObservations } from "./StudentObservations";
-import { User, MapPin, Phone, Calendar, Hash, Building2, BookA, UserSquare2, Briefcase, Droplets } from "lucide-react";
+import { StudentTimeline } from "./StudentTimeline";
+import { User, MapPin, Phone, Calendar, Hash, Building2, BookA, UserSquare2, Briefcase, Droplets, History } from "lucide-react";
 import { PhotoUpload } from "./PhotoUpload";
 import { formatDni } from "@/lib/utils";
 import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
@@ -236,6 +238,24 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
         <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
           <StudentObservations studentId={student.id} />
         </div>
+      </div>
+
+      <div className="mt-6">
+        <Accordion type="single" collapsible>
+          <AccordionItem value="historial" className="border-none">
+            <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl px-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
+              <AccordionTrigger className="hover:no-underline py-3">
+                <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+                  <History className="h-4 w-4 text-slate-400" />
+                  Historial
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <StudentTimeline studentId={student.id} />
+              </AccordionContent>
+            </div>
+          </AccordionItem>
+        </Accordion>
       </div>
     </div>
   );

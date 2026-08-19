@@ -18,7 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { CustomTabs } from "@/components/CustomTabs";
 import { Badge } from "@/components/ui/badge";
-import { getCompany, getStudents } from "@/lib/api";
+import { getCompany, getStudents, promoteStudents } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { useDepartments } from "@/hooks/useDepartments";
 import { DepartmentSelect } from "@/components/DepartmentSelect";
@@ -267,44 +267,13 @@ const PromoverAlumnos = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from("students")
-        .update({
-          department_id: targetDepartmentId,
-          department: targetDepartment,
-          assigned_class: targetClass || null
-        })
-        .in("id", selectedStudents);
-
-      if (error) {
-        console.error("Error al promover miembros:", error);
-        toast({
-          title: "Error",
-          description: "No se pudieron promover los miembros. Intenta nuevamente.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const deletePromises = selectedStudents.map(async (studentId) => {
-        try {
-          const { error: deleteError } = await supabase
-            .from("student_authorizations")
-            .delete()
-            .eq("student_id", studentId)
-            .eq("department_id", targetDepartmentId);
-
-          if (deleteError) {
-            console.error("Error al eliminar autorización:", deleteError);
-          } else {
-            console.log(`Eliminada autorización para miembro ${studentId} en departamento ${targetDepartmentId}`);
-          }
-        } catch (e) {
-          console.error("Error al procesar eliminación de autorización:", e);
-        }
+      // El endpoint mueve el departamento, sincroniza student_departments, limpia las
+      // autorizaciones del departamento destino y deja el movimiento registrado en la bitácora.
+      await promoteStudents({
+        student_ids: selectedStudents,
+        department_id: targetDepartmentId,
+        assigned_class: targetClass || null,
       });
-
-      await Promise.all(deletePromises);
 
       toast({
         title: "Éxito",

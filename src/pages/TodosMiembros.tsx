@@ -6,6 +6,7 @@ import { LabeledSwitch } from "@/components/LabeledSwitch";
 import { formatDni } from "@/lib/utils";
 import { SIN_DEPARTAMENTO, esSoloCongregacion } from "@/lib/departments";
 import { EditStudentModal } from "@/components/EditStudentModal";
+import { BajaMiembroDialog } from "@/components/BajaMiembroDialog";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
@@ -109,9 +110,11 @@ export default function TodosMiembros() {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const { mutate: doDelete, isPending: deleting } = useMutation({
-    mutationFn: (id: string) => deleteStudent(id),
+    mutationFn: ({ id, motivo, nota }: { id: string; motivo: string; nota: string | null }) =>
+      deleteStudent(id, null, { motivo, nota }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-students"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-students"] });
       toast.success("Miembro eliminado");
       setConfirmDelete(null);
     },
@@ -357,25 +360,14 @@ export default function TodosMiembros() {
                     >
                       <Edit2 className="h-3.5 w-3.5" /> Editar
                     </Button>
-                    {confirmDelete === student.id ? (
-                      <div className="flex gap-1 flex-1">
-                        <Button size="sm" variant="destructive" className="flex-1 h-8 text-xs rounded-lg" disabled={deleting} onClick={() => doDelete(student.id)}>
-                          Confirmar
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg" onClick={() => setConfirmDelete(null)}>
-                          No
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
-                        onClick={() => setConfirmDelete(student.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                      onClick={() => setConfirmDelete(student.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 )}
               </div>
@@ -443,6 +435,17 @@ export default function TodosMiembros() {
         </div>
       )}
     </div>
+
+    <BajaMiembroDialog
+      open={!!confirmDelete}
+      onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}
+      isLoading={deleting}
+      memberName={(() => {
+        const s = students.find(st => st.id === confirmDelete);
+        return s ? `${s.first_name} ${s.last_name || ""}`.trim() : undefined;
+      })()}
+      onConfirm={(motivo, nota) => confirmDelete && doDelete({ id: confirmDelete, motivo, nota })}
+    />
 
     <EditStudentModal
       student={editStudent}

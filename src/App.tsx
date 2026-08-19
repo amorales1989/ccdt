@@ -34,6 +34,7 @@ import Guia from "@/pages/Guia";
 
 import Estadisticas from "./pages/Estadisticas";
 import TodosMiembros from "./pages/TodosMiembros";
+import ArchivoMiembros from "./pages/ArchivoMiembros";
 import AdminSistema from "@/pages/AdminSistema";
 import Landing from "@/pages/Landing";
 import { NotificationHandler } from '@/components/NotificationHandler';
@@ -134,6 +135,10 @@ function App() {
                   {
                     path: "/todos-los-miembros",
                     element: <TodosMiembros />,
+                  },
+                  {
+                    path: "/archivo",
+                    element: <ArchivoMiembros />,
                   },
                   {
                     path: "/gestion-usuarios",

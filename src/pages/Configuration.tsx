@@ -63,6 +63,7 @@ const PERMISSIONS = [
 const MENU_PERMISSIONS = [
   { key: 'menu_todos_miembros',   label: 'Todos los Miembros' },
   { key: 'menu_lista_miembros',   label: 'Lista de Miembros' },
+  { key: 'menu_archivo',          label: 'Archivo de Miembros' },
   { key: 'menu_asistencia',       label: 'Tomar Asistencia' },
   { key: 'menu_historial',        label: 'Historial' },
   { key: 'menu_promover',         label: 'Promover Miembros' },

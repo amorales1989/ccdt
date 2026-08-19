@@ -6,7 +6,7 @@ import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
 } from "@/components/ui/accordion";
 import {
-  Home, Users, ClipboardList, History, FileText, BookOpen, FolderUp,
+  Home, Users, ClipboardList, History, FileText, BookOpen, FolderUp, Archive,
   BarChart3, ClipboardCheck, FolderIcon, Wallet, UserRound, Megaphone,
   Wrench, Settings, FileOutput, Search, HelpCircle, ArrowRight,
 } from "lucide-react";
@@ -28,6 +28,7 @@ type GuideItem = {
 const MENU_KEY: Record<string, string> = {
   "Todos los Miembros": "menu_todos_miembros",
   "Lista de Miembros": "menu_lista_miembros",
+  "Archivo de Miembros": "menu_archivo",
   "Material Didáctico": "menu_material",
   "Informes de Personal": "menu_informes",
   "Tomar Asistencia": "menu_asistencia",
@@ -85,13 +86,29 @@ const SECTIONS: GuideItem[] = [
       "Elegí el departamento (y la clase, si corresponde) en los filtros de arriba para ver solo ese grupo.",
       "Usá «Agregar Nuevo Miembro» para cargar a una persona directamente desde esta pantalla.",
       "Usá «Importar Miembros desde Excel» para dar de alta a muchas personas de una sola vez a partir de una planilla.",
-      "Tocá el menú de tres puntos (⋮) de una persona para abrir las acciones: editar, eliminar o promover.",
+      "Tocá el menú de tres puntos (⋮) de una persona para abrir las acciones: editar, dar de baja o promover.",
+      "Al dar de baja te pide el motivo (se mudó, dejó de asistir, etc.): la ficha no se borra, pasa al Archivo de Miembros con todo su historial.",
       "En «Editar Miembro» modificás nombre, apellido, género, fecha de nacimiento, número de documento (DNI), teléfono, dirección, departamento y clase; guardá al finalizar.",
       "En «Departamentos del miembro» asignás los departamentos secundarios (además del principal): así la persona aparece y recibe avisos en más de un departamento.",
       "Marcá el estado «Autorizado» o «Nuevo» desde las etiquetas de cada miembro.",
       "Abrí «Reportes» → «Generar reporte» para crear la matriz de asistencia o el reporte de actividad.",
       "Usá los botones de exportación para bajar la lista a Excel o generar un PDF.",
       "Para mover personas, seleccionalas y usá «Promover»: elegí el departamento y la clase destino.",
+    ],
+  },
+  {
+    title: "Archivo de Miembros",
+    url: "/archivo",
+    icon: Archive,
+    color: "bg-amber-100 text-amber-700",
+    what: "Las personas que estuvieron en la congregación y fueron dadas de baja. La ficha no se borra: queda archivada con su historial completo, así que podés consultarla o reactivarla si la persona vuelve.",
+    uses: [
+      "Buscá por nombre, apellido o DNI para saber si alguien ya estuvo en la congregación.",
+      "Filtrá por departamento o por rango de fechas de baja para acotar la búsqueda.",
+      "Cada ficha muestra el último departamento, la fecha y el motivo de la baja, quién la dio de baja y cuántas clases asistió.",
+      "Tocá una persona para ver su ficha y su «Historial»: altas, cambios de departamento, promociones, observaciones, autorizaciones y asistencia mes a mes.",
+      "Usá «Reactivar» cuando la persona vuelve: elegí el departamento y la clase, y su ficha vuelve a la lista con todo el historial anterior.",
+      "Al cargar a alguien nuevo, si el DNI corresponde a una persona archivada la app te avisa y te ofrece reactivarla en vez de crear una ficha duplicada.",
     ],
   },
   {
