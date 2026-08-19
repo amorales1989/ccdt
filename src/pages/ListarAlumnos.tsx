@@ -401,8 +401,10 @@ const ListarAlumnos = () => {
       });
       const ids = new Set(reportStudents.map(s => s.id));
       const relevantRows = matrix.rows.filter(r => ids.has(r.student_id));
-      // Descartar fechas donde ningún miembro visible tiene registro (columnas vacías)
-      const keep = matrix.dates.map((_, i) => relevantRows.some(r => r.marks[i] && r.marks[i] !== '-'));
+      // Descartar fechas donde ningún miembro visible tiene registro (columnas vacías).
+      // Las fechas con evento especial se conservan aunque estén vacías: son el dato.
+      const eventDates = new Set((matrix.events || []).map(e => e.date));
+      const keep = matrix.dates.map((d, i) => eventDates.has(d) || relevantRows.some(r => r.marks[i] && r.marks[i] !== '-'));
       const dates = matrix.dates.filter((_, i) => keep[i]);
       const rows = relevantRows.map(r => ({
         student_id: r.student_id,
@@ -450,7 +452,7 @@ const ListarAlumnos = () => {
           profile_assigned_class: (s as any).profile_id ? profileClassMap.get((s as any).profile_id) || null : null,
           teacher_assignments: (s as any).profile_id ? teacherAssignmentsMap.get((s as any).profile_id) || null : null,
         })),
-        { dates, rows },
+        { dates, rows, events: matrix.events || [] },
         titleParts.join(' - '),
         company?.congregation_name || company?.name || 'Nexus',
         contextDept,
@@ -531,8 +533,11 @@ const ListarAlumnos = () => {
 
       // Procesar datos por estudiante
       const reportData = reportStudents.map(student => {
-        const studentAttendances = relevantAttendance.filter(a => a.student_id === student.id && a.status === true);
-        const presenceCount = studentAttendances.length;
+        // Fechas distintas, no registros: un alumno puede tener dos filas el mismo día (dos
+        // departamentos, o un doble guardado) y contarlas sueltas daba porcentajes de +100%.
+        const presenceCount = new Set(
+          relevantAttendance.filter(a => a.student_id === student.id && a.status === true).map(a => a.date)
+        ).size;
         const percentage = (presenceCount / totalActivityDays) * 100;
 
         return {

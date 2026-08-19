@@ -2,13 +2,17 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserCheck, UserX, Calendar, Users, CheckCircle2, Save, HelpCircle } from "lucide-react";
+import { UserCheck, UserX, Calendar, CalendarOff, Users, CheckCircle2, Save, HelpCircle, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { type Step } from "react-joyride";
 import { TourGuide } from "@/components/TourGuide";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { markAttendance, getAttendance, getStudents, getCompany } from "@/lib/api";
+import { markAttendance, getAttendance, getStudents, getCompany, getClassEvents, createClassEvent, deleteClassEvent, type ClassEvent } from "@/lib/api";
+import { getEventColor } from "@/lib/eventColors";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 import { format, addDays } from "date-fns";
@@ -33,6 +37,13 @@ const TomarAsistencia = () => {
   const [dateOpen, setDateOpen] = useState(false);
   const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
   const [hasExistingRecord, setHasExistingRecord] = useState(false);
+
+  // Evento especial: día en que no hubo clase por otra actividad (no genera asistencias).
+  const [specialEvent, setSpecialEvent] = useState<ClassEvent | null>(null);
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventDescription, setEventDescription] = useState("");
+  const [savingEvent, setSavingEvent] = useState(false);
 
   const tourSteps: Step[] = [
     {
@@ -258,6 +269,71 @@ const TomarAsistencia = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, departmentId, selectedClass, userClass, students]);
 
+  // ¿Esta fecha ya está marcada como día especial (sin clase)?
+  useEffect(() => {
+    let cancelled = false;
+    const loadEvent = async () => {
+      if (!departmentId || !selectedDate) {
+        setSpecialEvent(null);
+        return;
+      }
+      try {
+        const eventos = await getClassEvents({
+          start: selectedDate,
+          end: selectedDate,
+          departmentId,
+          assignedClass: (isDirector ? selectedClass : userClass) || undefined,
+        });
+        if (!cancelled) setSpecialEvent(eventos[0] || null);
+      } catch {
+        // si falla, no bloquear la toma de asistencia
+      }
+    };
+    loadEvent();
+    return () => { cancelled = true; };
+  }, [departmentId, selectedDate, selectedClass, userClass, isDirector]);
+
+  const handleCreateEvent = async () => {
+    const titulo = eventTitle.trim();
+    if (!titulo || !departmentId) {
+      toast({ title: "Falta el título", description: "Escribí qué actividad hubo ese día.", variant: "destructive" });
+      return;
+    }
+    setSavingEvent(true);
+    try {
+      const evento = await createClassEvent({
+        date: selectedDate,
+        department_id: departmentId,
+        assigned_class: (isDirector ? selectedClass : userClass) || null,
+        title: titulo,
+        description: eventDescription.trim() || null,
+      });
+      setSpecialEvent(evento);
+      setEventDialogOpen(false);
+      setEventTitle("");
+      setEventDescription("");
+      toast({ title: "Día marcado", description: "Va a aparecer pintado en el reporte de asistencia.", variant: "success" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.message || "No se pudo marcar el día", variant: "destructive" });
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!specialEvent) return;
+    setSavingEvent(true);
+    try {
+      await deleteClassEvent(specialEvent.id);
+      setSpecialEvent(null);
+      toast({ title: "Evento quitado", description: "La fecha vuelve a quedar como un día común." });
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.message || "No se pudo quitar el evento", variant: "destructive" });
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
   const regularStudents = (students as any[])?.filter(s => !s.nuevo) || [];
   const newStudents = (students as any[])?.filter(s => s.nuevo === true) || [];
   const hasNewStudents = newStudents.length > 0;
@@ -439,6 +515,34 @@ const TomarAsistencia = () => {
           </div>
         </div>
 
+        {/* Día marcado como evento especial */}
+        {specialEvent && (
+          <div
+            className="mb-6 rounded-2xl border px-5 py-4 flex items-start gap-3 animate-fade-in"
+            style={{
+              borderColor: getEventColor(specialEvent.color).hex,
+              backgroundColor: `rgb(${getEventColor(specialEvent.color).rgb.join(',')})`,
+            }}
+          >
+            <CalendarOff className="h-5 w-5 shrink-0 mt-0.5" style={{ color: getEventColor(specialEvent.color).hex }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Este día no hubo clase</p>
+              <p className="font-bold text-gray-800 leading-tight">{specialEvent.title}</p>
+              {specialEvent.description && (
+                <p className="text-sm text-gray-600 mt-0.5">{specialEvent.description}</p>
+              )}
+            </div>
+            <button
+              onClick={handleDeleteEvent}
+              disabled={savingEvent}
+              className="shrink-0 flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white/70 hover:bg-white text-[11px] font-black uppercase tracking-widest text-gray-600 transition-all disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Quitar
+            </button>
+          </div>
+        )}
+
         {/* Stats + Date row */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           {/* Stats pill */}
@@ -562,11 +666,22 @@ const TomarAsistencia = () => {
       </div>
 
       {/* Floating Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 to-transparent flex justify-center" data-tour="save">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 to-transparent flex justify-center gap-2" data-tour="save">
+        {!specialEvent && (
+          <Button
+            variant="outline"
+            onClick={() => setEventDialogOpen(true)}
+            disabled={!selectedDate || !departmentId || (isDirector && !selectedClass)}
+            className="h-12 px-4 rounded-2xl font-bold text-sm bg-white shadow-lg border-slate-200 text-slate-600"
+          >
+            <CalendarOff className="h-4 w-4 mr-2" />
+            No hubo clase
+          </Button>
+        )}
         <Button
           onClick={handleSaveAttendance}
           disabled={isLoading || !selectedDate || students.length === 0}
-          className="w-full max-w-md h-12 button-gradient shadow-xl shadow-primary/20 font-bold text-base rounded-2xl"
+          className="flex-1 max-w-md h-12 button-gradient shadow-xl shadow-primary/20 font-bold text-base rounded-2xl"
         >
           {isLoading ? (
             <div className="flex items-center gap-2">
@@ -581,6 +696,51 @@ const TomarAsistencia = () => {
           )}
         </Button>
       </div>
+
+      <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Marcar día sin clase</DialogTitle>
+            <DialogDescription className="capitalize">
+              {displayDate}
+              {(isDirector ? selectedClass : userClass) ? ` · ${isDirector ? selectedClass : userClass}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">¿Qué hubo ese día?</label>
+              <Input
+                value={eventTitle}
+                onChange={(e) => setEventTitle(e.target.value)}
+                maxLength={80}
+                placeholder="Ej: Campamento de verano"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Detalle (opcional)</label>
+              <Textarea
+                value={eventDescription}
+                onChange={(e) => setEventDescription(e.target.value)}
+                rows={3}
+                placeholder="Alguna aclaración para quien lea el reporte"
+                className="mt-1"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              No se registra asistencia: esta fecha va a aparecer pintada en el reporte de grilla, con este título en la leyenda.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEventDialogOpen(false)} disabled={savingEvent}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateEvent} disabled={savingEvent || !eventTitle.trim()}>
+              {savingEvent ? "Guardando..." : "Marcar día"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

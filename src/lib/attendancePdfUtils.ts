@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getPersistentCompanyId } from '@/contexts/CompanyContext';
 import { supabase } from '@/integrations/supabase/client';
+import { getEventColor } from '@/lib/eventColors';
 
 interface AttendanceReportData {
     studentName: string;
@@ -111,10 +112,19 @@ interface MatrixStudent {
     teacher_assignments?: Array<{ department?: string | null; assigned_class?: string | null; role?: string | null }> | null;
 }
 
+// Día especial (no hubo clase): pinta la columna y entra en la leyenda del pie.
+interface MatrixEvent {
+    date: string;
+    title: string;
+    color: string;
+    assigned_class?: string | null;
+}
+
 // Matriz ya agregada por el SP api.asistencia_matriz: un caracter por fecha (P/A/-)
 interface MatrixData {
     dates: string[]; // YYYY-MM-DD ordenadas ASC
     rows: Array<{ student_id: string; marks: string }>;
+    events?: MatrixEvent[];
 }
 
 export const exportAttendanceMatrix = async (
@@ -169,6 +179,17 @@ export const exportAttendanceMatrix = async (
     const marksMap = new Map<string, string>();
     for (const r of matrix.rows) marksMap.set(r.student_id, r.marks);
 
+    // 2 bis. Días especiales por fecha. La referencia con la leyenda del pie es el color.
+    const eventsByDate = new Map<string, MatrixEvent[]>();
+    (matrix.events || [])
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title))
+        .forEach((e) => {
+            const lista = eventsByDate.get(e.date) || [];
+            lista.push(e);
+            eventsByDate.set(e.date, lista);
+        });
+
     // 3. Sort students by class then name
     const sortedStudents = [...students].sort((a, b) => {
         const ca = classForStudent(a).localeCompare(classForStudent(b));
@@ -205,6 +226,28 @@ export const exportAttendanceMatrix = async (
 
     let startY = 28;
 
+    // Leyenda de los días sin clase que aparecen en las columnas de esta página.
+    const drawLegend = (evs: MatrixEvent[], y: number) => {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(80);
+        doc.text('REFERENCIAS · DÍAS SIN CLASE', margin, y);
+        doc.setFont('helvetica', 'normal');
+        let cy = y + 4.5;
+        for (const e of evs) {
+            const c = getEventColor(e.color);
+            doc.setFillColor(c.rgb[0], c.rgb[1], c.rgb[2]);
+            doc.setDrawColor(170);
+            doc.rect(margin, cy - 3, 4, 4, 'FD');
+            doc.setTextColor(60);
+            const fecha = format(new Date(e.date + 'T00:00:00'), 'dd/MM');
+            const clase = e.assigned_class ? ` (${e.assigned_class})` : '';
+            doc.text(`${fecha} — ${e.title}${clase}`, margin + 6, cy);
+            cy += 4.5;
+        }
+        doc.setTextColor(0);
+    };
+
     for (let pageIdx = 0; pageIdx * datesPerPage < uniqueDates.length; pageIdx++) {
         if (pageIdx > 0) {
             doc.addPage();
@@ -232,10 +275,17 @@ export const exportAttendanceMatrix = async (
             monthRow.push({ content: g.month, colSpan: g.count, styles: { halign: 'center', fillColor: [0, 35, 102] } });
         }
 
-        const dayRow: any[] = chunkDates.map(d => ({
-            content: format(new Date(d + 'T00:00:00'), 'dd'),
-            styles: { halign: 'center', fontSize: 7 },
-        }));
+        const dayRow: any[] = chunkDates.map(d => {
+            const evs = eventsByDate.get(d);
+            const dia = format(new Date(d + 'T00:00:00'), 'dd');
+            if (!evs?.length) return { content: dia, styles: { halign: 'center', fontSize: 7 } };
+            const c = getEventColor(evs[0].color);
+            // Mismo formato que el resto de los días: lo que lo cruza con la leyenda es el color.
+            return {
+                content: dia,
+                styles: { halign: 'center', fontSize: 7, fillColor: c.rgb, textColor: c.textRgb },
+            };
+        });
 
         const body = sortedStudents.map(s => {
             const chunkMarks = (marksMap.get(s.id) || '').slice(chunkStart, chunkStart + chunkDates.length);
@@ -247,8 +297,11 @@ export const exportAttendanceMatrix = async (
             ];
             for (let i = 0; i < chunkDates.length; i++) {
                 const v = chunkMarks[i];
+                const ev = eventsByDate.get(chunkDates[i])?.[0];
+                // Si igual se tomó lista ese día, la asistencia manda sobre el color del evento.
                 if (v === 'P') row.push({ content: 'P', styles: { halign: 'center', fontSize: 7, fillColor: [220, 240, 220] } });
                 else if (v === 'A') row.push({ content: 'A', styles: { halign: 'center', fontSize: 7, textColor: [200, 0, 0], fillColor: [255, 235, 235] } });
+                else if (ev) row.push({ content: '', styles: { fillColor: getEventColor(ev.color).rgb } });
                 else row.push({ content: '', styles: { fillColor: [248, 248, 248] } });
             }
             return row;
@@ -296,6 +349,18 @@ export const exportAttendanceMatrix = async (
                 doc.setTextColor(0);
             },
         });
+
+        const chunkEvents = chunkDates.flatMap(d => eventsByDate.get(d) || []);
+        if (chunkEvents.length > 0) {
+            const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY;
+            let legendY = (finalY || startY) + 6;
+            const alto = 5 + chunkEvents.length * 4.5;
+            if (legendY + alto > pageHeight - 8) {
+                doc.addPage();
+                legendY = margin + 6;
+            }
+            drawLegend(chunkEvents, legendY);
+        }
     }
 
     // Nombre del archivo con depto/clase (del título) para diferenciarlos a simple vista.

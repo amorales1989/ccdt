@@ -1071,7 +1071,9 @@ export const deleteAttendanceByDate = async (params: {
   }
 };
 
-export type CoverageClass = { clase: string; tomada: boolean; presentes: number; total: number };
+// sin_clase: ese día no hubo clase por un evento especial (`motivo` es el título que cargó
+// el maestro/director). Cuenta como resuelta: no queda pendiente de tomar lista.
+export type CoverageClass = { clase: string; tomada: boolean; presentes: number; total: number; sin_clase?: boolean; motivo?: string | null };
 export type CoverageDept = { department_id: string; name: string; total_clases: number; tomadas: number; classes: CoverageClass[] };
 
 // Cobertura de asistencia: qué clases tomaron asistencia un día y cuáles no (directores/vicedir.)
@@ -1089,6 +1091,20 @@ export const getAttendanceCoverage = async (
 };
 
 // Matriz de asistencia para el reporte en grilla. La agregación la hace el SP
+// Día en que no hubo clase por otra actividad (campamento, feriado, acto...). No genera
+// registros de asistencia: solo pinta esa fecha en la grilla del reporte.
+export interface ClassEvent {
+  id: string;
+  date: string;
+  title: string;
+  description?: string | null;
+  color: string;
+  department_id: string;
+  department?: string | null;
+  assigned_class?: string | null;
+  created_by?: string | null;
+}
+
 // api.asistencia_matriz en la DB: devuelve las fechas y, por alumno, un caracter
 // por fecha (P=presente, A=ausente, -=sin registro).
 export const getAttendanceMatrix = async (params: {
@@ -1097,13 +1113,46 @@ export const getAttendanceMatrix = async (params: {
   departmentId?: string | null;
   department?: string | null;
   assignedClass?: string | null;
-}): Promise<{ dates: string[]; rows: Array<{ student_id: string; marks: string; total: number }> }> => {
+}): Promise<{ dates: string[]; rows: Array<{ student_id: string; marks: string; total: number }>; events: ClassEvent[] }> => {
   const qs = new URLSearchParams({ start: params.start, end: params.end });
   if (params.departmentId) qs.set('department_id', params.departmentId);
   if (params.department) qs.set('department', params.department);
   if (params.assignedClass && params.assignedClass !== 'all') qs.set('assigned_class', params.assignedClass);
   const response = await apiCall(`/attendance/matrix?${qs.toString()}`);
-  return { dates: response?.dates || [], rows: response?.rows || [] };
+  return { dates: response?.dates || [], rows: response?.rows || [], events: response?.events || [] };
+};
+
+export const getClassEvents = async (params: {
+  start: string;
+  end: string;
+  departmentId?: string | null;
+  department?: string | null;
+  assignedClass?: string | null;
+}): Promise<ClassEvent[]> => {
+  const qs = new URLSearchParams({ start: params.start, end: params.end });
+  if (params.departmentId) qs.set('department_id', params.departmentId);
+  if (params.department) qs.set('department', params.department);
+  if (params.assignedClass && params.assignedClass !== 'all') qs.set('assigned_class', params.assignedClass);
+  const response = await apiCall(`/attendance/events?${qs.toString()}`);
+  return response?.data || [];
+};
+
+export const createClassEvent = async (data: {
+  date: string;
+  department_id: string;
+  assigned_class?: string | null;
+  title: string;
+  description?: string | null;
+}): Promise<ClassEvent> => {
+  const response = await apiCall('/attendance/events', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response?.data;
+};
+
+export const deleteClassEvent = async (id: string) => {
+  return apiCall(`/attendance/events/${id}`, { method: 'DELETE' });
 };
 
 // Resumen de la pantalla Estadísticas. Todo lo agrega el SP api.estadisticas_resumen:

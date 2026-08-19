@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Check, Clock } from "lucide-react";
+import { Check, Clock, CalendarOff } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DatePickerField } from "@/components/DatePickerField";
 import { getAttendanceCoverage, type CoverageDept } from "@/lib/api";
@@ -81,21 +81,32 @@ function DeptBlock({ dept, showHeader }: { dept: CoverageDept; showHeader: boole
             <div
               key={c.clase}
               className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors ${
-                c.tomada
-                  ? "border-green-200 bg-green-50/70 dark:bg-green-900/10"
-                  : "border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40"
+                c.sin_clase
+                  ? "border-amber-200 bg-amber-50/70 dark:bg-amber-900/10"
+                  : c.tomada
+                    ? "border-green-200 bg-green-50/70 dark:bg-green-900/10"
+                    : "border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40"
               }`}
             >
               <div
                 className={`flex items-center justify-center w-6 h-6 rounded-full shrink-0 ${
-                  c.tomada ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400 dark:bg-slate-700"
+                  c.sin_clase
+                    ? "bg-amber-400 text-white"
+                    : c.tomada ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400 dark:bg-slate-700"
                 }`}
               >
-                {c.tomada ? <Check className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                {c.sin_clase ? <CalendarOff className="h-3.5 w-3.5" /> : c.tomada ? <Check className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
               </div>
-              <span className="flex-1 text-sm font-medium text-foreground truncate">{c.clase}</span>
-              <span className={`text-[11px] font-bold shrink-0 ${c.tomada ? "text-green-700" : "text-muted-foreground"}`}>
-                {c.tomada ? (
+              <span className="flex-1 text-sm font-medium text-foreground truncate">
+                {c.clase}
+                {c.sin_clase && c.motivo && (
+                  <span className="block text-[11px] font-normal text-amber-700 dark:text-amber-500 truncate">{c.motivo}</span>
+                )}
+              </span>
+              <span className={`text-[11px] font-bold shrink-0 ${c.sin_clase ? "text-amber-700" : c.tomada ? "text-green-700" : "text-muted-foreground"}`}>
+                {c.sin_clase ? (
+                  "Sin clase"
+                ) : c.tomada ? (
                   <>
                     {c.presentes}/{c.total} ·{" "}
                     <span className="text-blue-600 dark:text-blue-400">
