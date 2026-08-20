@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format, parseISO } from "date-fns";
 import { Navigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +29,7 @@ import {
   type PlanRow,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { DatePickerField } from "@/components/DatePickerField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -837,6 +839,7 @@ function PayDialog({
   freePending: boolean;
 }) {
   const [freeMonths, setFreeMonths] = useState("3");
+  const [payDateOpen, setPayDateOpen] = useState(false);
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["company-payments", company?.id],
     queryFn: () => getCompanyPayments(company!.id),
@@ -862,13 +865,17 @@ function PayDialog({
           </div>
           <div className="space-y-2">
             <Label>Fecha de pago</Label>
-            <Input
-              type="date"
-              max={new Date().toISOString().slice(0, 10)}
-              className="rounded-xl bg-slate-50 border-slate-200 h-11"
-              value={form.payment_date}
-              onChange={(e) => setForm({ ...form, payment_date: e.target.value })}
-            />
+            <div className="rounded-xl bg-slate-50 border border-slate-200 h-11 px-3 flex items-center overflow-hidden">
+              <DatePickerField
+                value={form.payment_date ? parseISO(form.payment_date) : undefined}
+                onChange={(d) => setForm({ ...form, payment_date: d ? format(d, "yyyy-MM-dd") : "" })}
+                open={payDateOpen}
+                onOpenChange={setPayDateOpen}
+                placeholder="DD/MM/AAAA"
+                maxDate={new Date()}
+                className="h-auto text-sm"
+              />
+            </div>
             <p className="text-[11px] text-slate-400">Si pagó otro día, seleccionalo. El vencimiento se calcula desde esta fecha.</p>
           </div>
           <div className="space-y-2">

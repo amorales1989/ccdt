@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Plus, Pencil, Trash2, Download, Wallet, TrendingUp, TrendingDown, FolderIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +24,7 @@ import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePickerField } from "@/components/DatePickerField";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -74,6 +75,9 @@ export default function Contabilidad() {
   const [to, setTo] = useState<string>("");
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [fromOpen, setFromOpen] = useState(false);
+  const [toOpen, setToOpen] = useState(false);
+  const [movementDateOpen, setMovementDateOpen] = useState(false);
   const [editing, setEditing] = useState<AccountingTransaction | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [deleteTarget, setDeleteTarget] = useState<AccountingTransaction | null>(null);
@@ -325,11 +329,29 @@ export default function Contabilidad() {
         <div className="grid grid-cols-2 gap-3 md:flex md:gap-3">
           <div className="flex flex-col gap-1">
             <Label className="text-xs">Desde</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full md:w-[150px]" />
+            <div className="h-10 px-3 rounded-md border border-input bg-background flex items-center overflow-hidden w-full md:w-[150px]">
+              <DatePickerField
+                value={from ? parseISO(from) : undefined}
+                onChange={(d) => setFrom(d ? format(d, "yyyy-MM-dd") : "")}
+                open={fromOpen}
+                onOpenChange={setFromOpen}
+                placeholder="DD/MM/AAAA"
+                className="h-auto text-sm"
+              />
+            </div>
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">Hasta</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full md:w-[150px]" />
+            <div className="h-10 px-3 rounded-md border border-input bg-background flex items-center overflow-hidden w-full md:w-[150px]">
+              <DatePickerField
+                value={to ? parseISO(to) : undefined}
+                onChange={(d) => setTo(d ? format(d, "yyyy-MM-dd") : "")}
+                open={toOpen}
+                onOpenChange={setToOpen}
+                placeholder="DD/MM/AAAA"
+                className="h-auto text-sm"
+              />
+            </div>
           </div>
         </div>
         {canWrite && (
@@ -370,7 +392,16 @@ export default function Contabilidad() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <Label>Fecha</Label>
-                  <Input type="date" value={form.movement_date} onChange={(e) => setForm({ ...form, movement_date: e.target.value })} />
+                  <div className="h-10 px-3 rounded-md border border-input bg-background flex items-center overflow-hidden">
+                    <DatePickerField
+                      value={form.movement_date ? parseISO(form.movement_date) : undefined}
+                      onChange={(d) => setForm({ ...form, movement_date: d ? format(d, "yyyy-MM-dd") : "" })}
+                      open={movementDateOpen}
+                      onOpenChange={setMovementDateOpen}
+                      placeholder="DD/MM/AAAA"
+                      className="h-auto text-sm"
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <Label>Descripción (opcional)</Label>

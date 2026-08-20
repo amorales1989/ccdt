@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format, parseISO } from "date-fns";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { UserPlus, Eye, EyeOff, Plus, X, Pencil } from "lucide-react";
 import { PersonSearchResult } from "./PersonSearchInput";
 import { NameSearchInput } from "./NameSearchInput";
 import { DniIdentityInput } from "./DniIdentityInput";
+import { MuiDatePickerField } from "./MuiDatePickerField";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { clearMemberDepartments } from "@/lib/api";
@@ -113,6 +115,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
 
     const [phone, setPhone] = useState("");
     const [birthdate, setBirthdate] = useState("");
+    const [birthdateOpen, setBirthdateOpen] = useState(false);
     const [gender, setGender] = useState("masculino");
     const [address, setAddress] = useState("");
     const [documentNumber, setDocumentNumber] = useState("");
@@ -749,7 +752,15 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="birthdate" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Fecha de Nacimiento</Label>
-                                <Input id="birthdate" type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" />
+                                <div className="h-12 px-3 rounded-xl bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 flex items-center overflow-hidden">
+                                    <MuiDatePickerField
+                                        value={birthdate ? parseISO(birthdate) : undefined}
+                                        onChange={(date) => setBirthdate(date ? format(date, "yyyy-MM-dd") : "")}
+                                        open={birthdateOpen}
+                                        onOpenChange={setBirthdateOpen}
+                                        placeholder="DD/MM/AAAA"
+                                    />
+                                </div>
                             </div>
                         </div>
 

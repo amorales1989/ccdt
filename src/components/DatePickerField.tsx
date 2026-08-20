@@ -18,6 +18,8 @@ interface DatePickerFieldProps {
     onOpenChange: (open: boolean) => void;
     placeholder?: string;
     className?: string;
+    /** Bloquea las fechas posteriores (ej. no permitir fechas futuras). */
+    maxDate?: Date;
 }
 
 export function DatePickerField({
@@ -27,6 +29,7 @@ export function DatePickerField({
     onOpenChange,
     placeholder = "Seleccionar fecha",
     className,
+    maxDate,
 }: DatePickerFieldProps) {
     return (
         <Popover open={open} onOpenChange={onOpenChange}>
@@ -55,6 +58,7 @@ export function DatePickerField({
                     }}
                     initialFocus
                     locale={es}
+                    disabled={maxDate ? { after: maxDate } : undefined}
                     className="rounded-2xl"
                 />
             </PopoverContent>

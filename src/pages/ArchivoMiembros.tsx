@@ -5,6 +5,7 @@ import { useDepartments } from "@/hooks/useDepartments";
 import { labelMotivo } from "@/components/BajaMiembroDialog";
 import { StudentTimeline } from "@/components/StudentTimeline";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { DatePickerField } from "@/components/DatePickerField";
 import { formatDni } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,8 @@ export default function ArchivoMiembros() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [desdeOpen, setDesdeOpen] = useState(false);
+  const [hastaOpen, setHastaOpen] = useState(false);
   const [page, setPage] = useState(1);
 
   const [selectedPersona, setSelectedPersona] = useState<ArchivedStudent | null>(null);
@@ -184,30 +187,41 @@ export default function ArchivoMiembros() {
               <select
                 value={filterDept}
                 onChange={e => setFilterDept(e.target.value)}
-                className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300"
+                className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 w-full sm:w-auto"
               >
                 <option value="all">Todos los departamentos</option>
                 {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
 
-              <div className="flex flex-col gap-1">
+              {/* En mobile ambas fechas van juntas en una fila debajo del select; sm:contents restaura el layout inline en desktop. */}
+              <div className="flex gap-3 items-end w-full sm:contents">
+              <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Baja desde</label>
-                <input
-                  type="date"
-                  value={desde}
-                  onChange={e => setDesde(e.target.value)}
-                  className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300"
-                />
+                <div className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center overflow-hidden">
+                  <DatePickerField
+                    value={desde ? new Date(desde + "T00:00:00") : undefined}
+                    onChange={d => setDesde(d ? format(d, "yyyy-MM-dd") : "")}
+                    open={desdeOpen}
+                    onOpenChange={setDesdeOpen}
+                    placeholder="DD/MM/AAAA"
+                    className="h-auto text-sm"
+                  />
+                </div>
               </div>
 
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Baja hasta</label>
-                <input
-                  type="date"
-                  value={hasta}
-                  onChange={e => setHasta(e.target.value)}
-                  className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300"
-                />
+                <div className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center overflow-hidden">
+                  <DatePickerField
+                    value={hasta ? new Date(hasta + "T00:00:00") : undefined}
+                    onChange={d => setHasta(d ? format(d, "yyyy-MM-dd") : "")}
+                    open={hastaOpen}
+                    onOpenChange={setHastaOpen}
+                    placeholder="DD/MM/AAAA"
+                    className="h-auto text-sm"
+                  />
+                </div>
+              </div>
               </div>
 
               {activeFiltersCount > 0 && (
