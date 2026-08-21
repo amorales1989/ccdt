@@ -1645,22 +1645,29 @@ export default function Configuration() {
                 </div>
               </CardHeader>
               <CardContent className="p-4 md:p-6">
-                <div className="overflow-x-auto">
+                {/* max-h + overflow-auto: el scroll vertical pasa a ser de este contenedor,
+                    que es contra lo que se anclan las celdas sticky de la cabecera.
+                    El sticky va en cada <th> y no en el <thead>: con border-collapse (default de
+                    Tailwind) el z-index del thead no gana y las filas se ven por encima.
+                    La fila 1 tiene alto fijo (h-9 = 36px) y la 2 se ancla en top-8 (32px): los
+                    4px de solape evitan la franja por la que se veían pasar los switches
+                    (el borde inferior de la fila 1 hace que mida un pixel más que su h-9). */}
+                <div className="overflow-auto max-h-[65vh]">
                   <table className="w-full text-sm">
                     <thead>
                       <tr>
-                        <th rowSpan={2} className="sticky left-0 z-20 bg-white dark:bg-slate-900 text-left py-3 px-2 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[130px] align-bottom border-r border-slate-200 dark:border-slate-700">Rol</th>
-                        <th colSpan={PERMISSIONS.length} className="text-center py-2 px-1 font-black text-[11px] uppercase tracking-widest text-indigo-500 dark:text-indigo-400 border-b border-slate-100 dark:border-slate-800">Acciones</th>
-                        <th colSpan={MENU_PERMISSIONS.length} className="text-center py-2 px-1 font-black text-[11px] uppercase tracking-widest text-indigo-500 dark:text-indigo-400 border-b border-slate-100 dark:border-slate-800 border-l border-slate-200 dark:border-slate-700">Visibilidad de Menú</th>
+                        <th rowSpan={2} className="sticky left-0 top-0 z-40 bg-white dark:bg-slate-900 text-left py-3 px-2 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[130px] align-bottom border-r border-slate-200 dark:border-slate-700">Rol</th>
+                        <th colSpan={PERMISSIONS.length} className="sticky top-0 z-30 h-9 bg-white dark:bg-slate-900 text-center px-1 font-black text-[11px] uppercase tracking-widest text-indigo-500 dark:text-indigo-400 border-b border-slate-100 dark:border-slate-800">Acciones</th>
+                        <th colSpan={MENU_PERMISSIONS.length} className="sticky top-0 z-30 h-9 bg-white dark:bg-slate-900 text-center px-1 font-black text-[11px] uppercase tracking-widest text-indigo-500 dark:text-indigo-400 border-b border-slate-100 dark:border-slate-800 border-l border-slate-200 dark:border-slate-700">Visibilidad de Menú</th>
                       </tr>
                       <tr>
                         {PERMISSIONS.map(p => (
-                          <th key={p.key} className="text-center py-3 px-1 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[90px]">
+                          <th key={p.key} className="sticky top-8 z-30 bg-white dark:bg-slate-900 text-center py-3 px-1 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[90px]">
                             {p.label}
                           </th>
                         ))}
                         {MENU_PERMISSIONS.map((p, i) => (
-                          <th key={p.key} className={`text-center py-3 px-1 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[80px] ${i === 0 ? 'border-l border-slate-200 dark:border-slate-700' : ''}`}>
+                          <th key={p.key} className={`sticky top-8 z-30 bg-white dark:bg-slate-900 text-center py-3 px-1 font-black text-xs uppercase tracking-widest text-slate-400 min-w-[80px] ${i === 0 ? 'border-l border-slate-200 dark:border-slate-700' : ''}`}>
                             {p.label}
                           </th>
                         ))}
