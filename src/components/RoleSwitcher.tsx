@@ -8,25 +8,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AppRole } from "@/types/database";
 import { ChevronDown, Shield } from "lucide-react";
-
-const ROLE_LABELS: Record<AppRole, string> = {
-    admin: "Administrador",
-    lider: "Líder",
-    director: "Director",
-    director_general: "Director General",
-    maestro: "Maestro",
-    secretaria: "Secretaria",
-    "secr.-calendario": "Secretaria (Calendario)",
-    colaborador: "Colaborador",
-    auxiliar_maestro: "Auxiliar de maestro",
-    vicedirector: "Vicedirector",
-    conserje: "Conserje"
-};
+import { useRoles } from "@/hooks/useRoles";
 
 export function RoleSwitcher() {
     const { profile, switchAssignment } = useAuth();
+    const { labelOf } = useRoles();
     const assignments = profile?.assignments || [];
 
     if (!profile || assignments.length <= 1) {
@@ -50,7 +37,7 @@ export function RoleSwitcher() {
                         <div className="flex flex-col items-start overflow-hidden">
                             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 leading-none mb-1">Activo</span>
                             <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                                {ROLE_LABELS[profile.role] || profile.role}
+                                {labelOf(profile.role)}
                             </span>
                         </div>
                     </div>
@@ -83,7 +70,7 @@ export function RoleSwitcher() {
                             >
                                 <div className="flex items-center justify-between w-full">
                                     <span className={`text-xs font-bold ${active ? "text-purple-700 dark:text-purple-400" : "text-slate-700 dark:text-slate-200"}`}>
-                                        {ROLE_LABELS[a.role] || a.role}
+                                        {labelOf(a.role)}
                                     </span>
                                     {active && <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />}
                                 </div>

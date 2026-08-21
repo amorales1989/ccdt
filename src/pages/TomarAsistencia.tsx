@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
-import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,9 +86,11 @@ const TomarAsistencia = () => {
   const savedPerms = (company as any)?.role_permissions?.[role];
   // Misma clave que oculta "Tomar Asistencia" del menú (Configuración › Permisos):
   // si está oculta, tampoco debe poder accederse por URL directa.
-  const canTakeAttendance = savedPerms && 'menu_asistencia' in savedPerms
+  const canTakeAttendance = (savedPerms && 'menu_asistencia' in savedPerms
     ? savedPerms.menu_asistencia !== false
-    : DEFAULT_PERMISSIONS[role]?.menu_asistencia !== false;
+    : DEFAULT_PERMISSIONS[role]?.menu_asistencia !== false)
+    // Roles propios de la empresa: viven en profiles.roles, no en profile.role.
+    || hasPermission(profile, 'menu_asistencia', (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions);
   const [selectedDepartmentName, setSelectedDepartmentName] = useState<string | null>(null);
   const userClass = profile?.assigned_class;
 

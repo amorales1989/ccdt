@@ -275,6 +275,51 @@ export const updateCompany = async (id: number, updates: any) => {
   }
 };
 
+// ============ ROLES PROPIOS DE LA EMPRESA ============
+
+/** Rol creado por la empresa. `key` siempre arranca con `custom_` y es inmutable. */
+export interface CompanyRole {
+  id: string;
+  key: string;
+  label: string;
+  created_at?: string;
+}
+
+export const getCompanyRoles = async (): Promise<CompanyRole[]> => {
+  const response = await apiCall('/company/roles');
+  return response.data || [];
+};
+
+export const createCompanyRole = async (label: string): Promise<CompanyRole> => {
+  const response = await apiCall('/company/roles', {
+    method: 'POST',
+    body: JSON.stringify({ label }),
+  });
+  return response.data;
+};
+
+export const updateCompanyRole = async (id: string, label: string): Promise<CompanyRole> => {
+  const response = await apiCall(`/company/roles/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ label }),
+  });
+  return response.data;
+};
+
+/** Si hay usuarios con el rol asignado, el back tira 409 con code ROL_EN_USO y body.usuarios. */
+export const deleteCompanyRole = async (id: string) => {
+  return apiCall(`/company/roles/${id}`, { method: 'DELETE' });
+};
+
+/** Matriz de permisos por rol. El back valida que quien guarda sea admin/secretaría. */
+export const updateRolePermissions = async (rolePermissions: Record<string, Record<string, boolean>>) => {
+  const response = await apiCall('/company/role-permissions', {
+    method: 'PATCH',
+    body: JSON.stringify({ role_permissions: rolePermissions }),
+  });
+  return response.data;
+};
+
 // ============ SYSTEM ADMIN (super admin / panel de empresas) ============
 
 export type AdminCompany = {

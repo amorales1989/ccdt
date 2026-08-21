@@ -1,3 +1,22 @@
+/** Roles fijos del enum app_role, en el orden en que se muestran. Los roles propios de cada
+ *  empresa (tabla company_roles) se agregan aparte; ver el hook useRoles. */
+export const BUILTIN_ROLES = [
+  'admin', 'director_general', 'director', 'vicedirector',
+  'secretaria', 'secr.-calendario', 'lider', 'maestro',
+  'conserje', 'colaborador', 'auxiliar_maestro', 'miembro',
+] as const;
+
+export const BUILTIN_ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin', director_general: 'Director General', director: 'Director',
+  vicedirector: 'Vicedirector', secretaria: 'Secretaria', 'secr.-calendario': 'Secr. Calendario',
+  lider: 'Líder', maestro: 'Maestro', conserje: 'Conserje',
+  colaborador: 'Colaborador', auxiliar_maestro: 'Auxiliar de maestro',
+  miembro: 'Miembro (sin funciones)',
+};
+
+/** Los roles creados por la empresa siempre llevan este prefijo (lo pone el back). */
+export const isCustomRole = (role: string) => role.startsWith('custom_');
+
 export const DEFAULT_PERMISSIONS: Record<string, Record<string, boolean>> = {
   admin:             { puede_gestionar_mantenimiento: true,  puede_agregar_miembros: true,  puede_agregar_miembros_sin_depto: true,  menu_todos_miembros: true,  menu_lista_miembros: true,  menu_archivo: true,  menu_asistencia: false, menu_historial: true,  menu_promover: true,  menu_autorizaciones: true,  menu_estadisticas: true,  menu_informes: true,  menu_material: true,  menu_grupos: true, menu_departamentos: true,  menu_contabilidad: true,  menu_gestion_usuarios: true,  menu_configuracion: true,  menu_mantenimiento: true,  menu_notificaciones: true,  menu_registro_temas: true  },
   director_general:  { puede_gestionar_mantenimiento: false, puede_agregar_miembros: false, puede_agregar_miembros_sin_depto: false, menu_todos_miembros: false, menu_lista_miembros: true,  menu_archivo: true,  menu_asistencia: false, menu_historial: true,  menu_promover: true,  menu_autorizaciones: false, menu_estadisticas: true,  menu_informes: true,  menu_material: true,  menu_grupos: true, menu_departamentos: false, menu_contabilidad: false,  menu_gestion_usuarios: true,  menu_configuracion: false, menu_mantenimiento: true,  menu_notificaciones: false, menu_registro_temas: true  },

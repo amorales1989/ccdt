@@ -20,7 +20,7 @@ import {
 } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { exportAccountingReport } from "@/lib/accountingPdfUtils";
-import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -228,9 +228,11 @@ export default function Contabilidad() {
   // con fallback a los valores por defecto; por ahora solo admin).
   const savedPerms = (company as any)?.role_permissions?.[role];
   const hasAccess =
-    savedPerms && "menu_contabilidad" in savedPerms
+    (savedPerms && "menu_contabilidad" in savedPerms
       ? savedPerms.menu_contabilidad !== false
-      : DEFAULT_PERMISSIONS[role]?.menu_contabilidad !== false;
+      : DEFAULT_PERMISSIONS[role]?.menu_contabilidad !== false)
+    // Roles propios de la empresa: viven en profiles.roles, no en profile.role.
+    || hasPermission(profile, 'menu_contabilidad', (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions);
 
   if (!hasAccess) {
     return (

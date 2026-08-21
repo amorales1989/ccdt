@@ -17,6 +17,8 @@ import { PersonSearchResult } from "./PersonSearchInput";
 import { NameSearchInput } from "./NameSearchInput";
 import { DniIdentityInput } from "./DniIdentityInput";
 import { MuiDatePickerField } from "./MuiDatePickerField";
+import { isCustomRole } from "@/lib/rolePermissions";
+import { useRoles } from "@/hooks/useRoles";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { clearMemberDepartments } from "@/lib/api";
@@ -70,20 +72,14 @@ const ASSIGNABLE_ROLES: AppRole[] = [
 // Roles that don't require a department
 const STANDALONE_ROLE_VALUES = ['conserje', 'admin', 'secr.-calendario', 'secretaria', 'miembro'];
 
-const ROLE_LABELS: Record<string, string> = {
-    maestro: 'Maestro',
-    lider: 'Líder',
-    director: 'Director',
-    vicedirector: 'Vicedirector',
-    director_general: 'Director General',
-    colaborador: 'Colaborador',
-    auxiliar_maestro: 'Auxiliar de maestro',
-    secretaria: 'Secretaria',
-    'secr.-calendario': 'Secr. Calendario',
-    conserje: 'Conserje',
-    admin: 'Admin',
-    miembro: 'Miembro (sin funciones)',
-};
+// Los roles propios de la empresa tampoco requieren departamento (ver useRoles).
+const esStandalone = (r: string) => STANDALONE_ROLE_VALUES.includes(r) || isCustomRole(r);
+
+// profiles.role es un enum de Postgres: nunca puede recibir un rol custom. El principal es el
+// primer rol del sistema; si el usuario solo tiene roles propios, queda como 'miembro' y los
+// custom viajan en profiles.roles (que es text[]).
+const primaryRoleFrom = (roles: AppRole[]): AppRole =>
+    (roles.find(r => !isCustomRole(r as string)) || 'miembro') as AppRole;
 
 export function RegisterUserModal({ children, onSuccess, user }: RegisterUserModalProps) {
     const [open, setOpen] = useState(false);
@@ -128,6 +124,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
 
     const { profile } = useAuth();
     const { toast } = useToast();
+    const { custom: customRoles, labelOf } = useRoles();
 
     const isEditMode = !!user;
     const isLoggedInDirector = profile?.role === 'director';
@@ -248,7 +245,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                         .filter((a: any) => !a.department)
                         .map((a: any) => a.role as AppRole);
                     // También detectar por roles para compatibilidad con registros anteriores
-                    const standaloneFromRoles = userRoles.filter(r => STANDALONE_ROLE_VALUES.includes(r as string)) as AppRole[];
+                    const standaloneFromRoles = userRoles.filter(r => esStandalone(r as string)) as AppRole[];
                     const allStandalone = [...new Set([...standaloneFromAssignments, ...standaloneFromRoles])];
                     setStandaloneRoles(allStandalone);
                     setAssignments(deptAssignments.map((a: any) => ({
@@ -257,15 +254,15 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                         assigned_class: a.assigned_class || '',
                     })));
                 } else if (user.departments && user.departments.length > 0) {
-                    const standaloneFromRoles = userRoles.filter(r => STANDALONE_ROLE_VALUES.includes(r as string)) as AppRole[];
+                    const standaloneFromRoles = userRoles.filter(r => esStandalone(r as string)) as AppRole[];
                     setStandaloneRoles(standaloneFromRoles);
                     setAssignments(user.departments.map((dept) => ({
-                        role: (userRoles.find(r => !STANDALONE_ROLE_VALUES.includes(r as string)) || userRoles[0] || 'maestro') as AppRole,
+                        role: (userRoles.find(r => !esStandalone(r as string)) || userRoles[0] || 'maestro') as AppRole,
                         department: dept,
                         assigned_class: dept === user.departments[0] ? (user.assigned_class || '') : '',
                     })));
                 } else {
-                    const standaloneFromRoles = userRoles.filter(r => STANDALONE_ROLE_VALUES.includes(r as string)) as AppRole[];
+                    const standaloneFromRoles = userRoles.filter(r => esStandalone(r as string)) as AppRole[];
                     setStandaloneRoles(standaloneFromRoles);
                     setAssignments([]);
                 }
@@ -409,7 +406,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                 finalDepts = [];
                 finalDeptId = undefined;
                 finalClass = undefined;
-                finalRole = standaloneRoles[0];
+                finalRole = primaryRoleFrom(standaloneRoles);
                 finalRoles = standaloneRoles;
                 finalAssignments = [];
             } else {
@@ -427,7 +424,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                     finalDepts = [];
                     finalDeptId = undefined;
                     finalClass = undefined;
-                    finalRole = standaloneRoles[0];
+                    finalRole = primaryRoleFrom(standaloneRoles);
                     finalRoles = standaloneRoles;
                     finalAssignments = [];
                 } else {
@@ -842,7 +839,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {(['maestro', 'colaborador', 'auxiliar_maestro'] as AppRole[]).map(r => (
-                                                        <SelectItem key={r} value={r}>{ROLE_LABELS[r] || r}</SelectItem>
+                                                        <SelectItem key={r} value={r}>{labelOf(r)}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
@@ -899,11 +896,38 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                                             }}
                                                             className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                                                         />
-                                                        <span className="text-sm font-medium capitalize">{ROLE_LABELS[r] || r}</span>
+                                                        <span className="text-sm font-medium capitalize">{labelOf(r)}</span>
                                                     </label>
                                                 ))}
                                         </div>
                                     </div>
+
+                                    {/* Roles propios de la empresa (Configuración › Permisos). Se guardan en
+                                        profiles.roles; el rol principal sigue siendo uno del sistema. */}
+                                    {customRoles.length > 0 && (
+                                        <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Roles propios</p>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                {customRoles.map(rol => (
+                                                    <label key={rol.key} className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={standaloneRoles.includes(rol.key as AppRole)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setStandaloneRoles([...standaloneRoles.filter(x => x !== ('miembro' as AppRole)), rol.key as AppRole]);
+                                                                } else {
+                                                                    setStandaloneRoles(standaloneRoles.filter(x => x !== rol.key));
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                                        />
+                                                        <span className="text-sm font-medium">{rol.label}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Director general: dept checkboxes */}
                                     {isDirectorGeneralMode && (
@@ -948,7 +972,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                                         <div key={idx} className="flex items-center justify-between gap-2 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700">
                                                             <div className="flex items-center gap-2 flex-wrap min-w-0">
                                                                 <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 text-[10px] shrink-0">
-                                                                    {ROLE_LABELS[a.role] || a.role}
+                                                                    {labelOf(a.role)}
                                                                 </Badge>
                                                                 <span className="text-sm font-medium truncate">{a.department}</span>
                                                                 {a.assigned_class && (
@@ -980,7 +1004,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                                                 {rolesForLoggedIn
                                                                     .filter(r => !['director_general', 'conserje', 'admin', 'secr.-calendario', 'secretaria'].includes(r as string))
                                                                     .map(r => (
-                                                                        <SelectItem key={r} value={r} className="text-xs">{ROLE_LABELS[r] || r}</SelectItem>
+                                                                        <SelectItem key={r} value={r} className="text-xs">{labelOf(r)}</SelectItem>
                                                                     ))}
                                                             </SelectContent>
                                                         </Select>

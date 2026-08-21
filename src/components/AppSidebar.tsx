@@ -48,7 +48,8 @@ import { NotificationBell } from "./NotificationBell";
 import { CompanyBadges } from "./CompanyBadges";
 import { SupportButton } from "./SupportButton";
 import { CustomTooltip } from "@/components/CustomTooltip";
-import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, rolesOf, isCustomRole, type SavedPermissions } from "@/lib/rolePermissions";
+import { useRoles } from "@/hooks/useRoles";
 
 // Contexto para el modo rail (solo desktop). En mobile/sheet queda con los defaults
 // (collapsed=false, pinnable=false) y todo se renderiza como siempre.
@@ -335,6 +336,8 @@ const NavigationContent = ({
     staleTime: 5 * 60 * 1000,
   });
 
+  const { labelOf } = useRoles();
+
   // Roles que pueden CREAR grupos ven el menú siempre. El resto (maestro, auxiliar, colaborador)
   // solo lo ve si está a cargo o es miembro de al menos un grupo — se resuelve consultando.
   const GROUP_CREATOR_ROLES = ['admin', 'secretaria', 'director', 'vicedirector', 'director_general', 'lider'];
@@ -369,9 +372,18 @@ const NavigationContent = ({
     "Solicitar Reparación": "menu_mantenimiento",
   };
 
+  // Roles propios de la empresa (profiles.roles). No son el rol principal, así que solo SUMAN
+  // menús: nunca sacan uno que el rol principal ya habilitaba. Sin permiso guardado en true,
+  // un rol custom no ve nada (deny by default), a diferencia de los del sistema.
+  const permisosCustom = rolesOf(profile)
+    .filter(isCustomRole)
+    .map(r => (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions?.[r] || {});
+  const habilitadoPorRolPropio = (menuKey: string) => permisosCustom.some(p => p[menuKey] === true);
+
   const checkMenuPerm = (menuKey: string) => {
     const role = profile?.role || '';
     const savedPerms = (company as any)?.role_permissions?.[role];
+    if (habilitadoPorRolPropio(menuKey)) return true;
     if (savedPerms && menuKey in savedPerms) return savedPerms[menuKey] !== false;
     return DEFAULT_PERMISSIONS[role]?.[menuKey] !== false;
   };
@@ -386,6 +398,7 @@ const NavigationContent = ({
       const menuKey = MENU_KEY_MAP[item.title];
       if (!menuKey) return true; // Inicio, Calendario siempre visibles
       if (menuKey === 'menu_grupos' && !hasSmallGroups) return false;
+      if (habilitadoPorRolPropio(menuKey)) return true;
       if (savedPerms && menuKey in savedPerms) return savedPerms[menuKey] !== false;
       return DEFAULT_PERMISSIONS[role]?.[menuKey] !== false;
     });
@@ -410,7 +423,7 @@ const NavigationContent = ({
       if (byTitle.has(it.title)) { grouped.push(it); byTitle.delete(it.title); }
     }
     return grouped;
-  }, [profile?.role, profile?.departments, unreadReportsCount, company, hasSmallGroups]);
+  }, [profile?.role, profile?.roles, profile?.departments, unreadReportsCount, company, hasSmallGroups]);
 
   const isAdminOrSecretary = profile?.role === 'admin' || profile?.role === 'secretaria';
 
@@ -458,6 +471,11 @@ const NavigationContent = ({
 
   const initials = `${profile?.first_name?.[0] ?? ''}${profile?.last_name?.[0] ?? ''}`.toUpperCase();
 
+  // Un usuario cuyo único rol es propio de la empresa tiene 'miembro' como rol principal
+  // (profiles.role es un enum): mostramos el rol propio, que es el que la persona reconoce.
+  const rolPropio = rolesOf(profile).find(isCustomRole);
+  const rolMostrado = (profile?.role === 'miembro' && rolPropio) ? rolPropio : (profile?.role ?? "");
+
   const roleLabel = {
     admin: { label: "Admin", color: "bg-purple-100 text-purple-700" },
     secretaria: { label: "Secretaria", color: "bg-blue-100 text-blue-700" },
@@ -466,7 +484,7 @@ const NavigationContent = ({
     auxiliar_maestro: { label: "Auxiliar de maestro", color: "bg-teal-100 text-teal-700" },
     director: { label: "Director", color: "bg-red-100 text-red-700" },
     "secr.-calendario": { label: "Secretaria", color: "bg-blue-100 text-blue-700" },
-  }[profile?.role ?? ""] ?? { label: profile?.role ?? "", color: "bg-gray-100 text-gray-700" };
+  }[rolMostrado] ?? { label: labelOf(rolMostrado), color: "bg-gray-100 text-gray-700" };
 
   return (
     <div className="flex flex-col h-full">

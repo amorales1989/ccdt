@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { canSuspendTarget } from "@/lib/suspension";
+import { useRoles } from "@/hooks/useRoles";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -106,6 +107,7 @@ const GestionUsuarios = () => {
   const isDirector = profile?.role === 'director';
   const isDirectorGeneral = profile?.role === 'director_general';
   const isVicedirector = profile?.role === 'vicedirector';
+  const { labelOf } = useRoles();
 
   useEffect(() => {
     if ((isDirector || isVicedirector) && profile?.departments?.[0]) {
@@ -684,7 +686,7 @@ const GestionUsuarios = () => {
                                   {user.assignments.map((a: any, i: number) => (
                                     <div key={i} className="flex items-center gap-1 flex-wrap">
                                       <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 text-[9px] h-4 capitalize">
-                                        {a.role}
+                                        {labelOf(a.role)}
                                       </Badge>
                                       <span className="text-xs text-slate-600 dark:text-slate-400">{a.department}</span>
                                       {a.assigned_class && (
@@ -699,7 +701,7 @@ const GestionUsuarios = () => {
                                 <div className="flex flex-col gap-1">
                                   {(user.roles && user.roles.length > 0 ? user.roles : [user.role]).map((r, i) => (
                                     <div key={i} className="flex items-center gap-1 flex-wrap">
-                                      <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[9px] h-4 capitalize">{r}</Badge>
+                                      <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[9px] h-4 capitalize">{labelOf(r)}</Badge>
                                       {user.departments?.[i] && (
                                         <span className="text-xs text-slate-600 dark:text-slate-400">{user.departments[i]}</span>
                                       )}
@@ -937,7 +939,7 @@ const GestionUsuarios = () => {
                             <TableRow key={user.id} className="group hover:bg-blue-50/30 dark:hover:bg-blue-900/10">
                               <TableCell className="py-3">
                                 <div className="font-bold text-slate-700 dark:text-slate-300">{user.first_name} {user.last_name}</div>
-                                <div className="text-[10px] text-muted-foreground uppercase">{user.role}</div>
+                                <div className="text-[10px] text-muted-foreground uppercase">{labelOf(user.role)}</div>
                               </TableCell>
                               <TableCell className="py-3 text-xs">
                                 {(() => { const eff = getEffectiveClass(user); return eff ? <Badge variant="outline" className={`h-5 text-[10px] ${user.id in pendingAssignments ? 'border-amber-400 text-amber-600' : ''}`}>{eff}</Badge> : <span className="text-muted-foreground">Sin clase</span>; })()}
@@ -992,7 +994,7 @@ const GestionUsuarios = () => {
                                 </Button>
                               </TableCell>
                               <TableCell className="py-3"><div className="font-bold text-slate-800 dark:text-slate-200">{user.first_name} {user.last_name}</div></TableCell>
-                              <TableCell className="py-3"><Badge variant="outline" className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-[9px]">{user.role}</Badge></TableCell>
+                              <TableCell className="py-3"><Badge variant="outline" className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-[9px]">{labelOf(user.role)}</Badge></TableCell>
                               <TableCell className="text-right py-3">
                                 {user.id in pendingAssignments
                                   ? <CustomTooltip title="Cambio pendiente"><div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" /></CustomTooltip>

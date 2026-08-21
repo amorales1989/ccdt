@@ -15,7 +15,7 @@ import { format, parseISO } from "date-fns";
 import { isDemoMode, DEMO_PDF_HEADER } from "@/lib/demo";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 
 
 const AutorizacionRhema = () => {
@@ -34,9 +34,11 @@ const AutorizacionRhema = () => {
     if (profile && company !== undefined) {
       const role = profile.role || '';
       const savedPerms = (company as any)?.role_permissions?.[role];
-      const authorized = savedPerms && 'menu_autorizaciones' in savedPerms
+      const authorized = (savedPerms && 'menu_autorizaciones' in savedPerms
         ? savedPerms.menu_autorizaciones !== false
-        : DEFAULT_PERMISSIONS[role]?.menu_autorizaciones !== false;
+        : DEFAULT_PERMISSIONS[role]?.menu_autorizaciones !== false)
+        // Roles propios de la empresa: viven en profiles.roles, no en profile.role.
+        || hasPermission(profile, 'menu_autorizaciones', (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions);
       if (!authorized) {
         toast.error("No tenés permisos para acceder a esta sección");
         navigate("/");

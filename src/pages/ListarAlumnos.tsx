@@ -101,9 +101,11 @@ const ListarAlumnos = () => {
   });
   const role = profile?.role || '';
   const savedPerms = (company as any)?.role_permissions?.[role];
-  const canAddStudent = savedPerms && 'puede_agregar_miembros' in savedPerms
+  const canAddStudent = (savedPerms && 'puede_agregar_miembros' in savedPerms
     ? savedPerms.puede_agregar_miembros !== false
-    : DEFAULT_PERMISSIONS[role]?.puede_agregar_miembros !== false;
+    : DEFAULT_PERMISSIONS[role]?.puede_agregar_miembros !== false)
+    // Roles propios de la empresa: viven en profiles.roles, no en profile.role.
+    || hasPermission(profile, 'puede_agregar_miembros', (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions);
   // Quien puede dejar a un miembro sin ningun departamento (solo congregación).
   const puedeSinDepto = hasPermission(
     profile,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CustomTabs } from "@/components/CustomTabs";
 import { Switch } from "@/components/ui/switch";
@@ -10,9 +10,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage, runBirthdayCron, getMemberCount, getSubscription, renewSubscription, subscribe, getQuote, changePlan, changePacks, getMyPayments, SubscriptionQuote, Payment } from "@/lib/api";
+import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage, runBirthdayCron, getMemberCount, getSubscription, renewSubscription, subscribe, getQuote, changePlan, changePacks, getMyPayments, updateRolePermissions, createCompanyRole, updateCompanyRole, deleteCompanyRole, SubscriptionQuote, Payment } from "@/lib/api";
 import { planLabel, effectiveLimit, planLimit, PACK_SIZE } from "@/lib/plans";
-import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell, KeyRound, Cake, Layers, Users, Infinity as InfinityIcon, Plus, Minus } from "lucide-react";
+import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell, KeyRound, Cake, Layers, Users, Infinity as InfinityIcon, Plus, Minus, Pencil, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { supabase, STORAGE_URL } from "@/integrations/supabase/client";
@@ -20,29 +20,18 @@ import { FcmDebug } from "@/components/FcmDebug";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { isDemoMode } from "@/lib/demo";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
-import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, rolesOf } from "@/lib/rolePermissions";
+import { useRoles } from "@/hooks/useRoles";
 import { CompanyBadges } from "@/components/CompanyBadges";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // ─── Permisos y Notificaciones ───────────────────────────────────────────────
-
-const ALL_ROLES = [
-  'admin', 'director_general', 'director', 'vicedirector',
-  'secretaria', 'secr.-calendario', 'lider', 'maestro',
-  'conserje', 'colaborador', 'auxiliar_maestro',
-] as const;
 
 const PAYMENT_SOURCE_LABELS: Record<string, string> = {
   manual: 'Pago manual',
   transferencia: 'Transferencia',
   mp_link: 'Pago único (MP)',
   mp_subscription: 'Débito automático (MP)',
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Admin', director_general: 'Director General', director: 'Director',
-  vicedirector: 'Vicedirector', secretaria: 'Secretaria', 'secr.-calendario': 'Secr. Calendario',
-  lider: 'Líder', maestro: 'Maestro', conserje: 'Conserje',
-  colaborador: 'Colaborador', auxiliar_maestro: 'Auxiliar de maestro',
 };
 
 // Solo queda acá "Agregar miembros": es la única acción sin equivalente en
@@ -123,10 +112,22 @@ export default function Configuration() {
   const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>(DEFAULT_PERMISSIONS);
   const [notificationSettings, setNotificationSettings] = useState<Record<string, string[]>>(DEFAULT_NOTIFICATIONS);
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
+  const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
   const [masterPassword, setMasterPassword] = useState("");
   const [confirmMasterPassword, setConfirmMasterPassword] = useState("");
   const [isSettingMasterPassword, setIsSettingMasterPassword] = useState(false);
+
+  // ── Roles propios de la empresa ──
+  const { roles: allRoles, custom: customRoles } = useRoles();
+  // El ABM de roles es solo para admin/secretaría. La página ya está detrás de
+  // menu_configuracion, pero ese permiso es configurable y podría dárselo a otro rol.
+  const puedeGestionarRoles = rolesOf(profile).some(r => r === 'admin' || r === 'secretaria');
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [roleEditing, setRoleEditing] = useState<{ id: string; label: string } | null>(null);
+  const [roleLabel, setRoleLabel] = useState("");
+  const [isSavingRole, setIsSavingRole] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<{ id: string; label: string } | null>(null);
 
   const [generalSettings, setGeneralSettings] = useState({
     darkMode: false,
@@ -346,13 +347,16 @@ export default function Configuration() {
     const companyData = company as any;
     if (companyData.auth_pdf_header && Array.isArray(companyData.auth_pdf_header) && companyData.auth_pdf_header.length > 0) {
       setAuthPdfHeader(companyData.auth_pdf_header as { text: string, enabled: boolean }[]);
+      authPdfRef.current = companyData.auth_pdf_header as { text: string, enabled: boolean }[];
     } else {
-      setAuthPdfHeader([
+      const vacio = [
         { text: "", enabled: false },
         { text: "", enabled: false },
         { text: "", enabled: false },
         { text: "", enabled: false }
-      ]);
+      ];
+      setAuthPdfHeader(vacio);
+      authPdfRef.current = vacio;
     }
 
     if (companyData.role_permissions && Object.keys(companyData.role_permissions).length > 0) {
@@ -361,6 +365,8 @@ export default function Configuration() {
         merged[role] = { ...DEFAULT_PERMISSIONS[role], ...companyData.role_permissions[role] };
       }
       setRolePermissions(merged);
+      // Si hay un guardado en curso no pisamos lo que el usuario acaba de tocar.
+      if (!permisosTimer.current) permisosRef.current = merged;
     }
     if (companyData.notification_settings && Object.keys(companyData.notification_settings).length > 0) {
       setNotificationSettings({ ...DEFAULT_NOTIFICATIONS, ...companyData.notification_settings });
@@ -483,6 +489,32 @@ export default function Configuration() {
     }
   };
 
+  // Guardado automático: la pantalla no tiene botón de guardar. Los cambios se acumulan unos
+  // milisegundos (para no disparar un PATCH por tecla) y se persisten solos.
+  const cambiosPendientes = useRef<Record<string, unknown>>({});
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const guardarAuto = (updates: Record<string, unknown>, delay = 700) => {
+    cambiosPendientes.current = { ...cambiosPendientes.current, ...updates };
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    setAutoSaveState('saving');
+    autoSaveTimer.current = setTimeout(async () => {
+      const payload = cambiosPendientes.current;
+      cambiosPendientes.current = {};
+      try {
+        await updateCompany(getPersistentCompanyId(), payload);
+        // Actualizamos la cache en vez de invalidar: refetchear pisaría lo que el usuario
+        // esté tocando mientras el request viaja.
+        queryClient.setQueryData(['company', getPersistentCompanyId()], (old: Record<string, unknown> | undefined) => old ? { ...old, ...payload } : old);
+        setAutoSaveState('saved');
+        setTimeout(() => setAutoSaveState(prev => prev === 'saved' ? 'idle' : prev), 2500);
+      } catch {
+        setAutoSaveState('idle');
+        toast({ title: "Error", description: "No se pudo guardar el cambio.", variant: "destructive" });
+      }
+    }, delay);
+  };
+
   const handleGeneralSettingChange = (setting: keyof typeof generalSettings) => {
     const newValue = !generalSettings[setting];
 
@@ -508,12 +540,16 @@ export default function Configuration() {
     }
   };
 
+  // Mismo motivo que permisosRef: con dos cambios seguidos el estado todavía no se
+  // re-renderizó, así que encadenamos sobre el ref y no sobre `authPdfHeader`.
+  const authPdfRef = useRef(authPdfHeader);
+
   const handleAuthPdfHeaderChange = (index: number, field: 'text' | 'enabled', value: string | boolean) => {
-    setAuthPdfHeader(prev => {
-      const newHeader = [...prev];
-      newHeader[index] = { ...newHeader[index], [field]: value };
-      return newHeader;
-    });
+    const newHeader = [...authPdfRef.current];
+    newHeader[index] = { ...newHeader[index], [field]: value };
+    authPdfRef.current = newHeader;
+    setAuthPdfHeader(newHeader);
+    guardarAuto({ auth_pdf_header: newHeader });
   };
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -605,31 +641,9 @@ export default function Configuration() {
     }
   };
 
-  const handleSaveSettings = () => {
-    try {
-      const updates: any = {
-        congregation_name: congregationName,
-        auth_pdf_header: authPdfHeader
-      };
-
-      updateCompanyMutate(updates);
-
-      toast({
-        title: "Configuración guardada",
-        description: "Los cambios han sido aplicados exitosamente",
-      });
-    } catch (error) {
-      console.error("Error saving settings:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron guardar los cambios",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleCongregationNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCongregationName(e.target.value);
+    guardarAuto({ congregation_name: e.target.value });
   };
 
   const handleClearCongregationName = () => {
@@ -638,15 +652,79 @@ export default function Configuration() {
     toast({ title: "Nombre eliminado", description: "El nombre de la congregación ha sido eliminado" });
   };
 
-  const handleSavePermissions = async () => {
+  // Los permisos también se guardan solos. Van por su propio endpoint (no es un campo de
+  // companies), así que tienen su timer aparte del de guardarAuto.
+  const permisosTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Se manda la matriz entera, así que cada toggle tiene que partir del último valor real.
+  // Con clicks rápidos el estado de React todavía no se re-renderizó, así que la fuente de
+  // verdad para encadenar cambios es este ref, no `rolePermissions`.
+  const permisosRef = useRef(rolePermissions);
+
+  const guardarPermisos = () => {
+    if (permisosTimer.current) clearTimeout(permisosTimer.current);
     setIsSavingPermissions(true);
+    // 2s sin tocar ningún switch = se guarda todo junto en un solo request.
+    permisosTimer.current = setTimeout(async () => {
+      permisosTimer.current = null;
+      const perms = permisosRef.current;
+      try {
+        await updateRolePermissions(perms);
+        queryClient.setQueryData(['company', getPersistentCompanyId()], (old: Record<string, unknown> | undefined) => old ? { ...old, role_permissions: perms } : old);
+      } catch {
+        toast({ title: "Error", description: "No se pudieron guardar los permisos.", variant: "destructive" });
+      } finally {
+        setIsSavingPermissions(false);
+      }
+    }, 2000);
+  };
+
+  const handleSaveRole = async () => {
+    const label = roleLabel.trim();
+    if (label.length < 2) {
+      toast({ title: "Nombre muy corto", description: "El rol necesita al menos 2 caracteres.", variant: "destructive" });
+      return;
+    }
+    setIsSavingRole(true);
     try {
-      await updateCompany(getPersistentCompanyId(), { role_permissions: rolePermissions });
-      toast({ title: "Permisos guardados", description: "La configuración de roles fue actualizada." });
-    } catch {
-      toast({ title: "Error", description: "No se pudieron guardar los permisos.", variant: "destructive" });
+      if (roleEditing) {
+        await updateCompanyRole(roleEditing.id, label);
+      } else {
+        await createCompanyRole(label);
+      }
+      queryClient.invalidateQueries({ queryKey: ['company-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+      setRoleDialogOpen(false);
+      setRoleEditing(null);
+      setRoleLabel("");
+      toast({ title: roleEditing ? "Rol actualizado" : "Rol creado", description: label });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo guardar el rol.",
+        variant: "destructive",
+      });
     } finally {
-      setIsSavingPermissions(false);
+      setIsSavingRole(false);
+    }
+  };
+
+  const handleDeleteRole = async () => {
+    if (!roleToDelete) return;
+    try {
+      await deleteCompanyRole(roleToDelete.id);
+      queryClient.invalidateQueries({ queryKey: ['company-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+      toast({ title: "Rol eliminado", description: roleToDelete.label });
+      setRoleToDelete(null);
+    } catch (error) {
+      // El back devuelve 409 con la cantidad de usuarios que todavía lo tienen asignado.
+      toast({
+        title: "No se pudo eliminar",
+        description: error instanceof Error ? error.message : "Error al eliminar el rol.",
+        variant: "destructive",
+      });
+      setRoleToDelete(null);
     }
   };
 
@@ -688,10 +766,11 @@ export default function Configuration() {
   };
 
   const togglePermission = (role: string, perm: string) => {
-    setRolePermissions(prev => ({
-      ...prev,
-      [role]: { ...prev[role], [perm]: !prev[role]?.[perm] }
-    }));
+    const base = permisosRef.current;
+    const next = { ...base, [role]: { ...base[role], [perm]: !base[role]?.[perm] } };
+    permisosRef.current = next;
+    setRolePermissions(next);
+    guardarPermisos();
   };
 
   const toggleNotificationRole = (event: string, role: string) => {
@@ -746,14 +825,10 @@ export default function Configuration() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={handleSaveSettings}
-                className="button-gradient rounded-xl h-11 px-8 font-black uppercase text-[10px] tracking-widest gap-2 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-95"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Guardar Cambios
-              </Button>
+            {/* Sin botón de guardar: cada cambio se persiste solo. */}
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              {autoSaveState === 'saving' && <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>}
+              {autoSaveState === 'saved' && <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />Cambios guardados</>}
             </div>
           </div>
         </Card>
@@ -1505,6 +1580,58 @@ export default function Configuration() {
         {/* ── TAB: Permisos por Rol ───────────────────────────────────────── */}
         {activeTab === 'permissions' && (
           <div className="mt-0 outline-none space-y-6">
+            {puedeGestionarRoles && (
+              <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl overflow-hidden">
+                <CardHeader className="relative p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-2xl text-indigo-600 dark:text-indigo-400 shrink-0">
+                      <Users className="h-6 w-6" />
+                    </div>
+                    <div className="max-w-xl">
+                      <CardTitle className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Roles de la Empresa</CardTitle>
+                      <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">
+                        Creá roles propios además de los del sistema. Se asignan como rol adicional desde Gestión de Usuarios y solo tienen los permisos que les marques abajo.
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {/* Absoluto para no correr del centro al título: el CardHeader centra su contenido. */}
+                  <div className="mt-4 sm:mt-0 sm:absolute sm:right-6 md:right-8 sm:top-6 md:top-8">
+                    <Button
+                      onClick={() => { setRoleEditing(null); setRoleLabel(""); setRoleDialogOpen(true); }}
+                      className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl font-bold gap-2"
+                    >
+                      <Plus className="h-4 w-4" /> Nuevo rol
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {customRoles.length === 0 ? (
+                    <p className="text-sm text-slate-400 font-medium">Todavía no creaste ningún rol propio.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-3">
+                      {customRoles.map(rol => (
+                        <div key={rol.id} className="inline-flex items-center gap-1 pl-4 pr-1 py-1 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                          <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">{rol.label}</span>
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8 rounded-lg"
+                            onClick={() => { setRoleEditing({ id: rol.id!, label: rol.label }); setRoleLabel(rol.label); setRoleDialogOpen(true); }}
+                          >
+                            <Pencil className="h-4 w-4 text-slate-500" />
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8 rounded-lg"
+                            onClick={() => setRoleToDelete({ id: rol.id!, label: rol.label })}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl overflow-hidden">
               <CardHeader className="p-6 md:p-8 border-b border-white/10 dark:border-slate-800/50">
                 <div className="flex items-center gap-4">
@@ -1540,10 +1667,11 @@ export default function Configuration() {
                       </tr>
                     </thead>
                     <tbody>
-                      {ALL_ROLES.map((role, i) => (
+                      {allRoles.map(({ key: role, label, custom }, i) => (
                         <tr key={role} className={`border-t border-slate-100 dark:border-slate-800 ${i % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-800/20' : ''}`}>
                           <td className={`sticky left-0 z-10 py-3 px-2 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap border-r border-slate-200 dark:border-slate-700 ${i % 2 === 0 ? 'bg-slate-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'}`}>
-                            {ROLE_LABELS[role]}
+                            {label}
+                            {custom && <span className="ml-2 text-[9px] font-black uppercase text-indigo-500">propio</span>}
                           </td>
                           {PERMISSIONS.map(p => (
                             <td key={p.key} className="py-3 px-1 text-center">
@@ -1568,14 +1696,10 @@ export default function Configuration() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-end mt-6">
-                  <Button
-                    onClick={handleSavePermissions}
-                    disabled={isSavingPermissions}
-                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl px-8 font-bold shadow-lg"
-                  >
-                    {isSavingPermissions ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : 'Guardar Permisos'}
-                  </Button>
+                <div className="flex justify-end items-center gap-2 mt-6 text-[10px] font-black uppercase tracking-widest text-slate-400 h-5">
+                  {isSavingPermissions
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
+                    : <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />Cada cambio se guarda solo</>}
                 </div>
               </CardContent>
             </Card>
@@ -1664,7 +1788,7 @@ export default function Configuration() {
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{event.description}</p>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      {ALL_ROLES.map(role => {
+                      {allRoles.map(({ key: role, label }) => {
                         const active = (notificationSettings[event.key] || []).includes(role);
                         return (
                           <button
@@ -1676,7 +1800,7 @@ export default function Configuration() {
                                 : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-amber-300'
                             }`}
                           >
-                            {ROLE_LABELS[role]}
+                            {label}
                           </button>
                         );
                       })}
@@ -1731,6 +1855,51 @@ export default function Configuration() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Alta / renombrado de un rol propio */}
+      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{roleEditing ? "Renombrar rol" : "Nuevo rol"}</DialogTitle>
+            <DialogDescription>
+              {roleEditing
+                ? "Cambiá solo el nombre visible. Los permisos y los usuarios asignados se mantienen."
+                : "El rol nace sin permisos: marcá los que necesite en la tabla de abajo."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Nombre del rol</Label>
+            <Input
+              value={roleLabel}
+              onChange={(e) => setRoleLabel(e.target.value)}
+              placeholder="Ej. Tesorero"
+              maxLength={40}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveRole(); }}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setRoleDialogOpen(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={handleSaveRole} disabled={isSavingRole} className="rounded-xl font-bold">
+              {isSavingRole ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!roleToDelete} onOpenChange={(o) => !o && setRoleToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar el rol "{roleToDelete?.label}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borran también sus permisos. Si hay usuarios con este rol asignado, primero hay que quitárselo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRole} className="rounded-xl bg-red-500 hover:bg-red-600">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

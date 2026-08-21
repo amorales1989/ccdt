@@ -24,7 +24,7 @@ import { useDepartments } from "@/hooks/useDepartments";
 import { DepartmentSelect } from "@/components/DepartmentSelect";
 import { ALL_VALUE } from "@/lib/departments";
 import { ClassSelect } from "@/components/ClassSelect";
-import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 
 const PromoverAlumnos = () => {
   const { profile } = useAuth();
@@ -60,9 +60,11 @@ const PromoverAlumnos = () => {
   const savedPerms = (company as any)?.role_permissions?.[role];
   // Misma clave que oculta "Promover Miembros" del menú (Configuración › Permisos):
   // si está oculta, tampoco debe poder accederse por URL directa.
-  const canPromote = savedPerms && 'menu_promover' in savedPerms
+  const canPromote = (savedPerms && 'menu_promover' in savedPerms
     ? savedPerms.menu_promover !== false
-    : DEFAULT_PERMISSIONS[role]?.menu_promover !== false;
+    : DEFAULT_PERMISSIONS[role]?.menu_promover !== false)
+    // Roles propios de la empresa: viven en profiles.roles, no en profile.role.
+    || hasPermission(profile, 'menu_promover', (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions);
 
   const userDepartment = profile?.departments?.[0] || null;
   const userClass = profile?.assigned_class || null;

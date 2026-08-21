@@ -13,7 +13,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
-import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 
 type GuideItem = {
   title: string;
@@ -344,6 +344,8 @@ const Guia = () => {
     const savedPerms = (company as any)?.role_permissions?.[role];
     const allowed = (key?: string) => {
       if (!key) return true;
+      // Roles propios de la empresa: viven en profiles.roles, no en profile.role.
+      if (hasPermission(profile, key, (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions)) return true;
       if (savedPerms && key in savedPerms) return savedPerms[key] !== false;
       return DEFAULT_PERMISSIONS[role]?.[key] !== false;
     };
@@ -354,7 +356,7 @@ const Guia = () => {
       if (s.title === "Autorizaciones" && role === "lider" && userDepartment !== "adolescentes") return false;
       return allowed(MENU_KEY[s.title]);
     });
-  }, [profile?.role, profile?.departments, company]);
+  }, [profile, company]);
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();

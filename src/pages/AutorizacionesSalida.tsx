@@ -8,7 +8,7 @@ import AuthorizationOption from "@/components/AuthorizationOption";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
-import { DEFAULT_PERMISSIONS } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 import { generateBlankFichaSalud } from "@/lib/pdfUtils";
 import { isDemoMode } from "@/lib/demo";
 import { FileText, HelpCircle } from "lucide-react";
@@ -61,9 +61,11 @@ const AutorizacionesSalida = () => {
       // con fallback a los permisos por defecto del rol.
       const role = profile.role || '';
       const savedPerms = (company as any)?.role_permissions?.[role];
-      const authorized = savedPerms && 'menu_autorizaciones' in savedPerms
+      const authorized = (savedPerms && 'menu_autorizaciones' in savedPerms
         ? savedPerms.menu_autorizaciones !== false
-        : DEFAULT_PERMISSIONS[role]?.menu_autorizaciones !== false;
+        : DEFAULT_PERMISSIONS[role]?.menu_autorizaciones !== false)
+        // Roles propios de la empresa: viven en profiles.roles, no en profile.role.
+        || hasPermission(profile, 'menu_autorizaciones', (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions);
       setIsAuthorized(authorized);
 
       if (!authorized) {
