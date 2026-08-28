@@ -60,9 +60,9 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
 
   return (
     <div className="bg-gradient-to-br from-indigo-50/50 via-white/80 to-purple-50/50 dark:from-slate-900/80 dark:via-slate-800/80 dark:to-slate-900/80 rounded-2xl m-2 border border-indigo-100/50 dark:border-slate-700/50 shadow-inner overflow-hidden animate-fade-in p-6">
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="flex flex-col gap-6">
 
-        {/* Columna Foto */}
+        {/* Foto arriba */}
         <div className="flex flex-col items-center justify-center pt-2">
           <PhotoUpload
             studentId={student.id}
@@ -74,8 +74,10 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
           />
         </div>
 
-        {/* Separador vertical en escritorio (después de la foto) */}
-        <div className="hidden md:block w-px bg-indigo-100 dark:bg-slate-700 my-2"></div>
+        {/* Separador horizontal debajo de la foto */}
+        <div className="h-px bg-indigo-100 dark:bg-slate-700"></div>
+
+        <div className="flex flex-col md:flex-row gap-8">
 
         {/* Columna Izquierda: Info Personal */}
         <div className="flex-1 space-y-4">
@@ -183,20 +185,20 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
             )}
 
             <div className="grid grid-cols-2 gap-4 mt-2 p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-              <div className="flex items-start gap-2.5">
-                <Building2 className="h-4 w-4 text-primary mt-0.5" />
-                <div>
-                  <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Departamento</p>
-                  <p className="font-medium text-primary">{student.department ? formatDepartment(student.department) : "No asignado"}</p>
+              <div className="flex items-start gap-2.5 min-w-0">
+                <Building2 className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider break-words">Departamento</p>
+                  <p className="font-medium text-primary break-words">{student.department ? formatDepartment(student.department) : "No asignado"}</p>
                 </div>
               </div>
 
               {primaryClass && (
-                <div className="flex items-start gap-2.5">
-                  <BookA className="h-4 w-4 text-primary mt-0.5" />
-                  <div>
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <BookA className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                  <div className="min-w-0">
                     <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Clase</p>
-                    <p className="font-medium text-primary">{primaryClass}</p>
+                    <p className="font-medium text-primary break-words">{primaryClass}</p>
                   </div>
                 </div>
               )}
@@ -210,19 +212,19 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
                 </p>
                 {otherAssignments.map((a, idx) => (
                   <div key={a.id || idx} className="grid grid-cols-2 gap-4 p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                    <div className="flex items-start gap-2.5">
-                      <Building2 className="h-4 w-4 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Departamento</p>
-                        <p className="font-medium text-primary">{a.departments?.name ? formatDepartment(a.departments.name) : "—"}</p>
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <Building2 className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider break-words">Departamento</p>
+                        <p className="font-medium text-primary break-words">{a.departments?.name ? formatDepartment(a.departments.name) : "—"}</p>
                       </div>
                     </div>
                     {a.assigned_class && (
-                      <div className="flex items-start gap-2.5">
-                        <BookA className="h-4 w-4 text-primary mt-0.5" />
-                        <div>
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <BookA className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                        <div className="min-w-0">
                           <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Clase</p>
-                          <p className="font-medium text-primary">{a.assigned_class}</p>
+                          <p className="font-medium text-primary break-words">{a.assigned_class}</p>
                         </div>
                       </div>
                     )}
@@ -231,6 +233,7 @@ export const StudentDetails = ({ student, onPhotoUpdate }: StudentDetailsProps) 
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
 

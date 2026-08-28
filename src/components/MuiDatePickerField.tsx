@@ -19,6 +19,7 @@ interface MuiDatePickerFieldProps {
     onOpenChange: (open: boolean) => void;
     placeholder?: string;
     className?: string;
+    minDate?: Date;
 }
 
 export function MuiDatePickerField({
@@ -28,6 +29,7 @@ export function MuiDatePickerField({
     onOpenChange,
     placeholder = "Seleccionar fecha",
     className,
+    minDate,
 }: MuiDatePickerFieldProps) {
     const [internalDate, setInternalDate] = useState<Dayjs | null>(value ? dayjs(value) : null);
 
@@ -59,6 +61,7 @@ export function MuiDatePickerField({
                 onClose={() => onOpenChange(false)}
                 value={internalDate}
                 onChange={handleDateChange}
+                minDate={minDate ? dayjs(minDate) : undefined}
                 format="DD/MM/YYYY"
                 slotProps={{
                     popper: {

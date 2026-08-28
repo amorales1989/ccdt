@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, MapPin, Users, FileText, List, Info, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { jsPDF } from "jspdf";
@@ -49,6 +50,8 @@ const AutorizacionCampamento = () => {
     }
   }, [profile, company, navigate]);
 
+  const DESTINATARIOS = ["niños", "pre-adolescentes", "adolescentes"];
+
   // Lista por defecto de elementos
   const elementosDefault = `• Sábanas, frazadas
 • Ropa liviana
@@ -61,9 +64,11 @@ const AutorizacionCampamento = () => {
 • Biblia`;
 
   const [formData, setFormData] = useState({
+    destinatarios: "adolescentes",
     fechaInicio: "",
     fechaFin: "",
     lugar: "",
+    descripcionEvento: "",
     costo: "",
     fechaLimite: "",
     horaSalida1: "",
@@ -109,7 +114,9 @@ const AutorizacionCampamento = () => {
   const handleDateChange = (name: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
+      // La fecha de fin no puede quedar antes del nuevo inicio
+      ...(name === 'fechaInicio' && prev.fechaFin && value && prev.fechaFin < value ? { fechaFin: "" } : {})
     }));
 
     if (errors[name]) {
@@ -123,6 +130,7 @@ const AutorizacionCampamento = () => {
 
   const formatDate = (dateStr) => {
     // Simplemente reorganizar el string sin crear objeto Date
+    if (!dateStr) return "";
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year}`;
   };
@@ -155,6 +163,7 @@ const AutorizacionCampamento = () => {
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
     let currentY = margin;
+    const destinatariosCapitalizado = formData.destinatarios.charAt(0).toUpperCase() + formData.destinatarios.slice(1);
 
     // Encabezado de la organización
     const companyData = company as any;
@@ -191,15 +200,9 @@ const AutorizacionCampamento = () => {
     currentY += 10;
 
     // Cuerpo de la carta
-    const textoIntro = `Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para adolescentes que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio ${formData.lugar}`;
+    const textoIntro = `Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para ${formData.destinatarios} que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio ${formData.lugar}.`;
 
-    // Dividir texto en líneas manualmente
-    const lineas = [
-      "Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos",
-      "organizando el campamento para adolescentes que cada año hacemos. En esta",
-      `oportunidad el campamento se realizará en el domicilio ${formData.lugar.substring(0, 30)}`,
-      formData.lugar.length > 30 ? formData.lugar.substring(30) : ""
-    ].filter(linea => linea.trim());
+    const lineas: string[] = doc.splitTextToSize(textoIntro, pageWidth - margin * 2);
 
     lineas.forEach(linea => {
       doc.text(linea, margin, currentY);
@@ -221,8 +224,22 @@ const AutorizacionCampamento = () => {
     currentY += 4;
     doc.text(`regresando el día Domingo ${finDia}, a las ${formData.horaRegreso || "____"}hs., aproximadamente.`, margin, currentY);
     currentY += 4;
-    doc.text(`El costo es de: $${formData.costo || "______"}.-`, margin, currentY);
-    currentY += 7;
+
+    if (formData.descripcionEvento) {
+      currentY += 3;
+      const lineasDesc: string[] = doc.splitTextToSize(formData.descripcionEvento, pageWidth - margin * 2);
+      lineasDesc.forEach(linea => {
+        doc.text(linea, margin, currentY);
+        currentY += 5;
+      });
+    }
+
+    // Sin costo cargado no se imprime la línea (igual que la autorización de salida).
+    if (formData.costo) {
+      doc.text(`El costo es de: $${formData.costo}.-`, margin, currentY);
+      currentY += 4;
+    }
+    currentY += 3;
 
     // Párrafo de inscripción
     doc.text("Si Uds. están interesados en que su hijo/a concurra a este campamento,", margin, currentY);
@@ -324,7 +341,7 @@ const AutorizacionCampamento = () => {
     doc.setFont("helvetica", "bold");
     doc.text("DATOS PERSONALES PARA INSCRIPCIÓN", pageWidth / 2, currentY, { align: "center" });
     currentY += 8;
-    doc.text(`CAMPAMENTO DE ADOLESCENTES – ${mesNombre.toUpperCase()} ${año.toUpperCase()}`, pageWidth / 2, currentY, { align: "center" });
+    doc.text(`CAMPAMENTO DE ${formData.destinatarios.toUpperCase()} – ${mesNombre.toUpperCase()} ${año.toUpperCase()}`, pageWidth / 2, currentY, { align: "center" });
     currentY += 15;
 
     doc.setFontSize(10);
@@ -354,7 +371,7 @@ const AutorizacionCampamento = () => {
     doc.setFont("helvetica", "normal");
     doc.text("Autorizo a mi hijo/a ..................................................................................................... a", margin, currentY);
     currentY += 8;
-    doc.text(`concurrir los días ${inicioFormatted.split('/')[0]} al ${finFormatted.split('/')[0]} de ${mesNombre} del ${año} al Campamento para Adolescentes que`, margin, currentY);
+    doc.text(`concurrir los días ${inicioFormatted.split('/')[0]} al ${finFormatted.split('/')[0]} de ${mesNombre} del ${año} al Campamento para ${destinatariosCapitalizado} que`, margin, currentY);
     currentY += 8;
     doc.text(`organiza la "${authPdfHeader[0]?.text || 'ASOCIACIÓN DE BENEFICIENCIA Y EDUCACIÓN RHEMA'}", en el predio con`, margin, currentY);
     currentY += 8;
@@ -376,7 +393,7 @@ const AutorizacionCampamento = () => {
     currentY += 12;
     doc.text("TEL. DE CONTACTO:...............................................................................................................", margin, currentY);
 
-    doc.save("autorizacion_campamento_adolescentes.pdf");
+    doc.save(`autorizacion_campamento_${formData.destinatarios}.pdf`);
   };
 
   const handleSubmit = (e) => {
@@ -388,7 +405,9 @@ const AutorizacionCampamento = () => {
     if (!formData.fechaInicio) newErrors.fechaInicio = "La fecha de inicio es requerida";
     if (!formData.fechaFin) newErrors.fechaFin = "La fecha de fin es requerida";
     if (!formData.fechaLimite) newErrors.fechaLimite = "La fecha límite es requerida";
-    if (!formData.costo) newErrors.costo = "El costo es requerido";
+    if (formData.fechaInicio && formData.fechaFin && formData.fechaFin < formData.fechaInicio) {
+      newErrors.fechaFin = "La fecha de fin no puede ser anterior a la de inicio";
+    }
     if (!formData.liderDirector) newErrors.liderDirector = "El nombre del responsable es requerido";
     if (!formData.telefono) newErrors.telefono = "El teléfono es requerido";
     if (!formData.horaSalida1) newErrors.horaSalida1 = "La hora de salida es requerida";
@@ -473,6 +492,23 @@ const AutorizacionCampamento = () => {
               </h2>
               <div onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1 md:col-span-2">
+                    <Label htmlFor="destinatarios" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Campamento para <span className="text-red-500">*</span></Label>
+                    <Select
+                      value={formData.destinatarios}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, destinatarios: value }))}
+                    >
+                      <SelectTrigger id="destinatarios" className="rounded-xl bg-slate-50 border-slate-200 capitalize">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DESTINATARIOS.map(opcion => (
+                          <SelectItem key={opcion} value={opcion} className="capitalize">{opcion}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="space-y-1">
                     <Label htmlFor="fechaInicio" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha de inicio <span className="text-red-500">*</span></Label>
                     <MuiDatePickerField
@@ -496,6 +532,7 @@ const AutorizacionCampamento = () => {
                       }
                       open={fechaFinOpen}
                       onOpenChange={setFechaFinOpen}
+                      minDate={formData.fechaInicio ? parseISO(formData.fechaInicio) : undefined}
                       placeholder="Seleccionar fecha"
                     />
                     {errors.fechaFin && <p className="text-xs text-red-500">{errors.fechaFin}</p>}
@@ -517,18 +554,33 @@ const AutorizacionCampamento = () => {
                     {errors.lugar && <p className="text-xs text-red-500">{errors.lugar}</p>}
                   </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="costo" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Costo ($) <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="costo"
-                      name="costo"
-                      type="text"
-                      value={formData.costo}
+                  <div className="md:col-span-2 space-y-1">
+                    <Label htmlFor="descripcionEvento" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Descripción Adicional (Opcional)</Label>
+                    <textarea
+                      id="descripcionEvento"
+                      name="descripcionEvento"
+                      value={formData.descripcionEvento}
                       onChange={handleInputChange}
-                      placeholder="Ej: 15.000"
-                      className="rounded-xl bg-slate-50 border-slate-200"
+                      placeholder="Información adicional sobre el campamento, transporte, etc."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 text-sm resize-none"
                     />
-                    {errors.costo && <p className="text-xs text-red-500">{errors.costo}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="costo" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Costo del Campamento (Opcional)</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">$</span>
+                      <Input
+                        id="costo"
+                        name="costo"
+                        type="text"
+                        value={formData.costo}
+                        onChange={handleInputChange}
+                        placeholder="Ej: 15.000"
+                        className="pl-7 rounded-xl bg-slate-50 border-slate-200"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-1">
@@ -662,14 +714,21 @@ const AutorizacionCampamento = () => {
 
                   <div className="text-sm mt-4 text-gray-800 space-y-4">
                     <p className="text-justify leading-relaxed">
-                      Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para adolescentes que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio <strong>{formData.lugar || "_________________"}</strong>.
+                      Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para {formData.destinatarios} que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio <strong>{formData.lugar || "_________________"}</strong>.
                     </p>
                     <p className="text-justify leading-relaxed">
                       El campamento se realizará los días <strong>{inicioDia} al {finDia} de {mesNombre} del {año}</strong>. Vamos a salir de la Iglesia el día viernes {inicioDia}, a las {formData.horaSalida1 || "____"}hs{formData.horaSalida2 ? ` y ${formData.horaSalida2}hs` : ''}. y estaremos regresando el día Domingo {finDia}, a las {formData.horaRegreso || "____"}hs., aproximadamente.
                     </p>
-                    <p className="text-justify leading-relaxed">
-                      El costo es de: <strong>${formData.costo || "______"}.-</strong>
-                    </p>
+                    {formData.descripcionEvento && (
+                      <p className="text-justify leading-relaxed">
+                        {formData.descripcionEvento}
+                      </p>
+                    )}
+                    {formData.costo && (
+                      <p className="text-justify leading-relaxed">
+                        El costo es de: <strong>${formData.costo}.-</strong>
+                      </p>
+                    )}
                   </div>
 
                   <div className="mt-8 border-t-2 border-dashed border-gray-300 pt-8 opacity-50 flex flex-col items-center">

@@ -321,7 +321,10 @@ const Home = () => {
       const estado = (event as any).estado;
       const isAproved = !esSolicitud || estado === 'aprobada';
       // Para eventos de varios días vale la fecha de fin: siguen vigentes mientras duran.
-      const lastDay = (event.end_date || event.date).split('T')[0];
+      // Se toma la mayor de las dos por si el end_date quedó mal cargado (anterior a date).
+      const startDay = event.date.split('T')[0];
+      const endDay = (event.end_date || event.date).split('T')[0];
+      const lastDay = endDay > startDay ? endDay : startDay;
       const isPast = lastDay < todayStr;
       return isAproved && !isPast;
     }).map(event => ({
