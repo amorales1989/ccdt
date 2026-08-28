@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDepartments, updateDepartment, createDepartment, deleteDepartment } from "@/lib/api";
+import { getDepartments, updateDepartment, createDepartment, deleteDepartment, getDepartmentDeleteImpact } from "@/lib/api";
 import { Department, DepartmentType } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Layers, Pencil, Trash2, Plus, X, GraduationCap } from "lucide-react";
@@ -103,13 +103,24 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
     }
   });
 
+  // Qué pasa con los miembros si se borra: se consulta al abrir el diálogo de confirmación.
+  const { data: deleteImpact } = useQuery({
+    queryKey: ['department-delete-impact', selectedDepartment?.id],
+    queryFn: () => getDepartmentDeleteImpact(selectedDepartment!.id),
+    enabled: isDeleting && !!selectedDepartment?.id,
+  });
+
   const deleteDepartmentMutation = useMutation({
     mutationFn: deleteDepartment,
-    onSuccess: () => {
+    onSuccess: (impacto) => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      const sinDepto = impacto?.miembros_sin_departamento || 0;
       toast({
         title: "Departamento eliminado",
-        description: "El departamento ha sido eliminado exitosamente.",
+        description: sinDepto > 0
+          ? `${sinDepto} ${sinDepto === 1 ? "miembro quedó" : "miembros quedaron"} en la congregación sin departamento.`
+          : "El departamento ha sido eliminado exitosamente.",
         variant: "success",
       });
       setIsDeleting(false);
@@ -261,8 +272,36 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
                             <div className="bg-red-100 p-2 rounded-lg text-red-500"><Trash2 className="h-4 w-4" /></div>
                             ¿Eliminar departamento?
                           </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esto eliminará <strong>"{department.name}"</strong> permanentemente. Los miembros asociados serán desvinculados.
+                          <AlertDialogDescription asChild>
+                            <div className="space-y-2">
+                              <p>Esto eliminará <strong>"{department.name}"</strong> permanentemente.</p>
+                              {(deleteImpact?.miembros ?? 0) > 0 && (
+                                <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-amber-900 dark:text-amber-100 text-sm space-y-1">
+                                  <p>
+                                    A <strong>{deleteImpact.miembros} {deleteImpact.miembros === 1 ? "miembro" : "miembros"}</strong> se les quitará este departamento.
+                                  </p>
+                                  {deleteImpact.miembros_reasignados > 0 && (
+                                    <p>
+                                      {deleteImpact.miembros_reasignados === 1
+                                        ? "1 pasará al otro departamento que tiene asignado."
+                                        : `${deleteImpact.miembros_reasignados} pasarán al otro departamento que tienen asignado.`}
+                                    </p>
+                                  )}
+                                  {deleteImpact.miembros_sin_departamento > 0 && (
+                                    <p>
+                                      {deleteImpact.miembros_sin_departamento === 1
+                                        ? "1 quedará en la congregación como miembro sin departamento."
+                                        : `${deleteImpact.miembros_sin_departamento} quedarán en la congregación como miembros sin departamento.`}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                              {(deleteImpact?.usuarios ?? 0) > 0 && (
+                                <p className="text-sm">
+                                  Además, {deleteImpact.usuarios === 1 ? "1 usuario quedará" : `${deleteImpact.usuarios} usuarios quedarán`} sin este departamento asignado.
+                                </p>
+                              )}
+                            </div>
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

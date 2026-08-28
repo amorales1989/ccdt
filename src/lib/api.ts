@@ -997,16 +997,26 @@ export const createDepartment = async (department: {
   }
 };
 
-export const deleteDepartment = async (id: string) => {
-  try {
-    const { error } = await supabase
-      .from('departments')
-      .delete()
-      .eq('id', id)
-      .eq('company_id', getPersistentCompanyId());
+export interface DepartmentDeleteImpact {
+  miembros: number;
+  miembros_reasignados: number;
+  miembros_sin_departamento: number;
+  usuarios: number;
+  eliminado: boolean;
+}
 
-    if (error) throw error;
-    return true;
+// A quiénes afecta borrar el departamento (no modifica nada): alimenta el aviso del diálogo.
+export const getDepartmentDeleteImpact = async (id: string): Promise<DepartmentDeleteImpact> => {
+  const response = await apiCall(`/departments/${id}/delete-impact`);
+  return response.data;
+};
+
+export const deleteDepartment = async (id: string): Promise<DepartmentDeleteImpact> => {
+  try {
+    // El back reasigna a los miembros antes de borrar; borrarlo directo por supabase fallaba
+    // por la FK de students.department_id.
+    const response = await apiCall(`/departments/${id}`, { method: 'DELETE' });
+    return response.data;
   } catch (error) {
     console.error('Error deleting department:', error);
     throw error;
