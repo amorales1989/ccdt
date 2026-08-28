@@ -2024,7 +2024,7 @@ export interface AccountingCategoryTotal {
   cantidad: number;
 }
 
-// Totales por motivo (tab "Por motivos"): los agrupa el SP, no el browser.
+// Totales por concepto (tab "Por conceptos"): los agrupa el SP, no el browser.
 export const getAccountingByCategory = async (params: {
   department_id: string;
   from?: string;

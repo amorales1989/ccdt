@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Plus, Pencil, Trash2, Download, Wallet, TrendingUp, TrendingDown, FolderIcon, ListOrdered, PieChart as PieChartIcon } from "lucide-react";
-import { PieChart, Pie, Cell, Legend, Tooltip as ReTooltip, ResponsiveContainer } from "recharts";
+import { PieChartWithLegend } from "@/components/BasePieChart";
+import { buildPieData, getPieChartOptions } from "@/lib/pieChartOptions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -50,10 +51,10 @@ const WRITE_ROLES = ["admin", "lider", "director", "vicedirector", "director_gen
 // director_general se limita a los departamentos asignados en su perfil (no todos).
 const ALL_DEPT_ROLES = ["admin", "secretaria"];
 
-// Motivos sugeridos por tipo. "Otro" habilita un texto libre para lo que no entre en la lista
-// (y es el modo en el que caen los movimientos viejos con motivos fuera de estas opciones).
-const MOTIVO_OTRO = "__otro__";
-const MOTIVOS: Record<"ingreso" | "egreso", string[]> = {
+// Conceptos sugeridos por tipo. "Otro" habilita un texto libre para lo que no entre en la lista
+// (y es el modo en el que caen los movimientos viejos con conceptos fuera de estas opciones).
+const CONCEPTO_OTRO = "__otro__";
+const CONCEPTOS: Record<"ingreso" | "egreso", string[]> = {
   ingreso: [
     "Ofrenda",
     "Donación",
@@ -72,16 +73,24 @@ const MOTIVOS: Record<"ingreso" | "egreso", string[]> = {
 
 
 
-// El % va afuera de la torta con línea conectora: recharts pasa el color del sector en `fill`.
-type PieLabelProps = { x?: number; y?: number; fill?: string; percent?: number; textAnchor?: string };
-const renderPercentLabel = ({ x = 0, y = 0, fill, percent = 0, textAnchor }: PieLabelProps) => (
-  <text x={x} y={y} fill={fill} textAnchor={textAnchor} dominantBaseline="central" fontSize={12} fontWeight={700}>
-    {Math.round(percent * 100)}%
-  </text>
-);
-
 const fmtMoney = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(n || 0);
+
+// Sin decimales: la etiqueta va adentro del gráfico y el espacio es poco.
+const fmtMoneyShort = (n: number) =>
+  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0);
+
+// Tooltip multilínea y etiqueta externa de la torta de conceptos.
+const pieOptions = getPieChartOptions<AccountingCategoryTotal>(
+  (ctx) =>
+    `Importe: ${fmtMoney(ctx.raw.value)}\n` +
+    `Porcentaje: ${Math.round(ctx.percent * 100)}%\n` +
+    `Movimientos: ${ctx.raw.fullRow.cantidad}`,
+  (value, ctx) =>
+    `${ctx.label.length > 14 ? `${ctx.label.slice(0, 13)}…` : ctx.label}: ${fmtMoneyShort(value)} · ${Math.round(ctx.percent * 100)}%`,
+  { fontSize: 10 },
+  { padding: { top: 40, bottom: 40, left: 55, right: 55 } },
+);
 
 const todayStr = () => format(new Date(), "yyyy-MM-dd");
 
@@ -108,7 +117,7 @@ export default function Contabilidad() {
   const [selectedDept, setSelectedDept] = useState<string>("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterClass, setFilterClass] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<"detallado" | "motivos">("detallado");
+  const [activeTab, setActiveTab] = useState<"detallado" | "conceptos">("detallado");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
 
@@ -118,7 +127,7 @@ export default function Contabilidad() {
   const [movementDateOpen, setMovementDateOpen] = useState(false);
   const [editing, setEditing] = useState<AccountingTransaction | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
-  const [motivoOtro, setMotivoOtro] = useState(false);
+  const [conceptoOtro, setConceptoOtro] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AccountingTransaction | null>(null);
 
   const [obDialogOpen, setObDialogOpen] = useState(false);
@@ -173,11 +182,11 @@ export default function Contabilidad() {
     enabled: !!selectedDept,
   });
 
-  // Totales por motivo (tab "Por motivos"): los agrupa el SP, no el browser.
+  // Totales por concepto (tab "Por conceptos"): los agrupa el SP, no el browser.
   const { data: byCategory = [], isLoading: byCategoryLoading } = useQuery({
     queryKey: ["accounting-by-category", selectedDept, from, to, classFilter],
     queryFn: () => getAccountingByCategory({ department_id: selectedDept, from: from || undefined, to: to || undefined, assigned_class: classFilter }),
-    enabled: !!selectedDept && activeTab === "motivos",
+    enabled: !!selectedDept && activeTab === "conceptos",
   });
 
   const { data: categories = [] } = useQuery({
@@ -212,7 +221,17 @@ export default function Contabilidad() {
   );
 
   const pieData = (tipo: "ingreso" | "egreso") =>
-    categoryRows.filter((r) => r.type === tipo).map((r) => ({ name: r.category, value: Number(r.total) }));
+    buildPieData(categoryRows.filter((r) => r.type === tipo), {
+      getValue: (r) => Number(r.total),
+      getLabel: (r) => r.category,
+      colors: CHART_COLORS,
+      mergeOthers: (rest) => ({
+        category: "Otros",
+        type: tipo,
+        total: rest.reduce((acc, r) => acc + Number(r.total), 0),
+        cantidad: rest.reduce((acc, r) => acc + r.cantidad, 0),
+      }),
+    });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["accounting-tx"] });
@@ -256,7 +275,7 @@ export default function Contabilidad() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm()); setMotivoOtro(false); setDialogOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(emptyForm()); setConceptoOtro(false); setDialogOpen(true); };
   const openEdit = (t: AccountingTransaction) => {
     setEditing(t);
     setForm({
@@ -264,8 +283,8 @@ export default function Contabilidad() {
       description: t.description || "", movement_date: t.movement_date,
       assigned_class: t.assigned_class || "",
     });
-    // Motivo cargado antes del select (o escrito a mano): se edita como "Otro".
-    setMotivoOtro(!!t.category && !MOTIVOS[t.type].includes(t.category));
+    // Concepto cargado antes del select (o escrito a mano): se edita como "Otro".
+    setConceptoOtro(!!t.category && !CONCEPTOS[t.type].includes(t.category));
     setDialogOpen(true);
   };
 
@@ -279,16 +298,16 @@ export default function Contabilidad() {
       toast({ title: "Falta la fecha", variant: "destructive" });
       return;
     }
-    // Con motivo "Otro" el detalle es lo único que explica el movimiento.
-    if (motivoOtro && !form.description.trim()) {
-      toast({ title: "Falta la descripción", description: "Con el motivo \"Otro\" la descripción es obligatoria", variant: "destructive" });
+    // Con concepto "Otro" el detalle es lo único que explica el movimiento.
+    if (conceptoOtro && !form.description.trim()) {
+      toast({ title: "Falta la descripción", description: "Con el concepto \"Otro\" la descripción es obligatoria", variant: "destructive" });
       return;
     }
     saveMutation.mutate();
   };
 
   const handleExport = () => {
-    if (activeTab === "motivos") {
+    if (activeTab === "conceptos") {
       exportAccountingByCategoryReport(categoryRows, String(deptName), { from, to }, company?.name || "Nexus", classFilter);
       return;
     }
@@ -351,7 +370,7 @@ export default function Contabilidad() {
               variant="outline"
               className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
               onClick={handleExport}
-              disabled={activeTab === "motivos" ? !categoryRows.length : !balance}
+              disabled={activeTab === "conceptos" ? !categoryRows.length : !balance}
             >
               <Download className="h-4 w-4 mr-1" /> Reporte
             </Button>
@@ -455,7 +474,7 @@ export default function Contabilidad() {
                       value={form.type}
                       onValueChange={(v) => {
                         setForm({ ...form, type: v as "ingreso" | "egreso", category: "" });
-                        setMotivoOtro(false);
+                        setConceptoOtro(false);
                       }}
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -471,32 +490,32 @@ export default function Contabilidad() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label>Motivo</Label>
+                  <Label>Concepto</Label>
                   <Select
-                    value={motivoOtro ? MOTIVO_OTRO : form.category}
+                    value={conceptoOtro ? CONCEPTO_OTRO : form.category}
                     onValueChange={(v) => {
-                      if (v === MOTIVO_OTRO) {
-                        setMotivoOtro(true);
+                      if (v === CONCEPTO_OTRO) {
+                        setConceptoOtro(true);
                         setForm({ ...form, category: "" });
                       } else {
-                        setMotivoOtro(false);
+                        setConceptoOtro(false);
                         setForm({ ...form, category: v });
                       }
                     }}
                   >
-                    <SelectTrigger><SelectValue placeholder="Elegí un motivo" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Elegí un concepto" /></SelectTrigger>
                     <SelectContent>
-                      {MOTIVOS[form.type].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                      <SelectItem value={MOTIVO_OTRO}>Otro</SelectItem>
+                      {CONCEPTOS[form.type].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                      <SelectItem value={CONCEPTO_OTRO}>Otro</SelectItem>
                     </SelectContent>
                   </Select>
-                  {motivoOtro && (
+                  {conceptoOtro && (
                     <>
                       <Input
                         list="accounting-categories"
                         value={form.category}
                         onChange={(e) => setForm({ ...form, category: e.target.value })}
-                        placeholder="Escribí el motivo"
+                        placeholder="Escribí el concepto"
                       />
                       <datalist id="accounting-categories">
                         {categories.map((c) => <option key={c} value={c} />)}
@@ -533,12 +552,12 @@ export default function Contabilidad() {
                   </div>
                 )}
                 <div className="flex flex-col gap-1">
-                  <Label>Descripción {motivoOtro ? <span className="text-red-500">*</span> : "(opcional)"}</Label>
+                  <Label>Descripción {conceptoOtro ? <span className="text-red-500">*</span> : "(opcional)"}</Label>
                   <Textarea
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     rows={2}
-                    placeholder={motivoOtro ? "Detallá el motivo del movimiento" : undefined}
+                    placeholder={conceptoOtro ? "Detallá el concepto del movimiento" : undefined}
                   />
                 </div>
               </div>
@@ -556,79 +575,60 @@ export default function Contabilidad() {
         onChange={setActiveTab}
         options={[
           { value: "detallado", label: "Detallado", icon: ListOrdered },
-          { value: "motivos", label: "Por motivos", icon: PieChartIcon },
+          { value: "conceptos", label: "Por conceptos", icon: PieChartIcon },
         ]}
       />
 
-      {activeTab === "motivos" ? (
+      {activeTab === "conceptos" ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {(["ingreso", "egreso"] as const).map((tipo) => {
-            const rows = categoryRows.filter((r) => r.type === tipo);
             const data = pieData(tipo);
-            const total = data.reduce((acc, d) => acc + d.value, 0);
+            const points = data.datasets[0].data;
+            const total = points.reduce((acc, p) => acc + p.value, 0);
             if (filterType !== "all" && filterType !== tipo) return null;
             return (
               <Card key={tipo} className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
                     {tipo === "ingreso"
-                      ? <><TrendingUp className="h-4 w-4 text-green-600" /> Ingresos por motivo</>
-                      : <><TrendingDown className="h-4 w-4 text-red-600" /> Egresos por motivo</>}
+                      ? <><TrendingUp className="h-4 w-4 text-green-600" /> Ingresos por concepto</>
+                      : <><TrendingDown className="h-4 w-4 text-red-600" /> Egresos por concepto</>}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {byCategoryLoading ? (
                     <p className="text-center text-muted-foreground py-10">Cargando...</p>
-                  ) : !data.length ? (
+                  ) : !points.length ? (
                     <p className="text-center text-muted-foreground py-10">Sin movimientos</p>
                   ) : (
                     <>
-                      <div className="h-[280px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart margin={{ top: 16, right: 16, bottom: 16, left: 16 }}>
-                            <Pie
-                              data={data}
-                              outerRadius="75%"
-                              dataKey="value"
-                              stroke="none"
-                              label={renderPercentLabel}
-                              isAnimationActive={false}
-                            >
-                              {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                            </Pie>
-                            <Legend
-                              layout="horizontal"
-                              align="center"
-                              verticalAlign="bottom"
-                              iconType="circle"
-                              wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-                              formatter={(value: string) => (
-                                <span className="text-slate-900 dark:text-slate-100">{value}</span>
-                              )}
-                            />
-                            <ReTooltip formatter={(v: number) => fmtMoney(Number(v))} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
+                      <PieChartWithLegend
+                        data={data}
+                        options={pieOptions}
+                        formatValue={fmtMoney}
+                        title={tipo === "ingreso" ? "Total ingresos" : "Total egresos"}
+                        itemsLabel={(n) => `${n} ${n === 1 ? "concepto" : "conceptos"}`}
+                        className="mb-4"
+                      />
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/50">
-                            <TableHead>Motivo</TableHead>
+                            <TableHead>Concepto</TableHead>
                             <TableHead className="text-right">Mov.</TableHead>
                             <TableHead className="text-right">Total</TableHead>
                             <TableHead className="text-right">%</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {rows.map((r, i) => (
-                            <TableRow key={r.category}>
+                          {points.map((p, i) => (
+                            <TableRow key={p.label}>
                               <TableCell className="flex items-center gap-2">
-                                <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                                {r.category}
+                                <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: data.datasets[0].backgroundColor[i] }} />
+                                {p.label}
                               </TableCell>
-                              <TableCell className="text-right text-muted-foreground">{r.cantidad}</TableCell>
-                              <TableCell className={`text-right font-semibold ${tipo === "ingreso" ? "text-green-600" : "text-red-600"}`}>{fmtMoney(Number(r.total))}</TableCell>
-                              <TableCell className="text-right text-muted-foreground">{total ? Math.round((Number(r.total) / total) * 100) : 0}%</TableCell>
+                              <TableCell className="text-right text-muted-foreground">{p.fullRow.cantidad}</TableCell>
+                              <TableCell className={`text-right font-semibold ${tipo === "ingreso" ? "text-green-600" : "text-red-600"}`}>{fmtMoney(p.value)}</TableCell>
+                              <TableCell className="text-right text-muted-foreground">{total ? Math.round((p.value / total) * 100) : 0}%</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -654,7 +654,7 @@ export default function Contabilidad() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="whitespace-nowrap">Fecha</TableHead>
-                <TableHead>Motivo</TableHead>
+                <TableHead>Concepto</TableHead>
                 <TableHead>Detalle</TableHead>
                 <TableHead>Responsable</TableHead>
                 <TableHead className="text-right whitespace-nowrap">Debe (ingresos)</TableHead>
@@ -735,7 +735,7 @@ export default function Contabilidad() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar movimiento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el movimiento de {deleteTarget?.category || "sin motivo"} por {fmtMoney(Number(deleteTarget?.amount || 0))}.
+              Esta acción no se puede deshacer. Se eliminará el movimiento de {deleteTarget?.category || "sin concepto"} por {fmtMoney(Number(deleteTarget?.amount || 0))}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

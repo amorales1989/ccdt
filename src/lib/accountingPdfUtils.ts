@@ -68,7 +68,7 @@ export const exportAccountingReport = (
 
   autoTable(doc, {
     startY: afterSummary + 6,
-    head: [['Fecha', 'Motivo', 'Detalle', 'Responsable', 'Debe', 'Haber', 'Saldo']],
+    head: [['Fecha', 'Concepto', 'Detalle', 'Responsable', 'Debe', 'Haber', 'Saldo']],
     body: [openingRow, ...body],
     foot: [['', '', '', 'Totales', fmtMoney(balance.total_ingresos), fmtMoney(balance.total_egresos), fmtMoney(balance.balance)]],
     headStyles: { fillColor: NAVY, textColor: 255, fontStyle: 'bold', fontSize: 8 },
@@ -108,7 +108,7 @@ const drawPieSlice = (
   doc.lines(deltas, cx, cy, [1, 1], 'F', true);
 };
 
-// Reporte de la tab "Por motivos": torta + totales por motivo, para ingresos y egresos.
+// Reporte de la tab "Por conceptos": torta + totales por concepto, para ingresos y egresos.
 export const exportAccountingByCategoryReport = (
   rows: AccountingCategoryTotal[],
   departmentName: string,
@@ -122,7 +122,7 @@ export const exportAccountingByCategoryReport = (
 
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Contabilidad por motivos - ${departmentName}`, pageWidth / 2, 18, { align: 'center' });
+  doc.text(`Contabilidad por conceptos - ${departmentName}`, pageWidth / 2, 18, { align: 'center' });
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -135,7 +135,9 @@ export const exportAccountingByCategoryReport = (
   let cursorY = 40;
 
   (['ingreso', 'egreso'] as const).forEach((tipo) => {
-    const items = rows.filter(r => r.type === tipo);
+    // Mismo orden que la pantalla (buildPieData): por monto descendente, para que el color
+    // de cada concepto coincida entre el PDF y el gráfico.
+    const items = rows.filter(r => r.type === tipo).sort((a, b) => Number(b.total) - Number(a.total));
     if (!items.length) return;
 
     const total = items.reduce((acc, r) => acc + Number(r.total), 0);
@@ -145,7 +147,7 @@ export const exportAccountingByCategoryReport = (
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(tipo === 'ingreso' ? 'Ingresos por motivo' : 'Egresos por motivo', 14, cursorY);
+    doc.text(tipo === 'ingreso' ? 'Ingresos por concepto' : 'Egresos por concepto', 14, cursorY);
     cursorY += 6;
 
     const cx = pageWidth / 2;
@@ -160,7 +162,7 @@ export const exportAccountingByCategoryReport = (
 
     autoTable(doc, {
       startY: cursorY,
-      head: [['', 'Motivo', 'Mov.', 'Total', '%']],
+      head: [['', 'Concepto', 'Mov.', 'Total', '%']],
       body: items.map(r => [
         '',
         r.category,
@@ -196,5 +198,5 @@ export const exportAccountingByCategoryReport = (
     doc.text('Sin movimientos en el período seleccionado.', pageWidth / 2, cursorY + 10, { align: 'center' });
   }
 
-  doc.save(`contabilidad_motivos_${departmentName}_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  doc.save(`contabilidad_conceptos_${departmentName}_${format(new Date(), 'yyyyMMdd')}.pdf`);
 };
