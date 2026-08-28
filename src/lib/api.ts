@@ -1912,6 +1912,7 @@ export interface AccountingTransaction {
   category: string | null;
   description: string | null;
   movement_date: string;
+  assigned_class: string | null;
   created_by: string | null;
   created_at: string;
   departments?: { name: string };
@@ -1930,12 +1931,14 @@ export const getAccountingTransactions = async (params: {
   from?: string;
   to?: string;
   type?: 'ingreso' | 'egreso';
+  assigned_class?: string;
 }): Promise<AccountingTransaction[]> => {
   const qs = new URLSearchParams();
   qs.set('department_id', params.department_id);
   if (params.from) qs.set('from', params.from);
   if (params.to) qs.set('to', params.to);
   if (params.type) qs.set('type', params.type);
+  if (params.assigned_class) qs.set('assigned_class', params.assigned_class);
   const response = await apiCall(`/accounting/transactions?${qs.toString()}`);
   return response.data || [];
 };
@@ -1947,6 +1950,7 @@ export const createAccountingTransaction = async (tx: {
   category?: string | null;
   description?: string | null;
   movement_date: string;
+  assigned_class?: string | null;
 }): Promise<AccountingTransaction> => {
   const response = await apiCall('/accounting/transactions', {
     method: 'POST',
@@ -1963,6 +1967,7 @@ export const updateAccountingTransaction = async (
     category: string | null;
     description: string | null;
     movement_date: string;
+    assigned_class: string | null;
   }>
 ): Promise<AccountingTransaction> => {
   const response = await apiCall(`/accounting/transactions/${id}`, {
@@ -1991,13 +1996,38 @@ export const getAccountingBalance = async (params: {
   department_id: string;
   from?: string;
   to?: string;
+  assigned_class?: string;
 }): Promise<AccountingBalance> => {
   const qs = new URLSearchParams();
   qs.set('department_id', params.department_id);
   if (params.from) qs.set('from', params.from);
   if (params.to) qs.set('to', params.to);
+  if (params.assigned_class) qs.set('assigned_class', params.assigned_class);
   const response = await apiCall(`/accounting/balance?${qs.toString()}`);
   return response.data;
+};
+
+export interface AccountingCategoryTotal {
+  category: string;
+  type: 'ingreso' | 'egreso';
+  total: number;
+  cantidad: number;
+}
+
+// Totales por motivo (tab "Por motivos"): los agrupa el SP, no el browser.
+export const getAccountingByCategory = async (params: {
+  department_id: string;
+  from?: string;
+  to?: string;
+  assigned_class?: string;
+}): Promise<AccountingCategoryTotal[]> => {
+  const qs = new URLSearchParams();
+  qs.set('department_id', params.department_id);
+  if (params.from) qs.set('from', params.from);
+  if (params.to) qs.set('to', params.to);
+  if (params.assigned_class) qs.set('assigned_class', params.assigned_class);
+  const response = await apiCall(`/accounting/by-category?${qs.toString()}`);
+  return response.data || [];
 };
 
 export const getOpeningBalance = async (department_id: string): Promise<number> => {

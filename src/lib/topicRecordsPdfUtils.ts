@@ -20,7 +20,8 @@ export const exportTopicRecordsPdf = (
   assignedClass?: string,
   showClassCol = false,
 ) => {
-  const doc = new jsPDF('l', 'mm', 'a4');
+  // Oficio/legal apaisado (356mm) en vez de A4 (297mm): Observaciones pasa de ~35-57mm a ~72-94mm.
+  const doc = new jsPDF('l', 'mm', 'legal');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 12;

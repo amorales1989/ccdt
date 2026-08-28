@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plus, Pencil, Trash2, Download, Wallet, TrendingUp, TrendingDown, FolderIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, Wallet, TrendingUp, TrendingDown, FolderIcon, ListOrdered, PieChart as PieChartIcon } from "lucide-react";
+import { PieChart, Pie, Cell, Legend, Tooltip as ReTooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -10,6 +11,7 @@ import {
   getAccountingTransactions,
   getAccountingBalance,
   getAccountingCategories,
+  getAccountingByCategory,
   createAccountingTransaction,
   updateAccountingTransaction,
   deleteAccountingTransaction,
@@ -17,9 +19,10 @@ import {
   setOpeningBalance,
   getCompany,
   type AccountingTransaction,
+  type AccountingCategoryTotal,
 } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
-import { exportAccountingReport } from "@/lib/accountingPdfUtils";
+import { exportAccountingReport, exportAccountingByCategoryReport } from "@/lib/accountingPdfUtils";
 import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,10 +43,42 @@ import {
 import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { CustomTabs } from "@/components/CustomTabs";
+import { CHART_COLORS } from "@/lib/chartColors";
 
 const WRITE_ROLES = ["admin", "lider", "director", "vicedirector", "director_general"];
 // director_general se limita a los departamentos asignados en su perfil (no todos).
 const ALL_DEPT_ROLES = ["admin", "secretaria"];
+
+// Motivos sugeridos por tipo. "Otro" habilita un texto libre para lo que no entre en la lista
+// (y es el modo en el que caen los movimientos viejos con motivos fuera de estas opciones).
+const MOTIVO_OTRO = "__otro__";
+const MOTIVOS: Record<"ingreso" | "egreso", string[]> = {
+  ingreso: [
+    "Ofrenda",
+    "Donación",
+    "Aporte de la iglesia",
+    "Recaudación de actividad",
+    "Inscripciones",
+  ],
+  egreso: [
+    "Comida y bebida",
+    "Materiales y librería",
+    "Limpieza y mantenimiento",
+    "Transporte y combustible",
+    "Actividades y eventos",
+  ],
+};
+
+
+
+// El % va afuera de la torta con línea conectora: recharts pasa el color del sector en `fill`.
+type PieLabelProps = { x?: number; y?: number; fill?: string; percent?: number; textAnchor?: string };
+const renderPercentLabel = ({ x = 0, y = 0, fill, percent = 0, textAnchor }: PieLabelProps) => (
+  <text x={x} y={y} fill={fill} textAnchor={textAnchor} dominantBaseline="central" fontSize={12} fontWeight={700}>
+    {Math.round(percent * 100)}%
+  </text>
+);
 
 const fmtMoney = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(n || 0);
@@ -56,10 +91,11 @@ type FormState = {
   category: string;
   description: string;
   movement_date: string;
+  assigned_class: string;
 };
 
 const emptyForm = (): FormState => ({
-  type: "ingreso", amount: "", category: "", description: "", movement_date: todayStr(),
+  type: "ingreso", amount: "", category: "", description: "", movement_date: todayStr(), assigned_class: "",
 });
 
 export default function Contabilidad() {
@@ -71,6 +107,8 @@ export default function Contabilidad() {
 
   const [selectedDept, setSelectedDept] = useState<string>("");
   const [filterType, setFilterType] = useState<string>("all");
+  const [filterClass, setFilterClass] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"detallado" | "motivos">("detallado");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
 
@@ -80,6 +118,7 @@ export default function Contabilidad() {
   const [movementDateOpen, setMovementDateOpen] = useState(false);
   const [editing, setEditing] = useState<AccountingTransaction | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [motivoOtro, setMotivoOtro] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AccountingTransaction | null>(null);
 
   const [obDialogOpen, setObDialogOpen] = useState(false);
@@ -112,11 +151,14 @@ export default function Contabilidad() {
   }, [allowedDepartments, selectedDept]);
 
   const deptName = allowedDepartments.find((d) => d.id === selectedDept)?.name || "";
+  const deptClasses = (allowedDepartments.find((d) => d.id === selectedDept)?.classes || []) as string[];
+  const classFilter = filterClass === "all" ? undefined : filterClass;
   const queryParams = {
     department_id: selectedDept,
     from: from || undefined,
     to: to || undefined,
     type: filterType === "all" ? undefined : (filterType as "ingreso" | "egreso"),
+    assigned_class: classFilter,
   };
 
   const { data: transactions = [], isLoading } = useQuery({
@@ -126,9 +168,16 @@ export default function Contabilidad() {
   });
 
   const { data: balance } = useQuery({
-    queryKey: ["accounting-balance", selectedDept, from, to],
-    queryFn: () => getAccountingBalance({ department_id: selectedDept, from: from || undefined, to: to || undefined }),
+    queryKey: ["accounting-balance", selectedDept, from, to, classFilter],
+    queryFn: () => getAccountingBalance({ department_id: selectedDept, from: from || undefined, to: to || undefined, assigned_class: classFilter }),
     enabled: !!selectedDept,
+  });
+
+  // Totales por motivo (tab "Por motivos"): los agrupa el SP, no el browser.
+  const { data: byCategory = [], isLoading: byCategoryLoading } = useQuery({
+    queryKey: ["accounting-by-category", selectedDept, from, to, classFilter],
+    queryFn: () => getAccountingByCategory({ department_id: selectedDept, from: from || undefined, to: to || undefined, assigned_class: classFilter }),
+    enabled: !!selectedDept && activeTab === "motivos",
   });
 
   const { data: categories = [] } = useQuery({
@@ -156,10 +205,20 @@ export default function Contabilidad() {
     });
   }, [transactions, balance?.opening_balance]);
 
+  // El filtro de tipo no viaja al SP: la lista ya viene agrupada, se recorta acá.
+  const categoryRows = useMemo(
+    () => byCategory.filter((r) => filterType === "all" || r.type === filterType),
+    [byCategory, filterType]
+  );
+
+  const pieData = (tipo: "ingreso" | "egreso") =>
+    categoryRows.filter((r) => r.type === tipo).map((r) => ({ name: r.category, value: Number(r.total) }));
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["accounting-tx"] });
     qc.invalidateQueries({ queryKey: ["accounting-balance"] });
     qc.invalidateQueries({ queryKey: ["accounting-opening"] });
+    qc.invalidateQueries({ queryKey: ["accounting-by-category"] });
   };
 
   const saveMutation = useMutation({
@@ -170,6 +229,7 @@ export default function Contabilidad() {
         category: form.category.trim() || null,
         description: form.description.trim() || null,
         movement_date: form.movement_date,
+        assigned_class: form.assigned_class || null,
       };
       if (editing) return updateAccountingTransaction(editing.id, payload);
       return createAccountingTransaction({ department_id: selectedDept, ...payload });
@@ -196,13 +256,16 @@ export default function Contabilidad() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm()); setDialogOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(emptyForm()); setMotivoOtro(false); setDialogOpen(true); };
   const openEdit = (t: AccountingTransaction) => {
     setEditing(t);
     setForm({
       type: t.type, amount: String(t.amount), category: t.category || "",
       description: t.description || "", movement_date: t.movement_date,
+      assigned_class: t.assigned_class || "",
     });
+    // Motivo cargado antes del select (o escrito a mano): se edita como "Otro".
+    setMotivoOtro(!!t.category && !MOTIVOS[t.type].includes(t.category));
     setDialogOpen(true);
   };
 
@@ -216,10 +279,19 @@ export default function Contabilidad() {
       toast({ title: "Falta la fecha", variant: "destructive" });
       return;
     }
+    // Con motivo "Otro" el detalle es lo único que explica el movimiento.
+    if (motivoOtro && !form.description.trim()) {
+      toast({ title: "Falta la descripción", description: "Con el motivo \"Otro\" la descripción es obligatoria", variant: "destructive" });
+      return;
+    }
     saveMutation.mutate();
   };
 
   const handleExport = () => {
+    if (activeTab === "motivos") {
+      exportAccountingByCategoryReport(categoryRows, String(deptName), { from, to }, company?.name || "Nexus", classFilter);
+      return;
+    }
     if (!balance) return;
     exportAccountingReport(ledger, balance, String(deptName), { from, to }, company?.name || "Nexus");
   };
@@ -259,7 +331,7 @@ export default function Contabilidad() {
 
           <div className="flex items-center gap-2 ml-auto">
             {allowedDepartments.length > 1 ? (
-              <Select value={selectedDept} onValueChange={setSelectedDept}>
+              <Select value={selectedDept} onValueChange={(v) => { setSelectedDept(v); setFilterClass("all"); }}>
                 <SelectTrigger className="w-[200px] rounded-xl border-slate-200 bg-white shadow-sm h-10">
                   <SelectValue placeholder="Departamento" />
                 </SelectTrigger>
@@ -279,7 +351,7 @@ export default function Contabilidad() {
               variant="outline"
               className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
               onClick={handleExport}
-              disabled={!balance}
+              disabled={activeTab === "motivos" ? !categoryRows.length : !balance}
             >
               <Download className="h-4 w-4 mr-1" /> Reporte
             </Button>
@@ -328,6 +400,18 @@ export default function Contabilidad() {
             </SelectContent>
           </Select>
         </div>
+        {deptClasses.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Clase</Label>
+            <Select value={filterClass} onValueChange={setFilterClass}>
+              <SelectTrigger className="w-full md:w-[170px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {deptClasses.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3 md:flex md:gap-3">
           <div className="flex flex-col gap-1">
             <Label className="text-xs">Desde</Label>
@@ -367,7 +451,13 @@ export default function Contabilidad() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
                     <Label>Tipo</Label>
-                    <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as "ingreso" | "egreso" })}>
+                    <Select
+                      value={form.type}
+                      onValueChange={(v) => {
+                        setForm({ ...form, type: v as "ingreso" | "egreso", category: "" });
+                        setMotivoOtro(false);
+                      }}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="ingreso">Ingreso</SelectItem>
@@ -382,15 +472,37 @@ export default function Contabilidad() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <Label>Motivo</Label>
-                  <Input
-                    list="accounting-categories"
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    placeholder="Escribí o elegí un motivo"
-                  />
-                  <datalist id="accounting-categories">
-                    {categories.map((c) => <option key={c} value={c} />)}
-                  </datalist>
+                  <Select
+                    value={motivoOtro ? MOTIVO_OTRO : form.category}
+                    onValueChange={(v) => {
+                      if (v === MOTIVO_OTRO) {
+                        setMotivoOtro(true);
+                        setForm({ ...form, category: "" });
+                      } else {
+                        setMotivoOtro(false);
+                        setForm({ ...form, category: v });
+                      }
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Elegí un motivo" /></SelectTrigger>
+                    <SelectContent>
+                      {MOTIVOS[form.type].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                      <SelectItem value={MOTIVO_OTRO}>Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {motivoOtro && (
+                    <>
+                      <Input
+                        list="accounting-categories"
+                        value={form.category}
+                        onChange={(e) => setForm({ ...form, category: e.target.value })}
+                        placeholder="Escribí el motivo"
+                      />
+                      <datalist id="accounting-categories">
+                        {categories.map((c) => <option key={c} value={c} />)}
+                      </datalist>
+                    </>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1">
                   <Label>Fecha</Label>
@@ -405,9 +517,29 @@ export default function Contabilidad() {
                     />
                   </div>
                 </div>
+                {deptClasses.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <Label>Clase (opcional)</Label>
+                    <Select
+                      value={form.assigned_class || "__sin__"}
+                      onValueChange={(v) => setForm({ ...form, assigned_class: v === "__sin__" ? "" : v })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__sin__">Todo el departamento</SelectItem>
+                        {deptClasses.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="flex flex-col gap-1">
-                  <Label>Descripción (opcional)</Label>
-                  <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
+                  <Label>Descripción {motivoOtro ? <span className="text-red-500">*</span> : "(opcional)"}</Label>
+                  <Textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    rows={2}
+                    placeholder={motivoOtro ? "Detallá el motivo del movimiento" : undefined}
+                  />
                 </div>
               </div>
               <DialogFooter>
@@ -419,7 +551,103 @@ export default function Contabilidad() {
         )}
       </div>
 
-      {/* Libro de caja */}
+      <CustomTabs
+        value={activeTab}
+        onChange={setActiveTab}
+        options={[
+          { value: "detallado", label: "Detallado", icon: ListOrdered },
+          { value: "motivos", label: "Por motivos", icon: PieChartIcon },
+        ]}
+      />
+
+      {activeTab === "motivos" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {(["ingreso", "egreso"] as const).map((tipo) => {
+            const rows = categoryRows.filter((r) => r.type === tipo);
+            const data = pieData(tipo);
+            const total = data.reduce((acc, d) => acc + d.value, 0);
+            if (filterType !== "all" && filterType !== tipo) return null;
+            return (
+              <Card key={tipo} className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                    {tipo === "ingreso"
+                      ? <><TrendingUp className="h-4 w-4 text-green-600" /> Ingresos por motivo</>
+                      : <><TrendingDown className="h-4 w-4 text-red-600" /> Egresos por motivo</>}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {byCategoryLoading ? (
+                    <p className="text-center text-muted-foreground py-10">Cargando...</p>
+                  ) : !data.length ? (
+                    <p className="text-center text-muted-foreground py-10">Sin movimientos</p>
+                  ) : (
+                    <>
+                      <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart margin={{ top: 16, right: 16, bottom: 16, left: 16 }}>
+                            <Pie
+                              data={data}
+                              outerRadius="75%"
+                              dataKey="value"
+                              stroke="none"
+                              label={renderPercentLabel}
+                              isAnimationActive={false}
+                            >
+                              {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                            </Pie>
+                            <Legend
+                              layout="horizontal"
+                              align="center"
+                              verticalAlign="bottom"
+                              iconType="circle"
+                              wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                              formatter={(value: string) => (
+                                <span className="text-slate-900 dark:text-slate-100">{value}</span>
+                              )}
+                            />
+                            <ReTooltip formatter={(v: number) => fmtMoney(Number(v))} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead>Motivo</TableHead>
+                            <TableHead className="text-right">Mov.</TableHead>
+                            <TableHead className="text-right">Total</TableHead>
+                            <TableHead className="text-right">%</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {rows.map((r, i) => (
+                            <TableRow key={r.category}>
+                              <TableCell className="flex items-center gap-2">
+                                <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                {r.category}
+                              </TableCell>
+                              <TableCell className="text-right text-muted-foreground">{r.cantidad}</TableCell>
+                              <TableCell className={`text-right font-semibold ${tipo === "ingreso" ? "text-green-600" : "text-red-600"}`}>{fmtMoney(Number(r.total))}</TableCell>
+                              <TableCell className="text-right text-muted-foreground">{total ? Math.round((Number(r.total) / total) * 100) : 0}%</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                        <TableFooter>
+                          <TableRow className="bg-muted/60 font-semibold">
+                            <TableCell colSpan={2}>Total</TableCell>
+                            <TableCell className="text-right">{fmtMoney(total)}</TableCell>
+                            <TableCell />
+                          </TableRow>
+                        </TableFooter>
+                      </Table>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
       <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         <CardContent className="p-0 overflow-x-auto pt-4">
           <Table>
@@ -484,6 +712,7 @@ export default function Contabilidad() {
           </Table>
         </CardContent>
       </Card>
+      )}
 
       {/* Saldo inicial dialog */}
       <Dialog open={obDialogOpen} onOpenChange={setObDialogOpen}>
