@@ -17,6 +17,17 @@ const resolveLocalBackendUrl = async (): Promise<string> => {
   return 'http://localhost:3002/api';
 };
 
+// Le pregunta al back si la sesión sigue viva (además de refrescar last_active_at).
+// Devuelve el status HTTP: 401 = sesión cerrada por inactividad o por el corte diario.
+const pingBackend = async (accessToken: string): Promise<number> => {
+  const apiBase = import.meta.env.VITE_API_URL || (await resolveLocalBackendUrl());
+  const res = await fetch(`${apiBase.replace(/\/api$/, '')}/api/heartbeat`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+  return res.status;
+};
+
 type Profile = {
   id: string;
   first_name: string | null;
@@ -97,11 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (!currentSession) return;
-        const apiBase = import.meta.env.VITE_API_URL || (await resolveLocalBackendUrl());
-        await fetch(`${apiBase.replace(/\/api$/, '')}/api/heartbeat`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${currentSession.access_token}` },
-        });
+        await pingBackend(currentSession.access_token);
       } catch { /* silent */ }
     }, 8 * 60 * 1000);
 
@@ -127,7 +134,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      // Al volver al día siguiente, supabase-js restaura la sesión de localStorage y refresca el
+      // token solo: sin preguntarle al back, la app arrancaba logueada con el último usuario.
+      // Un 401 acá = cerrada por inactividad o por el cierre global de las 00:00.
+      if (currentSession) {
+        try {
+          const status = await pingBackend(currentSession.access_token);
+          if (status === 401) {
+            await supabase.auth.signOut({ scope: 'global' });
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            return;
+          }
+        } catch { /* back inaccesible: no bloquear el arranque */ }
+      }
+
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       if (currentSession?.user) {
