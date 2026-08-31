@@ -118,88 +118,23 @@ const ListarAlumnos = () => {
   const { companyId } = useCompany();
 
   // ============ CONSULTA PRINCIPAL DE MIEMBROS USANDO BACKEND API ============
+  // scope=mine: el back recorta por rol (departamentos/clase del perfil + autorizados)
+  // dentro del SP get_students. Antes se bajaba toda la empresa + todas las
+  // student_authorizations y se filtraba acá, con el corte de 1000 filas de PostgREST.
   const { data: allStudents, isLoading, isError, refetch } = useQuery({
-    queryKey: ["students", companyId],
-    queryFn: getStudents,
+    queryKey: ["students", companyId, "mine"],
+    queryFn: () => getStudents({ scope: 'mine' }),
   });
 
-  // ============ CONSULTA DE AUTORIZACIONES - MANTENER SUPABASE POR AHORA ============
-  const { data: authorizations } = useQuery({
-    queryKey: ["authorizations", companyId],
-    queryFn: async () => {
-      const { data, error } = await (supabase.from("student_authorizations") as any).select("*").eq('company_id', companyId);
-      if (error) {
-        console.error("Error fetching authorizations:", error);
-        return [];
-      }
-      return data || [];
-    },
-  });
-
-  // Filtrar miembros según el rol y permisos del usuario
+  // El SP ya devuelve solo los miembros que este usuario puede ver, con is_authorized.
   const students = React.useMemo(() => {
     if (!allStudents?.length) return [];
-
-    const filteredStudentsBase = allStudents.filter(s => {
-      // Robust check for deleted status
-      if (s.deleted_at && s.deleted_at !== 'null') return false;
-      if ((s as any).is_deleted) return false;
-      return true;
-    });
-
-    // Si es admin o secretaria, mostrar todos los miembros
-    if (profile?.role === 'secretaria' || profile?.role === 'admin') {
-      return filteredStudentsBase.map(student => ({
-        ...student,
-        department: student.departments?.name || student.department
-      }));
-    }
-
-    // Identificar a los autorizados específicamente para mi departamento/clase
-    const myAuthorizedStudentIds = authorizations
-      ? authorizations
-        .filter((auth: any) =>
-          auth.department_id === profile?.department_id &&
-          (!auth.class || auth.class === profile?.assigned_class || auth.class === "all")
-        )
-        .map((auth: any) => auth.student_id)
-      : [];
-
-    // Unir mis miembros regulares con los autorizados
-    let filteredList = filteredStudentsBase.filter(student => {
-      // Verificar si el student pertenece al departamento via dept_assignments (junction table)
-      const inDeptViaAssignment = (student as any).dept_assignments?.some(
-        (a: any) => a.department_id === profile?.department_id
-      );
-
-      // Caso 1: Miembro regular de mi departamento (y clase si soy maestro)
-      const isRegular = (
-        ((profile?.role === 'director' || profile?.role === 'director_general' || profile?.role === 'vicedirector') &&
-          (profile?.departments?.includes(student.departments?.name || student.department) || student.department_id === profile?.department_id || inDeptViaAssignment)) ||
-        (profile?.department_id && profile?.assigned_class &&
-          (student.department_id === profile.department_id || inDeptViaAssignment) &&
-          ((student.assigned_class === profile.assigned_class) ||
-           (student as any).dept_assignments?.some(
-             (a: any) => a.department_id === profile?.department_id && a.assigned_class === profile.assigned_class
-           ))
-        )
-      );
-
-      // Caso 2: Miembro de otro departamento pero autorizado al mío
-      const isAuthorized = myAuthorizedStudentIds.includes(student.id);
-
-      return isRegular || isAuthorized;
-    });
-
-    return filteredList.map(student => {
-      const isAuthorizedToMe = myAuthorizedStudentIds.includes(student.id) && student.department_id !== profile?.department_id;
-      return {
-        ...student,
-        department: student.departments?.name || student.department,
-        isAuthorized: isAuthorizedToMe
-      };
-    });
-  }, [allStudents, profile, authorizations]);
+    return allStudents.map(student => ({
+      ...student,
+      department: student.departments?.name || student.department,
+      isAuthorized: !!(student as any).isAuthorized,
+    }));
+  }, [allStudents]);
 
   const calculateAge = React.useCallback((dateOfBirth: string): number | null => {
     if (!dateOfBirth) return null;

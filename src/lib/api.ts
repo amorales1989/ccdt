@@ -32,8 +32,13 @@ let _resolvedLocalUrl: string | null = null;
 const getResolvedBaseUrl = async (): Promise<string> => {
   const base = getApiBaseUrl();
   if (!base.includes('localhost')) return base;
-  if (!_resolvedLocalUrl) _resolvedLocalUrl = await resolveLocalPort();
-  return _resolvedLocalUrl;
+  if (_resolvedLocalUrl) return _resolvedLocalUrl;
+  // Solo se cachea el acierto: si el back todavia no estaba levantado (o el health
+  // check timeouteo), la proxima llamada reintenta 3001 en vez de quedar clavada
+  // en 3002 toda la sesion.
+  const resolved = await resolveLocalPort();
+  if (resolved.includes('3001')) _resolvedLocalUrl = resolved;
+  return resolved;
 };
 
 const API_BASE_URL = getApiBaseUrl();
