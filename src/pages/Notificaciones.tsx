@@ -25,9 +25,10 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Megaphone, X, Search, Send, History, Smartphone, MessageCircle } from "lucide-react";
+import { Megaphone, X, Search, Send, History, Smartphone, Mail } from "lucide-react";
 
-type Channel = "push" | "whatsapp";
+// WhatsApp no es un canal del broadcast: satura la sesión de WA de la empresa.
+type Channel = "push" | "email";
 type TargetType = "department" | "class" | "role" | "people";
 
 const ROLES = [
@@ -119,8 +120,13 @@ const Notificaciones = () => {
         const results = await searchProfiles(personQuery);
         setPersonResults(results.filter((r) => !selectedPersons.find((p) => p.id === r.id)));
         setShowDropdown(true);
-      } catch {
-        // ignore
+      } catch (err: any) {
+        // Antes se descartaba en silencio: un 401 o un error de red se veía como "no hay resultados".
+        toast({
+          title: "No se pudo buscar",
+          description: err?.message || "Error consultando el servidor",
+          variant: "destructive",
+        });
       } finally {
         setSearchLoading(false);
       }
@@ -157,7 +163,7 @@ const Notificaciones = () => {
   };
 
   const validate = (): string | null => {
-    if (channel === "push" && !title.trim()) return "El título es requerido para las notificaciones.";
+    if (!title.trim()) return channel === "push" ? "El título es requerido." : "El asunto es requerido.";
     if (!message.trim()) return "El mensaje no puede estar vacío.";
     if (targetType === "department" && !departmentId) return "Seleccioná un departamento.";
     if (targetType === "class") {
@@ -190,21 +196,25 @@ const Notificaciones = () => {
       message: message.trim(),
       ...(link.trim() && { link: link.trim() }),
       target,
-      ...(channel === "push" && { title: title.trim() }),
+      title: title.trim(),
     };
 
     setSending(true);
     try {
       const result = await broadcastNotification(payload);
-      const pushInfo =
-        result.push
-          ? ` Push: ${result.push.sent} enviados, ${result.push.fallbackToWa} derivados a WhatsApp.`
-          : "";
-      const waInfo =
-        result.whatsapp ? ` WhatsApp: ${result.whatsapp.queued} en cola.` : "";
+      const pushInfo = result.push
+        ? ` Push: ${result.push.sent} enviados, ${result.push.notDelivered} sin dispositivo.`
+        : "";
+      const emailInfo = result.email
+        ? ` Mails: ${result.email.sent} enviados` +
+          (result.email.withoutEmail ? `, ${result.email.withoutEmail} sin dirección` : "") +
+          (result.email.failed ? `, ${result.email.failed} fallidos` : "") +
+          (result.email.skipped ? `, ${result.email.skipped} bloqueados (revisar PERMITE_MAIL / RESEND_API_KEY)` : "") +
+          "."
+        : "";
       toast({
         title: "Notificación enviada",
-        description: `${result.recipients} destinatarios.${pushInfo}${waInfo}`,
+        description: `${result.recipients} destinatarios.${pushInfo}${emailInfo}`,
       });
       // Reset form
       setTitle("");
@@ -215,9 +225,7 @@ const Notificaciones = () => {
       setAssignedClass("");
       setSelectedRoles([]);
       setSelectedPersons([]);
-      // El contador de WhatsApp se actualiza en background: refrescar ahora y en unos segundos
       queryClient.invalidateQueries({ queryKey: ["broadcast-history"] });
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["broadcast-history"] }), 8000);
     } catch (err: any) {
       toast({
         title: "Error al enviar",
@@ -250,7 +258,7 @@ const Notificaciones = () => {
           <div>
             <Label className="text-sm font-bold text-foreground mb-2 block">Canal</Label>
             <div className="flex gap-2">
-              {(["push", "whatsapp"] as Channel[]).map((c) => (
+              {(["push", "email"] as Channel[]).map((c) => (
                 <button
                   key={c}
                   onClick={() => setChannel(c)}
@@ -260,7 +268,7 @@ const Notificaciones = () => {
                       : "bg-slate-50 dark:bg-slate-700 text-muted-foreground border-border hover:border-purple-300"
                   }`}
                 >
-                  {c === "push" ? "Notificación" : "WhatsApp"}
+                  {c === "push" ? "Notificación" : "Email"}
                 </button>
               ))}
             </div>
@@ -431,22 +439,20 @@ const Notificaciones = () => {
 
           {/* Columna derecha: contenido del mensaje */}
           <div className="space-y-4">
-          {/* Título (solo push) */}
-          {channel === "push" && (
-            <div>
-              <Label htmlFor="notif-title" className="text-sm font-bold text-foreground mb-2 block">
-                Título
-              </Label>
-              <Input
-                id="notif-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Título de la notificación"
-                className="rounded-xl"
-                maxLength={100}
-              />
-            </div>
-          )}
+          {/* Título del push / asunto del mail */}
+          <div>
+            <Label htmlFor="notif-title" className="text-sm font-bold text-foreground mb-2 block">
+              {channel === "push" ? "Título" : "Asunto"}
+            </Label>
+            <Input
+              id="notif-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={channel === "push" ? "Título de la notificación" : "Asunto del mail"}
+              className="rounded-xl"
+              maxLength={100}
+            />
+          </div>
 
           {/* Mensaje */}
           <div>
@@ -480,7 +486,7 @@ const Notificaciones = () => {
             <p className="text-xs text-muted-foreground mt-1">
               {channel === "push"
                 ? "Al tocar la notificación se abrirá esta URL."
-                : "Se agrega al final del mensaje (WhatsApp lo detecta automáticamente)."}
+                : "Se agrega al final del mail."}
             </p>
           </div>
 
@@ -526,7 +532,7 @@ const Notificaciones = () => {
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-wider text-muted-foreground">Título</th>
                     <th className="py-2 pr-4 text-[11px] font-black uppercase tracking-wider text-muted-foreground">Mensaje</th>
                     <th className="py-2 pr-3 text-[11px] font-black uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Push</th>
-                    <th className="py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">WhatsApp</th>
+                    <th className="py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Email</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -555,8 +561,8 @@ const Notificaciones = () => {
                       </td>
                       <td className="py-2.5 text-center">
                         <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          {h.wa_sent}
+                          <Mail className="h-3.5 w-3.5" />
+                          {h.email_sent ?? 0}
                         </span>
                       </td>
                     </tr>

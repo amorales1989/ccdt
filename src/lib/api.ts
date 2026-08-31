@@ -1758,7 +1758,7 @@ export const resetTourApi = async (tourKey: string): Promise<string[]> => {
 };
 
 export interface BroadcastPayload {
-  channel: 'push' | 'whatsapp';
+  channel: 'push' | 'email';
   title?: string;
   message: string;
   link?: string;
@@ -1773,8 +1773,8 @@ export interface BroadcastPayload {
 
 export interface BroadcastResult {
   recipients: number;
-  push?: { sent: number; fallbackToWa: number };
-  whatsapp?: { queued: number };
+  push?: { sent: number; notDelivered: number };
+  email?: { sent: number; failed: number; skipped: number; withoutEmail: number };
 }
 
 export const broadcastNotification = async (payload: BroadcastPayload): Promise<BroadcastResult> => {
@@ -1802,7 +1802,7 @@ export const getProfilesWithAssignments = async (): Promise<ProfileWithAssignmen
 
 export interface BroadcastHistoryItem {
   id: string;
-  channel: 'push' | 'whatsapp';
+  channel: 'push' | 'email';
   title: string | null;
   message: string;
   link: string | null;
@@ -1810,7 +1810,7 @@ export interface BroadcastHistoryItem {
   target_label: string;
   recipients: number;
   push_sent: number;
-  wa_sent: number;
+  email_sent: number;
   created_at: string;
 }
 

@@ -841,7 +841,7 @@ export default function Configuration() {
           { value: 'general', label: 'Marca', icon: LayoutGrid },
           ...(getPersistentCompanyId() === 1 ? [] : [{ value: 'plan', label: 'Plan', icon: Layers }]),
           { value: 'authorizations', label: 'Membrete', icon: FileText },
-          { value: 'whatsapp', label: 'Whatsapp', icon: Smartphone },
+          ...(profile?.role === 'secretaria' ? [] : [{ value: 'whatsapp', label: 'Whatsapp', icon: Smartphone }]),
           ...(profile?.role === 'admin' ? [
             { value: 'permissions', label: 'Permisos', icon: Shield },
             { value: 'notifications', label: 'Notificaciones', icon: Bell },
