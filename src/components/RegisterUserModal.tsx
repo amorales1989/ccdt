@@ -245,7 +245,10 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                         .filter((a: any) => !a.department)
                         .map((a: any) => a.role as AppRole);
                     // También detectar por roles para compatibilidad con registros anteriores
-                    const standaloneFromRoles = userRoles.filter(r => esStandalone(r as string)) as AppRole[];
+                    const rolesConDepto = new Set(deptAssignments.map((a: any) => a.role));
+                    const standaloneFromRoles = userRoles.filter(
+                        r => esStandalone(r as string) && !rolesConDepto.has(r)
+                    ) as AppRole[];
                     const allStandalone = [...new Set([...standaloneFromAssignments, ...standaloneFromRoles])];
                     setStandaloneRoles(allStandalone);
                     setAssignments(deptAssignments.map((a: any) => ({
@@ -429,11 +432,14 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                     finalAssignments = [];
                 } else {
                     finalDepts = [...new Set(assignments.map(a => a.department))];
-                    finalDeptId = departments.find(d => d.name === assignments[0].department)?.id;
-                    finalClass = assignments[0].assigned_class || undefined;
-                    finalRole = assignments[0].role;
                     // Combinar roles de asignaciones + roles standalone (ej: Líder + Conserje)
                     finalRoles = [...new Set([...assignments.map(a => a.role), ...standaloneRoles])] as AppRole[];
+                    finalRole = primaryRoleFrom(finalRoles);
+                    // Depto/clase activos: los del assignment del rol principal (si todos son
+                    // propios de la empresa, el primero de la lista).
+                    const principal = assignments.find(a => a.role === finalRole) || assignments[0];
+                    finalDeptId = departments.find(d => d.name === principal.department)?.id;
+                    finalClass = principal.assigned_class || undefined;
                     // Los standalone se guardan como assignments sin dept para que aparezcan en RoleSwitcher
                     const standaloneAssignments = standaloneRoles.map((r, i) => ({
                         id: `assign_s_${i}`,
@@ -529,7 +535,7 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
 
                 // Rol "miembro": ya no trabaja en ningún lado, así que su ficha de miembro
                 // también sale de todos los departamentos.
-                if (finalRole === ('miembro' as AppRole)) {
+                if (finalRoles.every(r => (r as string) === 'miembro')) {
                     await clearMemberDepartments(user!.id);
                 }
             } else {
@@ -1001,11 +1007,13 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                                                                 <SelectValue />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                {rolesForLoggedIn
-                                                                    .filter(r => !['director_general', 'conserje', 'admin', 'secr.-calendario', 'secretaria'].includes(r as string))
-                                                                    .map(r => (
-                                                                        <SelectItem key={r} value={r} className="text-xs">{labelOf(r)}</SelectItem>
-                                                                    ))}
+                                                                {[
+                                                                    ...rolesForLoggedIn.filter(r => !['director_general', 'conserje', 'admin', 'secr.-calendario', 'secretaria'].includes(r as string)),
+                                                                    // Un rol propio también puede atarse a un departamento (ej: Contador de Jóvenes).
+                                                                    ...customRoles.map(rol => rol.key as AppRole),
+                                                                ].map(r => (
+                                                                    <SelectItem key={r} value={r} className="text-xs">{labelOf(r)}</SelectItem>
+                                                                ))}
                                                             </SelectContent>
                                                         </Select>
                                                     </div>

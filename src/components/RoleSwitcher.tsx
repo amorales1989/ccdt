@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Shield } from "lucide-react";
 import { useRoles } from "@/hooks/useRoles";
+import { isCustomRole, getActiveCustomRole } from "@/lib/rolePermissions";
 
 export function RoleSwitcher() {
     const { profile, switchAssignment } = useAuth();
@@ -20,9 +21,12 @@ export function RoleSwitcher() {
         return null;
     }
 
+    // Un rol propio de la empresa nunca es profile.role (enum): se compara contra el guardado.
+    const rolCustomActivo = getActiveCustomRole(profile);
+
     // Helper to identify if an assignment is the active one
     const isActive = (a: any) =>
-        a.role === profile.role &&
+        (isCustomRole(a.role) ? a.role === rolCustomActivo : (a.role === profile.role && !rolCustomActivo)) &&
         (a.department_id || null) === (profile.department_id || null) &&
         (a.assigned_class || "") === (profile.assigned_class || "");
 
@@ -37,7 +41,7 @@ export function RoleSwitcher() {
                         <div className="flex flex-col items-start overflow-hidden">
                             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 leading-none mb-1">Activo</span>
                             <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                                {labelOf(profile.role)}
+                                {labelOf(rolCustomActivo || profile.role)}
                             </span>
                         </div>
                     </div>
@@ -60,7 +64,9 @@ export function RoleSwitcher() {
                                     try {
                                         await switchAssignment(a);
                                     } finally {
-                                        window.location.reload();
+                                        // Recarga en Inicio: la pantalla actual puede no existir
+                                        // para el perfil nuevo (menús y departamento cambian).
+                                        window.location.href = "/";
                                     }
                                 }}
                                 className={`flex flex-col items-start gap-0.5 p-2.5 cursor-pointer rounded-xl transition-all ${active

@@ -5,6 +5,7 @@ import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import type { User, Session } from "@supabase/supabase-js";
 import type { DepartmentType, AppRole, UserAssignment } from "@/types/database";
 import { isDemoMode, getDemoRole, buildDemoProfile, buildDemoUser, buildDemoSession, exitDemo } from "@/lib/demo";
+import { isCustomRole, getActiveCustomRole, ACTIVE_CUSTOM_ROLE_KEY } from "@/lib/rolePermissions";
 
 const resolveLocalBackendUrl = async (): Promise<string> => {
   if (typeof window === 'undefined' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
@@ -225,8 +226,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Esto evita que el widget muestre todos los departamentos al hacer login.
         let activeDepartments = (data.departments as DepartmentType[]) || [];
         if (assignmentsForProfile.length > 1) {
+          // Con un rol propio activo, profiles.role quedó en 'miembro': el assignment se busca
+          // por el rol propio guardado, no por el enum.
+          const rolActivo = getActiveCustomRole({ roles: (data.roles as string[]) || [] }) || data.role;
           const activeAssignment = assignmentsForProfile.find(
-            (a) => a.role === data.role && (a.department_id || null) === (data.department_id || null)
+            (a) => a.role === rolActivo && (a.department_id || null) === (data.department_id || null)
           ) ?? assignmentsForProfile.find(a => a.department) ?? assignmentsForProfile[0];
           // Solo sobreescribir si el assignment activo tiene departamento (standalone no tiene)
           if (activeAssignment?.department) {
@@ -418,10 +422,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const deptId = assignment.department_id || null;
 
+      // Los roles propios de la empresa no entran en el enum app_role: el primario queda
+      // en 'miembro' (sin permisos propios) y el rol activo se recuerda en localStorage,
+      // que es de donde lo leen el sidebar y el RoleSwitcher.
+      const esCustom = isCustomRole(assignment.role);
+      const rolPrimario = (esCustom ? 'miembro' : assignment.role) as AppRole;
+      if (esCustom) {
+        localStorage.setItem(ACTIVE_CUSTOM_ROLE_KEY, assignment.role);
+      } else {
+        localStorage.removeItem(ACTIVE_CUSTOM_ROLE_KEY);
+      }
+
       const { error } = await supabase
         .from("profiles")
         .update({
-          role: assignment.role,
+          role: rolPrimario,
           department_id: deptId,
           assigned_class: assignment.assigned_class || null
         })
@@ -432,7 +447,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Actualizar estado local: role activo, dept activo y clase activa
       setProfile(prev => prev ? {
         ...prev,
-        role: assignment.role,
+        role: rolPrimario,
         departments: assignment.department ? [assignment.department as DepartmentType] : [],
         department_id: deptId,
         assigned_class: assignment.assigned_class || null,

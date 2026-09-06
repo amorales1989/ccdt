@@ -828,7 +828,7 @@ const HistorialAsistencia = () => {
               {(isAdminOrSecretaria || isDirector) && selectedClass !== "all" && (
                 <> para la clase <strong>{selectedClass}</strong></>
               )}
-              . Esta acción no se puede deshacer.
+              , junto con el evento que marcaba ese día como &quot;sin clase&quot;. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

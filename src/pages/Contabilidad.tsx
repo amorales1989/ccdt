@@ -24,7 +24,7 @@ import {
 } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { exportAccountingReport, exportAccountingByCategoryReport } from "@/lib/accountingPdfUtils";
-import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, hasPermission, rolesOf, isCustomRole, type SavedPermissions } from "@/lib/rolePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,7 +112,6 @@ export default function Contabilidad() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const role = profile?.role || "";
-  const canWrite = WRITE_ROLES.includes(role);
 
   const [selectedDept, setSelectedDept] = useState<string>("");
   const [filterType, setFilterType] = useState<string>("all");
@@ -298,6 +297,10 @@ export default function Contabilidad() {
       toast({ title: "Falta la fecha", variant: "destructive" });
       return;
     }
+    if (!form.category.trim()) {
+      toast({ title: "Falta el concepto", description: "Elegí un concepto para el movimiento", variant: "destructive" });
+      return;
+    }
     // Con concepto "Otro" el detalle es lo único que explica el movimiento.
     if (conceptoOtro && !form.description.trim()) {
       toast({ title: "Falta la descripción", description: "Con el concepto \"Otro\" la descripción es obligatoria", variant: "destructive" });
@@ -317,6 +320,13 @@ export default function Contabilidad() {
 
   // Acceso configurable por rol desde Configuración (respeta company.role_permissions
   // con fallback a los valores por defecto; por ahora solo admin).
+  // Un rol propio de la empresa con la contabilidad habilitada la maneja completa: no hay
+  // modo solo-lectura para ellos (el back aplica la misma regla).
+  const contabilidadPorRolPropio = rolesOf(profile)
+    .filter(isCustomRole)
+    .some(r => (company as { role_permissions?: SavedPermissions } | undefined)?.role_permissions?.[r]?.menu_contabilidad === true);
+  const canWrite = WRITE_ROLES.includes(role) || contabilidadPorRolPropio;
+
   const savedPerms = (company as any)?.role_permissions?.[role];
   const hasAccess =
     (savedPerms && "menu_contabilidad" in savedPerms
@@ -490,7 +500,7 @@ export default function Contabilidad() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label>Concepto</Label>
+                  <Label>Concepto <span className="text-red-500">*</span></Label>
                   <Select
                     value={conceptoOtro ? CONCEPTO_OTRO : form.category}
                     onValueChange={(v) => {

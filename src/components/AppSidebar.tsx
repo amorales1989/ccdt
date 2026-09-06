@@ -48,7 +48,7 @@ import { NotificationBell } from "./NotificationBell";
 import { CompanyBadges } from "./CompanyBadges";
 import { SupportButton } from "./SupportButton";
 import { CustomTooltip } from "@/components/CustomTooltip";
-import { DEFAULT_PERMISSIONS, rolesOf, isCustomRole, type SavedPermissions } from "@/lib/rolePermissions";
+import { DEFAULT_PERMISSIONS, rolesOf, isCustomRole, getActiveCustomRole, type SavedPermissions } from "@/lib/rolePermissions";
 import { useRoles } from "@/hooks/useRoles";
 
 // Contexto para el modo rail (solo desktop). En mobile/sheet queda con los defaults
@@ -473,7 +473,7 @@ const NavigationContent = ({
 
   // Un usuario cuyo único rol es propio de la empresa tiene 'miembro' como rol principal
   // (profiles.role es un enum): mostramos el rol propio, que es el que la persona reconoce.
-  const rolPropio = rolesOf(profile).find(isCustomRole);
+  const rolPropio = getActiveCustomRole(profile) || rolesOf(profile).find(isCustomRole);
   const rolMostrado = (profile?.role === 'miembro' && rolPropio) ? rolPropio : (profile?.role ?? "");
 
   const roleLabel = {
