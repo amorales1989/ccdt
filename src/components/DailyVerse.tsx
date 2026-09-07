@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, X } from "lucide-react";
+import { X } from "lucide-react";
 import { getDailyVerse } from "@/lib/api";
 import { dismissDailyVerse, useDailyVerseDismissed } from "@/hooks/useDailyVerseDismissed";
 
@@ -12,7 +11,6 @@ export const DailyVerse = () => {
     retry: false,
   });
 
-  const [expanded, setExpanded] = useState(false);
   const dismissed = useDailyVerseDismissed();
 
   // Sin versículo (deshabilitado o error de red) no renderizamos nada: un skeleton acá
@@ -39,41 +37,19 @@ export const DailyVerse = () => {
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            aria-expanded={expanded}
-            className="mt-1.5 block w-full text-left"
-          >
-            <p
-              className={`font-serif text-[15px] italic leading-relaxed text-slate-700 dark:text-slate-200 ${expanded ? "" : "line-clamp-2"
-                }`}
-            >
-              “{verse.text}”
-            </p>
-          </button>
+          <p className="mt-1.5 font-serif text-[15px] italic leading-relaxed text-slate-700 dark:text-slate-200">
+            “{verse.text}”
+          </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-0.5 text-slate-300 dark:text-slate-600">
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            aria-label={expanded ? "Contraer versículo" : "Expandir versículo"}
-            className="rounded-full p-1 transition-colors hover:bg-slate-100 hover:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300"
-          >
-            <ChevronDown
-              className={`h-4 w-4 transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
-            />
-          </button>
-          <button
-            type="button"
-            onClick={dismissDailyVerse}
-            aria-label="Ocultar versículo del día"
-            className="rounded-full p-1 transition-colors hover:bg-slate-100 hover:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={dismissDailyVerse}
+          aria-label="Ocultar versículo del día"
+          className="shrink-0 rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
