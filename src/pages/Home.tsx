@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MaintenanceSummaryWidget } from "@/components/MaintenanceSummaryWidget";
 import { AttendanceCoverageWidget, useAttendanceCoverage } from "@/components/AttendanceCoverageWidget";
+import { DailyVerse } from "@/components/DailyVerse";
 import { MissingDniAlertModal } from "@/components/MissingDniAlertModal";
 import {
   DropdownMenu,
@@ -452,6 +453,10 @@ const Home = () => {
           )}
         </div>
       </header>
+
+      {/* Versiculo del dia: franja compacta arriba de las cards, solo en el home.
+          Sin wrapper propio: si el componente devuelve null no queda un hueco. */}
+      <DailyVerse />
 
       {isTeacherOrLeader && (
         <>

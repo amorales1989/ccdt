@@ -297,6 +297,15 @@ export function resolveDemoApiCall(endpoint: string, options: RequestInit = {}):
   if (path.startsWith("/staff-reports/eligible")) return { data: PROFILES };
   if (path === "/material") return { data: [] };
   if (path === "/tours") return { data: [] };
+  if (path === "/daily-verse")
+    return {
+      data: {
+        text: "Todo lo puedo en Cristo que me fortalece.",
+        reference: "Filipenses 4:13",
+        version: "PDT",
+        date: new Date().toLocaleDateString("en-CA"),
+      },
+    };
   if (path.startsWith("/observations/")) return { data: [] };
   if (path.startsWith("/profiles/search")) return { data: [] };
   if (path.startsWith("/whatsapp")) return { data: { status: "disconnected" } };

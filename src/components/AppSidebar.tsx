@@ -45,6 +45,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { NotificationBell } from "./NotificationBell";
+import { DailyVerseButton } from "./DailyVerseButton";
 import { CompanyBadges } from "./CompanyBadges";
 import { SupportButton } from "./SupportButton";
 import { CustomTooltip } from "@/components/CustomTooltip";
@@ -729,6 +730,7 @@ export function AppSidebar() {
           {showCongregationName && congregationName && (
             <span className="text-[10px] font-bold text-muted-foreground text-right leading-tight max-w-[110px] mr-1">{congregationName}</span>
           )}
+          <DailyVerseButton />
           <NotificationBell />
           <SupportButton />
           <Button

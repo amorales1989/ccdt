@@ -9,6 +9,7 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { getStudents } from "@/lib/api";
 import { CompanyBadges } from "./CompanyBadges";
 import { SupportButton } from "./SupportButton";
+import { DailyVerseButton } from "./DailyVerseButton";
 import { CustomTooltip } from "@/components/CustomTooltip";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -71,6 +72,7 @@ export function AppNavbar() {
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
+        <DailyVerseButton />
         <NotificationBell />
         <SupportButton />
         <CustomTooltip title="Guía de uso">

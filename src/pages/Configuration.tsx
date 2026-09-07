@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCompany, updateCompany, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage, runBirthdayCron, getMemberCount, getSubscription, renewSubscription, subscribe, getQuote, changePlan, changePacks, getMyPayments, updateRolePermissions, createCompanyRole, updateCompanyRole, deleteCompanyRole, SubscriptionQuote, Payment } from "@/lib/api";
+import { getCompany, updateCompany, updateDailyVerseSettings, DAILY_VERSE_VERSIONS, getWhatsappStatus, connectWhatsapp, disconnectWhatsapp, testWhatsappMessage, runBirthdayCron, getMemberCount, getSubscription, renewSubscription, subscribe, getQuote, changePlan, changePacks, getMyPayments, updateRolePermissions, createCompanyRole, updateCompanyRole, deleteCompanyRole, SubscriptionQuote, Payment } from "@/lib/api";
 import { planLabel, effectiveLimit, planLimit, PACK_SIZE } from "@/lib/plans";
 import { Loader2, Moon, Sun, Upload, X, Smartphone, CheckCircle2, AlertCircle, RefreshCw, Settings, FileText, LayoutGrid, Shield, Bell, KeyRound, Cake, Layers, Users, Infinity as InfinityIcon, Plus, Minus, Pencil, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -91,6 +91,13 @@ const DEFAULT_NOTIFICATIONS: Record<string, string[]> = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+const VERSION_LABELS: Record<string, string> = {
+  RVR1960: 'Reina Valera 1960',
+  NVI: 'Nueva Versión Internacional',
+  PDT: 'Palabra de Dios para Todos',
+  TLA: 'Traducción en Lenguaje Actual',
+};
+
 export default function Configuration() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -136,6 +143,8 @@ export default function Configuration() {
     showName: true,
     baptized: true,
   });
+
+  const [dailyVerse, setDailyVerse] = useState({ enabled: true, version: 'PDT' });
 
   const [authPdfHeader, setAuthPdfHeader] = useState<{ text: string, enabled: boolean }[]>([
     { text: "Asociación de Beneficencia y Educación RHEMA", enabled: true },
@@ -344,6 +353,12 @@ export default function Configuration() {
       baptized: (company as any).baptized_enabled !== false
     });
 
+    const verseSettings = company as { daily_verse_enabled?: boolean; daily_verse_version?: string };
+    setDailyVerse({
+      enabled: verseSettings.daily_verse_enabled !== false,
+      version: verseSettings.daily_verse_version || 'PDT',
+    });
+
     const companyData = company as any;
     if (companyData.auth_pdf_header && Array.isArray(companyData.auth_pdf_header) && companyData.auth_pdf_header.length > 0) {
       setAuthPdfHeader(companyData.auth_pdf_header as { text: string, enabled: boolean }[]);
@@ -513,6 +528,22 @@ export default function Configuration() {
         toast({ title: "Error", description: "No se pudo guardar el cambio.", variant: "destructive" });
       }
     }, delay);
+  };
+
+  const handleDailyVerseChange = async (cambios: { enabled?: boolean; version?: string }) => {
+    const previo = dailyVerse;
+    setDailyVerse(prev => ({ ...prev, ...cambios }));
+    try {
+      await updateDailyVerseSettings({
+        ...(cambios.enabled !== undefined && { daily_verse_enabled: cambios.enabled }),
+        ...(cambios.version !== undefined && { daily_verse_version: cambios.version }),
+      });
+      queryClient.invalidateQueries({ queryKey: ['daily-verse'] });
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+    } catch {
+      setDailyVerse(previo);
+      toast({ title: "Error", description: "No se pudo guardar el ajuste del versículo", variant: "destructive" });
+    }
   };
 
   const handleGeneralSettingChange = (setting: keyof typeof generalSettings) => {
@@ -1346,6 +1377,33 @@ export default function Configuration() {
                           checked={generalSettings.baptized}
                           onCheckedChange={() => handleGeneralSettingChange('baptized')}
                         />
+                      </div>
+                      <div className="p-4 rounded-2xl bg-white/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label className="text-sm font-bold text-slate-700 dark:text-slate-200">Versículo del día</Label>
+                            <p className="text-[10px] text-slate-500 font-medium tracking-tight">Mostrarlo en el inicio y elegir la traducción</p>
+                          </div>
+                          <Switch
+                            checked={dailyVerse.enabled}
+                            onCheckedChange={(checked) => handleDailyVerseChange({ enabled: checked })}
+                          />
+                        </div>
+                        {dailyVerse.enabled && (
+                          <Select
+                            value={dailyVerse.version}
+                            onValueChange={(v) => handleDailyVerseChange({ version: v })}
+                          >
+                            <SelectTrigger className="rounded-xl bg-slate-50 dark:bg-slate-800 h-10 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                              {DAILY_VERSE_VERSIONS.map((v) => (
+                                <SelectItem key={v} value={v}>{VERSION_LABELS[v]}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
                     </div>
                   </div>

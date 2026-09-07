@@ -2192,3 +2192,25 @@ export const saveSmallGroupAttendance = async (
     body: JSON.stringify({ records }),
   });
 };
+
+export type DailyVerse = {
+  text: string;
+  reference: string;
+  version: string;
+  date: string;
+};
+
+export const DAILY_VERSE_VERSIONS = ['RVR1960', 'NVI', 'PDT', 'TLA'] as const;
+
+/** Devuelve null si la empresa tiene el versículo deshabilitado. */
+export const getDailyVerse = async (): Promise<DailyVerse | null> => {
+  const res = await apiCall('/daily-verse');
+  return res.data || null;
+};
+
+export const updateDailyVerseSettings = async (
+  settings: { daily_verse_enabled?: boolean; daily_verse_version?: string }
+) => {
+  const res = await apiCall('/company/settings', { method: 'PATCH', body: JSON.stringify(settings) });
+  return res.data;
+};
