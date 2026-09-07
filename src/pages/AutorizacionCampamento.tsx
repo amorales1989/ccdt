@@ -70,7 +70,7 @@ const AutorizacionCampamento = () => {
   const [conIglesiaClase, setConIglesiaClase] = useState(false);
 
   const [formData, setFormData] = useState({
-    destinatarios: "adolescentes",
+    destinatarios: "",
     fechaInicio: "",
     fechaFin: "",
     lugar: "",
@@ -279,7 +279,7 @@ const AutorizacionCampamento = () => {
     doc.text(`correspondiente ${formatDate(formData.fechaLimite).toUpperCase()}.`, margin, currentY);
     currentY += 8;
 
-    doc.text(`SALIMOS EL: ${formatDate(formData.fechaInicio)} a las ${formData.horaSalida1}hs${formData.horaSalida2 != null ? ` y ${formData.horaSalida2}hs` : ''}.`, margin, currentY);
+    doc.text(`SALIMOS EL: ${formatDate(formData.fechaInicio)} a las ${formData.horaSalida1}hs${formData.horaSalida2 ? ` y ${formData.horaSalida2}hs` : ''}.`, margin, currentY);
     currentY += 8;
 
     // Lista de elementos a llevar (usando la lista del formulario)
@@ -418,6 +418,7 @@ const AutorizacionCampamento = () => {
 
     // Validación de campos básicos
     const newErrors: Record<string, string> = {};
+    if (!formData.destinatarios) newErrors.destinatarios = "Elegí para quiénes es el campamento";
     if (!formData.lugar) newErrors.lugar = "El lugar es requerido";
     if (!formData.fechaInicio) newErrors.fechaInicio = "La fecha de inicio es requerida";
     if (!formData.fechaFin) newErrors.fechaFin = "La fecha de fin es requerida";
@@ -516,7 +517,7 @@ const AutorizacionCampamento = () => {
                       onValueChange={(value) => setFormData(prev => ({ ...prev, destinatarios: value }))}
                     >
                       <SelectTrigger id="destinatarios" className="rounded-xl bg-slate-50 border-slate-200 capitalize">
-                        <SelectValue />
+                        <SelectValue placeholder="Seleccione" />
                       </SelectTrigger>
                       <SelectContent>
                         {DESTINATARIOS.map(opcion => (
@@ -524,6 +525,7 @@ const AutorizacionCampamento = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {errors.destinatarios && <p className="text-xs text-red-500">{errors.destinatarios}</p>}
                   </div>
 
                   <div className="space-y-1">
@@ -626,6 +628,8 @@ const AutorizacionCampamento = () => {
                     label="Segunda hora de salida"
                     value={formData.horaSalida2}
                     onChange={(v) => handleInputChange({ target: { name: 'horaSalida2', value: v } })}
+                    clearable
+                    onClear={() => setFormData(prev => ({ ...prev, horaSalida2: "" }))}
                   />
 
                   <TimePickerField
@@ -743,7 +747,7 @@ const AutorizacionCampamento = () => {
 
                   <div className="text-sm mt-4 text-gray-800 space-y-4">
                     <p className="text-justify leading-relaxed">
-                      Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para {formData.destinatarios} que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio <strong>{formData.lugar || "_________________"}</strong>.
+                      Tenemos el agrado de dirigirnos a Uds., a fin de comunicarles que estamos organizando el campamento para {formData.destinatarios || "_________"} que cada año hacemos. En esta oportunidad el campamento se realizará en el domicilio <strong>{formData.lugar || "_________________"}</strong>.
                     </p>
                     <p className="text-justify leading-relaxed">
                       El campamento se realizará los días <strong>{inicioDia} al {finDia} de {mesNombre} del {año}</strong>. Vamos a salir de la Iglesia el día viernes {inicioDia}, a las {formData.horaSalida1 || "____"}hs{formData.horaSalida2 ? ` y ${formData.horaSalida2}hs` : ''}. y estaremos regresando el día Domingo {finDia}, a las {formData.horaRegreso || "____"}hs., aproximadamente.
