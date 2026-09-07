@@ -2200,7 +2200,7 @@ export type DailyVerse = {
   date: string;
 };
 
-export const DAILY_VERSE_VERSIONS = ['RVR1960', 'NVI', 'PDT', 'TLA'] as const;
+export const DAILY_VERSE_VERSIONS = ['RVR1960', 'NVI', 'PDT'] as const;
 
 /** Devuelve null si la empresa tiene el versículo deshabilitado. */
 export const getDailyVerse = async (): Promise<DailyVerse | null> => {

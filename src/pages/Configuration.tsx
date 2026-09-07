@@ -95,7 +95,6 @@ const VERSION_LABELS: Record<string, string> = {
   RVR1960: 'Reina Valera 1960',
   NVI: 'Nueva Versión Internacional',
   PDT: 'Palabra de Dios para Todos',
-  TLA: 'Traducción en Lenguaje Actual',
 };
 
 export default function Configuration() {
@@ -144,7 +143,7 @@ export default function Configuration() {
     baptized: true,
   });
 
-  const [dailyVerse, setDailyVerse] = useState({ enabled: true, version: 'PDT' });
+  const [dailyVerse, setDailyVerse] = useState({ enabled: true, version: 'RVR1960' });
 
   const [authPdfHeader, setAuthPdfHeader] = useState<{ text: string, enabled: boolean }[]>([
     { text: "Asociación de Beneficencia y Educación RHEMA", enabled: true },
@@ -356,7 +355,7 @@ export default function Configuration() {
     const verseSettings = company as { daily_verse_enabled?: boolean; daily_verse_version?: string };
     setDailyVerse({
       enabled: verseSettings.daily_verse_enabled !== false,
-      version: verseSettings.daily_verse_version || 'PDT',
+      version: verseSettings.daily_verse_version || 'RVR1960',
     });
 
     const companyData = company as any;

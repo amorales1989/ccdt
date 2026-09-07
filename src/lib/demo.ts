@@ -302,7 +302,7 @@ export function resolveDemoApiCall(endpoint: string, options: RequestInit = {}):
       data: {
         text: "Todo lo puedo en Cristo que me fortalece.",
         reference: "Filipenses 4:13",
-        version: "PDT",
+        version: "RVR1960",
         date: new Date().toLocaleDateString("en-CA"),
       },
     };
