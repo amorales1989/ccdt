@@ -13,6 +13,7 @@ import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { MuiDatePickerField } from "@/components/MuiDatePickerField";
 import { TimePickerField } from "@/components/TimePickerField";
+import { LabeledSwitch } from "@/components/LabeledSwitch";
 import { isDemoMode, DEMO_PDF_HEADER } from "@/lib/demo";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
@@ -61,7 +62,12 @@ const AutorizacionCampamento = () => {
 • Ojotas y zapatillas
 • Gorro para el sol
 • Toalla y elementos de higiene (cepillo de dientes, dentífrico, jabón, peine, etc.).
-• Biblia`;
+• Biblia
+• Fotocopia del D.N.I.`;
+
+  // Renglones "Iglesia:" y "Clase:" arriba del título de la hoja de inscripción, para que
+  // el maestro los complete a mano. Opcional: no todas las congregaciones los usan.
+  const [conIglesiaClase, setConIglesiaClase] = useState(false);
 
   const [formData, setFormData] = useState({
     destinatarios: "adolescentes",
@@ -164,6 +170,8 @@ const AutorizacionCampamento = () => {
     const margin = 20;
     let currentY = margin;
     const destinatariosCapitalizado = formData.destinatarios.charAt(0).toUpperCase() + formData.destinatarios.slice(1);
+    // "niños" → "niño": los textos del cuerpo hablan del acampante en singular.
+    const destinatarioSingular = formData.destinatarios.replace(/s$/, "");
 
     // Encabezado de la organización
     const companyData = company as any;
@@ -309,14 +317,14 @@ const AutorizacionCampamento = () => {
     doc.setFont("helvetica", "normal");
     doc.text("Que todos los elementos deberán estar correctamente identificados", margin + 5, currentY);
     currentY += 5;
-    doc.text("con el nombre del adolescente.", margin + 5, currentY);
+    doc.text(`con el nombre del ${destinatarioSingular}.`, margin + 5, currentY);
     currentY += 7;
 
     doc.setFont("helvetica", "bold");
     doc.text("ROGAMOS:", margin, currentY);
     currentY += 5;
     doc.setFont("helvetica", "normal");
-    doc.text("Que se indique si el adolescente necesita medicación (enviar copia de la", margin + 5, currentY);
+    doc.text(`Que se indique si el ${destinatarioSingular} necesita medicación (enviar copia de la`, margin + 5, currentY);
     currentY += 5;
     doc.text("receta médica escribiendo en el reverso la autorización correspondiente", margin + 5, currentY);
     currentY += 5;
@@ -328,13 +336,22 @@ const AutorizacionCampamento = () => {
     currentY += 5;
     doc.text("alguna medicación. De forma que cada maestro pueda ocuparse correcta", margin + 5, currentY);
     currentY += 5;
-    doc.text("y personalmente del adolescente.", margin + 5, currentY);
+    doc.text(`y personalmente del ${destinatarioSingular}.`, margin + 5, currentY);
     currentY += 5;
     doc.text("Fotocopia del D.N.I y Carnet Obra Social.", margin + 5, currentY);
 
     // Nueva página para el formulario
     doc.addPage();
     currentY = margin;
+
+    if (conIglesiaClase) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text("Iglesia: .......................................", pageWidth - margin, currentY, { align: "right" });
+      currentY += 6;
+      doc.text("Clase: .........................................", pageWidth - margin, currentY, { align: "right" });
+      currentY += 10;
+    }
 
     // Formulario de datos personales
     doc.setFontSize(14);
@@ -664,6 +681,18 @@ const AutorizacionCampamento = () => {
                   />
                   <p className="text-xs text-slate-400">
                     Escriba cada elemento en una línea separada. Si deja vacío, se usará la lista por defecto.
+                  </p>
+                </div>
+
+                <div className="space-y-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-3">
+                  <LabeledSwitch
+                    label="Agregar renglones de Iglesia y Clase"
+                    checked={conIglesiaClase}
+                    onCheckedChange={setConIglesiaClase}
+                  />
+                  <p className="text-xs text-slate-400">
+                    Suma dos renglones en blanco en la esquina superior derecha de la hoja de inscripción
+                    (la segunda), arriba del título, para que el maestro complete a mano la iglesia y la clase.
                   </p>
                 </div>
 
