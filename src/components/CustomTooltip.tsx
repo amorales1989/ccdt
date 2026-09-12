@@ -1,50 +1,77 @@
 import React from 'react';
-import { Tooltip as MuiTooltip, TooltipProps, Zoom, styled } from '@mui/material';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
-const StyledTooltip = styled(({ className, ...props }: TooltipProps) => (
-    <MuiTooltip {...props} classes={{ popper: className }} />
-))(({ theme }) => ({
-    [`& .MuiTooltip-tooltip`]: {
-        backgroundColor: 'rgba(15, 23, 42, 0.95)', // slate-900 with strong opacity
-        color: '#fff',
-        fontSize: '0.75rem',
-        fontWeight: 500,
-        padding: '8px 12px',
-        borderRadius: '8px',
-        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-        backdropFilter: 'blur(4px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-    },
-    [`& .MuiTooltip-arrow`]: {
-        color: 'rgba(15, 23, 42, 0.95)',
-    },
-}));
+type Placement =
+    | 'top' | 'bottom' | 'left' | 'right'
+    | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end'
+    | 'left-start' | 'left-end' | 'right-start' | 'right-end';
 
-interface CustomTooltipProps extends Omit<TooltipProps, 'title' | 'children'> {
+interface CustomTooltipProps {
     title: React.ReactNode;
     children: React.ReactElement;
-    placement?: TooltipProps['placement'];
+    placement?: Placement;
+    /** Se acepta por compatibilidad con los ~40 usos previos; Radix siempre dibuja flecha. */
     arrow?: boolean;
+    className?: string;
 }
+
+/** Cuánto queda abierto el tooltip tras un toque, antes de cerrarse solo. */
+const MS_VISIBLE_EN_TACTIL = 2500;
 
 export const CustomTooltip: React.FC<CustomTooltipProps> = ({
     title,
     children,
-    placement = "bottom",
-    arrow = true,
-    ...props
+    placement = 'bottom',
+    className,
 }) => {
+    // Radix solo abre con hover/foco: en celular los tooltips quedaban inaccesibles
+    // (MUI los abría con toque largo). Varias pantallas los usan como única forma de
+    // leer texto truncado, así que en táctil se abren al tocar y se cierran solos.
+    const [open, setOpen] = React.useState(false);
+    const timer = React.useRef<number>();
+
+    React.useEffect(() => () => window.clearTimeout(timer.current), []);
+
+    const alTocar = (e: React.PointerEvent) => {
+        if (e.pointerType !== 'touch') return;
+        setOpen(true);
+        window.clearTimeout(timer.current);
+        timer.current = window.setTimeout(() => setOpen(false), MS_VISIBLE_EN_TACTIL);
+    };
+
+    // MUI no renderiza nada con title vacío; se mantiene ese comportamiento. Va después
+    // de los hooks para no cambiar su cantidad entre renders.
+    if (title === null || title === undefined || title === '') return children;
+
+    const [side, align] = placement.split('-') as [
+        'top' | 'bottom' | 'left' | 'right',
+        'start' | 'end' | undefined,
+    ];
+
     return (
-        <StyledTooltip
-            title={title}
-            placement={placement}
-            arrow={arrow}
-            TransitionComponent={Zoom}
-            enterDelay={200}
-            leaveDelay={0}
-            {...props}
-        >
-            {children}
-        </StyledTooltip>
+        <TooltipProvider delayDuration={200}>
+            <Tooltip open={open} onOpenChange={setOpen}>
+                {/* Sin preventDefault: el onClick propio del hijo (botones, links) sigue andando. */}
+                <TooltipTrigger asChild onPointerDown={alTocar}>
+                    {children}
+                </TooltipTrigger>
+                <TooltipContent
+                    side={side}
+                    align={align ?? 'center'}
+                    collisionPadding={8}
+                    className={
+                        'max-w-xs border border-white/10 bg-slate-900/95 px-3 py-2 text-xs ' +
+                        'font-medium text-white shadow-lg backdrop-blur-sm ' + (className ?? '')
+                    }
+                >
+                    {title}
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 };

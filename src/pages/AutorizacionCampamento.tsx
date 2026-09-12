@@ -7,11 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, MapPin, Users, FileText, List, Info, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { jsPDF } from "jspdf";
+import { loadJsPdf } from "@/lib/jspdfLoader";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
-import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { DatePickerField } from "@/components/DatePickerField";
 import { TimePickerField } from "@/components/TimePickerField";
 import { LabeledSwitch } from "@/components/LabeledSwitch";
 import { isDemoMode, DEMO_PDF_HEADER } from "@/lib/demo";
@@ -159,11 +159,12 @@ const AutorizacionCampamento = () => {
     return months[parseInt(monthNumber) - 1];
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (isDemoMode()) {
       toast.success("Autorización generada con éxito. En el modo demo no se descargan autorizaciones.");
       return;
     }
+    const { jsPDF } = await loadJsPdf();
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -530,21 +531,20 @@ const AutorizacionCampamento = () => {
 
                   <div className="space-y-1">
                     <Label htmlFor="fechaInicio" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha de inicio <span className="text-red-500">*</span></Label>
-                    <MuiDatePickerField
+                    <DatePickerField
                       value={formData.fechaInicio ? parseISO(formData.fechaInicio) : undefined}
                       onChange={(date) =>
                         handleDateChange('fechaInicio', date ? format(date, 'yyyy-MM-dd') : '')
                       }
                       open={fechaInicioOpen}
                       onOpenChange={setFechaInicioOpen}
-                      placeholder="Seleccionar fecha"
                     />
                     {errors.fechaInicio && <p className="text-xs text-red-500">{errors.fechaInicio}</p>}
                   </div>
 
                   <div className="space-y-1">
                     <Label htmlFor="fechaFin" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha de fin <span className="text-red-500">*</span></Label>
-                    <MuiDatePickerField
+                    <DatePickerField
                       value={formData.fechaFin ? parseISO(formData.fechaFin) : undefined}
                       onChange={(date) =>
                         handleDateChange('fechaFin', date ? format(date, 'yyyy-MM-dd') : '')
@@ -552,7 +552,6 @@ const AutorizacionCampamento = () => {
                       open={fechaFinOpen}
                       onOpenChange={setFechaFinOpen}
                       minDate={formData.fechaInicio ? parseISO(formData.fechaInicio) : undefined}
-                      placeholder="Seleccionar fecha"
                     />
                     {errors.fechaFin && <p className="text-xs text-red-500">{errors.fechaFin}</p>}
                   </div>
@@ -604,14 +603,13 @@ const AutorizacionCampamento = () => {
 
                   <div className="space-y-1">
                     <Label htmlFor="fechaLimite" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha límite de inscripción <span className="text-red-500">*</span></Label>
-                    <MuiDatePickerField
+                    <DatePickerField
                       value={formData.fechaLimite ? parseISO(formData.fechaLimite) : undefined}
                       onChange={(date) =>
                         handleDateChange('fechaLimite', date ? format(date, 'yyyy-MM-dd') : '')
                       }
                       open={fechaLimiteOpen}
                       onOpenChange={setFechaLimiteOpen}
-                      placeholder="Seleccionar límite"
                     />
                     {errors.fechaLimite && <p className="text-xs text-red-500">{errors.fechaLimite}</p>}
                   </div>

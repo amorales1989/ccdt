@@ -193,6 +193,14 @@ const NavItem = ({
   // ¿Alguna página de este grupo está activa? (para marcar el header y auto-abrirlo)
   const childActive = !!item.subItems?.some(sub => location.pathname + location.search === sub.url);
 
+  // Auto-abrir el grupo cuyo hijo está activo (acordeón: uno solo abierto a la vez).
+  // Va antes del early return de `collapsed`: si quedara después, al expandirse/colapsarse
+  // el sidebar cambiaría la cantidad de hooks y React tiraría el árbol.
+  useEffect(() => {
+    if (childActive) setOpenGroup?.(item.title);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search]);
+
   // Modo rail: solo icono centrado. Al hacer hover el sidebar se expande y se ve el menú completo.
   if (collapsed) {
     const active = isActive || childActive;
@@ -214,12 +222,6 @@ const NavItem = ({
       </Link>
     );
   }
-
-  // Auto-abrir el grupo cuyo hijo está activo (acordeón: uno solo abierto a la vez).
-  useEffect(() => {
-    if (childActive) setOpenGroup?.(item.title);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, location.search]);
 
   if (item.subItems) {
     const isOpen = openGroup === item.title;

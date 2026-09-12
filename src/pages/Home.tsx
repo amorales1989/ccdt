@@ -62,10 +62,6 @@ const Home = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Redirigir si no hay sesión activa y terminó de cargar
-  if (!loading && !user) {
-    return <Navigate to="/" replace />;
-  }
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const isConserje = profile?.role === 'conserje';
@@ -392,6 +388,13 @@ const Home = () => {
     coverageLoading ||
     (studentsLoading && !isCalendarDepartment) ||
     (departmentsLoading && !isCalendarDepartment);
+
+  // Redirigir si no hay sesión activa y terminó de cargar. Va después de TODOS los hooks:
+  // si cortara antes, al cambiar `user` el render siguiente ejecutaría menos hooks y React
+  // tira "Rendered fewer hooks than expected", dejando la app en blanco.
+  if (!loading && !user) {
+    return <Navigate to="/" replace />;
+  }
 
   if (panelLoading) {
     return <LoadingOverlay message="Cargando panel..." />;

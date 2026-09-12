@@ -1703,6 +1703,23 @@ export const getMaterials = async (params: { department_id?: string; age_range?:
   }
 };
 
+export const getMaterialUploadUrl = async (params: {
+  filename: string;
+  content_type: string;
+  file_size: number;
+}): Promise<{ upload_url: string; key: string; public_url: string }> => {
+  try {
+    const response = await apiCall('/material/upload-url', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error getting material upload url:', error);
+    throw error;
+  }
+};
+
 export const createMaterial = async (materialData: {
   name: string;
   description?: string;
@@ -1710,6 +1727,7 @@ export const createMaterial = async (materialData: {
   age_range: string;
   department_id?: string;
   file_size?: number;
+  storage_provider?: 'supabase' | 'r2';
 }) => {
   try {
     const response = await apiCall('/material', {

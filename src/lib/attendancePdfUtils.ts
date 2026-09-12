@@ -1,5 +1,6 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type jsPDF from "jspdf";
+import { loadJsPdf } from "@/lib/jspdfLoader";
+
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getPersistentCompanyId } from '@/contexts/CompanyContext';
@@ -19,6 +20,7 @@ export const exportAttendanceReport = async (
     totalActivityDays: number,
     companyName: string = "Nexus"
 ) => {
+  const { jsPDF, autoTable } = await loadJsPdf();
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -135,6 +137,7 @@ export const exportAttendanceMatrix = async (
     contextDepartment?: string | null,
     showClassColumn: boolean = true,
 ) => {
+  const { jsPDF, autoTable } = await loadJsPdf();
     // Valores que no son una "clase real" sino nombres del departamento/grupo
     const deptTokens = (contextDepartment || '')
         .toLowerCase()

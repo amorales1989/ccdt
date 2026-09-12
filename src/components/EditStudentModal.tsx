@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { DatePickerField } from "@/components/DatePickerField";
 import { LabeledSwitch } from "@/components/LabeledSwitch";
 import { DniIdentityInput } from "@/components/DniIdentityInput";
 import { toast } from "@/hooks/use-toast";
@@ -358,12 +358,13 @@ export function EditStudentModal({ student, open, onOpenChange, onSaved }: EditS
                   <FormItem>
                     <FormLabel>Fecha de Nacimiento</FormLabel>
                     <FormControl>
-                      <MuiDatePickerField
+                      <DatePickerField
+                        fromYear={1920}
+                        toYear={new Date().getFullYear()}
                         value={field.value ? parseISO(field.value) : undefined}
                         onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                         open={birthdateOpen}
                         onOpenChange={setBirthdateOpen}
-                        placeholder="Seleccionar fecha de nacimiento"
                       />
                     </FormControl>
                     <FormMessage />

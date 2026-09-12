@@ -1,17 +1,11 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Pencil, Trash2, MoreVertical, Plus, Search, Calendar, Clock } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { differenceInDays, startOfToday, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import AddIcon from '@mui/icons-material/Add';
-import SearchIcon from '@mui/icons-material/Search';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createEvent, updateEvent, deleteEvent } from "@/lib/api";
@@ -150,16 +144,16 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
-              <MoreVertIcon className="h-4 w-4" />
+              <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-popover border-border">
             <DropdownMenuItem onClick={() => handleEditEvent(event as Event)}>
-              <EditIcon className="mr-2 h-4 w-4 text-primary/70" />
+              <Pencil className="mr-2 h-4 w-4 text-primary/70" />
               Editar
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)}>
-              <DeleteIcon className="mr-2 h-4 w-4 text-destructive/70" />
+              <Trash2 className="mr-2 h-4 w-4 text-destructive/70" />
               Eliminar
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -175,7 +169,7 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
           className="text-primary/60 hover:text-primary transition-colors"
           onClick={() => handleEditEvent(event as Event)}
         >
-          <EditIcon className="h-4 w-4" />
+          <Pencil className="h-4 w-4" />
           <span className="sr-only">Editar</span>
         </Button>
         <Button
@@ -184,7 +178,7 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
           className="text-destructive/60 hover:text-destructive transition-colors"
           onClick={() => handleDeleteEvent(event.id)}
         >
-          <DeleteIcon className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" />
           <span className="sr-only">Eliminar</span>
         </Button>
       </div>
@@ -207,7 +201,7 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
                 className="button-gradient shadow-lg hover:shadow-primary/30 transition-all duration-300"
                 onClick={() => setSelectedEventForEdit(null)}
               >
-                <AddIcon className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 h-4 w-4" />
                 Agregar Evento
               </Button>
             </DialogTrigger>
@@ -238,7 +232,7 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
         </div>
       ) : events.length === 0 ? (
         <div className="text-center py-20 glass-card border-dashed">
-          <CalendarTodayIcon className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
+          <Calendar className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
           <p className="text-xl font-medium text-muted-foreground">No hay eventos próximos programados</p>
           {isAdminOrSecretary && (
             <p className="text-sm text-muted-foreground mt-2">Usa el botón superior para crear el primero</p>
@@ -294,7 +288,7 @@ export function CalendarWidget({ auth, data }: CalendarWidgetProps) {
                     </h3>
                     {event.time && (
                       <div className="bg-[#f4f6fa] text-slate-500 dark:bg-slate-800 dark:text-slate-400 font-semibold flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] shrink-0">
-                        <AccessTimeIcon className="h-3 w-3 opacity-70" />
+                        <Clock className="h-3 w-3 opacity-70" />
                         {event.time} {event.end_time ? `- ${event.end_time}` : ''}
                       </div>
                     )}

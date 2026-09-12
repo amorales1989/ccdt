@@ -22,7 +22,16 @@ function Calendar({
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4 w-full",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
+        caption_label: "text-sm font-medium capitalize",
+        // Solo se usan con captionLayout="dropdown-buttons" (selector de mes/año).
+        // react-day-picker dibuja, además del <select>, un label aria-hidden con el valor
+        // actual (pensado para que el select vaya transparente encima). Acá el select se
+        // ve, así que ese label se oculta para que no salga el mes/año duplicado.
+        caption_dropdowns: "flex gap-1 items-center [&_[aria-hidden='true']]:hidden",
+        dropdown:
+          "bg-background border border-input rounded-md text-sm font-medium px-2 py-1 " +
+          "capitalize focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer",
+        vhidden: "hidden",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),

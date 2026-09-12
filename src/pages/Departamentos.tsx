@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import {
   AlertDialog,
@@ -27,8 +27,7 @@ import {
 const Departamentos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
-  const navigate = useNavigate();
+  const { profile, loading } = useAuth();
 const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -41,10 +40,9 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingName, setEditingName] = useState<string>("");
 
-  if (profile?.role !== 'admin' && profile?.role !== 'secretaria') {
-    navigate('/');
-    return null;
-  }
+  // `profile` arranca en null mientras carga la sesión: sin mirar `loading` el guard
+  // rebotaría al admin apenas entra, antes de saber cuál es su rol.
+  const sinAcceso = !loading && profile?.role !== 'admin' && profile?.role !== 'secretaria';
 
   const { data: departments = [], isLoading } = useQuery({
     queryKey: ['departments'],
@@ -174,6 +172,12 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
   ];
   const toggleActivityDay = (n: number) =>
     setActivityDays((prev) => (prev.includes(n) ? prev.filter((d) => d !== n) : [...prev, n].sort()));
+
+  // Guard. Va después de TODOS los hooks: si cortara antes, al cargar el profile el render
+  // siguiente ejecutaría menos hooks y React tira "Rendered fewer hooks than expected".
+  if (sinAcceso) {
+    return <Navigate to="/" replace />;
+  }
 
   if (isLoading) {
     return <LoadingOverlay message="Cargando departamentos..." />;

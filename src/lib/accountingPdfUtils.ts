@@ -1,5 +1,6 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type jsPDF from "jspdf";
+import { loadJsPdf } from "@/lib/jspdfLoader";
+
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { AccountingTransaction, AccountingBalance, AccountingCategoryTotal } from '@/lib/api';
@@ -16,13 +17,14 @@ const fmtDate = (d: string) => {
 
 type LedgerRow = AccountingTransaction & { saldo: number };
 
-export const exportAccountingReport = (
+export const exportAccountingReport = async (
   ledger: LedgerRow[],
   balance: AccountingBalance,
   departmentName: string,
   range: { from?: string; to?: string },
   companyName: string = 'Nexus'
 ) => {
+  const { jsPDF, autoTable } = await loadJsPdf();
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -109,13 +111,14 @@ const drawPieSlice = (
 };
 
 // Reporte de la tab "Por conceptos": torta + totales por concepto, para ingresos y egresos.
-export const exportAccountingByCategoryReport = (
+export const exportAccountingByCategoryReport = async (
   rows: AccountingCategoryTotal[],
   departmentName: string,
   range: { from?: string; to?: string },
   companyName: string = 'Nexus',
   assignedClass?: string
 ) => {
+  const { jsPDF, autoTable } = await loadJsPdf();
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();

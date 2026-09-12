@@ -6,11 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Calendar, Clock, MapPin, Users, Phone, User, FileText, Info, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { TimePickerField } from "@/components/TimePickerField";
-import { jsPDF } from "jspdf";
+import { loadJsPdf } from "@/lib/jspdfLoader";
 import { useQuery } from "@tanstack/react-query";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
-import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { DatePickerField } from "@/components/DatePickerField";
 import { format, parseISO } from "date-fns";
 import { isDemoMode, DEMO_PDF_HEADER } from "@/lib/demo";
 import { toast } from "sonner";
@@ -106,6 +106,7 @@ const AutorizacionRhema = () => {
     }
     const fechaEventoFormatted = formatDate(data.fechaEvento);
 
+    const { jsPDF } = await loadJsPdf();
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -358,12 +359,11 @@ const AutorizacionRhema = () => {
 
                   <div className="space-y-1">
                     <Label htmlFor="fechaEvento" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha del Evento <span className="text-red-500">*</span></Label>
-                    <MuiDatePickerField
+                    <DatePickerField
                       value={formData.fechaEvento ? parseISO(formData.fechaEvento) : undefined}
                       onChange={(date) => handleInputChange('fechaEvento', date ? format(date, 'yyyy-MM-dd') : '')}
                       open={fechaOpen}
                       onOpenChange={setFechaOpen}
-                      placeholder="Seleccionar fecha"
                     />
                     {errors.fechaEvento && <p className="text-xs text-red-500">{errors.fechaEvento}</p>}
                   </div>

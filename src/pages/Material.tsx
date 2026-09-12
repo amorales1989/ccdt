@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMaterials, createMaterial, deleteMaterial, getDepartments } from "@/lib/api";
+import { getMaterials, createMaterial, deleteMaterial, getDepartments, getMaterialUploadUrl } from "@/lib/api";
 import { MaterialDidactico, Department } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,45 +149,41 @@ const Material = () => {
             }
 
             setStatusText("Subiendo...");
-            const fileExt = fileToUpload.name.split('.').pop();
-            const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-            const filePath = `materials/${fileName}`;
+            const contentType = fileToUpload.type || 'application/octet-stream';
 
-            const { data: { session } } = await supabase.auth.getSession();
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            // El back firma la URL y el browser hace PUT directo a R2: el archivo
+            // no pasa por Express (50MB por el back seria lento y le comeria la RAM).
+            const { upload_url, key } = await getMaterialUploadUrl({
+                filename: fileToUpload.name,
+                content_type: contentType,
+                file_size: fileToUpload.size
+            });
 
-            const response = await axios.post(
-                `${supabaseUrl}/storage/v1/object/material-didactico/${filePath}`,
-                fileToUpload,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${session?.access_token}`,
-                        'apikey': supabaseAnonKey,
-                        'Content-Type': fileToUpload.type
-                    },
-                    onUploadProgress: (progressEvent) => {
-                        const total = progressEvent.total || fileToUpload.size;
-                        const current = progressEvent.loaded;
-                        const percent = Math.round((current / total) * 100);
-                        setUploadProgress(percent);
-                        const elapsedSeconds = (Date.now() - startTime) / 1000;
-                        const kbps = (current / 1024) / (elapsedSeconds || 1);
-                        setUploadSpeed(`${(kbps / 1024).toFixed(2)} MB/s`);
-                    }
+            await axios.put(upload_url, fileToUpload, {
+                // Define el Content-Type con el que R2 guarda y sirve el archivo
+                // (sin esto los PDF se descargan como binario en vez de abrirse).
+                headers: { 'Content-Type': contentType },
+                onUploadProgress: (progressEvent) => {
+                    const total = progressEvent.total || fileToUpload.size;
+                    const current = progressEvent.loaded;
+                    const percent = Math.round((current / total) * 100);
+                    setUploadProgress(percent);
+                    const elapsedSeconds = (Date.now() - startTime) / 1000;
+                    const kbps = (current / 1024) / (elapsedSeconds || 1);
+                    setUploadSpeed(`${(kbps / 1024).toFixed(2)} MB/s`);
                 }
-            );
+            });
 
-            const storagePath = response.data.Key || response.data.path || filePath;
             setStatusText("Guardando...");
 
             await createMaterial({
                 name: newName,
                 description: newDesc,
-                file_url: storagePath.includes('/') ? storagePath.split('/').slice(1).join('/') : storagePath,
+                file_url: key,
                 age_range: newAge,
                 department_id: (newDept && newDept !== "none") ? newDept : undefined,
-                file_size: selectedFile.size
+                file_size: selectedFile.size,
+                storage_provider: 'r2'
             });
 
             toast({ title: "Éxito", description: "Material publicado" });
@@ -228,7 +224,13 @@ const Material = () => {
         }
     };
 
-    const getPublicUrl = (path: string) => {
+    // Los materiales viejos siguen en Supabase Storage; los nuevos viven en R2.
+    const getPublicUrl = (material: Pick<MaterialDidactico, 'file_url' | 'storage_provider'>) => {
+        if (material.storage_provider === 'r2') {
+            const base = (import.meta.env.VITE_R2_PUBLIC_URL || '').replace(/\/$/, '');
+            return `${base}/${material.file_url}`;
+        }
+        const path = material.file_url;
         const cleanPath = path.startsWith('material-didactico/') ? path.replace('material-didactico/', '') : path;
         const { data } = supabase.storage.from('material-didactico').getPublicUrl(cleanPath);
         return data.publicUrl;
@@ -240,7 +242,7 @@ const Material = () => {
     );
 
     const renderActionIcons = (material: MaterialDidactico) => {
-        const publicUrl = getPublicUrl(material.file_url);
+        const publicUrl = getPublicUrl(material);
 
         if (isMobile) {
             return (
@@ -351,16 +353,16 @@ const Material = () => {
                             </div>
                             <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-slate-900/50">
                                 {isImage(selectedPreview.file_url) ? (
-                                    <img src={getPublicUrl(selectedPreview.file_url)} alt={selectedPreview.name} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+                                    <img src={getPublicUrl(selectedPreview)} alt={selectedPreview.name} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
                                 ) : isPDF(selectedPreview.file_url) ? (
-                                    <iframe src={getPublicUrl(selectedPreview.file_url)} className="w-full h-[70vh] rounded-lg border-none" title="PDF Preview" />
+                                    <iframe src={getPublicUrl(selectedPreview)} className="w-full h-[70vh] rounded-lg border-none" title="PDF Preview" />
                                 ) : (
                                     <div className="flex flex-col items-center gap-4 py-20">
                                         <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center">
                                             <FileText className="h-10 w-10 text-slate-400" />
                                         </div>
                                         <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No hay vista previa disponible para este formato</p>
-                                        <Button className="bg-white text-slate-950 hover:bg-white/90 rounded-full font-black px-8" onClick={() => window.open(getPublicUrl(selectedPreview.file_url), '_blank')}>DESCARGAR AHORA</Button>
+                                        <Button className="bg-white text-slate-950 hover:bg-white/90 rounded-full font-black px-8" onClick={() => window.open(getPublicUrl(selectedPreview), '_blank')}>DESCARGAR AHORA</Button>
                                     </div>
                                 )}
                             </div>
@@ -530,7 +532,7 @@ const Material = () => {
                                         <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden border border-slate-200 shadow-sm">
                                             {isImage(material.file_url) ? (
                                                 <img
-                                                    src={getPublicUrl(material.file_url)}
+                                                    src={getPublicUrl(material)}
                                                     alt="Preview"
                                                     className="w-full h-full object-cover transition-transform hover:scale-110"
                                                 />

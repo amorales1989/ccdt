@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Pencil, Trash2, MoreVertical, Filter, Upload, Loader2, FileDown, UserPlus, CircleChevronDown, CircleChevronUp, Check, MessageSquare, FileText, Table2, User, Search, X, FileBarChart2, ChevronDown, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
-import { jsPDF } from "jspdf";
+import { loadJsPdf } from "@/lib/jspdfLoader";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInYears, parse, isValid, parseISO } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -619,6 +619,7 @@ const ListarAlumnos = () => {
       });
 
       const observations = await getObservations(student.id);
+      const { jsPDF } = await loadJsPdf();
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
 

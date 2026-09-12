@@ -309,13 +309,13 @@ export default function Contabilidad() {
     saveMutation.mutate();
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (activeTab === "conceptos") {
-      exportAccountingByCategoryReport(categoryRows, String(deptName), { from, to }, company?.name || "Nexus", classFilter);
+      await exportAccountingByCategoryReport(categoryRows, String(deptName), { from, to }, company?.name || "Nexus", classFilter);
       return;
     }
     if (!balance) return;
-    exportAccountingReport(ledger, balance, String(deptName), { from, to }, company?.name || "Nexus");
+    await exportAccountingReport(ledger, balance, String(deptName), { from, to }, company?.name || "Nexus");
   };
 
   // Acceso configurable por rol desde Configuración (respeta company.role_permissions
@@ -444,26 +444,24 @@ export default function Contabilidad() {
         <div className="grid grid-cols-2 gap-3 md:flex md:gap-3">
           <div className="flex flex-col gap-1">
             <Label className="text-xs">Desde</Label>
-            <div className="h-10 px-3 rounded-md border border-input bg-background flex items-center overflow-hidden w-full md:w-[150px]">
+            <div className="h-10 px-3 rounded-md border border-input bg-background flex items-center overflow-hidden w-full md:w-[175px]">
               <DatePickerField
                 value={from ? parseISO(from) : undefined}
                 onChange={(d) => setFrom(d ? format(d, "yyyy-MM-dd") : "")}
                 open={fromOpen}
                 onOpenChange={setFromOpen}
-                placeholder="DD/MM/AAAA"
                 className="h-auto text-sm"
               />
             </div>
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">Hasta</Label>
-            <div className="h-10 px-3 rounded-md border border-input bg-background flex items-center overflow-hidden w-full md:w-[150px]">
+            <div className="h-10 px-3 rounded-md border border-input bg-background flex items-center overflow-hidden w-full md:w-[175px]">
               <DatePickerField
                 value={to ? parseISO(to) : undefined}
                 onChange={(d) => setTo(d ? format(d, "yyyy-MM-dd") : "")}
                 open={toOpen}
                 onOpenChange={setToOpen}
-                placeholder="DD/MM/AAAA"
                 className="h-auto text-sm"
               />
             </div>
@@ -541,7 +539,6 @@ export default function Contabilidad() {
                       onChange={(d) => setForm({ ...form, movement_date: d ? format(d, "yyyy-MM-dd") : "" })}
                       open={movementDateOpen}
                       onOpenChange={setMovementDateOpen}
-                      placeholder="DD/MM/AAAA"
                       className="h-auto text-sm"
                     />
                   </div>

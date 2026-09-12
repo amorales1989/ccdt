@@ -36,7 +36,7 @@ import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { SignaturePad } from "@/components/SignaturePad";
 import { BibleReferencePicker } from "@/components/BibleReferencePicker";
 import { BibleReferenceMultiPicker } from "@/components/BibleReferenceMultiPicker";
-import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { DatePickerField } from "@/components/DatePickerField";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -69,6 +69,8 @@ export default function RegistroTemas() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [fechaOpen, setFechaOpen] = useState(false);
+  const [filtroDesdeOpen, setFiltroDesdeOpen] = useState(false);
+  const [filtroHastaOpen, setFiltroHastaOpen] = useState(false);
   const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
   const [editing, setEditing] = useState<TopicRecord | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -260,7 +262,7 @@ export default function RegistroTemas() {
               data-tour="rt-pdf"
               variant="outline"
               className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
-              onClick={() => exportTopicRecordsPdf(
+              onClick={() => void exportTopicRecordsPdf(
                 displayed,
                 company?.congregation_name || company?.name || 'Nexus',
                 profile?.departments?.[0],
@@ -347,27 +349,28 @@ export default function RegistroTemas() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground w-10 sm:w-auto">Desde</span>
-              <Input
-                type={filterDateFrom ? "date" : "text"}
-                className="h-9 w-full sm:w-[150px] text-sm rounded-xl border-slate-200"
-                value={filterDateFrom}
-                placeholder="dd/mm/aaaa"
-                onFocus={e => { e.target.type = "date"; }}
-                onBlur={e => { if (!e.target.value) e.target.type = "text"; }}
-                onChange={e => setFilterDateFrom(e.target.value)}
-              />
+              <div className="h-9 w-full sm:w-[175px] flex items-center rounded-xl border border-slate-200 dark:border-slate-700 px-3">
+                <DatePickerField
+                  value={filterDateFrom ? parseISO(filterDateFrom) : undefined}
+                  onChange={(date) => setFilterDateFrom(date ? format(date, "yyyy-MM-dd") : "")}
+                  open={filtroDesdeOpen}
+                  onOpenChange={setFiltroDesdeOpen}
+                  className="h-auto text-sm font-normal"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground w-10 sm:w-auto">Hasta</span>
-              <Input
-                type={filterDateTo ? "date" : "text"}
-                className="h-9 w-full sm:w-[150px] text-sm rounded-xl border-slate-200"
-                value={filterDateTo}
-                placeholder="dd/mm/aaaa"
-                onFocus={e => { e.target.type = "date"; }}
-                onBlur={e => { if (!e.target.value) e.target.type = "text"; }}
-                onChange={e => setFilterDateTo(e.target.value)}
-              />
+              <div className="h-9 w-full sm:w-[175px] flex items-center rounded-xl border border-slate-200 dark:border-slate-700 px-3">
+                <DatePickerField
+                  value={filterDateTo ? parseISO(filterDateTo) : undefined}
+                  onChange={(date) => setFilterDateTo(date ? format(date, "yyyy-MM-dd") : "")}
+                  open={filtroHastaOpen}
+                  onOpenChange={setFiltroHastaOpen}
+                  minDate={filterDateFrom ? parseISO(filterDateFrom) : undefined}
+                  className="h-auto text-sm font-normal"
+                />
+              </div>
             </div>
             {(filterDateFrom || filterDateTo || filterClassFE) && (
               <button
@@ -535,12 +538,11 @@ export default function RegistroTemas() {
           <div className="flex flex-col gap-4 py-2">
             <div>
               <Label>Fecha</Label>
-              <MuiDatePickerField
+              <DatePickerField
                 value={form.fecha ? parseISO(form.fecha) : undefined}
                 onChange={(date) => set("fecha", date ? format(date, "yyyy-MM-dd") : "")}
                 open={fechaOpen}
                 onOpenChange={setFechaOpen}
-                placeholder="Seleccionar fecha"
               />
             </div>
 

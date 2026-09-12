@@ -1,5 +1,6 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type jsPDF from "jspdf";
+import { loadJsPdf } from "@/lib/jspdfLoader";
+
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { TopicRecord } from '@/lib/api';
@@ -13,13 +14,14 @@ const fmtDate = (d: string) => {
   catch { return d; }
 };
 
-export const exportTopicRecordsPdf = (
+export const exportTopicRecordsPdf = async (
   records: TopicRecord[],
   companyName = 'Nexus',
   departmentName?: string,
   assignedClass?: string,
   showClassCol = false,
 ) => {
+  const { jsPDF, autoTable } = await loadJsPdf();
   // Oficio/legal apaisado (356mm) en vez de A4 (297mm): Observaciones pasa de ~35-57mm a ~72-94mm.
   const doc = new jsPDF('l', 'mm', 'legal');
   const pageWidth = doc.internal.pageSize.getWidth();

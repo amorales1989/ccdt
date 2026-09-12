@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserCircle, Save } from "lucide-react";
-import { MuiDatePickerField } from "./MuiDatePickerField";
+import { DatePickerField } from "./DatePickerField";
 import { parseISO, format } from "date-fns";
 
 export function CompleteProfileModal() {
@@ -186,7 +186,9 @@ export function CompleteProfileModal() {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Fecha de Nacimiento</Label>
-                            <MuiDatePickerField
+                            <DatePickerField
+                              fromYear={1920}
+                              toYear={new Date().getFullYear()}
                                 value={formData.birthdate ? parseISO(formData.birthdate) : undefined}
                                 onChange={(date) => setFormData({ ...formData, birthdate: date ? format(date, 'yyyy-MM-dd') : "" })}
                                 open={birthdateOpen}

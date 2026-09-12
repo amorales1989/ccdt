@@ -259,7 +259,6 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
                     onChange={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
                     open={startDateOpen}
                     onOpenChange={setStartDateOpen}
-                    placeholder="Fecha inicio"
                   />
                 </FormControl>
                 <FormMessage />
@@ -278,7 +277,6 @@ export function EventForm({ onSubmit, initialData, isRequestMode = false, onSucc
                     onChange={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
                     open={endDateOpen}
                     onOpenChange={setEndDateOpen}
-                    placeholder="Fecha fin"
                   />
                 </FormControl>
                 <FormMessage />

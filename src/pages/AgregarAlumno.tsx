@@ -15,7 +15,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { UserPlus, Check, History } from "lucide-react";
-import { MuiDatePickerField } from "@/components/MuiDatePickerField";
+import { DatePickerField } from "@/components/DatePickerField";
 import { DniIdentityInput, textoBajaPrevia, type ArchivedPerson } from "@/components/DniIdentityInput";
 import { NameSearchInput } from "@/components/NameSearchInput";
 import type { PersonSearchResult } from "@/components/PersonSearchInput";
@@ -606,14 +606,15 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
           )}
           <div className="space-y-2">
             <Label htmlFor="birthdate">Fecha de Nacimiento</Label>
-            <MuiDatePickerField
+            <DatePickerField
+              fromYear={1920}
+              toYear={new Date().getFullYear()}
               value={formData.birthdate ? parseISO(formData.birthdate) : undefined}
               onChange={(date) =>
                 setFormData({ ...formData, birthdate: date ? format(date, 'yyyy-MM-dd') : '' })
               }
               open={birthdateOpen}
               onOpenChange={setBirthdateOpen}
-              placeholder="Seleccionar fecha de nacimiento"
             />
           </div>
           <div className="space-y-2">

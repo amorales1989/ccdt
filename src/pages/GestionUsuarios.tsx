@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,8 +70,7 @@ const GestionUsuarios = () => {
   const [activeTab, setActiveTab] = useState("listado");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
-  const navigate = useNavigate();
+  const { profile, loading } = useAuth();
   const { companyId } = useCompany();
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentType | null>(null);
@@ -116,10 +115,10 @@ const GestionUsuarios = () => {
     }
   }, [profile, isDirector, isVicedirector]);
 
-  if (profile?.role !== 'admin' && profile?.role !== 'secretaria' && !isDirector && !isDirectorGeneral && !isVicedirector) {
-    navigate('/');
-    return null;
-  }
+  // `profile` arranca en null mientras carga la sesión: sin mirar `loading` el guard
+  // rebotaría al admin apenas entra, antes de saber cuál es su rol.
+  const sinAcceso =
+    !loading && profile?.role !== 'admin' && profile?.role !== 'secretaria' && !isDirector && !isDirectorGeneral && !isVicedirector;
 
   const { data: departments = [] } = useQuery({
     queryKey: ['departments', companyId],
@@ -458,6 +457,12 @@ const GestionUsuarios = () => {
   });
 
   const hasPendingChanges = Object.keys(pendingAssignments).length > 0;
+
+  // Guard. Va después de TODOS los hooks: si cortara antes, al cargar el profile el render
+  // siguiente ejecutaría menos hooks y React tira "Rendered fewer hooks than expected".
+  if (sinAcceso) {
+    return <Navigate to="/" replace />;
+  }
 
   if (isLoading) {
     return <LoadingOverlay message="Cargando usuarios..." />;

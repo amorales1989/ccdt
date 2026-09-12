@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,39 +7,44 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Layout } from "@/components/Layout";
 import { InstallPWA } from "@/components/InstallPWA"; // 👈 Importar
 import Index from "@/pages/Index";
-import Home from "@/pages/Home";
-import ListarAlumnos from "@/pages/ListarAlumnos";
-import AgregarAlumno from "@/pages/AgregarAlumno";
-import TomarAsistencia from "@/pages/TomarAsistencia";
-import HistorialAsistencia from "@/pages/HistorialAsistencia";
-import NotFound from "@/pages/NotFound";
-import GestionUsuarios from "@/pages/GestionUsuarios";
-import Calendario from "@/pages/Calendario";
-import Departamentos from "@/pages/Departamentos";
-import GruposPequenos from "@/pages/GruposPequenos";
-import Contabilidad from "@/pages/Contabilidad";
-import PromoverAlumnos from "@/pages/PromoverAlumnos";
-import Configuration from "@/pages/Configuration";
-import Secretaria from "@/pages/Secretaria";
-import Notificaciones from "@/pages/Notificaciones";
-import AutorizacionesSalida from "@/pages/AutorizacionesSalida";
-import AutorizacionSimple from "@/pages/AutorizacionSimple";
-import AutorizacionCampamento from "./pages/AutorizacionCampamento";
-import Material from "@/pages/Material";
-import Mantenimiento from "@/pages/Mantenimiento";
-import InformesPersonal from "./pages/InformesPersonal";
-import RegistroTemas from "@/pages/RegistroTemas";
-import ResetPassword from "@/pages/ResetPassword";
-import Guia from "@/pages/Guia";
 
 
-import Estadisticas from "./pages/Estadisticas";
-import TodosMiembros from "./pages/TodosMiembros";
-import ArchivoMiembros from "./pages/ArchivoMiembros";
-import AdminSistema from "@/pages/AdminSistema";
 import Landing from "@/pages/Landing";
 import { NotificationHandler } from '@/components/NotificationHandler';
 import { DemoBanner } from '@/components/DemoBanner';
+import { LoadingOverlay } from '@/components/LoadingOverlay';
+import { RouteErrorElement } from '@/components/ErrorBoundary';
+
+// Las paginas se bajan al entrar, no en el arranque. Index y Landing quedan eager
+// porque son el primer paint.
+const Home = lazy(() => import("@/pages/Home"));
+const ListarAlumnos = lazy(() => import("@/pages/ListarAlumnos"));
+const AgregarAlumno = lazy(() => import("@/pages/AgregarAlumno"));
+const TomarAsistencia = lazy(() => import("@/pages/TomarAsistencia"));
+const HistorialAsistencia = lazy(() => import("@/pages/HistorialAsistencia"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const GestionUsuarios = lazy(() => import("@/pages/GestionUsuarios"));
+const Calendario = lazy(() => import("@/pages/Calendario"));
+const Departamentos = lazy(() => import("@/pages/Departamentos"));
+const GruposPequenos = lazy(() => import("@/pages/GruposPequenos"));
+const Contabilidad = lazy(() => import("@/pages/Contabilidad"));
+const PromoverAlumnos = lazy(() => import("@/pages/PromoverAlumnos"));
+const Configuration = lazy(() => import("@/pages/Configuration"));
+const Secretaria = lazy(() => import("@/pages/Secretaria"));
+const Notificaciones = lazy(() => import("@/pages/Notificaciones"));
+const AutorizacionesSalida = lazy(() => import("@/pages/AutorizacionesSalida"));
+const AutorizacionSimple = lazy(() => import("@/pages/AutorizacionSimple"));
+const AutorizacionCampamento = lazy(() => import("@/pages/AutorizacionCampamento"));
+const Material = lazy(() => import("@/pages/Material"));
+const Mantenimiento = lazy(() => import("@/pages/Mantenimiento"));
+const InformesPersonal = lazy(() => import("@/pages/InformesPersonal"));
+const RegistroTemas = lazy(() => import("@/pages/RegistroTemas"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const Guia = lazy(() => import("@/pages/Guia"));
+const Estadisticas = lazy(() => import("@/pages/Estadisticas"));
+const TodosMiembros = lazy(() => import("@/pages/TodosMiembros"));
+const ArchivoMiembros = lazy(() => import("@/pages/ArchivoMiembros"));
+const AdminSistema = lazy(() => import("@/pages/AdminSistema"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,11 +77,13 @@ function App() {
         <ThemeProvider>
           <DemoBanner />
           <div className="demo-shift-wrapper">
+          <Suspense fallback={<LoadingOverlay message="Cargando..." />}>
           <RouterProvider
             router={createBrowserRouter([
               {
                 path: "/",
                 element: <Layout />,
+                errorElement: <RouteErrorElement />,
                 children: [
                   {
                     index: true,
@@ -201,10 +209,12 @@ function App() {
               {
                 path: "/reset-password",
                 element: <ResetPassword />,
+                errorElement: <RouteErrorElement />,
               },
               {
                 path: "/presentacion",
                 element: <Landing />,
+                errorElement: <RouteErrorElement />,
               },
               {
                 path: "*",
@@ -212,6 +222,7 @@ function App() {
               },
             ])}
           />
+          </Suspense>
           </div>
           <NotificationHandler />
           <Toaster />

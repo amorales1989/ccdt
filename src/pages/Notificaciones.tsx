@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,15 +43,13 @@ const ROLES = [
 ];
 
 const Notificaciones = () => {
-  const { profile } = useAuth();
-  const navigate = useNavigate();
+  const { profile, loading } = useAuth();
   const { toast } = useToast();
 
-  // Guard
-  if (profile !== undefined && profile?.role !== "admin" && profile?.role !== "secretaria") {
-    navigate("/");
-    return null;
-  }
+  // `profile` arranca en null mientras carga la sesión: sin mirar `loading` el guard
+  // rebotaría al admin apenas entra, antes de saber cuál es su rol.
+  const sinAcceso =
+    !loading && profile?.role !== "admin" && profile?.role !== "secretaria";
 
   const [channel, setChannel] = useState<Channel>("push");
   const [targetType, setTargetType] = useState<TargetType>("department");
@@ -236,6 +234,12 @@ const Notificaciones = () => {
       setSending(false);
     }
   };
+
+  // Guard. Va después de TODOS los hooks: si cortara antes, al cargar el profile el render
+  // siguiente ejecutaría menos hooks y React tira "Rendered fewer hooks than expected".
+  if (sinAcceso) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="bg-slate-50 dark:bg-slate-900 p-2 md:p-4 rounded-2xl">

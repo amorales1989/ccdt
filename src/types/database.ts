@@ -186,6 +186,8 @@ export interface MaterialDidactico {
   file_url: string;
   age_range: string;
   file_size?: number;
+  // Donde vive el archivo: 'supabase' son los materiales viejos, 'r2' los nuevos.
+  storage_provider?: 'supabase' | 'r2';
   department_id?: string;
   created_at: string;
   created_by: string;

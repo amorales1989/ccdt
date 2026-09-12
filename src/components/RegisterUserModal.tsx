@@ -16,7 +16,7 @@ import { UserPlus, Eye, EyeOff, Plus, X, Pencil } from "lucide-react";
 import { PersonSearchResult } from "./PersonSearchInput";
 import { NameSearchInput } from "./NameSearchInput";
 import { DniIdentityInput } from "./DniIdentityInput";
-import { MuiDatePickerField } from "./MuiDatePickerField";
+import { DatePickerField } from "./DatePickerField";
 import { isCustomRole } from "@/lib/rolePermissions";
 import { useRoles } from "@/hooks/useRoles";
 import { Badge } from "@/components/ui/badge";
@@ -756,12 +756,13 @@ export function RegisterUserModal({ children, onSuccess, user }: RegisterUserMod
                             <div className="space-y-2">
                                 <Label htmlFor="birthdate" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Fecha de Nacimiento</Label>
                                 <div className="h-12 px-3 rounded-xl bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 flex items-center overflow-hidden">
-                                    <MuiDatePickerField
+                                    <DatePickerField
+                                      fromYear={1920}
+                                      toYear={new Date().getFullYear()}
                                         value={birthdate ? parseISO(birthdate) : undefined}
                                         onChange={(date) => setBirthdate(date ? format(date, "yyyy-MM-dd") : "")}
                                         open={birthdateOpen}
                                         onOpenChange={setBirthdateOpen}
-                                        placeholder="DD/MM/AAAA"
                                     />
                                 </div>
                             </div>

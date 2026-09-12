@@ -1,5 +1,4 @@
 import React from "react";
-import { Box, Tabs, Tab } from "@mui/material";
 import { LucideIcon } from "lucide-react";
 
 interface TabOption<T extends string = string> {
@@ -24,7 +23,7 @@ export const CustomTabs = <T extends string = string>({
     scrollable = false,
 }: CustomTabsProps<T>) => {
     return (
-        <Box
+        <div
             className={`
                 bg-slate-100/80 dark:bg-slate-800/50 backdrop-blur-md
                 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-700/50
@@ -32,62 +31,31 @@ export const CustomTabs = <T extends string = string>({
                 ${className}
             `}
         >
-            <Tabs
-                value={value}
-                onChange={(_, newValue: T) => onChange(newValue)}
-                variant={scrollable ? "scrollable" : "fullWidth"}
-                scrollButtons={scrollable ? "auto" : undefined}
-                allowScrollButtonsMobile={scrollable}
-                sx={{
-                    minHeight: "auto",
-                    "& .MuiTabs-indicator": {
-                        display: "none",
-                    },
-                    "& .MuiTabs-flexContainer": {
-                        gap: "4px",
-                    },
-                }}
-            >
-                {options.map((option) => (
-                    <Tab
-                        key={option.value}
-                        value={option.value}
-                        label={option.label}
-                        icon={
-                            option.icon
-                                ? React.createElement(option.icon, {
-                                    className: "h-4 w-4",
-                                })
-                                : undefined
-                        }
-                        iconPosition="start"
-                        sx={{
-                            minHeight: "40px",
-                            borderRadius: "12px",
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.875rem",
-                            color: "text.secondary",
-                            transition: "all 0.2s ease-in-out",
-                            "&.Mui-selected": {
-                                backgroundColor: "white",
-                                color: "#7c3aed", // purple-600
-                                boxShadow: "0 2px 8px -2px rgba(0,0,0,0.1), 0 1px 4px -1px rgba(0,0,0,0.1)",
-                                ".dark &": {
-                                    backgroundColor: "#1e293b", // slate-800
-                                    color: "#a78bfa", // purple-400
-                                }
-                            },
-                            "&:hover:not(.Mui-selected)": {
-                                backgroundColor: "rgba(0,0,0,0.04)",
-                                ".dark &": {
-                                    backgroundColor: "rgba(255,255,255,0.05)",
-                                }
-                            },
-                        }}
-                    />
-                ))}
-            </Tabs>
-        </Box>
+            <div className={`flex gap-1 ${scrollable ? "w-max min-w-full" : ""}`}>
+                {options.map((option) => {
+                    const selected = option.value === value;
+                    return (
+                        <button
+                            key={option.value}
+                            type="button"
+                            role="tab"
+                            aria-selected={selected}
+                            onClick={() => onChange(option.value)}
+                            className={`
+                                ${scrollable ? "shrink-0 px-4" : "flex-1 min-w-0"}
+                                inline-flex items-center justify-center gap-2 h-10 rounded-xl
+                                text-sm font-semibold whitespace-nowrap transition-all duration-200
+                                ${selected
+                                    ? "bg-white text-purple-600 shadow-sm dark:bg-slate-800 dark:text-purple-400"
+                                    : "text-muted-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"}
+                            `}
+                        >
+                            {option.icon && <option.icon className="h-4 w-4 shrink-0" />}
+                            <span className="truncate">{option.label}</span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
     );
 };

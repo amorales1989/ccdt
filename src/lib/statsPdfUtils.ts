@@ -1,4 +1,5 @@
-import jsPDF from "jspdf";
+import type jsPDF from "jspdf";
+import { loadJsPdf } from "@/lib/jspdfLoader";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -23,6 +24,7 @@ const LINE_SOFT: [number, number, number] = [226, 232, 240];
 const SURFACE_SOFT: [number, number, number] = [248, 250, 252];
 
 export const exportStatsReport = async (data: ReportData, scopeLabel: string = "Estadísticas") => {
+  const { jsPDF } = await loadJsPdf();
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();

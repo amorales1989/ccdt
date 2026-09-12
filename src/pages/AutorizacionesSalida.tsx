@@ -31,7 +31,7 @@ const AutorizacionesSalida = () => {
     queryFn: () => getCompany(getPersistentCompanyId())
   });
 
-  const handleDownloadFicha = () => {
+  const handleDownloadFicha = async () => {
     if (isDemoMode()) {
       toast({
         title: "Ficha de Salud",
@@ -40,7 +40,7 @@ const AutorizacionesSalida = () => {
       return;
     }
     try {
-      generateBlankFichaSalud(company);
+      await generateBlankFichaSalud(company);
       toast({
         title: "Ficha de Salud",
         description: "La ficha en blanco se ha descargado correctamente."

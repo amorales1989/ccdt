@@ -1,7 +1,8 @@
 
-import jsPDF from "jspdf";
-
-export const generateBlankFichaSalud = (company: any) => {
+import type jsPDF from "jspdf";
+import { loadJsPdf } from "@/lib/jspdfLoader";
+export const generateBlankFichaSalud = async (company: any) => {
+  const { jsPDF } = await loadJsPdf();
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();

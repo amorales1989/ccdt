@@ -1,7 +1,7 @@
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MuiCalendar } from "@/components/MuiCalendar";
+import { EventCalendar } from "@/components/EventCalendar";
 import { Badge } from "@/components/ui/badge";
 import { getEvents, deleteEvent, updateEvent, notifyNewRequest, getUsers, notifyRequestResponse, notifyMassiveApprovedEvent } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
@@ -587,7 +587,7 @@ export default function Calendario() {
             {/* Calendario visual (Izquierda - 5 cols) */}
             <div className="lg:col-span-5">
               <Card className="glass-card border-none shadow-xl overflow-hidden p-2 h-fit bg-white/40">
-                <MuiCalendar
+                <EventCalendar
                   selectedDate={selectedDate}
                   onDateSelect={setSelectedDate}
                   onMonthChange={handleMonthChange}

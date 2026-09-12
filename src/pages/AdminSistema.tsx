@@ -871,7 +871,6 @@ function PayDialog({
                 onChange={(d) => setForm({ ...form, payment_date: d ? format(d, "yyyy-MM-dd") : "" })}
                 open={payDateOpen}
                 onOpenChange={setPayDateOpen}
-                placeholder="DD/MM/AAAA"
                 maxDate={new Date()}
                 className="h-auto text-sm"
               />

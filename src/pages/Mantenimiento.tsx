@@ -117,10 +117,7 @@ export default function Mantenimiento() {
         priority: "normal" as Priority,
     });
 
-    // Redirect if not allowed
-    if (!profile) return null;
-
-    const companyId = profile.company_id;
+    const companyId = profile?.company_id;
 
     const { data: requests = [], isLoading } = useQuery<MaintenanceRequest[]>({
         queryKey: ["maintenance_requests", companyId, profile?.id, canSeeAll],
@@ -222,6 +219,10 @@ export default function Mantenimiento() {
 
     const formatDate = (iso: string) =>
         new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+
+    // Guard. Va después de TODOS los hooks: si cortara antes, al cargar el profile el render
+    // siguiente ejecutaría menos hooks y React tira "Rendered fewer hooks than expected".
+    if (!profile) return null;
 
     return (
         <div className="p-4 md:p-6 space-y-6">

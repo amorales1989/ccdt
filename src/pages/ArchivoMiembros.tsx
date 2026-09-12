@@ -203,7 +203,6 @@ export default function ArchivoMiembros() {
                     onChange={d => setDesde(d ? format(d, "yyyy-MM-dd") : "")}
                     open={desdeOpen}
                     onOpenChange={setDesdeOpen}
-                    placeholder="DD/MM/AAAA"
                     className="h-auto text-sm"
                   />
                 </div>
@@ -217,7 +216,6 @@ export default function ArchivoMiembros() {
                     onChange={d => setHasta(d ? format(d, "yyyy-MM-dd") : "")}
                     open={hastaOpen}
                     onOpenChange={setHastaOpen}
-                    placeholder="DD/MM/AAAA"
                     className="h-auto text-sm"
                   />
                 </div>

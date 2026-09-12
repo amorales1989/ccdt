@@ -27,7 +27,13 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        // Solo se fija el chunk de react: es lo unico que carga si o si en el arranque,
+        // y separarlo evita re-bajarlo en cada deploy. El resto lo agrupa Rollup segun
+        // quien lo importa; forzarlo aca hacia que chunks async (recharts, jspdf) pasaran
+        // a contarse como dependencia estatica del entry y se precargaran de mas.
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+        },
       },
     },
   },
