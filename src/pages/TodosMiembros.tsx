@@ -25,6 +25,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { Student } from "@/types/database";
 import AgregarAlumno from "@/pages/AgregarAlumno";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const PAGE_SIZE = 24;
 
@@ -130,27 +132,11 @@ export default function TodosMiembros() {
 
   return (
     <>
-    <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
+    <PageShell>
 
-      {/* Header card — mismo estilo que otras pantallas */}
-      <div className="relative group">
-        <div className="absolute inset-0 bg-indigo-500/5 blur-3xl rounded-[3rem] -z-10 group-hover:bg-indigo-500/10 transition-all duration-700" />
-        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-indigo-500/5 overflow-hidden">
-          <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-5">
-              <div className="relative">
-                <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-20 animate-pulse" />
-                <div className="relative h-14 w-14 bg-indigo-600 rounded-2xl flex items-center justify-center p-3.5 shadow-xl shadow-indigo-500/40">
-                  <Users className="h-full w-full text-white" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter leading-none">
-                  Todos los Miembros
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 font-bold text-sm tracking-tight flex items-center gap-1.5 mt-0.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 inline-block" />
-                  {students.length} registros · {withDept} en departamentos ·{" "}
+      <PageHeader
+        title="Todos los Miembros"
+        subtitle={<>{students.length} registros · {withDept} en departamentos ·{" "}
                   <button
                     type="button"
                     onClick={() => { setShowFilters(true); setFilterDept(SIN_DEPARTAMENTO); }}
@@ -158,22 +144,20 @@ export default function TodosMiembros() {
                     title="Miembros que no están en ningún departamento ni grupo pequeño"
                   >
                     {soloCongregacion} solo congregación
-                  </button>
-                </p>
-              </div>
-            </div>
+                  </button></>}
+        icon={Users}
+        actions={<>
             {canEdit && (
               <Button
                 onClick={() => setShowAddModal(true)}
-                className="button-gradient rounded-xl h-11 px-8 font-black uppercase text-[10px] tracking-widest gap-2 shadow-lg shadow-indigo-500/20"
+                className="h-10 px-5 rounded-xl gap-2 shadow-sm"
               >
                 <UserPlus className="h-3.5 w-3.5" />
                 Nuevo Miembro
               </Button>
             )}
-          </div>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Search + Filters */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-4">
@@ -434,7 +418,7 @@ export default function TodosMiembros() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
 
     <BajaMiembroDialog
       open={!!confirmDelete}

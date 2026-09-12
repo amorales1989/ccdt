@@ -19,6 +19,9 @@ import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
+import { Tent } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const AutorizacionCampamento = () => {
   const [loading, setLoading] = useState(false);
@@ -471,35 +474,23 @@ const AutorizacionCampamento = () => {
   const finDia = finFormatted ? finFormatted.split('/')[0] : "____";
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-12">
+    <PageShell>
 
-      {/* ── Hero Header ─────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-purple-700 via-pink-600 to-rose-600 px-6 md:px-10 pt-10 pb-16">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-pink-300 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
-        </div>
-        <div className="relative z-10 max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <p className="text-pink-200 text-xs font-black uppercase tracking-[0.2em] mb-2">Autorizaciones</p>
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
-              Autorización de Campamento
-            </h1>
-            <p className="text-pink-200 mt-2 text-sm font-medium">
-              Completá los datos para generar la autorización en PDF.
-            </p>
-          </div>
+      <PageHeader
+        title="Autorización de Campamento"
+        subtitle="Completá los datos para generar la autorización en PDF."
+        icon={Tent}
+        actions={<>
           <button
             onClick={() => navigate("/autorizaciones")}
-            className="flex items-center gap-2 h-10 px-5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-black uppercase tracking-widest border border-white/20 backdrop-blur-sm transition-all w-fit"
+            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-sm font-medium border border-slate-200 hover:border-slate-300 shadow-sm transition-all w-fit"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Volver
           </button>
-        </div>
-      </div>
+        </>}
+      />
 
-      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto -mt-4">
         <div className="flex flex-col xl:flex-row gap-6 items-start">
 
           {/* Lado izquierdo: Formulario */}
@@ -791,8 +782,7 @@ const AutorizacionCampamento = () => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </PageShell>
   );
 };
 

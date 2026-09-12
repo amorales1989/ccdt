@@ -47,6 +47,9 @@ import { CustomTooltip } from "@/components/CustomTooltip";
 import * as z from "zod";
 import { TourGuide } from "@/components/TourGuide";
 import { HelpCircle } from "lucide-react";
+import { Users } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const ListarAlumnos = () => {
   const baptizedEnabled = useBaptizedEnabled();
@@ -1203,8 +1206,7 @@ const ListarAlumnos = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
-      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto animate-fade-in space-y-6">
+    <PageShell>
 
         <TourGuide
           tourKey="listar_alumnos"
@@ -1217,13 +1219,12 @@ const ListarAlumnos = () => {
           run={runTour}
           onClose={() => setRunTour(false)}
         />
-        {/* Header */}
-        <div data-tour="lista-header" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Directorio de Miembros</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Gestión general e información detallada</p>
-            </div>
+        <PageHeader
+          data-tour="lista-header"
+          title="Directorio de Miembros"
+          subtitle="Gestión general e información detallada"
+          icon={Users}
+          actions={<>
             <CustomTooltip title="Ver guía">
               <button
                 onClick={() => setRunTour(true)}
@@ -1232,9 +1233,6 @@ const ListarAlumnos = () => {
                 <HelpCircle className="h-4 w-4" />
               </button>
             </CustomTooltip>
-          </div>
-
-          <div className="flex items-center gap-2 ml-auto">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold">
               <User className="h-3 w-3 text-slate-400" />
               {(regularStudents.length + newStudents.length)} miembros
@@ -1310,8 +1308,8 @@ const ListarAlumnos = () => {
               <UserPlus className="h-4 w-4 mr-2" />
               Nuevo Miembro
             </Button>}
-          </div>
-        </div>
+          </>}
+        />
 
         <div data-tour="lista-tabs"><CustomTabs
           value={activeTab}
@@ -1754,8 +1752,7 @@ const ListarAlumnos = () => {
           })()}
         />
 
-      </div>
-    </div>
+    </PageShell>
   );
 };
 

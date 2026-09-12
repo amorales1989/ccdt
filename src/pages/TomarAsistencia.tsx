@@ -23,6 +23,9 @@ import { DatePickerField } from "@/components/DatePickerField";
 import { DepartmentSelect } from "@/components/DepartmentSelect";
 import { ClassSelect } from "@/components/ClassSelect";
 import { useDepartments } from "@/hooks/useDepartments";
+import { ClipboardList } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const TomarAsistencia = () => {
   const { toast } = useToast();
@@ -493,29 +496,27 @@ const TomarAsistencia = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
+    <PageShell className="pb-28">
       <TourGuide
         tourKey="tomar_asistencia"
         steps={tourSteps}
         run={runTour}
         onClose={() => setRunTour(false)}
       />
-      <div className="p-4 md:p-6 pb-28">
 
-        {/* Page Header */}
-        <div className="mb-6 animate-fade-in flex items-start justify-between gap-3" data-tour="header">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black text-primary tracking-tight mb-1">
-              Tomar Asistencia
-            </h1>
-            <p className="text-sm text-muted-foreground capitalize">{displayDate}</p>
+        <PageHeader
+          data-tour="header"
+          title="Tomar Asistencia"
+          icon={ClipboardList}
+          subtitle={<>
+            <div className="capitalize">{displayDate}</div>
             {hasExistingRecord && (
               <Badge className="mt-1 bg-orange-100 text-orange-700 border-none font-bold text-[11px]">
                 <CheckCircle2 className="h-3 w-3 mr-1" /> Asistencia ya registrada — editando
               </Badge>
             )}
-          </div>
-        </div>
+          </>}
+        />
 
         {/* Día marcado como evento especial */}
         {specialEvent && (
@@ -665,7 +666,6 @@ const TomarAsistencia = () => {
             )}
           </div>
         )}
-      </div>
 
       {/* Floating Save Button */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 to-transparent flex justify-center gap-2" data-tour="save">
@@ -744,7 +744,7 @@ const TomarAsistencia = () => {
         </DialogContent>
       </Dialog>
 
-    </div>
+    </PageShell>
   );
 };
 

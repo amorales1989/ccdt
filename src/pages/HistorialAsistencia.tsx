@@ -30,7 +30,9 @@ import { markAttendance, deleteAttendanceByDate } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { TourGuide } from "@/components/TourGuide";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, History } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 import type { Step } from "react-joyride";
 import { CustomTooltip } from "@/components/CustomTooltip";
 
@@ -456,58 +458,42 @@ const HistorialAsistencia = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-12">
+    <PageShell>
       <TourGuide tourKey="historial_asistencia" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
 
-      {/* ── Hero Header ─────────────────────────────────────────────────── */}
-      <div data-tour="hist-header" className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 px-6 md:px-10 pt-10 pb-16">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-300 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
-        </div>
-        <div className="relative z-10 max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <p className="text-purple-200 text-xs font-black uppercase tracking-[0.2em] mb-2">
-              {isEditMode ? "Modo Edición" : "Registro histórico"}
-            </p>
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
-              Historial de Asistencias
-            </h1>
-            <p className="text-purple-200 mt-2 text-sm font-medium">
-              {isEditMode
-                ? `Editando · ${editRecords.length} registros`
-                : `${attendance.length.toLocaleString()} registros en el período seleccionado`}
-            </p>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              data-tour="hist-edit"
-              onClick={isEditMode ? exitEditMode : enterEditMode}
-              className={cn(
-                "flex items-center gap-2 h-10 px-5 rounded-xl text-xs font-black uppercase tracking-widest border backdrop-blur-sm transition-all",
-                isEditMode
-                  ? "bg-white/20 hover:bg-white/30 text-white border-white/30"
-                  : "bg-white/15 hover:bg-white/25 text-white border-white/20"
-              )}
-            >
-              {isEditMode ? <X className="h-3.5 w-3.5" /> : <PenSquare className="h-3.5 w-3.5" />}
-              {isEditMode ? "Salir de Edición" : "Editar Historial"}
-            </button>
-            {isAdminOrSecretaria && !isEditMode && (
-              <button
-                onClick={handleExportToExcel}
-                disabled={!attendance.length}
-                className="flex items-center gap-2 h-10 px-5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-black uppercase tracking-widest border border-white/20 backdrop-blur-sm transition-all disabled:opacity-40"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Excel
-              </button>
+      <PageHeader
+        data-tour="hist-header"
+        title="Historial de Asistencias"
+        icon={History}
+        subtitle={isEditMode
+          ? `Modo edición · ${editRecords.length} registros`
+          : `${attendance.length.toLocaleString()} registros en el período seleccionado`}
+        actions={<>
+          {/* En modo edición el botón va relleno: es la única señal fuerte de que se está editando. */}
+          <Button
+            data-tour="hist-edit"
+            variant={isEditMode ? "default" : "outline"}
+            onClick={isEditMode ? exitEditMode : enterEditMode}
+            className={cn(
+              "rounded-xl shadow-sm h-10 transition-all active:scale-95",
+              !isEditMode && "border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900"
             )}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-[1600px] mx-auto px-4 md:px-8 -mt-8 space-y-5 pb-28">
+          >
+            {isEditMode ? <X className="h-4 w-4 mr-1" /> : <PenSquare className="h-4 w-4 mr-1" />}
+            {isEditMode ? "Salir de edición" : "Editar historial"}
+          </Button>
+          {isAdminOrSecretaria && !isEditMode && (
+            <Button
+              variant="outline"
+              onClick={handleExportToExcel}
+              disabled={!attendance.length}
+              className="rounded-xl border-slate-200 bg-white hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 shadow-sm h-10 transition-all active:scale-95"
+            >
+              <Download className="h-4 w-4 mr-1" /> Excel
+            </Button>
+          )}
+        </>}
+      />
 
         {/* ── KPI Cards ─────────────────────────────────────────────────── */}
         <div data-tour="hist-kpis" className="grid grid-cols-3 gap-4">
@@ -816,7 +802,6 @@ const HistorialAsistencia = () => {
             </Card>
           )}
         </div>
-      </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -843,7 +828,7 @@ const HistorialAsistencia = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageShell>
   );
 };
 

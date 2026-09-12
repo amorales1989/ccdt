@@ -39,6 +39,9 @@ import { BibleReferenceMultiPicker } from "@/components/BibleReferenceMultiPicke
 import { DatePickerField } from "@/components/DatePickerField";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { ClipboardCheck } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const emptyForm = {
   fecha: new Date().toISOString().split("T")[0],
@@ -243,15 +246,14 @@ export default function RegistroTemas() {
   ];
 
   return (
-    <div className="p-4 w-full">
+    <PageShell>
       <TourGuide tourKey="registro_temas" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <div data-tour="rt-header">
-          <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Registro de Temas</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Clases y estadísticas por fecha</p>
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto">
+      <PageHeader
+        data-tour="rt-header"
+        title="Registro de Temas"
+        subtitle="Clases y estadísticas por fecha"
+        icon={ClipboardCheck}
+        actions={<>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold">
             <BookOpenCheck className="h-3 w-3 text-slate-400" />
             {displayed.length} {displayed.length === 1 ? 'registro' : 'registros'}
@@ -285,8 +287,8 @@ export default function RegistroTemas() {
               Nuevo registro
             </Button>
           )}
-        </div>
-      </div>
+        </>}
+      />
 
       {(isAdminOrSecretary || isDirectorLevel) && (
         <div data-tour="rt-filtros" className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 mb-4">
@@ -624,6 +626,6 @@ export default function RegistroTemas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }

@@ -23,6 +23,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Folder } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const Departamentos = () => {
   const { toast } = useToast();
@@ -195,34 +198,24 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
   const totalClasses = departments.reduce((acc, d) => acc + (d.classes?.length ?? 0), 0);
 
   return (
-    <div className="animate-fade-in pb-12">
+    <PageShell>
 
-      {/* Hero Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 px-6 md:px-10 pt-10 pb-16">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-300 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
-        </div>
-        <div className="relative z-10 max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <p className="text-violet-200 text-xs font-black uppercase tracking-[0.2em] mb-2">Estructura Ministerial</p>
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">Departamentos</h1>
-            <p className="text-violet-200 mt-2 text-sm font-medium">
-              {departments.length} {departments.length === 1 ? "departamento" : "departamentos"} · {totalClasses} clases/anexos
-            </p>
-          </div>
+      <PageHeader
+        title="Departamentos"
+        subtitle={<>{departments.length} {departments.length === 1 ? "departamento" : "departamentos"} · {totalClasses} clases/anexos</>}
+        icon={Folder}
+        actions={<>
           <Button
             onClick={handleCreateClick}
-            className="h-11 px-6 rounded-xl bg-white/15 hover:bg-white/25 text-white font-black text-[10px] uppercase tracking-widest border border-white/20 backdrop-blur-sm gap-2 transition-all"
+            className="h-10 px-5 rounded-xl gap-2 shadow-sm"
           >
             <Plus className="h-4 w-4" />
             Nuevo Departamento
           </Button>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Grid */}
-      <div className="relative z-10 max-w-[1400px] mx-auto px-4 md:px-8 -mt-8 pb-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {departments.length > 0 ? departments.map((department, idx) => {
           const palette = DEPT_PALETTE[idx % DEPT_PALETTE.length];
@@ -357,7 +350,6 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
           </div>
         )}
         </div>
-      </div>
 
       {/* Dialog Create/Edit */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -473,7 +465,7 @@ const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 };
 

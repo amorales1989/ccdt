@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CustomTabs } from "@/components/CustomTabs";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -832,37 +834,19 @@ export default function Configuration() {
     return <LoadingOverlay message="Cargando configuración..." />;
   }
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 p-4 md:p-8 pb-32 animate-fade-in max-w-[1600px] mx-auto">
-      <div className="relative group mb-8">
-        <div className="absolute inset-0 bg-indigo-500/5 blur-3xl rounded-[3rem] -z-10 group-hover:bg-indigo-500/10 transition-all duration-700"></div>
-        <Card className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-indigo-500/5 overflow-hidden">
-          <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-5">
-              <div className="relative">
-                <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-20 animate-pulse"></div>
-                <div className="relative h-14 w-14 bg-indigo-600 rounded-2xl flex items-center justify-center p-3.5 shadow-xl shadow-indigo-500/40 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                  <Settings className="h-full w-full text-white" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <h1 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter leading-none">
-                  Configuración
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 font-bold text-sm tracking-tight flex items-center gap-1.5">
-                  <div className="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
-                  Personalización y Ajustes Globales
-                </p>
-              </div>
-            </div>
-
-            {/* Sin botón de guardar: cada cambio se persiste solo. */}
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {autoSaveState === 'saving' && <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>}
-              {autoSaveState === 'saved' && <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />Cambios guardados</>}
-            </div>
+    <PageShell>
+      <PageHeader
+        title="Configuración"
+        subtitle="Personalización y ajustes globales"
+        icon={Settings}
+        actions={
+          /* Sin botón de guardar: cada cambio se persiste solo. */
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            {autoSaveState === 'saving' && <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>}
+            {autoSaveState === 'saved' && <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />Cambios guardados</>}
           </div>
-        </Card>
-      </div>
+        }
+      />
 
       <CustomTabs
         value={activeTab}
@@ -1964,7 +1948,7 @@ export default function Configuration() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageShell>
   );
 }
 

@@ -54,6 +54,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CustomTooltip } from "@/components/CustomTooltip";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const Material = () => {
     const { profile } = useAuth();
@@ -298,7 +300,7 @@ const Material = () => {
     };
 
     return (
-        <div className="container mx-auto p-4 space-y-6">
+        <PageShell>
             <DeleteConfirmationDialog
                 open={isDeleteDialogOpen}
                 onOpenChange={setIsDeleteDialogOpen}
@@ -371,14 +373,11 @@ const Material = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* HEADER PRO - SEGÚN SCREENSHOT */}
-            <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                    <h1 className="text-2xl font-black text-slate-800 tracking-tight">Material Didáctico</h1>
-                    <p className="text-slate-500 font-medium text-xs">Gestión de recursos y material educativo</p>
-                </div>
-
-                <div className="flex items-center gap-2">
+            <PageHeader
+              title="Material Didáctico"
+              subtitle="Gestión de recursos y material educativo"
+              icon={BookOpen}
+              actions={<>
                     {canUpload && (
                         <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
                             <DialogTrigger asChild>
@@ -474,8 +473,8 @@ const Material = () => {
                             </DialogContent>
                         </Dialog>
                     )}
-                </div>
-            </div>
+              </>}
+            />
 
             {/* TABLA PRO - SEGÚN SCREENSHOT */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -572,7 +571,7 @@ const Material = () => {
                     No hay recursos disponibles
                 </div>
             )}
-        </div>
+        </PageShell>
     );
 };
 

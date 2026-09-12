@@ -47,7 +47,7 @@ export const CustomTabs = <T extends string = string>({
                                 text-sm font-semibold whitespace-nowrap transition-all duration-200
                                 ${selected
                                     ? "bg-white text-purple-600 shadow-sm dark:bg-slate-800 dark:text-purple-400"
-                                    : "text-muted-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"}
+                                    : "text-slate-500 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"}
                             `}
                         >
                             {option.icon && <option.icon className="h-4 w-4 shrink-0" />}

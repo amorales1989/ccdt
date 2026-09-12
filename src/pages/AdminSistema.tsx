@@ -49,6 +49,8 @@ import { Building2, Plus, KeyRound, Loader2, Users, UserRound, CheckCircle2, Eye
 import { BadgeChip } from "@/components/CompanyBadges";
 import { CustomTooltip } from "@/components/CustomTooltip";
 import { PLANS, planLabel, effectiveLimit } from "@/lib/plans";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const formatDate = (d?: string | null) => {
   if (!d) return "—";
@@ -198,20 +200,12 @@ export default function AdminSistema() {
   const activeCount = companies.filter((c) => c.is_active).length;
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
-      <div className="p-4 md:p-6 pb-28 w-full animate-fade-in space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 p-3 rounded-2xl shadow-inner">
-              <Building2 className="h-7 w-7 text-purple-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Empresas</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Administración del sistema</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+    <PageShell>
+        <PageHeader
+          title="Empresas"
+          subtitle="Administración del sistema"
+          icon={Building2}
+          actions={<>
             <Button
               variant="outline"
               onClick={() => setPricesOpen(true)}
@@ -225,8 +219,8 @@ export default function AdminSistema() {
             >
               <Plus className="h-4 w-4 mr-2" /> Nueva empresa
             </Button>
-          </div>
-        </div>
+          </>}
+        />
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -406,7 +400,6 @@ export default function AdminSistema() {
             </TableBody>
           </Table>
         </div>
-      </div>
 
       {/* Crear empresa + admin */}
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
@@ -572,7 +565,7 @@ export default function AdminSistema() {
 
       {/* Precios de planes */}
       <PricesDialog open={pricesOpen} onClose={() => setPricesOpen(false)} />
-    </div>
+    </PageShell>
   );
 }
 

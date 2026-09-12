@@ -29,6 +29,8 @@ import {
     Wrench, Plus, Clock, Loader2, CheckCircle2, AlertCircle, Trash2, Ban, HelpCircle,
 } from "lucide-react";
 import { TourGuide } from "@/components/TourGuide";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 import type { Step } from "react-joyride";
 
 type Status = "pendiente" | "en_proceso" | "terminado" | "anulado";
@@ -225,22 +227,14 @@ export default function Mantenimiento() {
     if (!profile) return null;
 
     return (
-        <div className="p-4 md:p-6 space-y-6">
+        <PageShell>
             <TourGuide tourKey="mantenimiento" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
-            {/* Header */}
-            <div data-tour="mant-header" className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30">
-                        <Wrench className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-                            Mantenimiento
-                        </h1>
-                        <p className="text-xs text-muted-foreground">Gestión de reparaciones del edificio</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
+            <PageHeader
+                data-tour="mant-header"
+                title="Mantenimiento"
+                subtitle="Gestión de reparaciones del edificio"
+                icon={Wrench}
+                actions={
                     <Button
                         data-tour="mant-nuevo"
                         onClick={() => setNewDialogOpen(true)}
@@ -250,8 +244,8 @@ export default function Mantenimiento() {
                         <Plus className="h-4 w-4" />
                         {isConserje ? "Nueva reparación" : "Solicitar reparación"}
                     </Button>
-                </div>
-            </div>
+                }
+            />
 
             {/* Status filter tabs */}
             <div data-tour="mant-tabs"><CustomTabs
@@ -608,7 +602,7 @@ export default function Mantenimiento() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </PageShell>
     );
 }
 

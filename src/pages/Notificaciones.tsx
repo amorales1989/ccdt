@@ -26,6 +26,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Megaphone, X, Search, Send, History, Smartphone, Mail } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 // WhatsApp no es un canal del broadcast: satura la sesión de WA de la empresa.
 type Channel = "push" | "email";
@@ -242,18 +244,12 @@ const Notificaciones = () => {
   }
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-900 p-2 md:p-4 rounded-2xl">
-      <div className="w-full max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-            <Megaphone className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-foreground">Notificaciones</h1>
-            <p className="text-sm text-muted-foreground">Enviá mensajes masivos a tu congregación</p>
-          </div>
-        </div>
+    <PageShell className="max-w-6xl">
+        <PageHeader
+          title="Notificaciones"
+          subtitle="Enviá mensajes masivos a tu congregación"
+          icon={Megaphone}
+        />
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-border shadow-sm p-6 grid gap-6 lg:grid-cols-2 lg:gap-8">
           {/* Columna izquierda: destinatarios */}
@@ -576,8 +572,7 @@ const Notificaciones = () => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </PageShell>
   );
 };
 

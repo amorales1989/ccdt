@@ -45,6 +45,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { canSuspendTarget } from "@/lib/suspension";
 import { useRoles } from "@/hooks/useRoles";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -469,27 +471,16 @@ const GestionUsuarios = () => {
   }
 
   return (
-    <div className="animate-fade-in space-y-4 px-4 md:px-6 pb-8 pt-2 md:pt-4 max-w-[1600px] mx-auto relative overflow-hidden">
+    <PageShell>
       {(deleteUserMutation.isPending || saveClassMutation.isPending || bulkResetMutation.isPending) && (
         <LoadingOverlay message="Guardando..." />
       )}
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-400/10 blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-400/10 blur-3xl pointer-events-none"></div>
 
-      <div className="relative z-10 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-2">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl shadow-lg shadow-purple-500/30 text-white">
-            <Users className="h-6 w-6 sm:h-8" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">Gestión de Usuarios</h1>
-            <p className="text-muted-foreground text-[11px] sm:text-sm mt-0.5 sm:mt-1">
-              Administra los perfiles, roles y accesos de los miembros.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title="Gestión de Usuarios"
+        subtitle="Administra los perfiles, roles y accesos de los miembros."
+        icon={Users}
+        actions={<>
           <Button
             onClick={() => setShowImportDialog(true)}
             className="flex items-center gap-2 h-10 px-5 rounded-xl border border-purple-200 bg-white text-purple-600 hover:bg-purple-50 hover:text-purple-700 font-bold text-sm transition-all shadow-sm"
@@ -507,8 +498,8 @@ const GestionUsuarios = () => {
               <span className="sm:hidden">Nuevo</span>
             </Button>
           </RegisterUserModal>
-        </div>
-      </div>
+        </>}
+      />
 
       <div className="space-y-6 relative z-10 w-full">
         <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-4 w-full">
@@ -1076,7 +1067,7 @@ const GestionUsuarios = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div >
+    </PageShell>
   );
 };
 

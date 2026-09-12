@@ -31,6 +31,8 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const PAGE_SIZE = 30;
 
@@ -117,33 +119,13 @@ export default function ArchivoMiembros() {
 
   return (
     <>
-      <div className="animate-fade-in space-y-6 pb-8 p-4 md:p-6 max-w-[1600px] mx-auto">
+      <PageShell>
 
-        {/* Header card — mismo estilo que otras pantallas */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-slate-500/5 blur-3xl rounded-[3rem] -z-10 group-hover:bg-slate-500/10 transition-all duration-700" />
-          <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-3xl shadow-2xl shadow-slate-500/5 overflow-hidden">
-            <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-5">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-slate-600 blur-2xl opacity-20" />
-                  <div className="relative h-14 w-14 bg-slate-700 rounded-2xl flex items-center justify-center p-3.5 shadow-xl shadow-slate-500/40">
-                    <Archive className="h-full w-full text-white" />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter leading-none">
-                    Archivo de Miembros
-                  </h1>
-                  <p className="text-slate-500 dark:text-slate-400 font-bold text-sm tracking-tight flex items-center gap-1.5 mt-0.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-slate-500 inline-block" />
-                    Personas que estuvieron en la congregación. Su historial se conserva.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          title="Archivo de Miembros"
+          subtitle={<>Personas que estuvieron en la congregación. Su historial se conserva.</>}
+          icon={Archive}
+        />
 
         {/* Search + Filters */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-4">
@@ -341,7 +323,7 @@ export default function ArchivoMiembros() {
             </div>
           </div>
         )}
-      </div>
+      </PageShell>
 
       {/* Detail dialog */}
       <Dialog open={!!selectedPersona} onOpenChange={o => { if (!o) setSelectedPersona(null); }}>

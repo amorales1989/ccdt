@@ -39,6 +39,7 @@ import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { TourGuide } from "@/components/TourGuide";
 import { HelpCircle } from "lucide-react";
 import type { Step } from "react-joyride";
+import { PageShell } from "@/components/PageShell";
 
 interface ClassStats {
   male: number;
@@ -443,7 +444,7 @@ const Home = () => {
   }
 
   return (
-    <div className="space-y-8 bg-[#f8fafc] dark:bg-slate-900/50 min-h-screen -mt-4 -mx-4 px-4 pt-4 sm:-mt-8 sm:-mx-8 sm:px-8 sm:pt-8 rounded-tl-3xl">
+    <PageShell className="space-y-8">
       {isTeacherOrLeader && profile?.id && !studentsLoading && (
         <MissingDniAlertModal profileId={profile.id} students={students} />
       )}
@@ -517,7 +518,7 @@ const Home = () => {
           </section>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 };
 

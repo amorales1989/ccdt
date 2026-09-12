@@ -14,6 +14,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getCompany } from "@/lib/api";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 type GuideItem = {
   title: string;
@@ -369,20 +371,12 @@ const Guia = () => {
   }, [q, visibleSections]);
 
   return (
-    <div className="max-w-3xl mx-auto pb-16">
-      {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-purple-700 via-pink-600 to-rose-600 px-6 md:px-10 pt-10 pb-12 rounded-3xl mb-6">
-        <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full -translate-y-1/3 translate-x-1/4 blur-3xl pointer-events-none" />
-        <div className="relative z-10">
-          <p className="text-pink-200 text-xs font-black uppercase tracking-[0.2em] mb-2">Centro de ayuda</p>
-          <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none flex items-center gap-2">
-            <HelpCircle className="h-8 w-8" /> Guía de Uso
-          </h1>
-          <p className="text-pink-100 mt-2 text-sm font-medium">
-            Qué hace y cómo se usa cada opción del menú. Tocá una sección para ver el paso a paso.
-          </p>
-        </div>
-      </div>
+    <PageShell className="max-w-3xl">
+      <PageHeader
+        title="Guía de Uso"
+        subtitle="Qué hace y cómo se usa cada opción del menú. Tocá una sección para ver el paso a paso."
+        icon={HelpCircle}
+      />
 
       {/* Search */}
       <div className="relative mb-5 px-1">
@@ -440,7 +434,7 @@ const Guia = () => {
           ))}
         </Accordion>
       )}
-    </div>
+    </PageShell>
   );
 };
 

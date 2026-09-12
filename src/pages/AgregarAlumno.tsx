@@ -22,6 +22,8 @@ import type { PersonSearchResult } from "@/components/PersonSearchInput";
 import { getPersistentCompanyId } from "@/contexts/CompanyContext";
 import { useBaptizedEnabled } from "@/hooks/useBaptizedEnabled";
 import { LabeledSwitch } from "@/components/LabeledSwitch";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 interface AgregarAlumnoProps {
   onSuccess?: () => void;
@@ -443,18 +445,6 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
 
   const content = (
     <div className="relative z-10">
-      {!isModal && (
-        <div className="flex items-center gap-4 mb-8 pb-6 border-b border-purple-200/60 dark:border-slate-700/60">
-          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
-            <UserPlus className="h-8 w-8" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-foreground tracking-tight">Agregar Miembro</h2>
-            <p className="text-muted-foreground text-sm mt-1">Complete los datos para inscribir un nuevo miembro</p>
-          </div>
-        </div>
-      )}
-
       <div className={`${!isModal ? 'bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-white/40 dark:border-slate-700/50 shadow-sm' : ''}`}>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -779,14 +769,14 @@ const AgregarAlumno = ({ onSuccess, isModal = false }: AgregarAlumnoProps = {}) 
   }
 
   return (
-    <div className="animate-fade-in space-y-8 pb-8">
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-white to-pink-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 p-6 sm:p-10 rounded-3xl border-2 border-purple-200 dark:border-slate-700 shadow-xl mx-auto max-w-4xl mt-4">
-        {/* Decorative background blur */}
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-pink-500/20 blur-3xl pointer-events-none"></div>
-        {content}
-      </section>
-    </div>
+    <PageShell>
+      <PageHeader
+        title="Agregar Miembro"
+        subtitle="Complete los datos para inscribir un nuevo miembro"
+        icon={UserPlus}
+      />
+      {content}
+    </PageShell>
   );
 };
 

@@ -28,6 +28,8 @@ import { PersonSearchInput } from "@/components/PersonSearchInput";
 import { DatePickerField } from "@/components/DatePickerField";
 import { format } from "date-fns";
 import { CustomTooltip } from "@/components/CustomTooltip";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const GROUP_ADMIN_ROLES = ["admin", "secretaria", "director", "vicedirector", "director_general"];
 const DEPT_DIRECTOR_ROLES = ["director", "vicedirector", "director_general"];
@@ -315,28 +317,23 @@ const GruposPequenos = () => {
   if (isLoading) return <LoadingOverlay message="Cargando grupos..." />;
 
   return (
-    <div className="animate-fade-in pb-12">
-      <div className="relative overflow-hidden bg-gradient-to-br from-teal-600 via-cyan-600 to-blue-700 px-6 md:px-10 pt-10 pb-16">
-        <div className="relative z-10 max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <p className="text-teal-200 text-xs font-black uppercase tracking-[0.2em] mb-2">Comunidad</p>
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">Grupos Pequeños</h1>
-            <p className="text-teal-200 mt-2 text-sm font-medium">
-              {groups.length} {groups.length === 1 ? "grupo" : "grupos"}
-            </p>
-          </div>
+    <PageShell>
+      <PageHeader
+        title="Grupos Pequeños"
+        subtitle={<>{groups.length} {groups.length === 1 ? "grupo" : "grupos"}</>}
+        icon={Users2}
+        actions={<>
           {canCreate && (
             <Button
               onClick={openCreate}
-              className="h-11 px-6 rounded-xl bg-white/15 hover:bg-white/25 text-white font-black text-[10px] uppercase tracking-widest border border-white/20 backdrop-blur-sm gap-2"
+              className="h-10 px-5 rounded-xl gap-2 shadow-sm"
             >
               <Plus className="h-4 w-4" /> Nuevo Grupo
             </Button>
           )}
-        </div>
-      </div>
+        </>}
+      />
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-4 md:px-8 -mt-8 pb-4">
         {/* Pestañas de vista (Grupos/Miembros) + filtro (Activos/Archivados), en una sola fila alineada */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <div className="inline-flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-1 shadow-sm">
@@ -589,7 +586,6 @@ const GruposPequenos = () => {
             )}
           </div>
         )}
-      </div>
 
       {/* Dialog Crear/Editar */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -966,7 +962,7 @@ const GruposPequenos = () => {
           )}
         </SheetContent>
       </Sheet>
-    </div>
+    </PageShell>
   );
 };
 

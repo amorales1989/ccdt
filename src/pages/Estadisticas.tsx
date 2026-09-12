@@ -25,6 +25,9 @@ import { exportStatsReport } from "@/lib/statsPdfUtils";
 import { getStatsResumen } from "@/lib/api";
 import { toast } from "sonner";
 import { useCompany } from "@/contexts/CompanyContext";
+import { BarChart3 } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const CHART_COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
 const GENDER_COLORS: Record<string, string> = {
@@ -248,31 +251,13 @@ export default function Estadisticas() {
   const maxRoleValue = Math.max(...data.roleData.map(r => r.value), 1);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-12">
+    <PageShell>
 
-      {/* ── Hero Header ──────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-6 md:px-10 pt-10 pb-16">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-300 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
-        </div>
-
-        <div className="relative z-10 max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <p className="text-indigo-200 text-xs font-black uppercase tracking-[0.2em] mb-2">
-              {isLider
-                ? `${deptLabel || "Mi Departamento"} · ${currentProfile?.assigned_class || "Mi Clase"}`
-                : selectedDeptId === "all" ? (isGlobalView ? "Vista Global" : "Mis Departamentos") : `Departamento · ${deptLabel}`}
-            </p>
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
-              Estadísticas
-            </h1>
-            <p className="text-indigo-200 mt-2 text-sm font-medium">
-              {data.totalStudents} miembros activos · {data.totalAttendanceRecords.toLocaleString()} registros de asistencia
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
+      <PageHeader
+        title="Estadísticas"
+        subtitle={<><>{isLider ? `${deptLabel || "Mi Departamento"} · ${currentProfile?.assigned_class || "Mi Clase"}` : selectedDeptId === "all" ? (isGlobalView ? "Vista Global" : "Mis Departamentos") : `Departamento · ${deptLabel}`} · {data.totalStudents} miembros activos · {data.totalAttendanceRecords.toLocaleString()} registros de asistencia</></>}
+        icon={BarChart3}
+        actions={<>
             {!isLider && !isVicedirector && allowedDepts.length > 1 && (
               <Select
                 value={selectedDeptId}
@@ -281,7 +266,7 @@ export default function Estadisticas() {
                   setSelectedClass("all");
                 }}
               >
-                <SelectTrigger className="h-10 px-4 rounded-xl bg-white/15 text-white text-xs font-bold border border-white/20 backdrop-blur-sm focus:ring-2 focus:ring-white/30 w-auto min-w-[150px]">
+                <SelectTrigger className="h-10 px-4 rounded-xl bg-white text-slate-700 text-sm font-medium border border-slate-200 shadow-sm focus:ring-2 focus:ring-primary/30 w-auto min-w-[150px]">
                   <SelectValue placeholder={isGlobalView ? "Todas las áreas" : "Mis áreas"} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
@@ -299,7 +284,7 @@ export default function Estadisticas() {
                 value={selectedClass}
                 onValueChange={setSelectedClass}
               >
-                <SelectTrigger className="h-10 px-4 rounded-xl bg-white/15 text-white text-xs font-bold border border-white/20 backdrop-blur-sm focus:ring-2 focus:ring-white/30 w-auto min-w-[140px]">
+                <SelectTrigger className="h-10 px-4 rounded-xl bg-white text-slate-700 text-sm font-medium border border-slate-200 shadow-sm focus:ring-2 focus:ring-primary/30 w-auto min-w-[140px]">
                   <SelectValue placeholder="Todas las clases" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
@@ -313,16 +298,14 @@ export default function Estadisticas() {
             <button
               onClick={handleExport}
               disabled={isExporting}
-              className="flex items-center gap-2 h-10 px-5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-black uppercase tracking-widest border border-white/20 backdrop-blur-sm transition-all disabled:opacity-60"
+              className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-sm font-medium border border-slate-200 hover:border-slate-300 shadow-sm transition-all disabled:opacity-60"
             >
               {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
               Exportar
             </button>
-          </div>
-        </div>
-      </div>
+        </>}
+      />
 
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 -mt-8 space-y-6">
 
         {/* ── KPI Cards ──────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -641,7 +624,6 @@ export default function Estadisticas() {
           </div>
         </div>
 
-      </div>
-    </div>
+    </PageShell>
   );
 }

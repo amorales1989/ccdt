@@ -33,6 +33,9 @@ import { CustomTabs } from "@/components/CustomTabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ClipboardCheck, CheckCircle, XCircle, AlertCircle, Clock4, Building, User, FileText as FileTextIcon, Clock, CalendarPlus, Trash2, Calendar as CalendarIcon, Check, X, Pencil } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
+import { CalendarDays } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function Calendario() {
   const location = useLocation();
@@ -451,20 +454,15 @@ export default function Calendario() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
-      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto">
+    <PageShell>
 
-        {/* Header */}
-        <div className="mb-6 animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Calendario de Eventos</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
-              {isSuspended
+        <PageHeader
+          title="Calendario de Eventos"
+          subtitle={isSuspended
                 ? "Consultá las actividades de la congregación."
                 : (isSecretaria || isAdmin || isSecrCalendario) ? "Gestioná los eventos y solicitudes de la congregación." : "Consultá y solicitá nuevas fechas para tus actividades."}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
+          icon={CalendarDays}
+          actions={<>
             {isSuspended ? null : canCreateEvents ? (
               <Dialog
                 open={dialogOpen}
@@ -539,8 +537,8 @@ export default function Calendario() {
                 </DialogContent>
               </Dialog>
             )}
-          </div>
-        </div>
+          </>}
+        />
 
         {/* Stats and Tabs Row */}
         <div className="flex flex-col lg:flex-row gap-4 mb-8">
@@ -962,7 +960,6 @@ export default function Calendario() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+    </PageShell>
   );
 }

@@ -25,6 +25,8 @@ import { DepartmentSelect } from "@/components/DepartmentSelect";
 import { ALL_VALUE } from "@/lib/departments";
 import { ClassSelect } from "@/components/ClassSelect";
 import { DEFAULT_PERMISSIONS, hasPermission, type SavedPermissions } from "@/lib/rolePermissions";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 const PromoverAlumnos = () => {
   const { profile } = useAuth();
@@ -70,6 +72,9 @@ const PromoverAlumnos = () => {
   const userClass = profile?.assigned_class || null;
 
   const { getByName } = useDepartments({ scoped: true });
+  // Las autorizaciones existentes pueden ser a departamentos fuera del alcance del perfil
+  // (la consulta trae todas las de la empresa): para resolverlas no sirve la lista filtrada.
+  const { getByName: getAnyDepartmentByName } = useDepartments();
   const userDepartmentId = getByName(userDepartment)?.id ?? null;
 
   useEffect(() => {
@@ -363,6 +368,7 @@ const PromoverAlumnos = () => {
 
   const handleRemoveAuthorization = async (studentId: string, departmentId: string) => {
     try {
+      // TODO: mover a API back
       const { error } = await (supabase
         .from("student_authorizations") as any)
         .delete()
@@ -417,19 +423,15 @@ const PromoverAlumnos = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
-      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto animate-fade-in space-y-6">
+    <PageShell>
 
         <TourGuide tourKey="promover_alumnos" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
-        {/* Header */}
-        <div data-tour="prom-header" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Gestión de Miembros</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
-              Promové o autorizá a los miembros a diferentes departamentos.
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          data-tour="prom-header"
+          title="Gestión de Miembros"
+          subtitle="Promové o autorizá a los miembros a diferentes departamentos."
+          icon={FolderUp}
+        />
 
         {/* Tabs */}
         <div className="w-full" data-tour="prom-content">
@@ -792,7 +794,7 @@ const PromoverAlumnos = () => {
                                               className="ml-0.5 hover:text-red-500 transition-colors"
                                               onClick={async (e) => {
                                                 e.stopPropagation();
-                                                const deptObj = departments.find(d => d.name === dept);
+                                                const deptObj = getAnyDepartmentByName(dept);
                                                 if (deptObj) await handleRemoveAuthorization(student.id, deptObj.id);
                                               }}
                                             >
@@ -909,8 +911,7 @@ const PromoverAlumnos = () => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </PageShell>
   );
 };
 

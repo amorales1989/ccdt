@@ -37,6 +37,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CustomTabs } from "@/components/CustomTabs";
 import { CheckCircle2 } from "lucide-react";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function InformesPersonal() {
     const { profile } = useAuth();
@@ -255,26 +257,16 @@ export default function InformesPersonal() {
     if (!profile) return null;
 
     return (
-        <div className="p-4 md:p-6 space-y-6">
+        <PageShell>
             <TourGuide tourKey="informes_personal" steps={tourSteps} run={runTour} onClose={() => setRunTour(false)} />
-            {/* Header */}
-            <div data-tour="inf-header" className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30">
-                        <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-                            Informes de Personal
-                        </h1>
-                        <p className="text-xs text-muted-foreground">
-                            {canViewOthers
+            <PageHeader
+              data-tour="inf-header"
+              title="Informes de Personal"
+              subtitle={canViewOthers
                                 ? "Revisión de informes del equipo"
                                 : "Informes de colaboradores y maestros de tu clase"}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
+              icon={Users}
+              actions={<>
                     {canWrite && (
                         <Button
                             data-tour="inf-nuevo"
@@ -290,8 +282,8 @@ export default function InformesPersonal() {
                             Nuevo Informe
                         </Button>
                     )}
-                </div>
-            </div>
+              </>}
+            />
             <div data-tour="inf-lista" />
 
             {/* List */}
@@ -421,6 +413,6 @@ export default function InformesPersonal() {
                 </DialogContent>
             </Dialog>
 
-        </div>
+        </PageShell>
     );
 }

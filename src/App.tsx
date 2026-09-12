@@ -30,7 +30,6 @@ const GruposPequenos = lazy(() => import("@/pages/GruposPequenos"));
 const Contabilidad = lazy(() => import("@/pages/Contabilidad"));
 const PromoverAlumnos = lazy(() => import("@/pages/PromoverAlumnos"));
 const Configuration = lazy(() => import("@/pages/Configuration"));
-const Secretaria = lazy(() => import("@/pages/Secretaria"));
 const Notificaciones = lazy(() => import("@/pages/Notificaciones"));
 const AutorizacionesSalida = lazy(() => import("@/pages/AutorizacionesSalida"));
 const AutorizacionSimple = lazy(() => import("@/pages/AutorizacionSimple"));
@@ -179,10 +178,6 @@ function App() {
                   {
                     path: "/guia",
                     element: <Guia />,
-                  },
-                  {
-                    path: "/secretaria",
-                    element: <Secretaria />,
                   },
                   {
                     path: "/notificaciones",

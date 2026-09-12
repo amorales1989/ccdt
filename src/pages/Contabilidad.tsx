@@ -45,6 +45,8 @@ import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { CustomTabs } from "@/components/CustomTabs";
+import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/PageHeader";
 import { CHART_COLORS } from "@/lib/chartColors";
 
 const WRITE_ROLES = ["admin", "lider", "director", "vicedirector", "director_general"];
@@ -344,21 +346,12 @@ export default function Contabilidad() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50/30 via-white to-white">
-      <div className="p-4 md:p-6 pb-28 max-w-[1600px] mx-auto animate-fade-in space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Wallet className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Contabilidad</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Libro de caja por departamento</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 ml-auto">
+    <PageShell>
+        <PageHeader
+          title="Contabilidad"
+          subtitle="Libro de caja por departamento"
+          icon={Wallet}
+          actions={<>
             {allowedDepartments.length > 1 ? (
               <Select value={selectedDept} onValueChange={(v) => { setSelectedDept(v); setFilterClass("all"); }}>
                 <SelectTrigger className="w-[200px] rounded-xl border-slate-200 bg-white shadow-sm h-10">
@@ -384,8 +377,8 @@ export default function Contabilidad() {
             >
               <Download className="h-4 w-4 mr-1" /> Reporte
             </Button>
-          </div>
-        </div>
+          </>}
+        />
 
       {/* Resumen */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -751,7 +744,6 @@ export default function Contabilidad() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      </div>
-    </div>
+    </PageShell>
   );
 }

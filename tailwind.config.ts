@@ -72,6 +72,9 @@ export default {
 				// Muted basado en secondary (tonos medios del navy/gris)
 				muted: {
 					DEFAULT: '#64748b', // secondary-500
+					// Faltaba: sin esta clave `text-muted-foreground` (272 usos, incluidos los
+					// componentes de shadcn) no generaba CSS y el texto heredaba el color del padre.
+					foreground: 'hsl(var(--muted-foreground))',
 				},
 				// Neutral basado en secondary
 				neutral: {
