@@ -10,13 +10,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
 import imageCompression from 'browser-image-compression';
 import axios from 'axios';
+import { zip } from 'fflate';
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
     Plus, Download, Trash2, FileText, Search,
     Filter, BookOpen, Loader2, UploadCloud,
     Signal, MoreVertical, FileDown, Calendar,
     ExternalLink, Trash, Edit, FileSpreadsheet,
-    X, ImageIcon
+    X, ImageIcon, FolderArchive
 } from "lucide-react";
 import {
     Dialog,
@@ -80,6 +82,8 @@ const Material = () => {
     const [newAge, setNewAge] = useState("");
     const [newDept, setNewDept] = useState("");
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadMode, setUploadMode] = useState<"file" | "folder">("file");
+    const [folderFiles, setFolderFiles] = useState<File[]>([]);
 
     // Filters
     const [filterDept, setFilterDept] = useState<string>("all");
@@ -123,14 +127,33 @@ const Material = () => {
         loadMaterials();
     }, [filterDept, filterAge]);
 
+    const folderName = folderFiles[0]?.webkitRelativePath.split('/')[0] || "carpeta";
+
+    // La carpeta se sube como un unico .zip (sin comprimir: PDF/imagenes/docx ya
+    // vienen comprimidos). Las rutas relativas mantienen las subcarpetas al descomprimir.
+    const zipFolder = async (files: File[]) => {
+        const entries: Record<string, Uint8Array> = {};
+        for (const f of files) {
+            entries[f.webkitRelativePath || f.name] = new Uint8Array(await f.arrayBuffer());
+        }
+        const data = await new Promise<Uint8Array>((resolve, reject) =>
+            zip(entries, { level: 0 }, (err, out) => (err ? reject(err) : resolve(out)))
+        );
+        return new File([data], `${folderName}.zip`, { type: 'application/zip' });
+    };
+
     const handleUpload = async () => {
-        if (!selectedFile || !newName || !newAge) {
+        const hasSource = uploadMode === "folder" ? folderFiles.length > 0 : !!selectedFile;
+        if (!hasSource || !newName || !newAge) {
             toast({ title: "Requerido", description: "Completa los campos obligatorios", variant: "destructive" });
             return;
         }
 
         const MAX_SIZE = 50 * 1024 * 1024;
-        if (selectedFile.size > MAX_SIZE) {
+        const rawSize = uploadMode === "folder"
+            ? folderFiles.reduce((sum, f) => sum + f.size, 0)
+            : selectedFile!.size;
+        if (rawSize > MAX_SIZE) {
             toast({ title: "Error", description: "Límite 50MB.", variant: "destructive" });
             return;
         }
@@ -143,8 +166,14 @@ const Material = () => {
         const startTime = Date.now();
 
         try {
-            let fileToUpload = selectedFile;
-            if (selectedFile.type.startsWith('image/')) {
+            let fileToUpload: File;
+            if (uploadMode === "folder") {
+                setStatusText("Empaquetando...");
+                fileToUpload = await zipFolder(folderFiles);
+            } else {
+                fileToUpload = selectedFile!;
+            }
+            if (fileToUpload.type.startsWith('image/')) {
                 setStatusText("Comprimiendo...");
                 const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
                 fileToUpload = await imageCompression(selectedFile, options);
@@ -184,7 +213,7 @@ const Material = () => {
                 file_url: key,
                 age_range: newAge,
                 department_id: (newDept && newDept !== "none") ? newDept : undefined,
-                file_size: selectedFile.size,
+                file_size: rawSize,
                 storage_provider: 'r2'
             });
 
@@ -201,7 +230,7 @@ const Material = () => {
     };
 
     const resetForm = () => {
-        setNewName(""); setNewDesc(""); setNewAge(""); setNewDept(""); setSelectedFile(null);
+        setNewName(""); setNewDesc(""); setNewAge(""); setNewDept(""); setSelectedFile(null); setFolderFiles([]); setUploadMode("file");
     };
 
     const handleDelete = async (id: string, e?: React.MouseEvent) => {
@@ -293,6 +322,7 @@ const Material = () => {
     const getFileIcon = (url: string) => {
         const ext = url.split('.').pop()?.toLowerCase();
         if (isImage(url)) return null;
+        if (ext === 'zip') return <FolderArchive className="h-5 w-5 text-amber-500" />;
         if (ext === 'pdf') return <FileText className="h-5 w-5 text-red-500" />;
         if (['xlsx', 'xls', 'csv'].includes(ext || '')) return <FileSpreadsheet className="h-5 w-5 text-green-600" />;
         if (['doc', 'docx'].includes(ext || '')) return <FileText className="h-5 w-5 text-blue-600" />;
@@ -445,17 +475,46 @@ const Material = () => {
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Seleccionar Archivo (Máx 50MB)</Label>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                {uploadMode === "folder" ? "Seleccionar Carpeta" : "Seleccionar Archivo"} (Máx 50MB)
+                                            </Label>
+                                            <ToggleGroup
+                                                type="single"
+                                                size="sm"
+                                                value={uploadMode}
+                                                onValueChange={v => v && setUploadMode(v as "file" | "folder")}
+                                            >
+                                                <ToggleGroupItem value="file" className="text-[10px] font-bold uppercase h-7">Archivo</ToggleGroupItem>
+                                                <ToggleGroupItem value="folder" className="text-[10px] font-bold uppercase h-7">Carpeta</ToggleGroupItem>
+                                            </ToggleGroup>
+                                        </div>
                                         <div className="relative group">
                                             <Input
+                                                key={uploadMode}
                                                 type="file"
-                                                onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                                                // webkitdirectory no esta tipado en React: se setea por ref.
+                                                ref={el => {
+                                                    if (el && uploadMode === "folder") el.setAttribute('webkitdirectory', '');
+                                                }}
+                                                onChange={e => {
+                                                    if (uploadMode === "folder") {
+                                                        const files = Array.from(e.target.files || []);
+                                                        setFolderFiles(files);
+                                                        const name = files[0]?.webkitRelativePath.split('/')[0];
+                                                        if (name && !newName) setNewName(name.toUpperCase());
+                                                    } else {
+                                                        setSelectedFile(e.target.files?.[0] || null);
+                                                    }
+                                                }}
                                                 className="h-20 bg-primary/5 border-dashed border-2 border-primary/20 rounded-2xl cursor-pointer file:hidden text-transparent transition-colors group-hover:bg-primary/10"
                                             />
                                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none gap-3">
                                                 <UploadCloud className="h-6 w-6 text-primary animate-bounce" />
                                                 <span className="text-[10px] font-bold text-primary uppercase tracking-tighter">
-                                                    {selectedFile ? selectedFile.name : "Click o arrastra para subir"}
+                                                    {uploadMode === "folder"
+                                                        ? (folderFiles.length ? `${folderName} (${folderFiles.length} archivos)` : "Click para elegir una carpeta")
+                                                        : (selectedFile ? selectedFile.name : "Click o arrastra para subir")}
                                                 </span>
                                             </div>
                                         </div>
