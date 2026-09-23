@@ -1,7 +1,24 @@
 import { createRoot } from 'react-dom/client'
+import * as Sentry from '@sentry/react'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
+
+// Reporte de errores a GlitchTip (misma API que Sentry, instancia propia en
+// errores.n-xus.com). Solo en build de prod y si hay DSN, asi los errores de
+// desarrollo no ensucian el proyecto. Va antes del render para atrapar tambien
+// lo que explote durante el montaje.
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
+if (import.meta.env.PROD && sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: import.meta.env.MODE,
+    // Sin tracesSampleRate a proposito: el tracing queda apagado. Contra una
+    // instancia propia cada transaccion ocupa disco del VPS y no la miramos.
+    // No mandar IP ni datos del usuario: la app maneja datos de menores.
+    sendDefaultPii: false,
+  });
+}
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>

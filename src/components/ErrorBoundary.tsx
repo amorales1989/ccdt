@@ -1,5 +1,6 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { useRouteError } from "react-router-dom";
+import * as Sentry from "@sentry/react";
 
 /** Pantalla de último recurso. Sin esto, un error de render deja la pantalla en blanco
  *  (o el cartel crudo de React Router) sin forma de recuperarse. */
@@ -39,7 +40,11 @@ function ErrorFallback({ error }: { error: unknown }) {
  *  boundary de arriba, así que sin esto se ve su cartel crudo sin botón de salida. */
 export function RouteErrorElement() {
   const error = useRouteError();
-  console.error("Error no controlado (ruta):", error);
+  // En un efecto y no en el render: si no, se reporta de nuevo en cada re-render.
+  useEffect(() => {
+    console.error("Error no controlado (ruta):", error);
+    Sentry.captureException(error);
+  }, [error]);
   return <ErrorFallback error={error} />;
 }
 
@@ -53,6 +58,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("Error no controlado:", error, info.componentStack);
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: info.componentStack } },
+    });
   }
 
   render() {
