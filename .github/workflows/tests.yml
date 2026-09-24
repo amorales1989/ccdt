@@ -1,0 +1,34 @@
+name: tests
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  front:
+    name: lint + tests + build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # No bloquea: hoy el repo arrastra ~420 problemas de lint previos a este
+      # workflow. Queda visible para poder ir bajándolos; cuando llegue a cero,
+      # sacar el continue-on-error y pasa a ser obligatorio.
+      - name: Lint (informativo)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

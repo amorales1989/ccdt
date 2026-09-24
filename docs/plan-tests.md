@@ -281,5 +281,24 @@ genera una ficha en `students` cuando se actualiza, y `authMiddleware` actualiza
 en **cada** request. O sea: un maestro que entra a la app pasa a contar contra el límite de
 miembros del plan. No es un bug, pero no es evidente y afecta la facturación.
 
+### Fase 5 — CI (hecho)
+
+`.github/workflows/tests.yml` en los dos repos, disparado en cada push y a mano
+(`workflow_dispatch`).
+
+- **Front:** `npm ci` → lint (informativo, `continue-on-error`: el repo arrastra ~420 problemas
+  previos) → `npm test` → `npm run build`.
+- **Back:** dos jobs. `unit` corre solo. `integracion` checkoutea **también el repo del front**
+  (ahí viven `supabase/config.toml` y las migraciones), levanta la Supabase local con
+  `supabase/setup-cli`, genera el `.env.test` con el mismo pipeline que en local y corre
+  `npm run test:integration`.
+
+Único paso manual: si `ccdt` es un repo privado, hay que crear en `ccdt-Back` el secret
+`CCDT_FRONT_TOKEN` con un PAT de lectura. Si es público, el token del workflow alcanza.
+
+Que el proyecto de Supabase viva en el repo del front y lo necesite el del back es una costura
+incómoda. La alternativa (mover `supabase/` a ccdt-Back, que es el dueño de la DB según su
+CLAUDE.md) queda anotada, no hecha.
+
 Verificado tras los cambios: `npm test` (back) 23 unit + 44 integración (1 todo), `npm test` (front) 52/52,
 `npx eslint` limpio en los archivos nuevos, `npm run build` OK.
