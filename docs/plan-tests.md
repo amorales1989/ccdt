@@ -293,6 +293,26 @@ miembros del plan. No es un bug, pero no es evidente y afecta la facturación.
   `supabase/setup-cli`, genera el `.env.test` con el mismo pipeline que en local y corre
   `npm run test:integration`.
 
+**Lo que encontró la primera corrida verde.** Correr la suite en una máquina limpia sacó a la
+luz tres cosas que en local estaban tapadas:
+
+1. `config/serviceAccountKey.json` está gitignoreado, así que sin él `firebase.js` reventaba en
+   el `require` y se llevaba puestos **siete routers** (events, students, fcm, webhooks,
+   maintenance, notifications, profiles). El `try/catch` de `app.js` se tragaba el error y esas
+   rutas quedaban sin montar, respondiendo 404 "Ruta no encontrada". Si esa credencial falta en
+   producción, medio API desaparece sin un error visible. Ahora la app levanta igual y `messaging`
+   queda como un stub que rechaza con un mensaje explícito.
+2. PostgREST no exponía el schema `api` — **tampoco en local**. Grupos pequeños, cobertura y
+   matriz de asistencia y delete-impact respondían 400. Se arregla en `supabase/config.toml`
+   (requiere `supabase stop && supabase start`).
+3. El barrido multi-tenant pedía `status < 500`, así que un endpoint roto que devolvía 400 pasaba
+   el test **sin haberse ejercitado nunca**: así es como el punto 2 estuvo oculto. Los listados
+   ahora exigen 200 y los recursos ajenos 200/403/404.
+
+De paso, dos not-found con el código equivocado: `delete-impact` daba 500 (el SP levanta P0001) y
+`observations` daba 400 por usar `.single()`. Los dos pasan a 404. Quedan otros cuatro `.single()`
+con el mismo patrón en `observationsController`, sin tocar.
+
 Único paso manual: si `ccdt` es un repo privado, hay que crear en `ccdt-Back` el secret
 `CCDT_FRONT_TOKEN` con un PAT de lectura. Si es público, el token del workflow alcanza.
 
@@ -300,5 +320,6 @@ Que el proyecto de Supabase viva en el repo del front y lo necesite el del back 
 incómoda. La alternativa (mover `supabase/` a ccdt-Back, que es el dueño de la DB según su
 CLAUDE.md) queda anotada, no hecha.
 
-Verificado tras los cambios: `npm test` (back) 23 unit + 44 integración (1 todo), `npm test` (front) 52/52,
+Verificado tras los cambios: CI verde en los dos repos — back 23 unit + 44 integración (1 todo),
+front 52/52,
 `npx eslint` limpio en los archivos nuevos, `npm run build` OK.
