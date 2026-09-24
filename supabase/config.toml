@@ -6,3 +6,9 @@ major_version = 15
 
 [functions.manage-users]
 verify_jwt = true
+
+# PostgREST solo expone `public` y `graphql_public` por defecto. Los SP del back viven
+# en el schema `api` (ver ccdt-Back/migrations/sp/) y se llaman con
+# supabaseAdmin.schema('api').rpc(...): sin esto responden 400 "Invalid schema: api".
+[api]
+schemas = ["public", "graphql_public", "api"]
